@@ -1,0 +1,36 @@
+{
+  "name": "lawcalc-kr",
+  "version": "0.0.0",
+  "private": true,
+  "description": "한국 법률 계산 데스크톱 워크벤치 (Tauri + React + Rust). 판결금·지연손해금 이자 계산 MVP.",
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "test:golden": "pnpm -r --if-present test:golden",
+    "tauri:dev": "pnpm --filter @lawcalc-kr/desktop tauri dev",
+    "tauri:build": "pnpm --filter @lawcalc-kr/desktop tauri build"
+  },
+  "keywords": [
+    "korean-law",
+    "legal-calculator",
+    "interest-calculator",
+    "judgment-interest",
+    "tauri",
+    "lawcalc"
+  ],
+  "license": "BUSL-1.1",
+  "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "eslint": "^9.26.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.32.0"
+  }
+}
