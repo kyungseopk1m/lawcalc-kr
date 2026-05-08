@@ -42,6 +42,18 @@ The directories above are owned by different implementation sessions. D owns rep
 - `apps/desktop/src/lib/ipc.ts` maps UI actions to Tauri commands: `export_pdf`, `export_csv`, `save_lcalc`, `load_lcalc`, and `copy_to_clipboard`.
 - Rust commands are intentionally narrow. They should stay focused on local file IO, native dialogs, PDF/export, and clipboard integration.
 
+## Module Responsibilities
+
+| Module                   | Owns                                                                                                       | Must not own                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `packages/core-engine`   | validation, date/day-count rules, rate segmentation, interest totals, formula strings, data-version output | browser state, file dialogs, PDF rendering, native clipboard           |
+| `apps/desktop/src`       | form state, result presentation, accessibility, user-triggered export actions                              | filesystem writes outside Tauri commands, duplicated calculation rules |
+| `apps/desktop/src-tauri` | local file IO, native dialogs, export backends, clipboard integration, packaging metadata                  | legal-rate calculation policy, UI-only formatting                      |
+| `data/legal-rates`       | versioned legal-rate source data and citations                                                             | runtime user case data                                                 |
+| `docs` / CI              | operating contracts, release checklist, lockfile and workflow guardrails                                   | feature implementation details owned by A/B/C                          |
+
+The UI may format numbers and dates for display, but calculation-significant rounding and day-count choices must come from the engine result. This keeps PDF/CSV/clipboard output aligned with the on-screen table.
+
 ## `.lcalc` File Shape
 
 `.lcalc` files are JSON documents used for reproducible local saves. The schema should include:
@@ -53,6 +65,49 @@ The directories above are owned by different implementation sessions. D owns rep
 - the disclaimer text that was shown or exported with the calculation.
 
 The format is local-first and should not require network access. Backward-compatible readers should preserve unknown fields where practical.
+
+Example:
+
+```json
+{
+  "schemaVersion": "1",
+  "appVersion": "0.0.0",
+  "dataVersion": "legal-rates/v1.0.0",
+  "createdAt": "2026-05-09T12:34:56+09:00",
+  "input": {
+    "principal": 10000000,
+    "startDate": "2024-01-01",
+    "endDate": "2024-12-31",
+    "legalRatePreset": "civil",
+    "options": {
+      "mode": "period",
+      "leapYear": "fixed365",
+      "includeFirstDay": false
+    }
+  },
+  "options": {
+    "mode": "period",
+    "leapYear": "fixed365",
+    "includeFirstDay": false
+  },
+  "result": {
+    "principal": 10000000,
+    "segments": [],
+    "totalInterest": 0,
+    "grandTotal": 10000000,
+    "dataVersion": "legal-rates/v1.0.0"
+  },
+  "note": "optional user note",
+  "disclaimer": "This calculation is for review only."
+}
+```
+
+Compatibility rules:
+
+- increment `schemaVersion` only when readers need migration logic;
+- never infer a missing `dataVersion` for promoted files;
+- preserve `note` and unknown top-level fields on load/save when possible;
+- reject files that do not contain a parseable `input` object.
 
 ## Non-Goals
 

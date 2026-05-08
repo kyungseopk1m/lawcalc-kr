@@ -17,7 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Tauri 2.x shell and IPC command stubs for PDF, CSV, clipboard, and `.lcalc` save/load.
 - `@lawcalc-kr/core-engine` package scaffold with public interest-calculation types and placeholder tests.
 - Golden-test policy and placeholder wiring for court-output comparison cases.
+- Release checklist for W4 Tauri dry runs and artifact review.
 
 ### Changed
 
 - Refreshed `pnpm-lock.yaml` after desktop, Tauri, and core-engine package integration.
+- Expanded README, architecture, and testing docs for W2 integration ownership, `.lcalc` compatibility, and CI monitoring.

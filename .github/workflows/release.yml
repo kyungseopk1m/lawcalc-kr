@@ -51,7 +51,7 @@ jobs:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: lawcalc-kr ${{ github.ref_name }}
-          releaseBody: "lawcalc-kr desktop release"
+          releaseBody: "Draft desktop release. Review CHANGELOG.md, bundled artifacts, and legal disclaimer before publishing."
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
