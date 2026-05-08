@@ -7,6 +7,9 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+*.draft.json
+tests/golden/_wip/
+packages/*/tests/golden/_wip/
 
 # Environment
 .env

@@ -23,6 +23,15 @@ Each golden case should include:
 - source note explaining how the expected output was obtained;
 - data version.
 
-## Temporary Skip During W1
+## W2 Integration Checks
 
-The root `test:golden` script is wired through pnpm workspace packages. Until the core engine and golden fixtures are added, CI may run it as a no-op.
+- `pnpm install --frozen-lockfile` must pass after every A/B/C integration push.
+- `pnpm lint`, `pnpm test`, and `pnpm test:golden` are the baseline CI checks.
+- `pnpm build` should be run before release-prep changes or when TypeScript package surfaces change.
+- Golden fixtures may remain placeholders until official black-box comparison outputs are recorded.
+
+## Golden Fixtures
+
+Golden fixtures belong under the core-engine test area. Work-in-progress cases that are not ready for CI should stay in an ignored `_wip` directory and must not be treated as authoritative expected output.
+
+When a golden case is promoted into CI, record the data source, calculation options, expected segment days, expected interest, and the legal-rate data version together.

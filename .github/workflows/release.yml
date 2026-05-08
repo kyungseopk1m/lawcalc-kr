@@ -11,6 +11,8 @@ permissions:
 jobs:
   publish-tauri:
     name: Build Tauri app (${{ matrix.platform }})
+    # W4 dry-run prep: create a temporary v* tag and verify draft artifacts on
+    # macOS and Windows before publishing a user-facing release.
     strategy:
       fail-fast: false
       matrix:

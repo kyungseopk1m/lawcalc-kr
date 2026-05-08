@@ -25,7 +25,7 @@ lawcalc-kr/
 └── docs/
 ```
 
-The directories above are owned by different implementation sessions. This W1 setup intentionally creates only D-session infrastructure and documentation files.
+The directories above are owned by different implementation sessions. D owns repository infrastructure, lockfile, CI, release workflow, changelog, README, and top-level docs.
 
 ## Data Flow
 
@@ -34,6 +34,25 @@ The directories above are owned by different implementation sessions. This W1 se
 3. The engine returns a structured result with segment formulas and totals.
 4. The UI renders the result table and legal citations.
 5. Tauri commands handle local save/load, CSV/PDF export, and native dialogs.
+
+## Current Integration Surface
+
+- `@lawcalc-kr/core-engine` exposes the public `InterestInput`, `InterestResult`, `CalcOptions`, `RateSegment`, and `LegalRatePreset` types.
+- `apps/desktop` is a React 19 + Vite shell. W2/W3 form work should bind principal, date range, legal-rate preset, options, and rate segments to `InterestInput`.
+- `apps/desktop/src/lib/ipc.ts` maps UI actions to Tauri commands: `export_pdf`, `export_csv`, `save_lcalc`, `load_lcalc`, and `copy_to_clipboard`.
+- Rust commands are intentionally narrow. They should stay focused on local file IO, native dialogs, PDF/export, and clipboard integration.
+
+## `.lcalc` File Shape
+
+`.lcalc` files are JSON documents used for reproducible local saves. The schema should include:
+
+- `schemaVersion`, `appVersion`, `dataVersion`, and `createdAt`;
+- `input` and `options` matching the core-engine public types;
+- `result` matching `InterestResult`;
+- optional `note`;
+- the disclaimer text that was shown or exported with the calculation.
+
+The format is local-first and should not require network access. Backward-compatible readers should preserve unknown fields where practical.
 
 ## Non-Goals
 
