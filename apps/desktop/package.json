@@ -7,12 +7,14 @@
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "tsc --noEmit && vite build",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --ignore-pattern src/lib/ipc.ts",
-    "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort"
+    "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
+    "@tauri-apps/api": "^2.1.1",
     "@vitejs/plugin-react": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -24,6 +26,7 @@
     "vite": "^6.0.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0"
   }
