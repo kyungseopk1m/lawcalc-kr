@@ -1,0 +1,38 @@
+{
+  "id": "case-003",
+  "title": "소촉법 자동 분할: 2019년 (15% → 12%)",
+  "source": "engine-internal-w2",
+  "notes": "2019-06-01 변경일을 경계로 두 segment 자동 생성. 각 segment는 표시용 floor, totalInterest는 raw 합계 floor (1원 차이 가능).",
+  "input": {
+    "principal": 10000000,
+    "startDate": "2019-01-01",
+    "endDate": "2019-12-31",
+    "legalRatePreset": "promotion",
+    "options": {
+      "mode": "totalDays",
+      "leapYear": "fixed365",
+      "includeFirstDay": false
+    }
+  },
+  "expected": {
+    "totalInterest": 1316712,
+    "grandTotal": 11316712,
+    "dataVersion": "legal-rates/v1.0.0",
+    "segments": [
+      {
+        "from": "2019-01-01",
+        "to": "2019-05-31",
+        "days": 150,
+        "rate": 0.15,
+        "interest": 616438
+      },
+      {
+        "from": "2019-06-01",
+        "to": "2019-12-31",
+        "days": 213,
+        "rate": 0.12,
+        "interest": 700273
+      }
+    ]
+  }
+}

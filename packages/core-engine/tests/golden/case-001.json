@@ -1,0 +1,31 @@
+{
+  "id": "case-001",
+  "title": "민법 5% × 1년 정확 (총일수식, fixed365, 초일 불산입)",
+  "source": "engine-internal-w2",
+  "notes": "가장 단순한 평이 케이스. 1_000_000 × 5% × 365/365 = 50,000. 회귀 고정용.",
+  "input": {
+    "principal": 1000000,
+    "startDate": "2023-01-01",
+    "endDate": "2024-01-01",
+    "legalRatePreset": "civil",
+    "options": {
+      "mode": "totalDays",
+      "leapYear": "fixed365",
+      "includeFirstDay": false
+    }
+  },
+  "expected": {
+    "totalInterest": 50000,
+    "grandTotal": 1050000,
+    "dataVersion": "legal-rates/v1.0.0",
+    "segments": [
+      {
+        "from": "2023-01-01",
+        "to": "2024-01-01",
+        "days": 365,
+        "rate": 0.05,
+        "interest": 50000
+      }
+    ]
+  }
+}

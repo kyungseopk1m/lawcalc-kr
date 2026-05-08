@@ -1,0 +1,31 @@
+{
+  "id": "case-002",
+  "title": "상법 6% × 100일 (총일수식, fixed365, 초일 불산입)",
+  "source": "engine-internal-w2",
+  "notes": "1년 미만 단일 구간. 2_000_000 × 6% × 100/365 = 32,876.71... → floor 32,876.",
+  "input": {
+    "principal": 2000000,
+    "startDate": "2024-01-01",
+    "endDate": "2024-04-10",
+    "legalRatePreset": "commercial",
+    "options": {
+      "mode": "totalDays",
+      "leapYear": "fixed365",
+      "includeFirstDay": false
+    }
+  },
+  "expected": {
+    "totalInterest": 32876,
+    "grandTotal": 2032876,
+    "dataVersion": "legal-rates/v1.0.0",
+    "segments": [
+      {
+        "from": "2024-01-01",
+        "to": "2024-04-10",
+        "days": 100,
+        "rate": 0.06,
+        "interest": 32876
+      }
+    ]
+  }
+}

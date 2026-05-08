@@ -1,0 +1,41 @@
+{
+  "id": "case-006",
+  "title": "명시 segments × customRate (구간별 다른 이율)",
+  "source": "engine-internal-w2",
+  "notes": "당사자 합의 이율을 두 구간으로 분할 적용. 1차 5%, 2차 10%. totalDays/fixed365/no-first.",
+  "input": {
+    "principal": 5000000,
+    "startDate": "2024-01-01",
+    "endDate": "2024-12-31",
+    "segments": [
+      { "from": "2024-01-01", "to": "2024-06-30", "rate": 0.05 },
+      { "from": "2024-07-01", "to": "2024-12-31", "rate": 0.1 }
+    ],
+    "options": {
+      "mode": "totalDays",
+      "leapYear": "fixed365",
+      "includeFirstDay": false
+    }
+  },
+  "expected": {
+    "totalInterest": 374657,
+    "grandTotal": 5374657,
+    "dataVersion": "legal-rates/v1.0.0",
+    "segments": [
+      {
+        "from": "2024-01-01",
+        "to": "2024-06-30",
+        "days": 181,
+        "rate": 0.05,
+        "interest": 123972
+      },
+      {
+        "from": "2024-07-01",
+        "to": "2024-12-31",
+        "days": 183,
+        "rate": 0.1,
+        "interest": 250684
+      }
+    ]
+  }
+}
