@@ -46,9 +46,16 @@ mod tests {
 
     #[test]
     fn user_facing_prefixes_are_korean() {
-        assert!(Error::InvalidPath("/x/y".into()).to_string().starts_with("잘못된 파일 경로"));
-        assert!(Error::InvalidSchema("v9".into()).to_string().starts_with("지원하지 않는 .lcalc 형식"));
-        assert_eq!(Error::Other("끝수처리 실패".into()).to_string(), "끝수처리 실패");
+        assert!(Error::InvalidPath("/x/y".into())
+            .to_string()
+            .starts_with("잘못된 파일 경로"));
+        assert!(Error::InvalidSchema("v9".into())
+            .to_string()
+            .starts_with("지원하지 않는 .lcalc 형식"));
+        assert_eq!(
+            Error::Other("끝수처리 실패".into()).to_string(),
+            "끝수처리 실패"
+        );
     }
 
     #[test]

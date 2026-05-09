@@ -28,8 +28,7 @@ use super::result_view::{
     format_currency, format_rate_percent, options_summary, ResultView, DISCLAIMER_KO,
 };
 
-const PRETENDARD_REGULAR: &[u8] =
-    include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
+const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -206,7 +205,10 @@ impl<'a> PageWriter<'a> {
 
     fn draw_summary_block(&mut self, view: &ResultView) {
         let lines: [(String, String); 5] = [
-            ("원금".into(), format!("{} 원", format_currency(view.principal))),
+            (
+                "원금".into(),
+                format!("{} 원", format_currency(view.principal)),
+            ),
             (
                 "이자 합계".into(),
                 format!("{} 원", format_currency(view.total_interest)),
@@ -268,15 +270,9 @@ impl<'a> PageWriter<'a> {
                 x += w;
             }
             // formula column
-            let formula_x =
-                self.left() + COL_WIDTHS[..4].iter().sum::<f32>() + 1.0;
+            let formula_x = self.left() + COL_WIDTHS[..4].iter().sum::<f32>() + 1.0;
             for (i, line) in formula_lines.iter().enumerate() {
-                self.text(
-                    line,
-                    8.0,
-                    formula_x,
-                    self.y - 1.0 - 4.2 * i as f32,
-                );
+                self.text(line, 8.0, formula_x, self.y - 1.0 - 4.2 * i as f32);
             }
         }
 
@@ -384,10 +380,13 @@ mod tests {
 
     #[test]
     fn produces_pdf_with_pdf_header() {
-        let bytes =
-            render_pdf_bytes(&sample(), &PdfOptions::default()).expect("render pdf");
+        let bytes = render_pdf_bytes(&sample(), &PdfOptions::default()).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
-        assert!(bytes.len() > 1500, "pdf suspiciously small: {}", bytes.len());
+        assert!(
+            bytes.len() > 1500,
+            "pdf suspiciously small: {}",
+            bytes.len()
+        );
     }
 
     #[test]
@@ -419,10 +418,13 @@ mod tests {
         view.segments.clear();
         view.total_interest = 0.0;
         view.grand_total = view.principal;
-        let bytes =
-            render_pdf_bytes(&view, &PdfOptions::default()).expect("render pdf");
+        let bytes = render_pdf_bytes(&view, &PdfOptions::default()).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
-        assert!(bytes.len() > 1500, "pdf suspiciously small: {}", bytes.len());
+        assert!(
+            bytes.len() > 1500,
+            "pdf suspiciously small: {}",
+            bytes.len()
+        );
     }
 
     /// Manual visual check: writes a sample PDF to `/tmp/lawcalc-sample.pdf`

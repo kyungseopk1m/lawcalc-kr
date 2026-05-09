@@ -87,6 +87,17 @@ git push origin :refs/tags/v0.0.0-dryrun.1
 
 For v0.1.0, the draft release body must include Korean user notes, download guidance, the legal disclaimer, and `.lcalc` schemaVersion `1` compatibility.
 
+## Dry-Run Sanity Checklist
+
+C-W7 and C-W8 showed that a successful Tauri build is not enough release evidence. C-W7 produced v0.1.0 artifacts that built successfully but panicked on startup because `tauri.conf.json` had invalid empty plugin config objects. C-W8 then found that v0.1.1 started but froze after native dialog selection because sync Tauri commands called blocking dialog APIs on the main thread.
+
+For every public draft release, complete these checks before publishing:
+
+1. Install or unpack the generated macOS `.app` and Windows `.msi`, then launch each artifact once. This is the startup panic gate added after C-W7.
+2. Click all five export / save / load actions once: PDF export, CSV export, clipboard copy, `.lcalc` save, and `.lcalc` load. For dialog-backed actions, choose a real path and confirm the app returns to an interactive state. This is the dialog freeze gate added after C-W8.
+3. Enter the case-001-equivalent input and confirm the total interest result is `49,863`, not the old rough `50,000` expectation.
+4. Confirm the app info dialog, artifact filename, `tauri.conf.json`, Cargo package version, and release tag all use the same version.
+
 ## Artifact Review
 
 For each draft release, check:
