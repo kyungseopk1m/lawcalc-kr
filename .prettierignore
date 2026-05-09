@@ -1,0 +1,24 @@
+# Lockfiles (managed by pnpm)
+pnpm-lock.yaml
+
+# Generated TypeScript datasets (regenerated on every build/test by
+# scripts/sync-legal-rates.mjs)
+packages/core-engine/src/legal-rates.dataset.generated.ts
+**/*.generated.ts
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Rust / Tauri
+target/
+apps/*/src-tauri/target/
+apps/*/src-tauri/gen/
+
+# Reference cache (HWP-converted material kept locally)
+.hwp-cache/
+
+# Golden test scratch
+tests/golden/_wip/
+packages/*/tests/golden/_wip/

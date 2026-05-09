@@ -76,7 +76,11 @@ const input: InterestInput = {
   startDate: "2023-01-01",
   endDate: "2024-01-01",
   legalRatePreset: "civil",
-  options: { mode: "totalDays", leapYear: "fixed365", includeFirstDay: false } satisfies CalcOptions,
+  options: {
+    mode: "totalDays",
+    leapYear: "fixed365",
+    includeFirstDay: false,
+  } satisfies CalcOptions,
 };
 
 // (1) 기본 호출 — bundled dataset, dataVersion = "legal-rates/v1.0.0"
@@ -86,7 +90,15 @@ const def = calculateInterest(input);
 const future: LegalRateDataset = {
   version: "9.9.9-test",
   updatedAt: "2030-01-01",
-  rates: [{ code: "civil", label_ko: "test 7%", annualRate: 0.07, validFrom: "1958-02-22", validTo: null }],
+  rates: [
+    {
+      code: "civil",
+      label_ko: "test 7%",
+      annualRate: 0.07,
+      validFrom: "1958-02-22",
+      validTo: null,
+    },
+  ],
 };
 const inj = calculateInterest(input, { dataset: future });
 // inj.totalInterest = 70_000, inj.dataVersion = "legal-rates/v9.9.9-test"
@@ -178,13 +190,13 @@ packages/core-engine/
 
 ## 스크립트
 
-| 명령                                                       | 동작                                                          |
-| ---------------------------------------------------------- | ------------------------------------------------------------- |
-| `pnpm --filter @lawcalc-kr/core-engine sync:legal-rates`   | `data/legal-rates/v1.json` → `src/legal-rates.dataset.generated.ts` |
-| `pnpm --filter @lawcalc-kr/core-engine build`              | `prebuild` (sync) → `tsc -p tsconfig.build.json` → `dist/`    |
-| `pnpm --filter @lawcalc-kr/core-engine lint`               | `eslint src tests`                                            |
-| `pnpm --filter @lawcalc-kr/core-engine test`               | `pretest` (sync) → 단위 테스트 (`tests/golden.test.ts` 제외)  |
-| `pnpm --filter @lawcalc-kr/core-engine test:golden`        | 골든 테스트                                                   |
+| 명령                                                     | 동작                                                                |
+| -------------------------------------------------------- | ------------------------------------------------------------------- |
+| `pnpm --filter @lawcalc-kr/core-engine sync:legal-rates` | `data/legal-rates/v1.json` → `src/legal-rates.dataset.generated.ts` |
+| `pnpm --filter @lawcalc-kr/core-engine build`            | `prebuild` (sync) → `tsc -p tsconfig.build.json` → `dist/`          |
+| `pnpm --filter @lawcalc-kr/core-engine lint`             | `eslint src tests`                                                  |
+| `pnpm --filter @lawcalc-kr/core-engine test`             | `pretest` (sync) → 단위 테스트 (`tests/golden.test.ts` 제외)        |
+| `pnpm --filter @lawcalc-kr/core-engine test:golden`      | 골든 테스트                                                         |
 
 루트에서 `pnpm test` / `pnpm test:golden` / `pnpm lint` / `pnpm build` 도 모두 본 패키지를
 포함한다 (워크스페이스 단위).

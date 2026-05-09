@@ -40,10 +40,7 @@ function clipRange(
  *
  * 반환된 segments 는 항상 from <= to, 인접 구간 to+1 == 다음 from, 모두 [start, end] 안.
  */
-export function resolveSegments(
-  input: InterestInput,
-  deps?: ResolveSegmentsDeps,
-): RateSegment[] {
+export function resolveSegments(input: InterestInput, deps?: ResolveSegmentsDeps): RateSegment[] {
   const { startDate, endDate, segments, legalRatePreset } = input;
   if (parseIsoDateUtc(endDate) < parseIsoDateUtc(startDate)) {
     throw new RangeError(`resolveSegments: endDate (${endDate}) < startDate (${startDate})`);

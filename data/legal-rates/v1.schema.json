@@ -51,10 +51,7 @@
           "description": "현행 이율 시행일."
         },
         "validTo": {
-          "anyOf": [
-            { "type": "null" },
-            { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
-          ],
+          "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }],
           "description": "현행 이율 종료일. null = 무기한 유효."
         },
         "previousVersions": {

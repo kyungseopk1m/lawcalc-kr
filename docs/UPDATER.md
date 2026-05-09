@@ -62,10 +62,10 @@ pnpm tauri signer generate -w ~/.tauri/lawcalc-kr.key
 
 ### 3. 채널 전략
 
-| 채널 | 태그 패턴 | 대상 |
-|------|----------|------|
-| stable | `v*.*.*` (e.g. `v0.2.0`) | 일반 사용자 |
-| (미정) beta | `v*.*.*-beta.*` | 향후 검토 |
+| 채널        | 태그 패턴                | 대상        |
+| ----------- | ------------------------ | ----------- |
+| stable      | `v*.*.*` (e.g. `v0.2.0`) | 일반 사용자 |
+| (미정) beta | `v*.*.*-beta.*`          | 향후 검토   |
 
 v0.2에서는 stable 단일 채널만 운영.
 
@@ -113,8 +113,8 @@ IPC 시그니처 (A·B와 합의 필요):
 
 ```typescript
 // ipc.ts
-export async function checkUpdate(): Promise<string | null>
-export async function installUpdate(): Promise<void>
+export async function checkUpdate(): Promise<string | null>;
+export async function installUpdate(): Promise<void>;
 ```
 
 ---
@@ -139,13 +139,13 @@ export async function installUpdate(): Promise<void>
 
 ## 관련 파일 (v0.2 변경 예정)
 
-| 파일 | 변경 주체 |
-|------|----------|
-| `apps/desktop/src-tauri/Cargo.toml` | C |
-| `apps/desktop/src-tauri/src/lib.rs` | C |
-| `apps/desktop/src-tauri/src/commands/updater.rs` | C (신규) |
-| `apps/desktop/src-tauri/capabilities/default.json` | C |
-| `apps/desktop/src-tauri/tauri.conf.json` | C + D |
-| `apps/desktop/src/lib/ipc.ts` | C (시그니처) |
-| `.github/workflows/release.yml` | D |
-| `docs/RELEASE.md` | D |
+| 파일                                               | 변경 주체    |
+| -------------------------------------------------- | ------------ |
+| `apps/desktop/src-tauri/Cargo.toml`                | C            |
+| `apps/desktop/src-tauri/src/lib.rs`                | C            |
+| `apps/desktop/src-tauri/src/commands/updater.rs`   | C (신규)     |
+| `apps/desktop/src-tauri/capabilities/default.json` | C            |
+| `apps/desktop/src-tauri/tauri.conf.json`           | C + D        |
+| `apps/desktop/src/lib/ipc.ts`                      | C (시그니처) |
+| `.github/workflows/release.yml`                    | D            |
+| `docs/RELEASE.md`                                  | D            |
