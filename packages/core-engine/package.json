@@ -3,6 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "description": "Pure TypeScript calculation engine for lawcalc-kr (Korean legal interest calculation). Decoupled from any UI shell so it can be unit-tested and golden-tested in isolation.",
+  "license": "BUSL-1.1",
+  "author": "kyungseopk1m",
+  "homepage": "https://github.com/kyungseopk1m/lawcalc-kr#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kyungseopk1m/lawcalc-kr.git",
+    "directory": "packages/core-engine"
+  },
+  "bugs": {
+    "url": "https://github.com/kyungseopk1m/lawcalc-kr/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

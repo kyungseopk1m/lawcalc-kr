@@ -95,3 +95,7 @@ pnpm tauri:build
 lawcalc-kr is a Korean legal calculation desktop workbench for reviewing judgment interest and statutory delay damages. The project is independent from Korean court software and does not use court logos, screens, or reverse-engineered program internals.
 
 The MVP focuses on interest calculation with transparent formulas, legal references, reproducible data versions, and local-only processing on macOS and Windows.
+
+### License
+
+Distributed under the Business Source License 1.1 with a Change Date of 2031-05-09, after which the licensed work converts to the Apache License 2.0. See [LICENSE](LICENSE) and [LICENSE.future](LICENSE.future) for the full text.
