@@ -1,5 +1,5 @@
 import { addDays, addYears, containsLeapDay, countDays, parseIsoDateUtc } from "./days";
-import { datasetVersionTag, loadLegalRates } from "./legal-rates";
+import { datasetVersionTag, loadLegalRates, type LegalRateDataset } from "./legal-rates";
 import { resolveSegments } from "./segments";
 import type {
   CalcOptions,
@@ -9,6 +9,15 @@ import type {
   IsoDate,
   RateSegment,
 } from "./types";
+
+/**
+ * `calculateInterest` 의 두 번째 인자. 도메인 추가 시 `{ datasets: { ... } }` 로 일반화된다 (B9, v0.2).
+ *
+ * `dataset` 미지정 시 bundled `data/legal-rates/v1.json` 으로 동작 (회귀 호환).
+ */
+export interface CalculateInterestDeps {
+  dataset?: LegalRateDataset;
+}
 
 /**
  * 한 구간의 이자 계산.
@@ -195,15 +204,18 @@ function applyRounding(value: number, mode: RoundingMode): number {
  * - segment-floor 합과 totalInterest(raw 합계 floor) 간 ≤ 3원 차이는 v1과 동일하게 가능
  *   ("floor accumulation" edge.test.ts 회귀로 고정)
  */
-export function calculateInterest(input: InterestInput): InterestResult {
+export function calculateInterest(
+  input: InterestInput,
+  deps?: CalculateInterestDeps,
+): InterestResult {
   if (input.principal <= 0) {
     throw new RangeError(`calculateInterest: principal must be > 0 (got ${input.principal})`);
   }
   if (!Number.isFinite(input.principal)) {
     throw new RangeError("calculateInterest: principal must be a finite number");
   }
-  const segments = resolveSegments(input);
-  const dataset = loadLegalRates();
+  const dataset = loadLegalRates(deps?.dataset);
+  const segments = resolveSegments(input, { dataset });
   const rounding: RoundingMode = input.options.rounding ?? "floor";
 
   let rawTotal = 0;

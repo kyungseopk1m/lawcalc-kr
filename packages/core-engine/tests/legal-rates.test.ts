@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  datasetVersionTag,
-  getRateAt,
-  loadLegalRates,
-  rateHistoryFor,
-  type LegalRateDataset,
-} from "../src";
+import { datasetVersionTag, getRateAt, rateHistoryFor, type LegalRateDataset } from "../src";
+import { loadLegalRates } from "../src/legal-rates";
 
 describe("loadLegalRates default dataset", () => {
   it("loads inline default and validates", () => {

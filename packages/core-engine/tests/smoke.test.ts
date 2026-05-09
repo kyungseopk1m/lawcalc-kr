@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateInterest,
   countDays,
-  loadLegalRates,
+  datasetVersionTag,
   resolveSegments,
   type CalcOptions,
   type InterestInput,
@@ -14,7 +14,7 @@ describe("@lawcalc-kr/core-engine package surface", () => {
     expect(typeof calculateInterest).toBe("function");
     expect(typeof countDays).toBe("function");
     expect(typeof resolveSegments).toBe("function");
-    expect(typeof loadLegalRates).toBe("function");
+    expect(typeof datasetVersionTag).toBe("function");
   });
 
   it("computes a basic civil-rate result end-to-end (W2 sanity)", () => {

@@ -1,6 +1,13 @@
 import { addDays, maxDate, minDate, parseIsoDateUtc } from "./days";
-import { loadLegalRates, rateHistoryFor } from "./legal-rates";
+import { type LegalRateDataset, loadLegalRates, rateHistoryFor } from "./legal-rates";
 import type { InterestInput, IsoDate, LegalRatePreset, RateSegment } from "./types";
+
+/**
+ * `resolveSegments` 의 두 번째 인자. dataset 주입 (B9, v0.2). 미지정 시 bundled dataset.
+ */
+export interface ResolveSegmentsDeps {
+  dataset?: LegalRateDataset;
+}
 
 function isCustomRate(p: LegalRatePreset): p is { customRate: number } {
   return typeof p === "object" && p !== null && "customRate" in p;
@@ -33,7 +40,10 @@ function clipRange(
  *
  * 반환된 segments 는 항상 from <= to, 인접 구간 to+1 == 다음 from, 모두 [start, end] 안.
  */
-export function resolveSegments(input: InterestInput): RateSegment[] {
+export function resolveSegments(
+  input: InterestInput,
+  deps?: ResolveSegmentsDeps,
+): RateSegment[] {
   const { startDate, endDate, segments, legalRatePreset } = input;
   if (parseIsoDateUtc(endDate) < parseIsoDateUtc(startDate)) {
     throw new RangeError(`resolveSegments: endDate (${endDate}) < startDate (${startDate})`);
@@ -59,7 +69,7 @@ export function resolveSegments(input: InterestInput): RateSegment[] {
     return [{ from: startDate, to: endDate, rate: legalRatePreset.customRate }];
   }
 
-  const dataset = loadLegalRates();
+  const dataset = loadLegalRates(deps?.dataset);
   const history = rateHistoryFor(dataset, legalRatePreset);
   if (history.length === 0) {
     throw new Error(`resolveSegments: unknown legalRatePreset "${legalRatePreset}"`);

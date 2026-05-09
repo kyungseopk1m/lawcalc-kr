@@ -29,8 +29,11 @@
     "README.md"
   ],
   "scripts": {
+    "sync:legal-rates": "node scripts/sync-legal-rates.mjs",
+    "prebuild": "node scripts/sync-legal-rates.mjs",
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src tests",
+    "pretest": "node scripts/sync-legal-rates.mjs",
     "test": "vitest run",
     "test:golden": "vitest run --config vitest.golden.config.ts"
   },

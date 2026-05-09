@@ -10,8 +10,10 @@ export type {
 } from "./types";
 
 export type { LegalRateDataset, LegalRateRecord } from "./legal-rates";
+export type { CalculateInterestDeps } from "./interest";
+export type { ResolveSegmentsDeps } from "./segments";
 
 export { calculateInterest } from "./interest";
 export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "./days";
 export { resolveSegments } from "./segments";
-export { datasetVersionTag, getRateAt, loadLegalRates, rateHistoryFor } from "./legal-rates";
+export { datasetVersionTag, getRateAt, rateHistoryFor } from "./legal-rates";

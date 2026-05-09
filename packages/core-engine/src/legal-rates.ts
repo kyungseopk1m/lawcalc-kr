@@ -1,3 +1,4 @@
+import { DEFAULT_LEGAL_RATES_DATASET } from "./legal-rates.dataset.generated";
 import type { IsoDate, LegalRateCode } from "./types";
 
 /**
@@ -27,45 +28,16 @@ export interface LegalRateDataset {
 }
 
 /**
- * core-engine 안에 인라인된 기본 데이터셋. 워크스페이스 루트 `data/legal-rates/v1.json`과
- * 동기화한다 (수동). 패키지를 npm 단독 배포해도 동작하도록 inline.
+ * 기본 법정이율 데이터셋. 워크스페이스 루트 `data/legal-rates/v1.json`이 single source 이며,
+ * `scripts/sync-legal-rates.mjs` 가 빌드 타임에 `legal-rates.dataset.generated.ts` 로 인라인한다.
+ * 수동 동기화하지 않는다.
  *
  * 출처:
  * - 민법 제379조 (1958-02-22 시행, 연 5%)
  * - 상법 제54조 (1962-01-20 시행, 연 6%)
  * - 소송촉진 등에 관한 특례법 제3조 (대통령령 변경 이력 포함)
  */
-const DEFAULT_DATASET: LegalRateDataset = {
-  version: "1.0.0",
-  updatedAt: "2026-05-09",
-  rates: [
-    {
-      code: "civil",
-      label_ko: "민법 제379조 (법정이율)",
-      annualRate: 0.05,
-      validFrom: "1958-02-22",
-      validTo: null,
-    },
-    {
-      code: "commercial",
-      label_ko: "상법 제54조 (상사법정이율)",
-      annualRate: 0.06,
-      validFrom: "1962-01-20",
-      validTo: null,
-    },
-    {
-      code: "promotion",
-      label_ko: "소송촉진 등에 관한 특례법 제3조",
-      annualRate: 0.12,
-      validFrom: "2019-06-01",
-      validTo: null,
-      previousVersions: [
-        { annualRate: 0.15, validFrom: "2015-10-01", validTo: "2019-05-31" },
-        { annualRate: 0.2, validFrom: "2003-06-01", validTo: "2015-09-30" },
-      ],
-    },
-  ],
-};
+const DEFAULT_DATASET: LegalRateDataset = DEFAULT_LEGAL_RATES_DATASET;
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -116,6 +88,10 @@ function validate(dataset: LegalRateDataset): void {
 
 /**
  * 기본 인라인 데이터셋 또는 호출자가 제공한 외부 데이터셋을 검증해 반환한다.
+ *
+ * @internal core-engine 내부 전용. 외부 consumer 는 `calculateInterest(input, { dataset })`
+ * 으로 dataset 을 주입한다 (B9, v0.2). 본 함수는 시그니처 호환을 위해 export 를 유지하지만
+ * `index.ts` public surface 에서는 빠진다.
  */
 export function loadLegalRates(override?: LegalRateDataset): LegalRateDataset {
   const dataset = override ?? DEFAULT_DATASET;
