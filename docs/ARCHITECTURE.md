@@ -109,6 +109,10 @@ Compatibility rules:
 - preserve `note` and unknown top-level fields on load/save when possible;
 - reject files that do not contain a parseable `input` object.
 
+## PDF Engine
+
+PDF export uses [`printpdf`](https://crates.io/crates/printpdf) 0.7. We chose it over `typst-as-library` and any HTML-to-PDF route because the report is a single-page tabular form: the typst compiler would inflate the desktop binary by tens of megabytes for layout features we do not need, and a Chromium-based pipeline would add a runtime dependency to a local-first app. `printpdf` is pure Rust, has a stable manual-layout API, and supports embedded TrueType fonts with subsetting. Pretendard Regular (SIL OFL 1.1) ships at `apps/desktop/src-tauri/assets/fonts/Pretendard-Regular.ttf` and is embedded via `include_bytes!` so Korean glyphs render without relying on the host font cache; the OFL text is preserved next to the binary as `Pretendard-OFL.txt`. The exporter writes title, summary block, segment table, optional note, and a footer with disclaimer, `dataVersion`, and `computedAt` — the same fields that appear on screen.
+
 ## Non-Goals
 
 - This project is not a clone or port of any court-distributed executable.

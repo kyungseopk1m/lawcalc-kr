@@ -9,6 +9,9 @@ pub enum Error {
     #[error("serialization error: {0}")]
     Serde(#[from] serde_json::Error),
 
+    #[error("csv error: {0}")]
+    Csv(#[from] csv::Error),
+
     #[error("not implemented: {0}")]
     NotImplemented(&'static str),
 

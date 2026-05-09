@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { CalcOptions, InterestInput, InterestResult } from "@lawcalc-kr/core-engine";
 
 export interface PdfOptions {
-  path: string;
+  /** Optional free-form note rendered below the segment table. */
   note?: string;
 }
 
@@ -27,11 +27,19 @@ export interface LcalcFile {
 }
 
 export const ipc = {
-  exportPdf(input: InterestResult, options: PdfOptions): Promise<string> {
-    return invoke<string>("export_pdf", { input, options });
+  /**
+   * Opens a save dialog and writes a PDF report. Resolves to the chosen path,
+   * or `null` if the user cancelled the dialog.
+   */
+  exportPdf(result: InterestResult, options?: PdfOptions): Promise<string | null> {
+    return invoke<string | null>("export_pdf", { result, options: options ?? null });
   },
-  exportCsv(input: InterestResult, path: string): Promise<void> {
-    return invoke("export_csv", { input, path });
+  /**
+   * Opens a save dialog and writes a UTF-8 BOM CSV (Excel-friendly).
+   * Resolves to the chosen path, or `null` if the user cancelled.
+   */
+  exportCsv(result: InterestResult): Promise<string | null> {
+    return invoke<string | null>("export_csv", { result });
   },
   /**
    * Opens a save dialog and writes the payload as pretty-printed JSON.
