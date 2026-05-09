@@ -118,16 +118,17 @@ describe("edge: same-day span", () => {
   });
 });
 
-describe("edge: period mode days = formula 분자 일수 합 (TIER-A #1 회귀)", () => {
-  it("윤년 02-29 시작 + 02-28 도달 (addYears clip) + period actual + 초일산입: days = cycle 일수 + partial", () => {
+describe("edge: period mode days = formula 분자 일수 합 (TIER-A #1 + #2 회귀)", () => {
+  it("윤년 02-29 시작 + 02-28 만료 = 정확히 1년 (민법 159·160, A-W8 = 변호사 A안 채택)", () => {
     // segment.from=2024-02-29, segment.to=2025-02-28, includeFirstDay=true.
-    // 캘린더 inclusive = 365 일이지만, period 분기는 fullYears=1 + partialDays=1 로 분해된다.
-    // - cursor=2024-02-29, addYears(cursor,1)=2025-02-28 (02-29 → 02-28 clip),
-    //   fullYearEnd = addDays(2025-02-28, -1) = 2025-02-27 ≤ 2025-02-28 → fullYears=1.
-    // - cursor=2025-02-28, partialStart=2025-02-28, partialDays = 1.
-    // - cycle 일수 = (2025-02-28 - 2024-02-29) = 365 일.
-    // - days = 365 + 1 = 366 (formula 분자 합과 일치).
-    // 기존 (fix 전) 은 days=countDays(from,to,options) = 365 로, formula "1년 + 1일 / 365" 와 어긋났다.
+    // 민법 160조 3항 "해당일 없는 때 그 월의 말일" → [2024-02-29, 2025-02-28] = 정확히 1년.
+    // - cursor=2024-02-29, periodCycleEnd → end=2025-02-28 (clip 자체), nextCursor=2025-03-01.
+    //   2025-02-28 ≤ 2025-02-28 → fullYears=1.
+    // - cursor=2025-03-01, periodCycleEnd → end=2026-02-28 > 2025-02-28 → break.
+    // - partialStart=2025-03-01 > segment.to → partialDays=0.
+    // - cycle 일수 = 366 (2024-02-29..2025-02-28 inclusive, 윤일 포함). days = 366 + 0 = 366.
+    // - formula = "1년 × 1,000,000원 × 5%" (partial 없음).
+    // - interest = 1 × 1_000_000 × 0.05 = 50_000 (50,136 → 50,000 정정).
     const result = calculateInterest({
       principal: 1_000_000,
       startDate: "2024-02-29",
@@ -137,9 +138,31 @@ describe("edge: period mode days = formula 분자 일수 합 (TIER-A #1 회귀)"
     });
     expect(result.segments[0]!.days).toBe(366);
     expect(result.segments[0]!.formula).toContain("1년 ×");
-    expect(result.segments[0]!.formula).toContain("× 1일 / 365");
-    // interest: 1_000_000 × 0.05 × (1 + 1/365) = 50_136.986… → floor 50_136
-    expect(result.totalInterest).toBe(50_136);
+    expect(result.segments[0]!.formula).not.toContain("/ 365");
+    expect(result.segments[0]!.formula).not.toContain("/ 366");
+    expect(result.totalInterest).toBe(50_000);
+  });
+
+  it("윤년 02-29 시작 + 1년 + 15일 partial (cycle 흡수 + 다음 cursor 03-01)", () => {
+    // [2024-02-29, 2025-03-15], includeFirstDay=true, period actual.
+    // - cycle1 만료 = 2025-02-28 (clip 흡수), 다음 cursor = 2025-03-01.
+    // - cycle2 시도: end=2026-02-28 > 2025-03-15 → break. partialStart=2025-03-01.
+    // - partialDays = 2025-03-01..2025-03-15 = 15.
+    // - denom (actual): containsLeapDay(2025-03-01, 2026-02-28) → 윤일 없음 → 365.
+    // - cycle 일수 = 366 (2024-02-29..2025-02-28 inclusive, 윤일 포함). days = 366 + 15 = 381.
+    // - interestRaw = 50_000 + 1_000_000 × 0.05 × 15 / 365 = 50_000 + 2_054.794… = 52_054.794…
+    // - floor 52_054.
+    const result = calculateInterest({
+      principal: 1_000_000,
+      startDate: "2024-02-29",
+      endDate: "2025-03-15",
+      legalRatePreset: "civil",
+      options: { mode: "period", leapYear: "actual", includeFirstDay: true },
+    });
+    expect(result.segments[0]!.days).toBe(381);
+    expect(result.segments[0]!.formula).toContain("1년 ×");
+    expect(result.segments[0]!.formula).toContain("× 15일 / 365");
+    expect(result.totalInterest).toBe(52_054);
   });
 });
 
@@ -225,6 +248,37 @@ describe("edge: addYears / addDays / countDays at long span", () => {
     expect(
       countDays("1924-01-01", "2024-01-01", { leapYear: "actual", includeFirstDay: false }),
     ).toBe(36_525);
+  });
+});
+
+describe("edge: 소수 이율(12.345%) floating-point 누적 (TIER-A #7 회귀)", () => {
+  it("0.12345 × period 5년 풀 + partial 0 = 정확 누적 floor 617_250", () => {
+    // 1_000_000 × 0.12345 = 123_450 (IEEE 754 round-trip: 123_450.00000000001)
+    // 풀 5년 raw = fullYears × principal × rate = 5 × 1_000_000 × 0.12345
+    //          = 617_250.0000000001 → floor 617_250
+    // 사용자 테스트 (12.345% 등 비정수 이율) 에서 floor 결과가 흔들리지 않도록 회귀 고정.
+    const result = calculateInterest({
+      principal: 1_000_000,
+      startDate: "2020-01-01",
+      endDate: "2025-01-01",
+      legalRatePreset: { customRate: 0.12345 },
+      options: { mode: "period", leapYear: "fixed365", includeFirstDay: false },
+    });
+    expect(result.totalInterest).toBe(617_250);
+  });
+
+  it("0.12345 × period 1년 풀 + 100일 partial → floor 157_271", () => {
+    // effectiveStart=2020-01-02, fullYears=1 (~2021-01-01), partial 2021-01-02..2021-04-11=100일.
+    // raw = 1 × 1_000_000 × 0.12345 + 1_000_000 × 0.12345 × 100/365
+    //     = 123_450 + 33_821.917… = 157_271.917… → floor 157_271
+    const result = calculateInterest({
+      principal: 1_000_000,
+      startDate: "2020-01-01",
+      endDate: "2021-04-11",
+      legalRatePreset: { customRate: 0.12345 },
+      options: { mode: "period", leapYear: "fixed365", includeFirstDay: false },
+    });
+    expect(result.totalInterest).toBe(157_271);
   });
 });
 

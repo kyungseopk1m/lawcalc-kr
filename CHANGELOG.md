@@ -18,8 +18,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- 윤년 02-29 시작 + 비윤년 1년 후 만기 케이스의 풀 1년 cycle 정의를 민법 159·160조 통설로 정정했습니다. 변호사 답변(A안) 채택. 예: `[2024-02-29, 2025-02-28]` 은 정확히 1년 만료로 처리되며 (민법 160조 3항 "최종의 월에 해당일이 없는 때 그 월의 말일") 이자 = `1,000,000 × 5% = 50,000` 입니다 (이전 50,136 → 50,000). `addYears` 가 02-29 → 02-28 로 clip 한 결과 자체를 cycle 만료일로 인정하고 다음 cursor 를 03-01 로 잡는 `periodCycleEnd` 헬퍼를 도입했습니다 (`packages/core-engine/src/interest.ts`). 회귀 fixture `case-009` (정확 1년) + `case-010` (1년 + 15일 partial) 신규. 정책 단일 출처: `docs/INTEREST_FORMULAS.md` §4.1 + `docs/LEGAL_REFERENCES.md`.
+- 소수 이율(`12.345%` 등) 다구간 누적 시 부동소수점 결과가 흔들리지 않도록 `tests/edge.test.ts` 에 회귀 2건을 고정했습니다 (TIER-A #7).
 - `.lcalc` 로드 시 `legalRatePreset` 누락 또는 잘못된 custom rate 를 조용히 5%로 대체하지 않고 사용자에게 오류를 표시하도록 정리했습니다.
 - 입력 오류가 있는 상태에서 `.lcalc` 저장을 막고, 중복 액션 실행 중 재진입을 차단했습니다.
+
+### Documentation
+
+- `mode="totalDays"` + `leapYear="actual"` 가 1년 초과 구간에서 분모를 단일 (365 또는 366) 로 확정하는 한계를 `docs/INTEREST_FORMULAS.md` §3 caveat 으로 명시하고, 정확 비례 계산이 필요한 경우 `mode="period"` 사용을 권장합니다 (TIER-A #3 docs caveat).
 
 ## [0.1.2] - 2026-05-09
 

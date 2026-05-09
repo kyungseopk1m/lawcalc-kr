@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1",
+  "id": "case-009",
+  "title": "윤년 02-29 시작 + 02-28 만료 = 정확 1년 (민법 159·160, A안 채택)",
+  "source": "engine-internal-w8 (TIER-A #2 변호사 답변 = A안 채택)",
+  "notes": "2024-02-29 ~ 2025-02-28 + 초일산입 + period actual + civil 5%. 민법 160조 3항 '월 또는 연으로 정한 경우에 최종의 월에 해당일이 없는 때에는 그 월의 말일로 기간이 만료한다' 통설 → 풀 1년 만료, partial 0. cycle 일수 = 366 (2024-02-29..2025-02-28 inclusive, 윤일 포함). interest = 1 × 1,000,000 × 0.05 = 50,000.",
+  "input": {
+    "principal": 1000000,
+    "startDate": "2024-02-29",
+    "endDate": "2025-02-28",
+    "legalRatePreset": "civil",
+    "options": {
+      "mode": "period",
+      "leapYear": "actual",
+      "includeFirstDay": true
+    }
+  },
+  "expected": {
+    "totalInterest": 50000,
+    "grandTotal": 1050000,
+    "dataVersion": "legal-rates/v1.0.0",
+    "segments": [
+      {
+        "from": "2024-02-29",
+        "to": "2025-02-28",
+        "days": 366,
+        "rate": 0.05,
+        "interest": 50000
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1",
+  "id": "case-010",
+  "title": "윤년 02-29 시작 + 1년 풀 + 15일 partial (cycle 흡수 후 03-01 cursor)",
+  "source": "engine-internal-w8 (TIER-A #2 보조 회귀)",
+  "notes": "2024-02-29 ~ 2025-03-15 + 초일산입 + period actual + civil 5%. cycle1 만료 = 2025-02-28 (clip 흡수, fullYears=1), 다음 cursor = 2025-03-01, partial 2025-03-01..2025-03-15 = 15일. partial 분모: containsLeapDay(2025-03-01, 2026-02-28) → 윤일 없음 → 365. cycle 일수 = 366 (2024-02-29..2025-02-28 inclusive, 윤일 포함). raw = 50,000 + 1,000,000 × 0.05 × 15/365 = 50,000 + 2,054.794… = 52,054.794… → floor 52,054. days = 366 + 15 = 381.",
+  "input": {
+    "principal": 1000000,
+    "startDate": "2024-02-29",
+    "endDate": "2025-03-15",
+    "legalRatePreset": "civil",
+    "options": {
+      "mode": "period",
+      "leapYear": "actual",
+      "includeFirstDay": true
+    }
+  },
+  "expected": {
+    "totalInterest": 52054,
+    "grandTotal": 1052054,
+    "dataVersion": "legal-rates/v1.0.0",
+    "segments": [
+      {
+        "from": "2024-02-29",
+        "to": "2025-03-15",
+        "days": 381,
+        "rate": 0.05,
+        "interest": 52054
+      }
+    ]
+  }
+}

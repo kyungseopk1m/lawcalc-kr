@@ -46,20 +46,40 @@ function formatRatePercent(rate: number): string {
 }
 
 /**
+ * 1 cycle (cursor 부터 1년) 의 만료일과 다음 cursor.
+ *
+ * 민법 159·160조 통설:
+ * - 일반: cursor 의 1년 후 동일일자 전날이 만료일 (예: 2023-01-01 → 2023-12-31).
+ * - 예외 (160조 3항 "해당일 없는 때 그 월의 말일"): cursor 가 02-29 이고 다음 해가
+ *   비윤년이면 그 해 02-28 자체가 만료일이다 (예: 2024-02-29 → 2025-02-28).
+ *
+ * `addYears` 가 02-29 → 02-28 으로 clip 한 결과를 그대로 만료일로 채택하고,
+ * 다음 cursor 는 만료일 + 1 일로 잡는다. 이 한 곳에서 fullYears 루프와 periodDaysSum 이
+ * 동일한 만기 정의를 공유한다 (변호사 답변 A안 채택, TIER-A #2).
+ */
+function periodCycleEnd(cursor: IsoDate): { end: IsoDate; nextCursor: IsoDate } {
+  const nextSameDate = addYears(cursor, 1);
+  const isLeapClip = cursor.endsWith("-02-29") && nextSameDate.endsWith("-02-28");
+  const end = isLeapClip ? nextSameDate : addDays(nextSameDate, -1);
+  return { end, nextCursor: addDays(end, 1) };
+}
+
+/**
  * period 모드의 segment.days 재계산.
  *
- * `formula` 분자 일수 합과 일치시키기 위한 helper. 풀 1년 cycle 마다 실제 캘린더
- * 일수(365 또는 366, addYears clip 시는 cycle 시작과 다음 cursor 사이의 실 일수)를
- * 누적하고 마지막 partial 일수를 더한다. 사용자가 결과 표의 days 컬럼을 formula 의
- * 일수 합으로 검산할 때 비대칭이 생기지 않도록 보장한다.
+ * `formula` 분자 일수 합과 일치시키기 위한 helper. 풀 1년 cycle 마다 `periodCycleEnd`
+ * 가 정의한 cycle 의 실 일수를 누적하고 마지막 partial 일수를 더한다. 윤년 02-29
+ * 시작 cycle 은 365 일(만료 02-28 까지), 일반 cycle 은 윤일 포함 여부에 따라 365/366.
+ * 사용자가 결과 표의 days 컬럼을 formula 의 일수 합으로 검산할 때 비대칭이 생기지
+ * 않도록 보장한다.
  */
 function periodDaysSum(effectiveStart: IsoDate, fullYears: number, partialDays: number): number {
   let total = partialDays;
   let cursor: IsoDate = effectiveStart;
   for (let i = 0; i < fullYears; i++) {
-    const next = addYears(cursor, 1);
-    total += Math.round((parseIsoDateUtc(next) - parseIsoDateUtc(cursor)) / 86_400_000);
-    cursor = next;
+    const { nextCursor } = periodCycleEnd(cursor);
+    total += Math.round((parseIsoDateUtc(nextCursor) - parseIsoDateUtc(cursor)) / 86_400_000);
+    cursor = nextCursor;
   }
   return total;
 }
@@ -100,12 +120,12 @@ function computeSegmentInterest(
   let cursor: IsoDate = effectiveStart;
   let fullYears = 0;
   while (true) {
-    const nextYearStart = addYears(cursor, 1);
-    // 풀 1년: [cursor, nextYearStart - 1day] 가 segment.to 이내일 때
-    const fullYearEnd = addDays(nextYearStart, -1);
+    // 풀 1년 만료일은 민법 159·160 통설(`periodCycleEnd`) 을 따른다.
+    // 윤년 02-29 시작은 비윤년 02-28 자체가 만료일 (TIER-A #2 = A안 채택).
+    const { end: fullYearEnd, nextCursor } = periodCycleEnd(cursor);
     if (parseIsoDateUtc(fullYearEnd) <= parseIsoDateUtc(segment.to)) {
       fullYears += 1;
-      cursor = nextYearStart;
+      cursor = nextCursor;
     } else {
       break;
     }
