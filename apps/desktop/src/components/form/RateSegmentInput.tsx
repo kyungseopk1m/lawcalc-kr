@@ -52,58 +52,65 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
         <div className="grid gap-3">
           {value.map((segment, index) => (
             <div
-              className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-[1fr_1fr_110px_40px]"
+              className="space-y-3 rounded-md border border-border p-3"
               key={`${index}-${segment.from}-${segment.to}`}
             >
-              <label className="grid gap-1 text-xs font-medium">
-                시작일
-                <Input
-                  aria-describedby={error ? errorId : undefined}
-                  aria-invalid={Boolean(error)}
-                  type="date"
-                  value={segment.from}
-                  onChange={(event) =>
-                    onChange(updateSegment(value, index, "from", event.target.value))
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-1 text-xs font-medium">
+                  시작일
+                  <Input
+                    aria-describedby={error ? errorId : undefined}
+                    aria-invalid={Boolean(error)}
+                    type="date"
+                    value={segment.from}
+                    onChange={(event) =>
+                      onChange(updateSegment(value, index, "from", event.target.value))
+                    }
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-medium">
+                  종료일
+                  <Input
+                    aria-describedby={error ? errorId : undefined}
+                    aria-invalid={Boolean(error)}
+                    type="date"
+                    value={segment.to}
+                    onChange={(event) =>
+                      onChange(updateSegment(value, index, "to", event.target.value))
+                    }
+                  />
+                </label>
+              </div>
+              <div className="flex items-end gap-3">
+                <label className="grid flex-1 gap-1 text-xs font-medium">
+                  연이율(%)
+                  <Input
+                    aria-describedby={error ? errorId : undefined}
+                    aria-invalid={Boolean(error)}
+                    inputMode="decimal"
+                    min="0"
+                    step="0.1"
+                    type="number"
+                    value={segment.rate > 0 ? segment.rate * 100 : ""}
+                    onChange={(event) =>
+                      onChange(
+                        updateSegment(value, index, "rate", Number(event.target.value) / 100),
+                      )
+                    }
+                  />
+                </label>
+                <Button
+                  aria-label="이자율 구간 삭제"
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    onChange(value.filter((_, segmentIndex) => segmentIndex !== index))
                   }
-                />
-              </label>
-              <label className="grid gap-1 text-xs font-medium">
-                종료일
-                <Input
-                  aria-describedby={error ? errorId : undefined}
-                  aria-invalid={Boolean(error)}
-                  type="date"
-                  value={segment.to}
-                  onChange={(event) =>
-                    onChange(updateSegment(value, index, "to", event.target.value))
-                  }
-                />
-              </label>
-              <label className="grid gap-1 text-xs font-medium">
-                연이율(%)
-                <Input
-                  aria-describedby={error ? errorId : undefined}
-                  aria-invalid={Boolean(error)}
-                  inputMode="decimal"
-                  min="0"
-                  step="0.1"
-                  type="number"
-                  value={segment.rate > 0 ? segment.rate * 100 : ""}
-                  onChange={(event) =>
-                    onChange(updateSegment(value, index, "rate", Number(event.target.value) / 100))
-                  }
-                />
-              </label>
-              <Button
-                aria-label="이자율 구간 삭제"
-                className="self-end"
-                size="icon"
-                type="button"
-                variant="ghost"
-                onClick={() => onChange(value.filter((_, segmentIndex) => segmentIndex !== index))}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
-              </Button>
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>

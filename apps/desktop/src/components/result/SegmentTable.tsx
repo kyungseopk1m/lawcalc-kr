@@ -44,11 +44,13 @@ export function SegmentTable({ result }: SegmentTableProps) {
           {result.segments.map((segment) => (
             <SegmentRow key={`${segment.from}-${segment.to}`} segment={segment} />
           ))}
-          <tr className="border-t border-border bg-muted/50 font-semibold">
+          <tr className="border-t border-amber-200 bg-amber-50 font-semibold text-amber-900">
             <td className="px-3 py-3" colSpan={5}>
               합계
             </td>
-            <td className="px-3 py-3 text-right">{formatWon(result.totalInterest)}</td>
+            <td className="px-3 py-3 text-right text-amber-700">
+              {formatWon(result.totalInterest)}
+            </td>
           </tr>
         </tbody>
       </table>

@@ -20,7 +20,7 @@ export function DateRangeInput({
   return (
     <fieldset className="grid gap-2">
       <legend className="text-sm font-medium">계산 기간</legend>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-2 text-sm font-medium">
           시작일
           <Input

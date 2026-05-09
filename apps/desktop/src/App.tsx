@@ -22,6 +22,7 @@ import {
   type RateSegment,
 } from "@lawcalc-kr/core-engine";
 
+import { DisclaimerBar } from "./components/layout/DisclaimerBar";
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { DateRangeInput } from "./components/form/DateRangeInput";
@@ -400,8 +401,9 @@ export function App() {
       onKeyDown={handleKeyDown}
     >
       <Header />
+      <DisclaimerBar />
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,440px)_1fr]">
+      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
         <section className="space-y-4" aria-labelledby="input-title">
           <Card>
             <CardHeader>

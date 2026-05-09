@@ -23,8 +23,10 @@ function RadioOption({
   return (
     <label
       className={cn(
-        "flex min-h-10 items-center gap-2 rounded-md border border-input px-3 py-2 text-sm",
-        checked ? "border-primary bg-secondary text-secondary-foreground" : "bg-background",
+        "flex min-h-10 items-center gap-1.5 rounded-md border border-input px-2.5 py-2 text-sm",
+        checked
+          ? "border-primary bg-primary/5 font-medium text-primary"
+          : "bg-background hover:bg-muted/40",
       )}
     >
       <input id={id} checked={checked} name={name} type="radio" onChange={onChange} />
@@ -35,7 +37,7 @@ function RadioOption({
 
 export function OptionsPanel({ value, onChange }: OptionsPanelProps) {
   return (
-    <div className="grid gap-4 rounded-md border border-border bg-muted/40 p-4">
+    <div className="grid gap-4 rounded-md border border-border bg-muted/40 p-3">
       <fieldset className="grid gap-2">
         <legend className="text-sm font-medium">계산 방식</legend>
         <div className="grid gap-2 sm:grid-cols-2">
