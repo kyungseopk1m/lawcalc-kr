@@ -1,6 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { CalcOptions, InterestInput, InterestResult } from "@lawcalc-kr/core-engine";
+import type {
+  CalcOptions,
+  InheritanceInput,
+  InheritanceResult,
+  InterestInput,
+  InterestResult,
+} from "@lawcalc-kr/core-engine";
 
 export interface PdfOptions {
   /**
@@ -14,14 +20,11 @@ export interface PdfOptions {
 }
 
 /**
- * Wire-compatible `.lcalc` document. Mirrors the Rust `LcalcFile` struct in
- * `src-tauri/src/commands/lcalc.rs` and §5.4 of the project design.
- *
- * The Rust shell only enforces `schemaVersion`; the renderer is the source of
- * truth for `input` / `options` / `result` shapes.
+ * Legacy v1 `.lcalc` root document. Kept only as a renderer-side migration
+ * input shape for files saved by v0.1.x.
  */
-export interface LcalcFile {
-  schemaVersion: string;
+interface LcalcFileV1 {
+  schemaVersion: "1";
   appVersion: string;
   dataVersion: string;
   createdAt: string;
@@ -31,6 +34,29 @@ export interface LcalcFile {
   note?: string;
   disclaimer: string;
 }
+
+export interface LcalcInterestPayload {
+  appVersion: string;
+  dataVersion: string;
+  createdAt: string;
+  input: InterestInput;
+  options: CalcOptions;
+  result: InterestResult;
+  note?: string;
+  disclaimer: string;
+}
+
+export interface LcalcInheritancePayload {
+  input: InheritanceInput;
+  result?: InheritanceResult;
+  note?: string;
+}
+
+export type LcalcFile =
+  | { schemaVersion: "2"; kind: "interest"; payload: LcalcInterestPayload }
+  | { schemaVersion: "2"; kind: "inheritance"; payload: LcalcInheritancePayload };
+
+export type LoadableLcalcFile = LcalcFile | LcalcFileV1;
 
 export const ipc = {
   /**
@@ -65,8 +91,8 @@ export const ipc = {
    * Opens a file picker and reads the selected `.lcalc` document. Resolves to
    * `null` when the user cancels; rejects when `schemaVersion` mismatches.
    */
-  loadLcalc(): Promise<LcalcFile | null> {
-    return invoke<LcalcFile | null>("load_lcalc");
+  loadLcalc(): Promise<LoadableLcalcFile | null> {
+    return invoke<LoadableLcalcFile | null>("load_lcalc");
   },
   copyToClipboard(text: string): Promise<void> {
     return invoke("copy_to_clipboard", { text });

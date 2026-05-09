@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use tauri::{async_runtime, AppHandle};
 use tauri_plugin_dialog::DialogExt;
 
@@ -11,28 +11,19 @@ use super::result_view::DISCLAIMER_KO;
 
 /// Current `.lcalc` schema version. Bumped only on a breaking shape change.
 /// Map of `for-claude/personal/lawcalc-kr/docs/plans/project-design.md` §5.4.
-pub const SCHEMA_VERSION: &str = "1";
+pub const SCHEMA_VERSION: &str = "2";
+const SUPPORTED_SCHEMA_VERSIONS: &[&str] = &["1", SCHEMA_VERSION];
 
 /// Wire-compatible representation of an `.lcalc` document.
 ///
-/// `input` / `options` / `result` are kept as `serde_json::Value` so the Rust
-/// shell does not need to mirror the TypeScript `@lawcalc-kr/core-engine`
-/// surface; the renderer is responsible for shape correctness on save and the
-/// renderer (or a future migration step) is responsible for shape validation
-/// on load. Only `schemaVersion` is enforced here.
+/// The Rust shell only extracts `schemaVersion`; all domain-specific payload
+/// validation and migrations are renderer responsibilities.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LcalcFile {
     pub schema_version: String,
-    pub app_version: String,
-    pub data_version: String,
-    pub created_at: String,
-    pub input: Value,
-    pub options: Value,
-    pub result: Value,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub note: Option<String>,
-    pub disclaimer: String,
+    #[serde(flatten)]
+    pub body: Map<String, Value>,
 }
 
 /// dialog blocking 변형 + 파일 IO 는 main thread deadlock 회피 위해
@@ -42,7 +33,7 @@ pub async fn save_lcalc(app: AppHandle, payload: LcalcFile) -> Result<Option<Str
     let app2 = app.clone();
     async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
         let mut payload = payload;
-        payload.disclaimer = DISCLAIMER_KO.to_string();
+        enforce_disclaimer(&mut payload);
 
         let picked = app2
             .dialog()
@@ -97,7 +88,7 @@ pub async fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
 }
 
 fn validate_schema_version(schema_version: &str) -> Result<(), Error> {
-    if schema_version != SCHEMA_VERSION {
+    if !SUPPORTED_SCHEMA_VERSIONS.contains(&schema_version) {
         return Err(Error::InvalidSchema(format!(
             "지원하지 않는 .lcalc 버전입니다: {schema_version}"
         )));
@@ -106,22 +97,56 @@ fn validate_schema_version(schema_version: &str) -> Result<(), Error> {
     Ok(())
 }
 
+fn enforce_disclaimer(payload: &mut LcalcFile) {
+    if payload.schema_version == "1" {
+        payload.body.insert(
+            "disclaimer".to_string(),
+            Value::String(DISCLAIMER_KO.to_string()),
+        );
+        return;
+    }
+
+    let Some(Value::String(kind)) = payload.body.get("kind") else {
+        return;
+    };
+    if kind != "interest" {
+        return;
+    }
+
+    let Some(Value::Object(interest_payload)) = payload.body.get_mut("payload") else {
+        return;
+    };
+    interest_payload.insert(
+        "disclaimer".to_string(),
+        Value::String(DISCLAIMER_KO.to_string()),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
 
     fn sample() -> LcalcFile {
+        let mut body = Map::new();
+        body.insert("kind".to_string(), Value::String("interest".to_string()));
+        body.insert(
+            "payload".to_string(),
+            json!({
+                "appVersion": "0.1.2",
+                "dataVersion": "legal-rates/v1.0.0",
+                "createdAt": "2026-05-09T12:34:56+09:00",
+                "input": { "principal": 1000000 },
+                "options": { "mode": "period", "leapYear": "fixed365", "includeFirstDay": true },
+                "result": { "totalInterest": 0 },
+                "note": "note",
+                "disclaimer": DISCLAIMER_KO,
+            }),
+        );
+
         LcalcFile {
             schema_version: SCHEMA_VERSION.to_string(),
-            app_version: "0.1.0".to_string(),
-            data_version: "legal-rates/v1.0.0".to_string(),
-            created_at: "2026-05-09T12:34:56+09:00".to_string(),
-            input: json!({ "principal": 1000000 }),
-            options: json!({ "mode": "period", "leapYear": "fixed365", "includeFirstDay": true }),
-            result: json!({ "totalInterest": 0 }),
-            note: Some("note".to_string()),
-            disclaimer: DISCLAIMER_KO.to_string(),
+            body,
         }
     }
 
@@ -131,29 +156,44 @@ mod tests {
         let s = serde_json::to_string(&file).unwrap();
         // camelCase on the wire
         assert!(s.contains("\"schemaVersion\""));
-        assert!(s.contains("\"appVersion\""));
-        assert!(s.contains("\"dataVersion\""));
-        assert!(s.contains("\"createdAt\""));
+        assert!(s.contains("\"kind\""));
+        assert!(s.contains("\"payload\""));
         assert!(!s.contains("\"schema_version\""));
         let back: LcalcFile = serde_json::from_str(&s).unwrap();
         assert_eq!(back.schema_version, SCHEMA_VERSION);
-        assert_eq!(back.app_version, "0.1.0");
-        assert_eq!(back.note.as_deref(), Some("note"));
+        assert_eq!(
+            back.body.get("kind").and_then(Value::as_str),
+            Some("interest")
+        );
     }
 
     #[test]
-    fn note_is_optional_on_disk() {
-        let mut file = sample();
-        file.note = None;
-        let s = serde_json::to_string(&file).unwrap();
-        assert!(!s.contains("\"note\""));
-        let back: LcalcFile = serde_json::from_str(&s).unwrap();
-        assert!(back.note.is_none());
+    fn accepts_legacy_v1_and_current_v2_schema_versions() {
+        validate_schema_version("1").unwrap();
+        validate_schema_version("2").unwrap();
     }
 
     #[test]
     fn unsupported_schema_version_uses_korean_message() {
         let message = validate_schema_version("9").unwrap_err().to_string();
         assert!(message.contains("지원하지 않는 .lcalc 버전입니다: 9"));
+    }
+
+    #[test]
+    fn enforce_disclaimer_updates_interest_payload() {
+        let mut file = sample();
+        if let Some(Value::Object(payload)) = file.body.get_mut("payload") {
+            payload.insert("disclaimer".to_string(), Value::String("stale".to_string()));
+        }
+
+        enforce_disclaimer(&mut file);
+
+        let disclaimer = file
+            .body
+            .get("payload")
+            .and_then(Value::as_object)
+            .and_then(|payload| payload.get("disclaimer"))
+            .and_then(Value::as_str);
+        assert_eq!(disclaimer, Some(DISCLAIMER_KO));
     }
 }

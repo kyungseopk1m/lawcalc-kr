@@ -40,9 +40,9 @@ import { SegmentTable } from "./components/result/SegmentTable";
 import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
-import { ipc, type LcalcFile } from "./lib/ipc";
+import { ipc, type LcalcFile, type LcalcInterestPayload } from "./lib/ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
-import { parseLoadedLcalcInput } from "./lib/lcalc-validation";
+import { parseLoadedLcalcInput, validateLcalcEnvelope } from "./lib/lcalc-validation";
 import { InheritanceCalculator } from "./views/InheritanceCalculator";
 
 const defaultOptions: CalcOptions = {
@@ -188,8 +188,7 @@ function formatResultForClipboard(result: InterestResult) {
 }
 
 function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile {
-  const file: LcalcFile = {
-    schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
+  const payload: LcalcInterestPayload = {
     appVersion: APP_VERSION,
     dataVersion: result.dataVersion,
     createdAt: new Date().toISOString(),
@@ -200,10 +199,14 @@ function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile
   };
 
   if (input.note) {
-    file.note = input.note;
+    payload.note = input.note;
   }
 
-  return file;
+  return {
+    schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
+    kind: "interest",
+    payload,
+  };
 }
 
 export function App() {
@@ -334,6 +337,7 @@ export function App() {
       }
 
       const migratedFile = migrateLcalcFile(file);
+      validateLcalcEnvelope(migratedFile);
       const loaded = parseLoadedLcalcInput(migratedFile);
       skipAutoCalculateRef.current = true;
       setPrincipal(loaded.input.principal);
@@ -343,8 +347,8 @@ export function App() {
       setOptions({ ...loaded.input.options, rounding: loaded.input.options.rounding ?? "floor" });
       setPreset(loaded.preset);
       setCustomRate(loaded.customRate);
-      setNote(loaded.input.note ?? migratedFile.note ?? "");
-      setResult(migratedFile.result);
+      setNote(loaded.input.note ?? loaded.note ?? "");
+      setResult(loaded.result);
       setCalculationError("");
       window.requestAnimationFrame(() => resultSectionRef.current?.focus());
       return ".lcalc 파일을 불러왔습니다.";
@@ -369,6 +373,10 @@ export function App() {
     });
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (activeTab !== "interest") {
+      return;
+    }
+
     if (event.key === "Escape") {
       const target = event.target;
       const isFormInput =
