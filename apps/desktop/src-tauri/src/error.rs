@@ -12,6 +12,12 @@ pub enum Error {
     #[error("not implemented: {0}")]
     NotImplemented(&'static str),
 
+    #[error("invalid lcalc schema: {0}")]
+    InvalidSchema(String),
+
+    #[error("invalid path: {0}")]
+    InvalidPath(String),
+
     #[error("{0}")]
     Other(String),
 }

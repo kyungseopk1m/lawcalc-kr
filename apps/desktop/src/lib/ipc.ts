@@ -1,38 +1,51 @@
 import { invoke } from "@tauri-apps/api/core";
 
-// W2에서 A 세션의 @lawcalc-kr/core-engine InterestResult 타입으로 교체.
-// W1 시점에는 wire-level 호환을 위해 unknown payload로 stub.
-export type InterestResultPayload = unknown;
+import type { CalcOptions, InterestInput, InterestResult } from "@lawcalc-kr/core-engine";
 
 export interface PdfOptions {
   path: string;
   note?: string;
 }
 
+/**
+ * Wire-compatible `.lcalc` document. Mirrors the Rust `LcalcFile` struct in
+ * `src-tauri/src/commands/lcalc.rs` and §5.4 of the project design.
+ *
+ * The Rust shell only enforces `schemaVersion`; the renderer is the source of
+ * truth for `input` / `options` / `result` shapes.
+ */
 export interface LcalcFile {
   schemaVersion: string;
   appVersion: string;
   dataVersion: string;
   createdAt: string;
-  input: unknown;
-  options: unknown;
-  result: InterestResultPayload;
+  input: InterestInput;
+  options: CalcOptions;
+  result: InterestResult;
   note?: string;
   disclaimer: string;
 }
 
 export const ipc = {
-  exportPdf(input: InterestResultPayload, options: PdfOptions): Promise<string> {
+  exportPdf(input: InterestResult, options: PdfOptions): Promise<string> {
     return invoke<string>("export_pdf", { input, options });
   },
-  exportCsv(input: InterestResultPayload, path: string): Promise<void> {
+  exportCsv(input: InterestResult, path: string): Promise<void> {
     return invoke("export_csv", { input, path });
   },
-  saveLcalc(payload: LcalcFile, path: string): Promise<void> {
-    return invoke("save_lcalc", { payload, path });
+  /**
+   * Opens a save dialog and writes the payload as pretty-printed JSON.
+   * Resolves to the chosen path, or `null` if the user cancelled the dialog.
+   */
+  saveLcalc(payload: LcalcFile): Promise<string | null> {
+    return invoke<string | null>("save_lcalc", { payload });
   },
-  loadLcalc(path: string): Promise<LcalcFile> {
-    return invoke<LcalcFile>("load_lcalc", { path });
+  /**
+   * Opens a file picker and reads the selected `.lcalc` document. Resolves to
+   * `null` when the user cancels; rejects when `schemaVersion` mismatches.
+   */
+  loadLcalc(): Promise<LcalcFile | null> {
+    return invoke<LcalcFile | null>("load_lcalc");
   },
   copyToClipboard(text: string): Promise<void> {
     return invoke("copy_to_clipboard", { text });

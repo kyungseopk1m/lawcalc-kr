@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
     "build": "tsc --noEmit && vite build",
-    "lint": "eslint \"src/**/*.{ts,tsx}\" --ignore-pattern src/lib/ipc.ts",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "preview": "vite preview --host 127.0.0.1 --port 1420 --strictPort",
     "tauri": "tauri"
   },
