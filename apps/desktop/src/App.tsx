@@ -1,5 +1,16 @@
-import { Calculator, FileJson, TableProperties } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  Calculator,
+  CheckCircle2,
+  Clipboard,
+  FileDown,
+  FileJson,
+  FileSpreadsheet,
+  Loader2,
+  TableProperties,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import {
   calculateInterest,
@@ -27,11 +38,13 @@ import { SegmentTable } from "./components/result/SegmentTable";
 import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { ipc, type LcalcFile } from "./lib/ipc";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
   leapYear: "fixed365",
   includeFirstDay: false,
+  rounding: "floor",
 };
 
 const defaultInput: InterestInput = {
@@ -43,6 +56,16 @@ const defaultInput: InterestInput = {
   note: "",
 };
 
+const disclaimerText =
+  "이 계산 결과는 검토 보조용이며 법률 자문이나 법원 공식 계산 결과를 대체하지 않습니다.";
+
+type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
+
+interface ToastState {
+  type: "success" | "error";
+  message: string;
+}
+
 function toLegalRatePreset(
   preset: LegalRatePresetOption,
   customRate: number,
@@ -51,11 +74,7 @@ function toLegalRatePreset(
 }
 
 function validateInput(input: InterestInput, preset: LegalRatePresetOption, customRate: number) {
-  const segmentError = input.segments?.some(
-    (segment) => segment.from.length === 0 || segment.to.length === 0 || segment.rate <= 0,
-  )
-    ? "이자율 구간의 시작일, 종료일, 연이율을 모두 입력해 주세요."
-    : "";
+  const segmentError = validateSegments(input.startDate, input.endDate, input.segments ?? []);
 
   return {
     principal: input.principal > 0 ? "" : "원금은 0보다 큰 정수여야 합니다.",
@@ -68,6 +87,131 @@ function validateInput(input: InterestInput, preset: LegalRatePresetOption, cust
   };
 }
 
+function addDays(date: string, days: number) {
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+function validateSegments(startDate: string, endDate: string, segments: RateSegment[]) {
+  if (segments.length === 0) {
+    return "";
+  }
+
+  if (segments.some((segment) => !segment.from || !segment.to || segment.rate <= 0)) {
+    return "이자율 구간의 시작일, 종료일, 연이율을 모두 입력해 주세요.";
+  }
+
+  const sorted = [...segments].sort((left, right) => left.from.localeCompare(right.from));
+
+  if (sorted[0]?.from !== startDate) {
+    return "이자율 구간은 계산 시작일과 같은 날짜에서 시작해야 합니다.";
+  }
+
+  if (sorted[sorted.length - 1]?.to !== endDate) {
+    return "이자율 구간은 계산 종료일까지 빠짐없이 덮어야 합니다.";
+  }
+
+  for (let index = 0; index < sorted.length; index += 1) {
+    const segment = sorted[index];
+    if (!segment) {
+      continue;
+    }
+
+    if (segment.to < segment.from) {
+      return "이자율 구간의 종료일은 시작일과 같거나 이후여야 합니다.";
+    }
+
+    const previous = sorted[index - 1];
+    if (previous) {
+      if (segment.from <= previous.to) {
+        return "이자율 구간이 서로 겹칩니다.";
+      }
+
+      if (segment.from !== addDays(previous.to, 1)) {
+        return "이자율 구간 사이에 비어 있는 날짜가 있습니다.";
+      }
+    }
+  }
+
+  return "";
+}
+
+function formatWon(value: number) {
+  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원`;
+}
+
+function formatOptionLabels(options: CalcOptions) {
+  return {
+    mode: options.mode === "period" ? "기간식" : "총일수식",
+    leapYear: options.leapYear === "fixed365" ? "고정 365일" : "실제 일수(윤년 366)",
+    includeFirstDay: options.includeFirstDay ? "초일 산입" : "초일 불산입",
+    rounding:
+      options.rounding === "ceil" ? "절상" : options.rounding === "round" ? "사사오입" : "절사",
+  };
+}
+
+function formatResultForClipboard(result: InterestResult) {
+  const labels = formatOptionLabels(result.options);
+  const rows = result.segments
+    .map(
+      (segment) =>
+        `${segment.from}~${segment.to}\t${segment.days}일\t${(segment.rate * 100).toLocaleString(
+          "ko-KR",
+          { maximumFractionDigits: 3 },
+        )}%\t${segment.formula}\t${formatWon(segment.interest)}`,
+    )
+    .join("\n");
+
+  return [
+    "LawCalc Korea 이자 계산 결과",
+    `원금: ${formatWon(result.principal)}`,
+    `이자 합계: ${formatWon(result.totalInterest)}`,
+    `원리금 합계: ${formatWon(result.grandTotal)}`,
+    `계산 옵션: ${labels.mode} / ${labels.leapYear} / ${labels.includeFirstDay} / 끝수 ${labels.rounding}`,
+    `데이터 버전: ${result.dataVersion}`,
+    `계산 시각: ${result.computedAt}`,
+    "",
+    "시작\t종료\t일수\t이율\t공식\t이자",
+    rows,
+    "",
+    disclaimerText,
+  ].join("\n");
+}
+
+function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile {
+  const file: LcalcFile = {
+    schemaVersion: "1",
+    appVersion: "0.0.0",
+    dataVersion: result.dataVersion,
+    createdAt: new Date().toISOString(),
+    input,
+    options: input.options,
+    result,
+    disclaimer: disclaimerText,
+  };
+
+  if (input.note) {
+    file.note = input.note;
+  }
+
+  return file;
+}
+
+function presetFromLoadedInput(input: InterestInput): {
+  preset: LegalRatePresetOption;
+  customRate: number;
+} {
+  if (typeof input.legalRatePreset === "object") {
+    return { preset: "custom", customRate: input.legalRatePreset.customRate };
+  }
+
+  return {
+    preset: input.legalRatePreset ?? "civil",
+    customRate: 0.05,
+  };
+}
+
 export function App() {
   const [principal, setPrincipal] = useState(defaultInput.principal);
   const [startDate, setStartDate] = useState(defaultInput.startDate);
@@ -77,6 +221,11 @@ export function App() {
   const [preset, setPreset] = useState<LegalRatePresetOption>("civil");
   const [customRate, setCustomRate] = useState(0.05);
   const [note, setNote] = useState("");
+  const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const calculateButtonRef = useRef<HTMLButtonElement>(null);
+  const resultSectionRef = useRef<HTMLElement>(null);
+  const skipAutoCalculateRef = useRef(false);
 
   const input = useMemo<InterestInput>(
     () => ({
@@ -91,17 +240,52 @@ export function App() {
     [customRate, endDate, note, options, preset, principal, segments, startDate],
   );
   const errors = validateInput(input, preset, customRate);
+  const hasErrors = Boolean(
+    errors.principal || errors.dateRange || errors.customRate || errors.segments,
+  );
   const [calculationError, setCalculationError] = useState("");
   const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
 
-  const handleCalculate = () => {
-    if (errors.principal || errors.dateRange || errors.customRate || errors.segments) {
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setToast(null), 4200);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  useEffect(() => {
+    if (skipAutoCalculateRef.current) {
+      skipAutoCalculateRef.current = false;
+      return;
+    }
+
+    if (hasErrors) {
       return;
     }
 
     try {
       setResult(calculateInterest(input));
       setCalculationError("");
+    } catch (error) {
+      setCalculationError(
+        error instanceof Error ? error.message : "계산 중 알 수 없는 오류가 발생했습니다.",
+      );
+    }
+  }, [hasErrors, input]);
+
+  const handleCalculate = (focusResult = true) => {
+    if (hasErrors) {
+      return;
+    }
+
+    try {
+      setResult(calculateInterest(input));
+      setCalculationError("");
+      if (focusResult) {
+        window.requestAnimationFrame(() => resultSectionRef.current?.focus());
+      }
     } catch (error) {
       setCalculationError(
         error instanceof Error ? error.message : "계산 중 알 수 없는 오류가 발생했습니다.",
@@ -120,12 +304,94 @@ export function App() {
     setNote("");
     setCalculationError("");
     setResult(calculateInterest(defaultInput));
+    window.requestAnimationFrame(() => calculateButtonRef.current?.focus());
+  };
+
+  const runAction = async (action: ActionName, task: () => Promise<string | null | void>) => {
+    setLoadingAction(action);
+    setToast(null);
+    try {
+      const message = await task();
+      if (message) {
+        setToast({ type: "success", message });
+      }
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "작업 중 알 수 없는 오류가 발생했습니다.",
+      });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleSaveLcalc = () =>
+    runAction("save", async () => {
+      const path = await ipc.saveLcalc(buildLcalcFile(input, result));
+      return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
+    });
+
+  const handleLoadLcalc = () =>
+    runAction("load", async () => {
+      const file = await ipc.loadLcalc();
+      if (!file) {
+        return "불러오기를 취소했습니다.";
+      }
+
+      const loadedPreset = presetFromLoadedInput(file.input);
+      skipAutoCalculateRef.current = true;
+      setPrincipal(file.input.principal);
+      setStartDate(file.input.startDate);
+      setEndDate(file.input.endDate);
+      setSegments(file.input.segments ?? []);
+      setOptions({ ...file.input.options, rounding: file.input.options.rounding ?? "floor" });
+      setPreset(loadedPreset.preset);
+      setCustomRate(loadedPreset.customRate);
+      setNote(file.input.note ?? file.note ?? "");
+      setResult(file.result);
+      setCalculationError("");
+      window.requestAnimationFrame(() => resultSectionRef.current?.focus());
+      return ".lcalc 파일을 불러왔습니다.";
+    });
+
+  const handleCopy = () =>
+    runAction("copy", async () => {
+      await ipc.copyToClipboard(formatResultForClipboard(result));
+      return "계산 결과를 클립보드에 복사했습니다.";
+    });
+
+  const handleExportPdf = () =>
+    runAction("pdf", async () => {
+      const path = await ipc.exportPdf(result, { path: "lawcalc-interest.pdf", note });
+      return `PDF 파일을 저장했습니다: ${path}`;
+    });
+
+  const handleExportCsv = () =>
+    runAction("csv", async () => {
+      await ipc.exportCsv(result, "lawcalc-interest.csv");
+      return "CSV 파일을 저장했습니다.";
+    });
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      handleReset();
+      return;
+    }
+
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      handleCalculate();
+    }
   };
 
   const fallbackLabel = legalRateOptions[preset].label;
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/30 text-foreground">
+    <div
+      className="flex min-h-screen flex-col bg-muted/30 text-foreground"
+      onKeyDown={handleKeyDown}
+    >
       <Header />
       <DisclaimerBar />
 
@@ -167,6 +433,7 @@ export function App() {
               <label className="grid gap-2 text-sm font-medium">
                 비고
                 <textarea
+                  aria-label="비고"
                   className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   placeholder="예: 1심 판결 선고일부터 완제일까지"
                   value={note}
@@ -174,7 +441,12 @@ export function App() {
                 />
               </label>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={handleCalculate}>
+                <Button
+                  ref={calculateButtonRef}
+                  type="button"
+                  disabled={hasErrors}
+                  onClick={() => handleCalculate()}
+                >
                   계산
                 </Button>
                 <Button type="button" variant="outline" onClick={handleReset}>
@@ -190,7 +462,12 @@ export function App() {
           </Card>
         </section>
 
-        <section className="space-y-4" aria-labelledby="result-title">
+        <section
+          ref={resultSectionRef}
+          className="space-y-4 focus:outline-none"
+          aria-labelledby="result-title"
+          tabIndex={-1}
+        >
           <SummaryCard result={result} />
 
           <Card>
@@ -215,23 +492,52 @@ export function App() {
                 <FileJson className="h-4 w-4" aria-hidden="true" />
                 내보내기
               </CardTitle>
-              <CardDescription>
-                PDF, CSV, 클립보드, .lcalc 저장/로드 액션은 C 세션 IPC와 연결됩니다.
-              </CardDescription>
+              <CardDescription>계산 결과를 파일이나 클립보드로 내보냅니다.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" disabled>
-                PDF
-              </Button>
-              <Button type="button" variant="secondary" disabled>
-                CSV
-              </Button>
-              <Button type="button" variant="outline" disabled>
-                복사
-              </Button>
-              <Button type="button" variant="outline" disabled>
-                .lcalc
-              </Button>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="pdf"
+                  icon={FileDown}
+                  label="PDF"
+                  loadingAction={loadingAction}
+                  variant="secondary"
+                  onClick={handleExportPdf}
+                />
+                <ActionButton
+                  action="csv"
+                  icon={FileSpreadsheet}
+                  label="CSV"
+                  loadingAction={loadingAction}
+                  variant="secondary"
+                  onClick={handleExportCsv}
+                />
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleCopy}
+                />
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+              {toast ? <ToastMessage toast={toast} /> : null}
             </CardContent>
           </Card>
         </section>
@@ -239,5 +545,62 @@ export function App() {
 
       <Footer />
     </div>
+  );
+}
+
+interface ActionButtonProps {
+  action: ActionName;
+  icon: LucideIcon;
+  label: string;
+  loadingAction: ActionName | null;
+  variant: "secondary" | "outline";
+  onClick: () => Promise<void>;
+}
+
+function ActionButton({
+  action,
+  icon: Icon,
+  label,
+  loadingAction,
+  onClick,
+  variant,
+}: ActionButtonProps) {
+  const isLoading = loadingAction === action;
+  const isBusy = loadingAction !== null;
+
+  return (
+    <Button
+      type="button"
+      variant={variant}
+      disabled={isBusy}
+      onClick={() => {
+        void onClick();
+      }}
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      )}
+      {label}
+    </Button>
+  );
+}
+
+function ToastMessage({ toast }: { toast: ToastState }) {
+  const Icon = toast.type === "success" ? CheckCircle2 : XCircle;
+  const color =
+    toast.type === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : "border-red-200 bg-red-50 text-red-700";
+
+  return (
+    <p
+      className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${color}`}
+      role="status"
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>{toast.message}</span>
+    </p>
   );
 }

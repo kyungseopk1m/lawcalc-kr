@@ -21,7 +21,15 @@ function formatRate(rate: number) {
 export function SegmentTable({ result }: SegmentTableProps) {
   return (
     <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+      <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+        <colgroup>
+          <col className="w-[112px]" />
+          <col className="w-[112px]" />
+          <col className="w-[88px]" />
+          <col className="w-[88px]" />
+          <col />
+          <col className="w-[132px]" />
+        </colgroup>
         <thead className="bg-muted text-muted-foreground">
           <tr>
             <th className="px-3 py-3 font-medium">시작</th>

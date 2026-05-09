@@ -27,6 +27,7 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
   const addSegment = () => {
     onChange([...value, { from: "", to: "", rate: 0.05 }]);
   };
+  const errorId = "rate-segments-error";
 
   return (
     <div className="grid gap-3">
@@ -57,6 +58,8 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
               <label className="grid gap-1 text-xs font-medium">
                 시작일
                 <Input
+                  aria-describedby={error ? errorId : undefined}
+                  aria-invalid={Boolean(error)}
                   type="date"
                   value={segment.from}
                   onChange={(event) =>
@@ -67,6 +70,8 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
               <label className="grid gap-1 text-xs font-medium">
                 종료일
                 <Input
+                  aria-describedby={error ? errorId : undefined}
+                  aria-invalid={Boolean(error)}
                   type="date"
                   value={segment.to}
                   onChange={(event) =>
@@ -77,6 +82,8 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
               <label className="grid gap-1 text-xs font-medium">
                 연이율(%)
                 <Input
+                  aria-describedby={error ? errorId : undefined}
+                  aria-invalid={Boolean(error)}
                   inputMode="decimal"
                   min="0"
                   step="0.1"
@@ -101,7 +108,11 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
           ))}
         </div>
       )}
-      {error ? <span className="text-xs font-normal text-red-600">{error}</span> : null}
+      {error ? (
+        <span id={errorId} className="text-xs font-normal text-red-600">
+          {error}
+        </span>
+      ) : null}
     </div>
   );
 }

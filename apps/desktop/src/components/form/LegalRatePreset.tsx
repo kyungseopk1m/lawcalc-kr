@@ -25,6 +25,8 @@ export function LegalRatePreset({
   onValueChange,
   onCustomRateChange,
 }: LegalRatePresetProps) {
+  const errorId = "custom-rate-error";
+
   return (
     <div className="grid gap-2">
       <label className="grid gap-2 text-sm font-medium">
@@ -43,6 +45,7 @@ export function LegalRatePreset({
         <label className="grid gap-2 text-sm font-medium">
           직접 입력 이율 (%)
           <Input
+            aria-describedby={error ? errorId : undefined}
             aria-invalid={Boolean(error)}
             inputMode="decimal"
             min="0"
@@ -52,7 +55,11 @@ export function LegalRatePreset({
             value={customRate > 0 ? customRate * 100 : ""}
             onChange={(event) => onCustomRateChange(Number(event.target.value) / 100)}
           />
-          {error ? <span className="text-xs font-normal text-red-600">{error}</span> : null}
+          {error ? (
+            <span id={errorId} className="text-xs font-normal text-red-600">
+              {error}
+            </span>
+          ) : null}
         </label>
       ) : null}
     </div>
