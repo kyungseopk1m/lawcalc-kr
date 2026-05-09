@@ -62,7 +62,7 @@ pub async fn save_lcalc(app: AppHandle, payload: LcalcFile) -> Result<Option<Str
         Ok(Some(path.to_string_lossy().into_owned()))
     })
     .await
-    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
 }
 
 #[tauri::command]
@@ -93,7 +93,7 @@ pub async fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
         Ok(Some(parsed))
     })
     .await
-    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
 }
 
 fn validate_file_size(bytes_len: u64) -> Result<(), Error> {

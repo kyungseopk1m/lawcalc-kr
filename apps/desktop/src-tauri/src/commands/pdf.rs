@@ -76,7 +76,7 @@ pub async fn export_pdf(
         Ok(Some(path.to_string_lossy().into_owned()))
     })
     .await
-    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
 }
 
 #[tauri::command]
@@ -108,7 +108,7 @@ pub async fn export_inheritance_pdf(
         Ok(Some(path.to_string_lossy().into_owned()))
     })
     .await
-    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
 }
 
 /// A4 portrait dimensions, top-down layout.
