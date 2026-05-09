@@ -7,6 +7,7 @@ import type {
   InterestInput,
   InterestResult,
 } from "@lawcalc-kr/core-engine";
+import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 
 export interface PdfOptions {
   /**
@@ -47,9 +48,13 @@ export interface LcalcInterestPayload {
 }
 
 export interface LcalcInheritancePayload {
+  appVersion: string;
+  dataVersion: string;
+  createdAt: string;
   input: InheritanceInput;
   result?: InheritanceResult;
   note?: string;
+  disclaimer: string;
 }
 
 export type LcalcFile =
@@ -67,7 +72,7 @@ export const ipc = {
   exportPdf(result: InterestResult, options?: PdfOptions): Promise<string | null> {
     const note = options?.note;
     return invoke<string | null>("export_pdf", {
-      result,
+      result: { ...result, disclaimer: STANDARD_DISCLAIMER },
       options: note !== undefined ? { note } : null,
     });
   },
@@ -78,7 +83,15 @@ export const ipc = {
    */
   exportCsv(result: InterestResult, ...legacyPath: [string?]): Promise<string | null> {
     void legacyPath;
-    return invoke<string | null>("export_csv", { result });
+    return invoke<string | null>("export_csv", {
+      result: { ...result, disclaimer: STANDARD_DISCLAIMER },
+    });
+  },
+  exportInheritancePdf(result: InheritanceResult): Promise<string | null> {
+    return invoke<string | null>("export_inheritance_pdf", { result });
+  },
+  exportInheritanceCsv(result: InheritanceResult): Promise<string | null> {
+    return invoke<string | null>("export_inheritance_csv", { result });
   },
   /**
    * Opens a save dialog and writes the payload as pretty-printed JSON.

@@ -1,11 +1,14 @@
 import type {
   CalcOptions,
+  HeirNode,
+  InheritanceInput,
+  InheritanceResult,
   InterestInput,
   LegalRateCode,
   RateSegment,
 } from "@lawcalc-kr/core-engine";
 
-import type { LcalcFile, LcalcInterestPayload } from "./ipc";
+import type { LcalcFile, LcalcInheritancePayload, LcalcInterestPayload } from "./ipc";
 
 export type LoadedLegalRatePreset = LegalRateCode | "custom";
 
@@ -16,6 +19,12 @@ interface ParsedLcalcInput {
   preset: LoadedLegalRatePreset;
   customRate: number;
   result: LcalcInterestPayload["result"];
+  note?: string;
+}
+
+interface ParsedInheritanceLcalcInput {
+  input: InheritanceInput;
+  result?: InheritanceResult;
   note?: string;
 }
 
@@ -60,10 +69,50 @@ function requireRecord(value: unknown, field: string) {
   return value;
 }
 
+function parseHeirNode(value: unknown, field: string): HeirNode {
+  const record = requireRecord(value, field);
+  const name = record.name;
+  const deceasedBeforeOpening = record.deceasedBeforeOpening;
+  const representatives = record.representatives;
+
+  if (name !== undefined && typeof name !== "string") {
+    throw new Error(`.lcalc 파일의 ${field}.name 필드가 올바르지 않습니다.`);
+  }
+  if (typeof deceasedBeforeOpening !== "boolean") {
+    throw new Error(`.lcalc 파일의 ${field}.deceasedBeforeOpening 필드가 올바르지 않습니다.`);
+  }
+
+  const node: HeirNode = {
+    ...(typeof name === "string" ? { name } : {}),
+    deceasedBeforeOpening,
+  };
+
+  if (representatives !== undefined) {
+    if (!Array.isArray(representatives)) {
+      throw new Error(`.lcalc 파일의 ${field}.representatives 필드가 올바르지 않습니다.`);
+    }
+    node.representatives = representatives.map((representative, index) =>
+      parseHeirNode(representative, `${field}.representatives[${index}]`),
+    );
+  }
+
+  return node;
+}
+
+function parseHeirGroup(value: unknown, field: string): HeirNode[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`.lcalc 파일의 ${field} 필드가 올바르지 않습니다.`);
+  }
+  return value.map((heir, index) => parseHeirNode(heir, `${field}[${index}]`));
+}
+
 function parseInterestPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInterestPayload {
   if (file.kind !== "interest") {
     if (file.kind === "inheritance") {
-      throw new Error("상속 .lcalc 파일 불러오기는 다음 버전에서 지원합니다.");
+      throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
     }
 
     throw new Error(unsupportedKindMessage(file.kind));
@@ -87,6 +136,110 @@ function parseInterestPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInte
   };
 }
 
+function parseInheritanceResult(value: unknown): InheritanceResult {
+  const result = requireRecord(value, "payload.result");
+  const decedent = requireRecord(result.decedent, "payload.result.decedent");
+  const shares = result.shares;
+
+  if (!Array.isArray(shares)) {
+    throw new Error(".lcalc 파일의 payload.result.shares 필드가 올바르지 않습니다.");
+  }
+
+  return {
+    decedent: {
+      ...(typeof decedent.name === "string" ? { name: decedent.name } : {}),
+      deceasedAt: requireString(decedent.deceasedAt, "payload.result.decedent.deceasedAt"),
+    },
+    shares: shares.map((share, index) => {
+      const record = requireRecord(share, `payload.result.shares[${index}]`);
+      return {
+        name: requireString(record.name, `payload.result.shares[${index}].name`),
+        numerator: requirePositiveNumber(
+          record.numerator,
+          `payload.result.shares[${index}].numerator`,
+        ),
+        denominator: requirePositiveNumber(
+          record.denominator,
+          `payload.result.shares[${index}].denominator`,
+        ),
+        rawNumerator: requirePositiveNumber(
+          record.rawNumerator,
+          `payload.result.shares[${index}].rawNumerator`,
+        ),
+        rawDenominator: requirePositiveNumber(
+          record.rawDenominator,
+          `payload.result.shares[${index}].rawDenominator`,
+        ),
+      };
+    }),
+    disclaimer: requireString(result.disclaimer, "payload.result.disclaimer"),
+    dataVersion: requireString(result.dataVersion, "payload.result.dataVersion"),
+    computedAt: requireString(result.computedAt, "payload.result.computedAt"),
+  };
+}
+
+function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInheritancePayload {
+  if (file.kind !== "inheritance") {
+    if (file.kind === "interest") {
+      throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
+    }
+
+    throw new Error(unsupportedKindMessage(file.kind));
+  }
+
+  const payload = requireRecord(file.payload, "payload");
+  const input = requireRecord(payload.input, "payload.input");
+  const decedent = requireRecord(input.decedent, "payload.input.decedent");
+  const spouse = input.spouse;
+  const spouseRecord =
+    spouse === undefined ? undefined : requireRecord(spouse, "payload.input.spouse");
+  const linealDescendants = parseHeirGroup(
+    input.linealDescendants,
+    "payload.input.linealDescendants",
+  );
+  const linealAscendants = parseHeirGroup(input.linealAscendants, "payload.input.linealAscendants");
+  const siblings = parseHeirGroup(input.siblings, "payload.input.siblings");
+  const collateralFourth = parseHeirGroup(input.collateralFourth, "payload.input.collateralFourth");
+
+  if (spouseRecord !== undefined) {
+    if (spouseRecord.name !== undefined && typeof spouseRecord.name !== "string") {
+      throw new Error(".lcalc 파일의 payload.input.spouse.name 필드가 올바르지 않습니다.");
+    }
+    if (typeof spouseRecord.alive !== "boolean") {
+      throw new Error(".lcalc 파일의 payload.input.spouse.alive 필드가 올바르지 않습니다.");
+    }
+  }
+
+  const inheritanceInput: InheritanceInput = {
+    decedent: {
+      ...(typeof decedent.name === "string" ? { name: decedent.name } : {}),
+      deceasedAt: requireString(decedent.deceasedAt, "payload.input.decedent.deceasedAt"),
+    },
+    ...(spouseRecord === undefined
+      ? {}
+      : {
+          spouse: {
+            ...(typeof spouseRecord.name === "string" ? { name: spouseRecord.name } : {}),
+            alive: spouseRecord.alive as boolean,
+          },
+        }),
+    ...(linealDescendants === undefined ? {} : { linealDescendants }),
+    ...(linealAscendants === undefined ? {} : { linealAscendants }),
+    ...(siblings === undefined ? {} : { siblings }),
+    ...(collateralFourth === undefined ? {} : { collateralFourth }),
+  };
+
+  return {
+    appVersion: requireString(payload.appVersion, "payload.appVersion"),
+    dataVersion: requireString(payload.dataVersion, "payload.dataVersion"),
+    createdAt: requireString(payload.createdAt, "payload.createdAt"),
+    input: inheritanceInput,
+    ...(payload.result === undefined ? {} : { result: parseInheritanceResult(payload.result) }),
+    ...(typeof payload.note === "string" ? { note: payload.note } : {}),
+    disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
+  };
+}
+
 export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): void {
   if (file.schemaVersion !== "2") {
     throw new Error(
@@ -100,14 +253,7 @@ export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): v
   }
 
   if (file.kind === "inheritance") {
-    const payload = requireRecord(file.payload, "payload");
-    requireRecord(payload.input, "payload.input");
-    if (payload.result !== undefined) {
-      requireRecord(payload.result, "payload.result");
-    }
-    if (payload.note !== undefined && typeof payload.note !== "string") {
-      throw new Error(".lcalc 파일의 payload.note 필드가 올바르지 않습니다.");
-    }
+    void parseInheritancePayload(file);
     return;
   }
 
@@ -224,6 +370,15 @@ export function parseLoadedLcalcInput(file: LcalcFile): ParsedLcalcInput {
     preset: "custom",
     customRate,
     result: payload.result,
+    ...(payload.note === undefined ? {} : { note: payload.note }),
+  };
+}
+
+export function parseLoadedInheritanceLcalcInput(file: LcalcFile): ParsedInheritanceLcalcInput {
+  const payload = parseInheritancePayload(file);
+  return {
+    input: payload.input,
+    ...(payload.result === undefined ? {} : { result: payload.result }),
     ...(payload.note === undefined ? {} : { note: payload.note }),
   };
 }

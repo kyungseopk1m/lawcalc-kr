@@ -17,6 +17,8 @@ pub struct ResultView {
     pub options: OptionsView,
     pub data_version: String,
     pub computed_at: String,
+    #[serde(default)]
+    pub disclaimer: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -40,10 +42,44 @@ pub struct OptionsView {
     pub rounding: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InheritanceResultView {
+    pub decedent: InheritanceDecedentView,
+    pub shares: Vec<InheritanceShareView>,
+    pub disclaimer: String,
+    pub data_version: String,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InheritanceDecedentView {
+    #[serde(default)]
+    pub name: Option<String>,
+    pub deceased_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InheritanceShareView {
+    pub name: String,
+    pub numerator: i64,
+    pub denominator: i64,
+    pub raw_numerator: i64,
+    pub raw_denominator: i64,
+}
+
 /// Disclaimer copy that must accompany every exported artifact.
 /// Source of truth: `packages/core-engine/src/disclaimers.ts` `STANDARD_DISCLAIMER`.
 pub const DISCLAIMER_KO: &str =
     "본 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인이 필요합니다.";
+
+pub fn disclaimer_text(disclaimer: Option<&str>) -> &str {
+    disclaimer
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(DISCLAIMER_KO)
+}
 
 pub fn format_currency(amount: f64) -> String {
     let n = amount.round() as i64;
@@ -126,6 +162,23 @@ mod tests {
         assert_eq!(view.principal as i64, 10000000);
         assert_eq!(view.segments[0].days, 365);
         assert_eq!(view.options.mode, "period");
+    }
+
+    #[test]
+    fn deserializes_inheritance_camel_case_payload() {
+        let v = json!({
+            "decedent": { "name": "피상속인", "deceasedAt": "2025-01-01" },
+            "shares": [
+                { "name": "배우자", "numerator": 3, "denominator": 7,
+                  "rawNumerator": 3, "rawDenominator": 7 }
+            ],
+            "disclaimer": DISCLAIMER_KO,
+            "dataVersion": "inheritance/v1.0.0",
+            "computedAt": "2026-05-09T12:00:00+09:00"
+        });
+        let view: InheritanceResultView = serde_json::from_value(v).unwrap();
+        assert_eq!(view.decedent.deceased_at, "2025-01-01");
+        assert_eq!(view.shares[0].raw_denominator, 7);
     }
 
     #[test]

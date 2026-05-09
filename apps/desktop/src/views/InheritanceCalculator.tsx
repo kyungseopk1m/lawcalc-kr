@@ -1,12 +1,24 @@
 /**
  * 상속분 간이 계산 (inheritance v0.2) — Desktop UI 첫 commit.
  *
- * scope: 입력 + 계산 + 화면 결과 + 한국어 inline error. PDF/CSV/.lcalc 0건 (후속 commit).
+ * scope: 입력 + 계산 + 화면 결과 + 출력/저장 액션.
  *
  * 입력 모델 출처: `for-claude/.../inheritance-input-model-spike-2026-05-09.md` §5,
  * UI 라벨 출처: `source-extraction-spike-2026-05-09.md` §8.3 (UI strings verbatim).
  */
-import { CheckCircle2, Plus, Trash2, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Clipboard,
+  FileDown,
+  FileJson,
+  FileSpreadsheet,
+  Loader2,
+  Plus,
+  Trash2,
+  X,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 import {
@@ -20,6 +32,9 @@ import {
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { ipc, type LcalcFile, type LcalcInheritancePayload } from "../lib/ipc";
+import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
+import { parseLoadedInheritanceLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 
 interface HeirInput {
   id: string;
@@ -38,6 +53,15 @@ interface DecedentInput {
   deceasedAt: string;
 }
 
+const APP_VERSION = "0.1.2";
+
+type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
+
+interface ToastState {
+  type: "success" | "error";
+  message: string;
+}
+
 function newId(): string {
   return crypto.randomUUID();
 }
@@ -48,16 +72,36 @@ function emptyHeir(): HeirInput {
 
 function toHeirNode(h: HeirInput, allowRepresentation: boolean): HeirNode {
   const node: HeirNode = {
-    name: h.name.trim() || undefined,
     deceasedBeforeOpening: h.deceasedBeforeOpening,
   };
+  const name = h.name.trim();
+  if (name) {
+    node.name = name;
+  }
   if (allowRepresentation && h.deceasedBeforeOpening && h.representatives.length > 0) {
-    node.representatives = h.representatives.map((r) => ({
-      name: r.name.trim() || undefined,
-      deceasedBeforeOpening: false,
-    }));
+    node.representatives = h.representatives.map((r) => {
+      const representative: HeirNode = { deceasedBeforeOpening: false };
+      const representativeName = r.name.trim();
+      if (representativeName) {
+        representative.name = representativeName;
+      }
+      return representative;
+    });
   }
   return node;
+}
+
+function fromHeirNode(h: HeirNode): HeirInput {
+  return {
+    id: newId(),
+    name: h.name ?? "",
+    deceasedBeforeOpening: h.deceasedBeforeOpening,
+    representatives:
+      h.representatives?.map((representative) => ({
+        id: newId(),
+        name: representative.name ?? "",
+      })) ?? [],
+  };
 }
 
 interface HeirGroupCardProps {
@@ -214,6 +258,31 @@ function formatComputedAt(value: string): string {
   }).format(date);
 }
 
+function formatInheritanceForClipboard(result: InheritanceResult): string {
+  const rows = result.shares
+    .map(
+      (share) =>
+        `${share.name}\t${share.numerator}/${share.denominator}\t${share.rawNumerator}/${share.rawDenominator}\t${formatPercent(
+          share.numerator,
+          share.denominator,
+        )}`,
+    )
+    .join("\n");
+
+  return [
+    "LawCalc Korea 상속분 간이 계산 결과",
+    `피상속인: ${result.decedent.name ?? "-"}`,
+    `사망일: ${result.decedent.deceasedAt}`,
+    `데이터 버전: ${result.dataVersion}`,
+    `계산 시각: ${result.computedAt}`,
+    "",
+    "상속인\t지분(약분)\t약분 전\t백분율(참고)",
+    rows,
+    "",
+    STANDARD_DISCLAIMER,
+  ].join("\n");
+}
+
 export function InheritanceCalculator() {
   const [decedent, setDecedent] = useState<DecedentInput>({
     name: "",
@@ -224,31 +293,99 @@ export function InheritanceCalculator() {
   const [linealAscendants, setLinealAscendants] = useState<HeirInput[]>([]);
   const [siblings, setSiblings] = useState<HeirInput[]>([]);
   const [collateralFourth, setCollateralFourth] = useState<HeirInput[]>([]);
+  const [note, setNote] = useState("");
   const [result, setResult] = useState<InheritanceResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const buildInput = (): InheritanceInput => ({
+    decedent: decedent.name.trim()
+      ? { name: decedent.name.trim(), deceasedAt: decedent.deceasedAt }
+      : { deceasedAt: decedent.deceasedAt },
+    ...(spouse.alive
+      ? {
+          spouse: spouse.name.trim() ? { name: spouse.name.trim(), alive: true } : { alive: true },
+        }
+      : {}),
+    ...(linealDescendants.length > 0
+      ? { linealDescendants: linealDescendants.map((h) => toHeirNode(h, true)) }
+      : {}),
+    ...(linealAscendants.length > 0
+      ? { linealAscendants: linealAscendants.map((h) => toHeirNode(h, false)) }
+      : {}),
+    ...(siblings.length > 0 ? { siblings: siblings.map((h) => toHeirNode(h, true)) } : {}),
+    ...(collateralFourth.length > 0
+      ? { collateralFourth: collateralFourth.map((h) => toHeirNode(h, false)) }
+      : {}),
+  });
+
+  const applyInput = (input: InheritanceInput) => {
+    setDecedent({
+      name: input.decedent.name ?? "",
+      deceasedAt: input.decedent.deceasedAt,
+    });
+    setSpouse({
+      alive: input.spouse?.alive ?? false,
+      name: input.spouse?.name ?? "",
+    });
+    setLinealDescendants(input.linealDescendants?.map(fromHeirNode) ?? []);
+    setLinealAscendants(input.linealAscendants?.map(fromHeirNode) ?? []);
+    setSiblings(input.siblings?.map(fromHeirNode) ?? []);
+    setCollateralFourth(input.collateralFourth?.map(fromHeirNode) ?? []);
+  };
+
+  const buildLcalcFile = (input: InheritanceInput, calculated: InheritanceResult): LcalcFile => {
+    const payload: LcalcInheritancePayload = {
+      appVersion: APP_VERSION,
+      dataVersion: calculated.dataVersion,
+      createdAt: new Date().toISOString(),
+      input,
+      result: { ...calculated, disclaimer: STANDARD_DISCLAIMER },
+      disclaimer: STANDARD_DISCLAIMER,
+    };
+
+    if (note.trim()) {
+      payload.note = note.trim();
+    }
+
+    return {
+      schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
+      kind: "inheritance",
+      payload,
+    };
+  };
+
+  const runAction = async (action: ActionName, task: () => Promise<string | null | void>) => {
+    if (loadingAction !== null) {
+      return;
+    }
+
+    setLoadingAction(action);
+    setToast(null);
+    try {
+      const message = await task();
+      if (message) {
+        setToast({ type: "success", message });
+      }
+    } catch (e) {
+      setToast({
+        type: "error",
+        message: e instanceof Error ? e.message : "작업 중 알 수 없는 오류가 발생했습니다.",
+      });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
 
   const handleCalculate = () => {
-    const input: InheritanceInput = {
-      decedent: {
-        name: decedent.name.trim() || undefined,
-        deceasedAt: decedent.deceasedAt,
-      },
-      spouse: spouse.alive ? { name: spouse.name.trim() || undefined, alive: true } : undefined,
-      linealDescendants:
-        linealDescendants.length > 0
-          ? linealDescendants.map((h) => toHeirNode(h, true))
-          : undefined,
-      linealAscendants:
-        linealAscendants.length > 0 ? linealAscendants.map((h) => toHeirNode(h, false)) : undefined,
-      siblings: siblings.length > 0 ? siblings.map((h) => toHeirNode(h, true)) : undefined,
-      collateralFourth:
-        collateralFourth.length > 0 ? collateralFourth.map((h) => toHeirNode(h, false)) : undefined,
-    };
+    const input = buildInput();
 
     try {
       const r = calculateInheritance(input);
       setResult(r);
       setError(null);
+      setToast(null);
     } catch (e) {
       setResult(null);
       setError(e instanceof Error ? e.message : String(e));
@@ -262,9 +399,65 @@ export function InheritanceCalculator() {
     setLinealAscendants([]);
     setSiblings([]);
     setCollateralFourth([]);
+    setNote("");
     setResult(null);
     setError(null);
+    setToast(null);
   };
+
+  const handleExportPdf = () =>
+    runAction("pdf", async () => {
+      if (!result) {
+        throw new Error("계산 후 PDF를 저장해 주세요.");
+      }
+      const path = await ipc.exportInheritancePdf(result);
+      return path ? `PDF 파일을 저장했습니다: ${path}` : null;
+    });
+
+  const handleExportCsv = () =>
+    runAction("csv", async () => {
+      if (!result) {
+        throw new Error("계산 후 CSV를 저장해 주세요.");
+      }
+      const path = await ipc.exportInheritanceCsv(result);
+      return path ? `CSV 파일을 저장했습니다: ${path}` : null;
+    });
+
+  const handleCopy = () =>
+    runAction("copy", async () => {
+      if (!result) {
+        throw new Error("계산 후 복사해 주세요.");
+      }
+      await ipc.copyToClipboard(formatInheritanceForClipboard(result));
+      return "상속분 계산 결과를 클립보드에 복사했습니다.";
+    });
+
+  const handleSaveLcalc = () =>
+    runAction("save", async () => {
+      if (!result) {
+        throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
+      }
+      const path = await ipc.saveLcalc(buildLcalcFile(buildInput(), result));
+      return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
+    });
+
+  const handleLoadLcalc = () =>
+    runAction("load", async () => {
+      const file = await ipc.loadLcalc();
+      if (!file) {
+        return "불러오기를 취소했습니다.";
+      }
+
+      const migratedFile = migrateLcalcFile(file);
+      validateLcalcEnvelope(migratedFile);
+      const loaded = parseLoadedInheritanceLcalcInput(migratedFile);
+      applyInput(loaded.input);
+      setNote(loaded.note ?? "");
+      const loadedResult = loaded.result ?? calculateInheritance(loaded.input);
+      setResult({ ...loadedResult, disclaimer: STANDARD_DISCLAIMER });
+      setError(null);
+      return ".lcalc 파일을 불러왔습니다.";
+    });
 
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
@@ -369,6 +562,16 @@ export function InheritanceCalculator() {
             초기화
           </Button>
         </div>
+        <label className="grid gap-2 text-sm font-medium">
+          비고
+          <textarea
+            aria-label="상속분 계산 비고"
+            className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            placeholder="예: 가족관계등록부 기준 확인 필요"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
       </div>
 
       <div className="grid gap-4">
@@ -445,6 +648,62 @@ export function InheritanceCalculator() {
           </>
         ) : null}
 
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">내보내기</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 p-4 pt-0">
+            <div className="flex flex-wrap gap-2">
+              <ActionButton
+                action="pdf"
+                icon={FileDown}
+                label="PDF"
+                loadingAction={loadingAction}
+                requiresResult={true}
+                resultReady={result !== null}
+                onClick={handleExportPdf}
+              />
+              <ActionButton
+                action="csv"
+                icon={FileSpreadsheet}
+                label="CSV"
+                loadingAction={loadingAction}
+                requiresResult={true}
+                resultReady={result !== null}
+                onClick={handleExportCsv}
+              />
+              <ActionButton
+                action="copy"
+                icon={Clipboard}
+                label="복사"
+                loadingAction={loadingAction}
+                requiresResult={true}
+                resultReady={result !== null}
+                onClick={handleCopy}
+              />
+              <ActionButton
+                action="save"
+                icon={FileJson}
+                label=".lcalc 저장"
+                loadingAction={loadingAction}
+                requiresResult={true}
+                resultReady={result !== null}
+                onClick={handleSaveLcalc}
+              />
+              <ActionButton
+                action="load"
+                icon={FileJson}
+                label=".lcalc 열기"
+                loadingAction={loadingAction}
+                requiresResult={false}
+                resultReady={result !== null}
+                onClick={handleLoadLcalc}
+              />
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
         {!result && !error ? (
           <Card>
             <CardContent className="grid gap-2 p-6 text-sm text-muted-foreground">
@@ -461,5 +720,72 @@ export function InheritanceCalculator() {
         ) : null}
       </div>
     </main>
+  );
+}
+
+interface ActionButtonProps {
+  action: ActionName;
+  icon: LucideIcon;
+  label: string;
+  loadingAction: ActionName | null;
+  requiresResult: boolean;
+  resultReady: boolean;
+  onClick: () => Promise<void>;
+}
+
+function ActionButton({
+  action,
+  icon: Icon,
+  label,
+  loadingAction,
+  requiresResult,
+  resultReady,
+  onClick,
+}: ActionButtonProps) {
+  const isLoading = loadingAction === action;
+  const isBusy = loadingAction !== null;
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      disabled={isBusy || (requiresResult && !resultReady)}
+      onClick={() => {
+        void onClick();
+      }}
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      )}
+      {label}
+    </Button>
+  );
+}
+
+function ToastMessage({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void }) {
+  const Icon = toast.type === "success" ? CheckCircle2 : XCircle;
+  const color =
+    toast.type === "success"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : "border-red-200 bg-red-50 text-red-700";
+
+  return (
+    <div
+      className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${color}`}
+      role="status"
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="flex-1">{toast.message}</span>
+      <button
+        type="button"
+        aria-label="알림 닫기"
+        className="rounded-sm p-0.5 opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onDismiss}
+      >
+        <X className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </div>
   );
 }

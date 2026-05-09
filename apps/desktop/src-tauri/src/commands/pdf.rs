@@ -25,7 +25,8 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    format_currency, format_rate_percent, options_summary, ResultView, DISCLAIMER_KO,
+    disclaimer_text, format_currency, format_rate_percent, options_summary, InheritanceResultView,
+    ResultView,
 };
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
@@ -71,6 +72,38 @@ pub async fn export_pdf(
             .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
         let bytes = render_pdf_bytes(&view, &opts)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
+}
+
+#[tauri::command]
+pub async fn export_inheritance_pdf(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: InheritanceResultView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("PDF", &["pdf"])
+            .set_file_name("inheritance-calculation.pdf")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_inheritance_pdf_bytes(&view)?;
         std::fs::write(&path, bytes)?;
         Ok(Some(path.to_string_lossy().into_owned()))
     })
@@ -127,6 +160,34 @@ pub fn render_pdf_bytes(view: &ResultView, options: &PdfOptions) -> Result<Vec<u
     }
 
     writer.draw_footer(view);
+
+    let bytes = doc
+        .save_to_bytes()
+        .map_err(|e| Error::Other(format!("PDF 저장 실패: {e}")))?;
+    Ok(bytes)
+}
+
+pub fn render_inheritance_pdf_bytes(view: &InheritanceResultView) -> Result<Vec<u8>, Error> {
+    let (doc, page1, layer1) = PdfDocument::new(
+        "LawCalc Korea — 상속분 간이 계산서",
+        Mm(PAGE_W_MM),
+        Mm(PAGE_H_MM),
+        "Layer 1",
+    );
+
+    let font = doc
+        .add_external_font_with_subsetting(PRETENDARD_REGULAR, true)
+        .map_err(|e| Error::Other(format!("PDF 한글 폰트 임베딩 실패: {e}")))?;
+    let _builtin_helvetica = doc
+        .add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
+
+    let mut writer = PageWriter::new(&doc, page1, layer1, font);
+    writer.draw_title("LawCalc Korea — 상속분 간이 계산서");
+    writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
+    writer.draw_inheritance_summary(view);
+    writer.draw_inheritance_table(view);
+    writer.draw_inheritance_footer(view);
 
     let bytes = doc
         .save_to_bytes()
@@ -229,6 +290,25 @@ impl<'a> PageWriter<'a> {
         self.advance(2.0);
     }
 
+    fn draw_inheritance_summary(&mut self, view: &InheritanceResultView) {
+        let lines: [(String, String); 4] = [
+            (
+                "피상속인".into(),
+                view.decedent.name.clone().unwrap_or_else(|| "-".into()),
+            ),
+            ("사망일".into(), view.decedent.deceased_at.clone()),
+            ("데이터 버전".into(), view.data_version.clone()),
+            ("상속인 수".into(), view.shares.len().to_string()),
+        ];
+        let label_w = 30.0;
+        for (label, value) in &lines {
+            self.text(label, 10.0, self.left(), self.y - 4.0);
+            self.text(value, 10.0, self.left() + label_w, self.y - 4.0);
+            self.advance(5.6);
+        }
+        self.advance(2.0);
+    }
+
     fn draw_segment_table(&mut self, view: &ResultView) {
         let inner_w: f32 = COL_WIDTHS.iter().sum();
         let right = self.left() + inner_w;
@@ -292,6 +372,41 @@ impl<'a> PageWriter<'a> {
         self.advance(2.0);
     }
 
+    fn draw_inheritance_table(&mut self, view: &InheritanceResultView) {
+        let widths: [f32; 4] = [62.0, 34.0, 34.0, 36.0];
+        let inner_w: f32 = widths.iter().sum();
+        let right = self.left() + inner_w;
+
+        self.hline(self.left(), right, self.y);
+        self.advance(5.0);
+        let headers = ["상속인", "지분(약분)", "약분 전", "백분율(참고)"];
+        let mut x = self.left();
+        for (header, width) in headers.iter().zip(widths.iter()) {
+            self.text(header, 9.0, x + 1.0, self.y - 3.5);
+            x += width;
+        }
+        self.advance(5.0);
+        self.hline(self.left(), right, self.y);
+
+        for share in &view.shares {
+            self.advance(5.4);
+            let cells = [
+                share.name.clone(),
+                format!("{}/{}", share.numerator, share.denominator),
+                format!("{}/{}", share.raw_numerator, share.raw_denominator),
+                inheritance_percent(share.numerator, share.denominator),
+            ];
+            let mut x = self.left();
+            for (cell, width) in cells.iter().zip(widths.iter()) {
+                self.text(cell, 8.5, x + 1.0, self.y - 1.0);
+                x += width;
+            }
+        }
+        self.advance(2.0);
+        self.hline(self.left(), right, self.y);
+        self.advance(2.0);
+    }
+
     fn draw_note(&mut self, note: &str) {
         self.advance(4.0);
         self.text("비고", 9.0, self.left(), self.y - 3.5);
@@ -307,7 +422,12 @@ impl<'a> PageWriter<'a> {
         let inner_right = PAGE_W_MM - MARGIN_MM;
         let footer_y = MARGIN_MM + 14.0;
         self.hline(self.left(), inner_right, footer_y);
-        self.text(DISCLAIMER_KO, 8.0, self.left(), footer_y - 4.0);
+        self.text(
+            disclaimer_text(view.disclaimer.as_deref()),
+            8.0,
+            self.left(),
+            footer_y - 4.0,
+        );
         self.text(
             &format!(
                 "데이터 버전 {}  |  계산 시각 {}",
@@ -318,6 +438,34 @@ impl<'a> PageWriter<'a> {
             footer_y - 9.0,
         );
     }
+
+    fn draw_inheritance_footer(&mut self, view: &InheritanceResultView) {
+        let inner_right = PAGE_W_MM - MARGIN_MM;
+        let footer_y = MARGIN_MM + 14.0;
+        self.hline(self.left(), inner_right, footer_y);
+        self.text(
+            disclaimer_text(Some(&view.disclaimer)),
+            8.0,
+            self.left(),
+            footer_y - 4.0,
+        );
+        self.text(
+            &format!(
+                "데이터 버전 {}  |  계산 시각 {}",
+                view.data_version, view.computed_at
+            ),
+            7.5,
+            self.left(),
+            footer_y - 9.0,
+        );
+    }
+}
+
+fn inheritance_percent(numerator: i64, denominator: i64) -> String {
+    if denominator == 0 {
+        return "-".to_string();
+    }
+    format!("{:.2}%", (numerator as f64 / denominator as f64) * 100.0)
 }
 
 /// Conservative width-aware text wrap. We don't have access to font metrics
@@ -352,7 +500,9 @@ fn wrap_text(text: &str, max_chars: usize) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::result_view::{OptionsView, SegmentView};
+    use crate::commands::result_view::{
+        InheritanceDecedentView, InheritanceShareView, OptionsView, SegmentView, DISCLAIMER_KO,
+    };
 
     fn sample() -> ResultView {
         ResultView {
@@ -374,6 +524,35 @@ mod tests {
                 rounding: None,
             },
             data_version: "legal-rates/v1.0.0".into(),
+            computed_at: "2026-05-09T12:00:00+09:00".into(),
+            disclaimer: Some(DISCLAIMER_KO.into()),
+        }
+    }
+
+    fn inheritance_sample() -> InheritanceResultView {
+        InheritanceResultView {
+            decedent: InheritanceDecedentView {
+                name: Some("피상속인".into()),
+                deceased_at: "2025-01-01".into(),
+            },
+            shares: vec![
+                InheritanceShareView {
+                    name: "배우자".into(),
+                    numerator: 3,
+                    denominator: 7,
+                    raw_numerator: 3,
+                    raw_denominator: 7,
+                },
+                InheritanceShareView {
+                    name: "자녀1".into(),
+                    numerator: 2,
+                    denominator: 7,
+                    raw_numerator: 2,
+                    raw_denominator: 7,
+                },
+            ],
+            disclaimer: DISCLAIMER_KO.into(),
+            data_version: "inheritance/v1.0.0".into(),
             computed_at: "2026-05-09T12:00:00+09:00".into(),
         }
     }
@@ -427,6 +606,17 @@ mod tests {
         );
     }
 
+    #[test]
+    fn inheritance_result_renders_pdf() {
+        let bytes = render_inheritance_pdf_bytes(&inheritance_sample()).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+        assert!(
+            bytes.len() > 1500,
+            "pdf suspiciously small: {}",
+            bytes.len()
+        );
+    }
+
     /// Manual visual check: writes a sample PDF to `/tmp/lawcalc-sample.pdf`
     /// so a developer can open it locally. Excluded from the default suite
     /// so CI/cargo test stays hermetic; run with
@@ -464,6 +654,7 @@ mod tests {
             },
             data_version: "legal-rates/v1.0.0".into(),
             computed_at: "2026-05-09T12:00:00+09:00".into(),
+            disclaimer: Some(DISCLAIMER_KO.into()),
         };
         let opts = PdfOptions {
             note: Some("샘플 비고: 한글 렌더링 검증".into()),

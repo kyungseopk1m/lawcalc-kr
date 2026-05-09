@@ -229,7 +229,7 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
 
   return {
     decedent: {
-      name: input.decedent.name,
+      ...(input.decedent.name === undefined ? {} : { name: input.decedent.name }),
       deceasedAt: input.decedent.deceasedAt,
     },
     shares,

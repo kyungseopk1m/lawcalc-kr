@@ -109,7 +109,7 @@ fn enforce_disclaimer(payload: &mut LcalcFile) {
     let Some(Value::String(kind)) = payload.body.get("kind") else {
         return;
     };
-    if kind != "interest" {
+    if kind != "interest" && kind != "inheritance" {
         return;
     }
 
@@ -120,6 +120,12 @@ fn enforce_disclaimer(payload: &mut LcalcFile) {
         "disclaimer".to_string(),
         Value::String(DISCLAIMER_KO.to_string()),
     );
+    if let Some(Value::Object(result)) = interest_payload.get_mut("result") {
+        result.insert(
+            "disclaimer".to_string(),
+            Value::String(DISCLAIMER_KO.to_string()),
+        );
+    }
 }
 
 #[cfg(test)]
@@ -195,5 +201,38 @@ mod tests {
             .and_then(|payload| payload.get("disclaimer"))
             .and_then(Value::as_str);
         assert_eq!(disclaimer, Some(DISCLAIMER_KO));
+    }
+
+    #[test]
+    fn enforce_disclaimer_updates_inheritance_payload() {
+        let mut file = sample();
+        file.body
+            .insert("kind".to_string(), Value::String("inheritance".to_string()));
+        if let Some(Value::Object(payload)) = file.body.get_mut("payload") {
+            payload.insert("disclaimer".to_string(), Value::String("stale".to_string()));
+            payload.insert(
+                "result".to_string(),
+                json!({ "disclaimer": "stale result" }),
+            );
+        }
+
+        enforce_disclaimer(&mut file);
+
+        let disclaimer = file
+            .body
+            .get("payload")
+            .and_then(Value::as_object)
+            .and_then(|payload| payload.get("disclaimer"))
+            .and_then(Value::as_str);
+        assert_eq!(disclaimer, Some(DISCLAIMER_KO));
+        let result_disclaimer = file
+            .body
+            .get("payload")
+            .and_then(Value::as_object)
+            .and_then(|payload| payload.get("result"))
+            .and_then(Value::as_object)
+            .and_then(|result| result.get("disclaimer"))
+            .and_then(Value::as_str);
+        assert_eq!(result_disclaimer, Some(DISCLAIMER_KO));
     }
 }
