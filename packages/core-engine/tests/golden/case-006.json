@@ -1,4 +1,5 @@
 {
+  "schemaVersion": "1",
   "id": "case-006",
   "title": "명시 segments × customRate (구간별 다른 이율)",
   "source": "engine-internal-w2",

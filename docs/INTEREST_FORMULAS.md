@@ -100,15 +100,26 @@ interestRaw = principal × rate × days / denominator
 
 ---
 
-## 6. 반올림 정책 (v1)
+## 6. 반올림 정책 (v2)
 
-- 각 `segment.interest` : `Math.floor(interestRaw)` — 표시용 절사.
-- `result.totalInterest` : `Math.floor(rawTotal)` — 합산 후 절사 (raw 값의 합 → floor).
-- 결과적으로 표시 segment 합과 `totalInterest` 가 1원 차이가 날 수 있다 (raw 누적 시 소수 합산).
-- 채권자 보수 방향 (절상보다 작음) → 변호사 실무 default 와 정합.
+`options.rounding` (선택, default `"floor"`) 으로 원 단위 끝수를 결정한다. 매뉴얼
+(`Calculator.hwp`) 의 끝수처리 옵션과 매핑된다.
 
-법원 계산기는 절사 / 절상 / 사사오입을 모두 옵션으로 제공한다 (`Calculator.hwp` 매뉴얼).
-v2 에서 `options.rounding` 추가 예정 (`floor` / `ceil` / `round`).
+| `options.rounding`  | 매뉴얼 표기 | 동작                                    |
+| ------------------- | ----------- | --------------------------------------- |
+| `"floor"` (default) | 절사        | `Math.floor(raw)`                       |
+| `"ceil"`            | 절상        | `Math.ceil(raw)`                        |
+| `"round"`           | 사사오입    | `Math.round(raw)` (half-away-from-zero) |
+
+적용 지점:
+
+- 각 `segment.interest` : `applyRounding(interestRaw, mode)` — 표시용.
+- `result.totalInterest` : `applyRounding(rawTotal, mode)` — raw 합계 후 처리.
+- segment-level 합과 `totalInterest` 사이 ≤ 3원 차이는 어느 mode 든 발생 가능 (raw 누적
+  시 소수 합산). `tests/edge.test.ts` 의 "floor accumulation" 회귀가 이를 invariant 로 고정.
+
+기본값 `"floor"` 는 채권자 보수 방향 (절상보다 작음) — 변호사 실무 default 와 정합.
+`options.rounding` 미지정 시 v1 골든 / 단위 회귀가 그대로 통과한다 (default 가 v1 동작).
 
 ---
 
@@ -127,25 +138,32 @@ v2 에서 `options.rounding` 추가 예정 (`floor` / `ceil` / `round`).
 `case-007` 만 외부 매뉴얼 인용이고, 나머지는 엔진 내부 회귀 테스트(`source: engine-internal-w2`).
 Windows VM 으로 `ejpc.scourt.go.kr` 캡처를 진행하면 후속 케이스에 `source` 를 갱신하며 추가한다.
 
+`tests/golden-pending/case-008-input.json` 은 첫 외부 캡처 대기용 input sheet 이다
+(macOS / 한국 외부 IP 환경에서 ejpc 직접 캡처 불가). 한국 IP / VPN 또는 Windows VM
+에서 ejpc / 계산프로그램 결과를 받으면 본 디렉토리로 이동시키며 골든화한다. fixture
+형식은 `schemaVersion: "1"` 이며 v2 옵션 도입 시점에 함께 진화시킨다 (`golden.test.ts`
+의 `GOLDEN_FIXTURE_SCHEMA` gate).
+
 ---
 
 ## 8. 미해결 / 후속
 
-- `options.rounding` (절사/절상/사사오입) — v2 옵션화. 사전 설계 §9 참조.
 - `mode="totalDays"` + `leapYear="actual"` 의 분모 정의 (구간 윤일 vs 1년 사이 윤일) 는
   매뉴얼이 명시하지 않아 본 엔진은 "구간 안 윤일" 해석을 채택. 법원 결과 캡처 후
   필요 시 보정.
 - 다년 + 명시 segments 조합 — segment 단위로 `period` 분해된다 (`tests/edge.test.ts`
   "explicit segments + period mode 조합" 회귀로 고정). UI(B 세션) 도 segment 단위로 결과 표시.
+- `Calculator.hwp` 의 10원 / 100원 단위 절사 옵션은 v2 범위 밖. 외부 캡처에서 필요성이
+  확인되면 v3 후보. 현 v2 는 원 단위 끝수만 처리.
 
 ---
 
-## 9. 반올림 정책 v2 (사전 설계, W4 도입 예정)
+## 9. 반올림 정책 v2 (구현 완료, W4 도입)
 
 법원 매뉴얼(`Calculator.hwp`)은 "끝수처리" 옵션으로 절사 / 절상 / 사사오입 세 가지를 모두
 제공한다. v1 은 채권자 보수 default 인 절사(`Math.floor`) 단일 정책으로 출발했고,
-v2 에서 사용자 선택을 노출한다. 본 절은 도입 시 변경 지점을 미리 고정하기 위한 것이며
-코드 수정은 W4 진입 시점에 한 번에 수행한다.
+v2 에서 사용자 선택을 `options.rounding?` 으로 노출한다. 본 절은 W4 도입 시 결정한
+설계와 매핑을 기록한다 (소스 진입점은 §6 운영 본문, 본 절은 의사결정 archive).
 
 ### 9.1 인터페이스 (제안)
 

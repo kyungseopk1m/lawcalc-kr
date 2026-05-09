@@ -1,4 +1,5 @@
 {
+  "schemaVersion": "1",
   "id": "case-004",
   "title": "윤년 2024 전 구간 (totalDays, leapYear=actual, 분모 366)",
   "source": "engine-internal-w2",

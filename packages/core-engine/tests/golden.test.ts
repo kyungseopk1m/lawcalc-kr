@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { calculateInterest, type InterestInput } from "../src";
 
+/**
+ * 골든 fixture 의 schema 버전. v1 = W2 도입 시점.
+ *
+ * 추후 골든 fixture 자체의 형식이 변경되면 (예: rounding 옵션 명시, segment formula 비교 추가)
+ * 이 상수와 case JSON 의 `schemaVersion` 양쪽을 함께 올린다. 본 상수와 다른 버전을 가진
+ * fixture 는 테스트에서 명시적으로 실패시켜 누락 변경을 잡는다.
+ */
+const GOLDEN_FIXTURE_SCHEMA = "1";
+
 interface GoldenCase {
+  schemaVersion: string;
   id: string;
   title: string;
   source: string;
@@ -49,6 +59,12 @@ const cases: GoldenCase[] = Object.entries(modules)
 describe("golden cases (회귀 + 외부 기준 일치)", () => {
   it("loads at least 5 cases (W2 minimum)", () => {
     expect(cases.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("all cases match GOLDEN_FIXTURE_SCHEMA (v2 옵션 도입 대비 schema gate)", () => {
+    for (const c of cases) {
+      expect(c.schemaVersion, `${c.id} schemaVersion`).toBe(GOLDEN_FIXTURE_SCHEMA);
+    }
   });
 
   for (const c of cases) {

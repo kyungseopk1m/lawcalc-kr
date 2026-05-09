@@ -42,6 +42,15 @@ export interface CalcOptions {
   leapYear: "fixed365" | "actual";
   /** 초일 산입 여부. true면 시작일을 일수에 포함. */
   includeFirstDay: boolean;
+  /**
+   * 원 단위 끝수 처리. 미지정 시 "floor" (v1 default 와 동일).
+   * - "floor": 절사 (채권자 보수, 매뉴얼 default)
+   * - "ceil":  절상 (채무자 보수)
+   * - "round": 사사오입
+   *
+   * 매뉴얼 매핑 — Calculator.hwp 의 끝수처리: 절사 / 절상 / 사사오입.
+   */
+  rounding?: "floor" | "ceil" | "round";
 }
 
 export interface InterestInput {

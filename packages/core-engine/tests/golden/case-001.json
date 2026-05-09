@@ -1,4 +1,5 @@
 {
+  "schemaVersion": "1",
   "id": "case-001",
   "title": "민법 5% × 1년 정확 (총일수식, fixed365, 초일 불산입)",
   "source": "engine-internal-w2",

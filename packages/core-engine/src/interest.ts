@@ -24,7 +24,8 @@ import type {
  *   - leapYear="fixed365": denom = 365
  *   - leapYear="actual":   마지막 미만 구간 [start_of_partial, partial_end] 에 윤일 포함 시 366
  *
- * 반올림: 각 구간 합산 후 `Math.floor` 로 원 단위 절사 (채권자 보수적, 법원 매뉴얼 끝수처리 옵션 중 하나).
+ * 본 함수는 raw 값(소수 포함)만 반환한다. 원 단위 끝수 처리는 caller `calculateInterest` 가
+ * `options.rounding` 에 따라 segment.interest / totalInterest 양쪽에 적용한다 (v2).
  *
  * @internal segment-level 계산 — caller(`calculateInterest`)가 구간 단위로 호출한다.
  */
@@ -98,19 +99,42 @@ function computeSegmentInterest(
   return { days, interestRaw, formula: parts.join(" + ") || "0" };
 }
 
+type RoundingMode = NonNullable<CalcOptions["rounding"]>;
+
+/**
+ * 원 단위 끝수 처리. v2 도입.
+ *
+ * 매뉴얼(Calculator.hwp) 매핑:
+ * - "floor" → 절사 (채권자 보수, default)
+ * - "ceil"  → 절상 (채무자 보수)
+ * - "round" → 사사오입 (`Math.round` 의 half-away-from-zero, JS 표준)
+ */
+function applyRounding(value: number, mode: RoundingMode): number {
+  switch (mode) {
+    case "ceil":
+      return Math.ceil(value);
+    case "round":
+      return Math.round(value);
+    case "floor":
+    default:
+      return Math.floor(value);
+  }
+}
+
 /**
  * 이자 계산 메인 엔트리.
  *
  * 처리 순서:
  * 1. resolveSegments 로 RateSegment[] 확정
  * 2. 각 구간에 computeSegmentInterest 적용 (구간별 raw 이자 누적)
- * 3. 최종 합계만 `Math.floor` 로 원 단위 절사 → 합산 오차 최소화
+ * 3. 각 segment + 최종 합계에 `options.rounding` 적용 (default "floor")
  * 4. dataVersion + computedAt 기록
  *
- * 반올림 정책 (현행, v1):
- * - 각 구간의 `interest` 필드는 표시용으로 raw 값을 `Math.floor`
- * - `totalInterest` 는 raw 합계의 `Math.floor` (구간 floor 합과 1원 차이 가능)
- * - 법원 매뉴얼이 절사/절상/사사오입을 모두 옵션화하므로 v2에서 옵션 도입 예정
+ * 반올림 정책 (v2):
+ * - `options.rounding` 미지정 시 "floor" (v1 회귀 호환)
+ * - 각 구간 `interest` 와 `totalInterest` 모두 동일 모드로 처리
+ * - segment-floor 합과 totalInterest(raw 합계 floor) 간 ≤ 3원 차이는 v1과 동일하게 가능
+ *   ("floor accumulation" edge.test.ts 회귀로 고정)
  */
 export function calculateInterest(input: InterestInput): InterestResult {
   if (input.principal <= 0) {
@@ -121,6 +145,7 @@ export function calculateInterest(input: InterestInput): InterestResult {
   }
   const segments = resolveSegments(input);
   const dataset = loadLegalRates();
+  const rounding: RoundingMode = input.options.rounding ?? "floor";
 
   let rawTotal = 0;
   const out: InterestSegment[] = segments.map((seg) => {
@@ -137,11 +162,11 @@ export function calculateInterest(input: InterestInput): InterestResult {
       days,
       rate: seg.rate,
       formula,
-      interest: Math.floor(interestRaw),
+      interest: applyRounding(interestRaw, rounding),
     };
   });
 
-  const totalInterest = Math.floor(rawTotal);
+  const totalInterest = applyRounding(rawTotal, rounding);
   const grandTotal = input.principal + totalInterest;
 
   return {
