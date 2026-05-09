@@ -29,6 +29,22 @@ import type {
  *
  * @internal segment-level 계산 — caller(`calculateInterest`)가 구간 단위로 호출한다.
  */
+/**
+ * 사람이 읽는 표기 헬퍼 (formula 출력 전용, 계산 영향 없음).
+ *
+ * `formatPrincipal(1_000_000)` → `"1,000,000원"`
+ * `formatRatePercent(0.05)`    → `"5%"`
+ * `formatRatePercent(0.123)`   → `"12.3%"` (부동소수점 잡음 정리: toFixed(10) → Number)
+ *
+ * 통일 표기: `1,000,000원 × 5% × 100일 / 365` (한글/%, B-W5 컨펌).
+ */
+function formatPrincipal(principal: number): string {
+  return `${principal.toLocaleString("en-US")}원`;
+}
+function formatRatePercent(rate: number): string {
+  return `${Number((rate * 100).toFixed(10))}%`;
+}
+
 function computeSegmentInterest(
   principal: number,
   rate: number,
@@ -40,7 +56,7 @@ function computeSegmentInterest(
     return {
       days: 0,
       interestRaw: 0,
-      formula: `${principal.toLocaleString("en-US")} × ${rate} × 0일 = 0`,
+      formula: `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × 0일 = 0`,
     };
   }
 
@@ -48,7 +64,7 @@ function computeSegmentInterest(
     const denom =
       options.leapYear === "fixed365" ? 365 : containsLeapDay(segment.from, segment.to) ? 366 : 365;
     const interestRaw = (principal * rate * days) / denom;
-    const formula = `${principal.toLocaleString("en-US")} × ${rate} × ${days} / ${denom}`;
+    const formula = `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × ${days}일 / ${denom}`;
     return { days, interestRaw, formula };
   }
 
@@ -58,7 +74,7 @@ function computeSegmentInterest(
     return {
       days: 0,
       interestRaw: 0,
-      formula: `${principal.toLocaleString("en-US")} × ${rate} × 0일 = 0`,
+      formula: `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × 0일 = 0`,
     };
   }
 
@@ -92,9 +108,12 @@ function computeSegmentInterest(
   const interestPartial = partialDays > 0 ? (principal * rate * partialDays) / denom : 0;
   const interestRaw = interestFull + interestPartial;
   const parts: string[] = [];
-  if (fullYears > 0) parts.push(`${fullYears}년 × ${principal.toLocaleString("en-US")} × ${rate}`);
+  if (fullYears > 0)
+    parts.push(`${fullYears}년 × ${formatPrincipal(principal)} × ${formatRatePercent(rate)}`);
   if (partialDays > 0) {
-    parts.push(`${principal.toLocaleString("en-US")} × ${rate} × ${partialDays} / ${denom}`);
+    parts.push(
+      `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × ${partialDays}일 / ${denom}`,
+    );
   }
   return { days, interestRaw, formula: parts.join(" + ") || "0" };
 }

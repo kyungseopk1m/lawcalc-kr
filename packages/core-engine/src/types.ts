@@ -81,7 +81,7 @@ export interface InterestSegment {
   days: number;
   /** 적용된 연이율. */
   rate: number;
-  /** 사람이 읽을 수 있는 적용 공식 (예: "1,000,000 × 0.05 × 30 / 365"). */
+  /** 사람이 읽을 수 있는 적용 공식 (예: "1,000,000원 × 5% × 30일 / 365"). */
   formula: string;
   /** 해당 구간 이자(원). */
   interest: number;

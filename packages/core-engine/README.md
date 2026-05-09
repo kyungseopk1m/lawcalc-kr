@@ -50,13 +50,13 @@ const result: InterestResult = calculateInterest(input);
 // result.segments[0]    = {
 //   from: "2023-01-01", to: "2024-01-01",
 //   days: 365, rate: 0.05,
-//   formula: "1년 × 10,000,000 × 0.05",
+//   formula: "1년 × 10,000,000원 × 5%",
 //   interest: 500_000,
 // }
 ```
 
-`result.segments[i].formula` 는 사람이 읽을 수 있는 적용 식이다 (예: `1,000,000 × 0.05 × 100 / 365`).
-UI / PDF / CSV 가 그대로 노출해 계산 근거를 투명하게 보여줄 수 있다.
+`result.segments[i].formula` 는 사람이 읽을 수 있는 적용 식이다 (예: `1,000,000원 × 5% × 100일 / 365`).
+원금에 `원`, 이율은 `%`, 일수는 `일` 접미사로 통일 — UI / PDF / CSV 가 그대로 노출해 계산 근거를 투명하게 보여준다.
 
 ## 옵션 (`CalcOptions`)
 
