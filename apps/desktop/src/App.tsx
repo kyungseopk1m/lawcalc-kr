@@ -7,6 +7,7 @@ import {
   FileSpreadsheet,
   Loader2,
   TableProperties,
+  X,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -57,6 +58,8 @@ const defaultInput: InterestInput = {
 
 const disclaimerText =
   "이 계산 결과는 검토 보조용이며 법률 자문이나 법원 공식 계산 결과를 대체하지 않습니다.";
+
+const APP_VERSION = "0.1.0";
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 
@@ -181,7 +184,7 @@ function formatResultForClipboard(result: InterestResult) {
 function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile {
   const file: LcalcFile = {
     schemaVersion: "1",
-    appVersion: "0.0.0",
+    appVersion: APP_VERSION,
     dataVersion: result.dataVersion,
     createdAt: new Date().toISOString(),
     input,
@@ -244,15 +247,6 @@ export function App() {
   );
   const [calculationError, setCalculationError] = useState("");
   const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
-
-  useEffect(() => {
-    if (!toast) {
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => setToast(null), 4200);
-    return () => window.clearTimeout(timeout);
-  }, [toast]);
 
   useEffect(() => {
     if (skipAutoCalculateRef.current) {
@@ -373,6 +367,14 @@ export function App() {
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
+      const target = event.target;
+      const isFormInput =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement;
+      if (isFormInput) {
+        return;
+      }
       event.preventDefault();
       handleReset();
       return;
@@ -535,7 +537,7 @@ export function App() {
                   onClick={handleLoadLcalc}
                 />
               </div>
-              {toast ? <ToastMessage toast={toast} /> : null}
+              {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
             </CardContent>
           </Card>
         </section>
@@ -585,7 +587,7 @@ function ActionButton({
   );
 }
 
-function ToastMessage({ toast }: { toast: ToastState }) {
+function ToastMessage({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void }) {
   const Icon = toast.type === "success" ? CheckCircle2 : XCircle;
   const color =
     toast.type === "success"
@@ -593,12 +595,20 @@ function ToastMessage({ toast }: { toast: ToastState }) {
       : "border-red-200 bg-red-50 text-red-700";
 
   return (
-    <p
+    <div
       className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${color}`}
       role="status"
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span>{toast.message}</span>
-    </p>
+      <span className="flex-1">{toast.message}</span>
+      <button
+        type="button"
+        aria-label="알림 닫기"
+        className="rounded-sm p-0.5 opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onDismiss}
+      >
+        <X className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </div>
   );
 }
