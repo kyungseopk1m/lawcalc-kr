@@ -76,11 +76,22 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
             </p>
           </section>
 
+          <section aria-labelledby="info-shortcuts">
+            <h3 id="info-shortcuts" className="mb-1 font-medium">
+              단축키
+            </h3>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>Cmd/Ctrl+S: .lcalc 저장</li>
+              <li>Cmd/Ctrl+Enter: 계산</li>
+              <li>Esc: 입력 필드 밖에서 초기화</li>
+            </ul>
+          </section>
+
           <section aria-labelledby="info-version">
             <h3 id="info-version" className="mb-1 font-medium">
               버전
             </h3>
-            <p className="text-muted-foreground">v0.1.0</p>
+            <p className="text-muted-foreground">v0.1.2</p>
           </section>
         </div>
 

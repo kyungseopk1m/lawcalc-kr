@@ -39,6 +39,7 @@ import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { ipc, type LcalcFile } from "./lib/ipc";
+import { parseLoadedLcalcInput } from "./lib/lcalc-validation";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
@@ -71,8 +72,12 @@ interface ToastState {
 function toLegalRatePreset(
   preset: LegalRatePresetOption,
   customRate: number,
-): LegalRatePresetValue {
-  return preset === "custom" ? { customRate: customRate > 0 ? customRate : 0.05 } : preset;
+): LegalRatePresetValue | undefined {
+  if (preset !== "custom") {
+    return preset;
+  }
+
+  return customRate > 0 ? { customRate } : undefined;
 }
 
 function validateInput(input: InterestInput, preset: LegalRatePresetOption, customRate: number) {
@@ -200,20 +205,6 @@ function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile
   return file;
 }
 
-function presetFromLoadedInput(input: InterestInput): {
-  preset: LegalRatePresetOption;
-  customRate: number;
-} {
-  if (typeof input.legalRatePreset === "object") {
-    return { preset: "custom", customRate: input.legalRatePreset.customRate };
-  }
-
-  return {
-    preset: input.legalRatePreset ?? "civil",
-    customRate: 0.05,
-  };
-}
-
 export function App() {
   const [principal, setPrincipal] = useState(defaultInput.principal);
   const [startDate, setStartDate] = useState(defaultInput.startDate);
@@ -229,18 +220,19 @@ export function App() {
   const resultSectionRef = useRef<HTMLElement>(null);
   const skipAutoCalculateRef = useRef(false);
 
-  const input = useMemo<InterestInput>(
-    () => ({
+  const input = useMemo<InterestInput>(() => {
+    const legalRatePreset = toLegalRatePreset(preset, customRate);
+
+    return {
       principal,
       startDate,
       endDate,
       ...(segments.length > 0 ? { segments } : {}),
-      legalRatePreset: toLegalRatePreset(preset, customRate),
+      ...(legalRatePreset === undefined ? {} : { legalRatePreset }),
       options,
       note,
-    }),
-    [customRate, endDate, note, options, preset, principal, segments, startDate],
-  );
+    };
+  }, [customRate, endDate, note, options, preset, principal, segments, startDate]);
   const errors = validateInput(input, preset, customRate);
   const hasErrors = Boolean(
     errors.principal || errors.dateRange || errors.customRate || errors.segments,
@@ -301,6 +293,10 @@ export function App() {
   };
 
   const runAction = async (action: ActionName, task: () => Promise<string | null | void>) => {
+    if (loadingAction !== null) {
+      return;
+    }
+
     setLoadingAction(action);
     setToast(null);
     try {
@@ -320,6 +316,10 @@ export function App() {
 
   const handleSaveLcalc = () =>
     runAction("save", async () => {
+      if (hasErrors) {
+        throw new Error("입력 오류를 먼저 수정한 뒤 .lcalc 파일을 저장해 주세요.");
+      }
+
       const path = await ipc.saveLcalc(buildLcalcFile(input, result));
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
@@ -331,16 +331,16 @@ export function App() {
         return "불러오기를 취소했습니다.";
       }
 
-      const loadedPreset = presetFromLoadedInput(file.input);
+      const loaded = parseLoadedLcalcInput(file);
       skipAutoCalculateRef.current = true;
-      setPrincipal(file.input.principal);
-      setStartDate(file.input.startDate);
-      setEndDate(file.input.endDate);
-      setSegments(file.input.segments ?? []);
-      setOptions({ ...file.input.options, rounding: file.input.options.rounding ?? "floor" });
-      setPreset(loadedPreset.preset);
-      setCustomRate(loadedPreset.customRate);
-      setNote(file.input.note ?? file.note ?? "");
+      setPrincipal(loaded.input.principal);
+      setStartDate(loaded.input.startDate);
+      setEndDate(loaded.input.endDate);
+      setSegments(loaded.input.segments ?? []);
+      setOptions({ ...loaded.input.options, rounding: loaded.input.options.rounding ?? "floor" });
+      setPreset(loaded.preset);
+      setCustomRate(loaded.customRate);
+      setNote(loaded.input.note ?? file.note ?? "");
       setResult(file.result);
       setCalculationError("");
       window.requestAnimationFrame(() => resultSectionRef.current?.focus());
@@ -383,6 +383,12 @@ export function App() {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       handleCalculate();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "s" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      void handleSaveLcalc();
     }
   };
 
