@@ -6,7 +6,7 @@ lawcalc-kr is an independent open-source project for reviewing Korean legal calc
 
 이 도구의 계산 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인 필요합니다.
 
-lawcalc-kr는 법원 공식 프로그램과 무관합니다. 법원, 전자소송, 대법원 또는 그 산하기관이 배포·보증·감수한 프로그램이 아닙니다.
+자세한 출처 / 무관성 명시: [docs/LEGAL_REFERENCES.md](../docs/LEGAL_REFERENCES.md)
 
 ## Scope
 

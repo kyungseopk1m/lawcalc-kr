@@ -2,6 +2,13 @@
 
 This document lists reference sources for the judgment-interest MVP. It is not a substitute for checking the currently effective statute and case-specific procedural history.
 
+## 독립성 명시
+
+lawcalc-kr는 법원, 전자소송, 대법원 또는 그 산하기관이 배포·보증·감수한 프로그램이 아닙니다.
+법원 공식 프로그램, 상표, 로고, 설치 파일과 무관한 독립 오픈소스 프로젝트입니다.
+
+본 섹션이 이 무관성 명시의 단일 출처입니다. README와 다른 docs 파일에서 이 문구를 반복하지 않고 본 문서로 링크합니다.
+
 ## Primary Legal Sources
 
 | Topic                             | Reference                                                                        | MVP Use                                                   |
