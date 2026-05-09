@@ -21,7 +21,6 @@ import {
   type RateSegment,
 } from "@lawcalc-kr/core-engine";
 
-import { DisclaimerBar } from "./components/layout/DisclaimerBar";
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { DateRangeInput } from "./components/form/DateRangeInput";
@@ -363,13 +362,13 @@ export function App() {
   const handleExportPdf = () =>
     runAction("pdf", async () => {
       const path = await ipc.exportPdf(result, { path: "lawcalc-interest.pdf", note });
-      return `PDF 파일을 저장했습니다: ${path}`;
+      return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
-      await ipc.exportCsv(result, "lawcalc-interest.csv");
-      return "CSV 파일을 저장했습니다.";
+      const path = await ipc.exportCsv(result, "lawcalc-interest.csv");
+      return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -393,7 +392,6 @@ export function App() {
       onKeyDown={handleKeyDown}
     >
       <Header />
-      <DisclaimerBar />
 
       <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,440px)_1fr]">
         <section className="space-y-4" aria-labelledby="input-title">
