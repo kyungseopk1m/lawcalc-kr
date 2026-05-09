@@ -57,9 +57,9 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: lawcalc-kr ${{ github.ref_name }}
           releaseBody: |
-            # lawcalc-kr v0.1.0
+            # lawcalc-kr ${{ github.ref_name }}
 
-            한국 판결금 이자·지연손해금 계산을 검토하기 위한 첫 데스크톱 릴리스입니다.
+            한국 판결금 이자·지연손해금 계산 데스크톱 워크벤치 릴리스입니다.
 
             ## 다운로드
 
@@ -71,13 +71,18 @@ jobs:
             - 원금, 기간, 법정이율 프리셋, 초일 산입, 윤년 처리 옵션 기반 이자 계산
             - 민법·상법·소송촉진 등에 관한 특례법 이율 변경 이력 반영
             - 구간별 일수, 이율, 공식, 이자와 총액 표시
-            - `.lcalc` JSON 저장·로드로 입력값과 결과 재현
-            - PDF(A4, 한글 Pretendard 폰트 임베드) / CSV(UTF-8 BOM, Excel 한글 호환) / 클립보드 텍스트 내보내기
+            - 상속분 간이 계산 탭 (`Inheritance.hwp` 매뉴얼 기반, 8 골든 케이스)
+            - `.lcalc` v2 envelope (`{ schemaVersion: "2", kind, payload }`) 로 다중 도메인 저장·로드. v1 (interest 단일) 파일은 자동 마이그레이션
+            - PDF(A4, 한글 Pretendard 폰트 임베드) / CSV(UTF-8 BOM, Excel 한글 호환, formula injection 방어) / 클립보드 텍스트 내보내기
+            - `.lcalc` 1 MiB 상한 + 비고 10,000 자 상한
+            - toast 오류 메시지의 절대 경로·사용자 계정명·스택 프레임 redact
+            - CI `prettier --check` + `tsc --noEmit` + `cargo fmt --check` + `cargo clippy -- -D warnings` 게이트
+            - 5개 export/save/load 버튼 (PDF / CSV / 클립보드 / `.lcalc` 저장 / `.lcalc` 불러오기) 의 macOS·Windows main thread deadlock 해소
 
             ## 호환성
 
-            - `.lcalc` schemaVersion `1` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
-            - 첫 공개 릴리스이므로 breaking change는 없습니다.
+            - `.lcalc` v1 (`schemaVersion: "1"`) 파일은 불러올 때 v2 envelope 로 자동 마이그레이션됩니다.
+            - v0.2.x 에서 저장한 v2 envelope 파일은 v0.1.x 앱에서 열리지 않습니다.
 
             ## 라이선스
 

@@ -6,18 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-10
+
 ### Added
 
+- 상속분 간이 계산 탭을 추가했습니다. `Inheritance.hwp` 매뉴얼을 근거로 한 8 골든 케이스 + 단위 테스트가 포함됩니다.
+- `.lcalc` 파일 형식을 v2 envelope (`{ schemaVersion: "2", kind: "interest" | "inheritance", payload }`) 로 확장하고, v1 (interest 단일) 파일을 자동으로 v2 로 변환하는 마이그레이션 registry 를 추가했습니다.
+- 면책 고지 단일 source (`STANDARD_DISCLAIMER` from `@lawcalc-kr/core-engine`) 를 도입해 화면 / PDF / CSV / 클립보드 / `.lcalc` 5 surface 에 동일 문구를 적용합니다.
+- 법정이율 dataset 주입 API 를 추가했습니다. `calculateInterest(input, { dataset })` 형태로 호출할 수 있으며, 기본 dataset 은 codegen 으로 `data/legal-rates/v1.json` 단일 출처에서 생성됩니다.
+- CI 에 `prettier --check` + `tsc --noEmit` 게이트를 추가했습니다.
 - CI에 Rust formatting / Clippy 게이트를 추가했습니다. `apps/desktop/src-tauri`에서 `cargo fmt --all -- --check`와 `cargo clippy --all-targets -- -D warnings`를 실행합니다.
 - v0.1.x 개선 백로그를 `docs/plans/v0.1.x-improvement-backlog.md`로 정리했습니다.
 
 ### Changed
 
+- CSV 내보내기에 formula injection 방어를 적용했습니다. `=`, `+`, `-`, `@`, `\t`, `\r`, `\x00` 으로 시작하는 셀 앞에 single-quote prefix 를 붙입니다.
+- `.lcalc` 파일 크기 1 MiB 상한 + 비고(`note`) 10,000 자 상한을 추가해 비정상 입력을 차단합니다.
 - 릴리스 dry-run 체크리스트에 C-W7/C-W8 post-mortem 기반 실제 `.app`/`.msi` 실행, 5개 export/save/load 버튼 sanity, case-001 `49,863` 결과 확인을 추가했습니다.
 - GitHub Release 본문에 AGPL-3.0-or-later 라이선스 고지를 추가했습니다.
 
 ### Fixed
 
+- toast 오류 메시지에서 macOS/Linux/Windows 절대 경로 + 사용자 계정명 + 패닉 스택 프레임을 redact 하도록 `apps/desktop/src-tauri/src/error.rs` 에 `sanitize_for_user` 헬퍼를 도입하고, IPC 명령의 영문 prefix (`dialog task`) 를 한국어 prefix (`파일 대화 상자 작업 실패`) 로 일관 적용했습니다.
 - 윤년 02-29 시작 + 비윤년 1년 후 만기 케이스의 풀 1년 cycle 정의를 민법 159·160조 통설로 정정했습니다. 변호사 답변(A안) 채택. 예: `[2024-02-29, 2025-02-28]` 은 정확히 1년 만료로 처리되며 (민법 160조 3항 "최종의 월에 해당일이 없는 때 그 월의 말일") 이자 = `1,000,000 × 5% = 50,000` 입니다 (이전 50,136 → 50,000). `addYears` 가 02-29 → 02-28 로 clip 한 결과 자체를 cycle 만료일로 인정하고 다음 cursor 를 03-01 로 잡는 `periodCycleEnd` 헬퍼를 도입했습니다 (`packages/core-engine/src/interest.ts`). 회귀 fixture `case-009` (정확 1년) + `case-010` (1년 + 15일 partial) 신규. 정책 단일 출처: `docs/INTEREST_FORMULAS.md` §4.1 + `docs/LEGAL_REFERENCES.md`.
 - 소수 이율(`12.345%` 등) 다구간 누적 시 부동소수점 결과가 흔들리지 않도록 `tests/edge.test.ts` 에 회귀 2건을 고정했습니다 (TIER-A #7).
 - `.lcalc` 로드 시 `legalRatePreset` 누락 또는 잘못된 custom rate 를 조용히 5%로 대체하지 않고 사용자에게 오류를 표시하도록 정리했습니다.
@@ -26,6 +36,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Documentation
 
 - `mode="totalDays"` + `leapYear="actual"` 가 1년 초과 구간에서 분모를 단일 (365 또는 366) 로 확정하는 한계를 `docs/INTEREST_FORMULAS.md` §3 caveat 으로 명시하고, 정확 비례 계산이 필요한 경우 `mode="period"` 사용을 권장합니다 (TIER-A #3 docs caveat).
+
+### Compatibility
+
+- `.lcalc` v1 (`schemaVersion: "1"`) 파일은 불러올 때 v2 envelope 로 자동 마이그레이션됩니다.
+- v0.2.x 에서 저장한 v2 envelope 파일은 v0.1.x 앱에서 열리지 않습니다.
 
 ## [0.1.2] - 2026-05-09
 
@@ -73,7 +88,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.0
 [0.1.2]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.2
 [0.1.1]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.1
 [0.1.0]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.0
