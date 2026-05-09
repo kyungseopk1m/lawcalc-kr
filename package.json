@@ -15,7 +15,8 @@
     "test": "pnpm -r --if-present test",
     "test:golden": "pnpm -r --if-present test:golden",
     "tauri:dev": "pnpm --filter @lawcalc-kr/desktop tauri dev",
-    "tauri:build": "pnpm --filter @lawcalc-kr/desktop tauri build"
+    "tauri:build": "pnpm --filter @lawcalc-kr/desktop tauri build",
+    "build:icons": "node scripts/build-icons.mjs"
   },
   "keywords": [
     "korean-law",
@@ -29,7 +30,9 @@
   "devDependencies": {
     "@eslint/js": "^9.26.0",
     "eslint": "^9.26.0",
+    "png-to-ico": "^3.0.1",
     "prettier": "^3.5.3",
+    "sharp": "^0.34.5",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.32.0"
   },

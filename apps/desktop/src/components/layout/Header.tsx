@@ -1,6 +1,7 @@
-import { Info, Scale } from "lucide-react";
+import { Info } from "lucide-react";
 import { useState } from "react";
 
+import lcMark from "../../assets/brand/lc-mark.png";
 import { Button } from "../ui/button";
 import { InfoDialog } from "./InfoDialog";
 
@@ -12,9 +13,7 @@ export function Header() {
       <header className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Scale className="h-5 w-5" aria-hidden="true" />
-            </div>
+            <img src={lcMark} alt="LawCalc Korea" width={36} height={36} className="rounded-md" />
             <div>
               <h1 className="text-base font-semibold tracking-normal text-foreground">
                 LawCalc Korea

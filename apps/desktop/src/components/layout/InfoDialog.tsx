@@ -58,6 +58,16 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
         </div>
 
         <div className="space-y-4 px-6 py-5 text-sm">
+          <section aria-labelledby="info-intro">
+            <h3 id="info-intro" className="mb-1 font-medium">
+              소개
+            </h3>
+            <p className="text-muted-foreground">
+              본질에 집중한 법률 계산 워크벤치. 불필요한 장식을 덜어내고 계산의 본질을 상징하는
+              모노그램과 단 하나의 기준선으로 신뢰감과 전문성을 표현했습니다.
+            </p>
+          </section>
+
           <section aria-labelledby="info-disclaimer">
             <h3 id="info-disclaimer" className="mb-1 font-medium">
               면책 고지

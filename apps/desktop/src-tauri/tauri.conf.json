@@ -31,9 +31,14 @@
     "shortDescription": "한국 법률 계산 워크벤치 (이자/판결금/지연손해금)",
     "longDescription": "공개 법령과 공식 매뉴얼을 근거로 재구현한 데스크톱 법률 계산 도구. 100% 로컬 처리.",
     "icon": [
+      "icons/16x16.png",
       "icons/32x32.png",
+      "icons/64x64.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
+      "icons/256x256.png",
+      "icons/512x512.png",
+      "icons/1024x1024.png",
       "icons/icon.icns",
       "icons/icon.ico"
     ]

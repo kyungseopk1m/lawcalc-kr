@@ -16,6 +16,10 @@ target/
 apps/*/src-tauri/target/
 apps/*/src-tauri/gen/
 
+# Icon assets (SVG masters bypass prettier; PNG/ICO/ICNS are binary)
+apps/*/src-tauri/icons/*.svg
+apps/*/src-tauri/icons/icon.iconset/
+
 # Reference cache (HWP-converted material kept locally)
 .hwp-cache/
 
