@@ -162,4 +162,4 @@ gate 가 누락 / 불일치를 명시 실패로 잡는다 (v2 옵션 추가 시 
 
 ## 라이선스
 
-Business Source License 1.1 → 2031-05-09 자동 Apache-2.0 전환. 루트 `LICENSE` 참조.
+GNU Affero General Public License v3.0 (이상). 루트 `LICENSE` 참조.

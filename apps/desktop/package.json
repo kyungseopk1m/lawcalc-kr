@@ -2,7 +2,7 @@
   "name": "@lawcalc-kr/desktop",
   "version": "0.0.0",
   "private": true,
-  "license": "BUSL-1.1",
+  "license": "AGPL-3.0-or-later",
   "author": "kyungseopk1m",
   "homepage": "https://github.com/kyungseopk1m/lawcalc-kr#readme",
   "repository": {

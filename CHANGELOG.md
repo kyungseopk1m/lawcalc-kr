@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `.lcalc` JSON 저장·로드를 구현해 입력값, 옵션, 결과, 데이터 버전, 면책 고지를 로컬 파일로 재현할 수 있게 했습니다.
 - 계산 결과를 PDF(A4, Pretendard 한글 폰트 임베드, 구간표·합계·면책 푸터 포함)와 CSV(UTF-8 BOM, Excel 한글 호환)로 내보내고 텍스트 요약을 클립보드에 복사하는 기능을 추가했습니다.
 - GitHub Actions CI와 macOS/Windows Tauri draft release workflow를 추가했습니다.
-- BUSL-1.1 라이선스와 2031-05-09 Apache-2.0 자동 전환 고지를 추가했습니다.
+- GNU Affero General Public License v3.0 (이상) 라이선스를 적용했습니다. 누구나 자유롭게 사용·수정·재배포할 수 있으며, 수정본을 네트워크 서비스로 제공하거나 재배포할 경우 동일 라이선스로 source code 공개가 강제됩니다.
 - 다중 세션 개발 워크플로, 릴리스 체크리스트, 테스트 전략, 사용자 테스트 계획 문서를 추가했습니다.
 
 ### Changed

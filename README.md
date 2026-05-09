@@ -87,7 +87,14 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 ## 라이선스
 
-이 프로젝트는 Business Source License 1.1로 배포되며, 2031-05-09에 Apache License 2.0으로 전환됩니다. 자세한 내용은 [LICENSE](LICENSE)와 [LICENSE.future](LICENSE.future)를 확인하세요.
+이 프로젝트는 GNU Affero General Public License v3.0 (이상)으로 배포됩니다. 누구나 자유롭게 사용·수정·재배포할 수 있으며, 수정본을 네트워크 서비스로 제공하거나 재배포할 경우 동일 라이선스로 source code를 공개해야 합니다. 자세한 내용은 [LICENSE](LICENSE)를 확인하세요.
+
+상업적 사용을 위해 별도 라이선스가 필요한 경우 Licensor (kyungseopk1m)에게 문의해 주세요.
+
+> **사용 예시 / 의무 발동 조건**
+>
+> - 변호사·법무팀이 본인 사무소·기업 내부에서 stand-alone 데스크톱 앱으로 사용 → AGPL 의무 발동 0 (internal use).
+> - 본 코드를 자체 SaaS·웹·다중 사용자 시스템에 통합해 외부에 제공 → 동일 라이선스로 source 공개 강제.
 
 ## English
 
@@ -97,4 +104,6 @@ The v0.1.0 release focuses on local-only interest calculation, transparent formu
 
 ### License
 
-Distributed under the Business Source License 1.1 with a Change Date of 2031-05-09, after which the licensed work converts to the Apache License 2.0. See [LICENSE](LICENSE) and [LICENSE.future](LICENSE.future) for the full text.
+Distributed under the GNU Affero General Public License v3.0 or later. You are free to use, modify, and redistribute the software, but any modified version made available to users over a network or redistributed as a derivative work must be released under the same license with source code available. See [LICENSE](LICENSE) for the full text.
+
+For commercial licensing inquiries, please contact the Licensor (kyungseopk1m).

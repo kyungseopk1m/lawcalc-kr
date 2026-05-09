@@ -71,7 +71,8 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
               라이선스
             </h3>
             <p className="text-muted-foreground">
-              BUSL-1.1 — 2031-05-09 이후 Apache-2.0으로 자동 전환됩니다.
+              GNU Affero General Public License v3.0 (이상). 자세한 내용은 LICENSE 파일을
+              참조하세요.
             </p>
           </section>
 
