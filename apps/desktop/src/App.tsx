@@ -1,12 +1,13 @@
 import { Calculator, FileJson, TableProperties } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type {
-  CalcOptions,
-  InterestInput,
-  InterestResult,
-  LegalRatePreset as LegalRatePresetValue,
-  RateSegment,
+import {
+  calculateInterest,
+  type CalcOptions,
+  type InterestInput,
+  type InterestResult,
+  type LegalRatePreset as LegalRatePresetValue,
+  type RateSegment,
 } from "@lawcalc-kr/core-engine";
 
 import { DisclaimerBar } from "./components/layout/DisclaimerBar";
@@ -49,68 +50,21 @@ function toLegalRatePreset(
   return preset === "custom" ? { customRate: customRate > 0 ? customRate : 0.05 } : preset;
 }
 
-function resolvePresetRate(preset: LegalRatePresetOption, customRate: number) {
-  return preset === "custom" ? customRate : legalRateOptions[preset].rate;
-}
+function validateInput(input: InterestInput, preset: LegalRatePresetOption, customRate: number) {
+  const segmentError = input.segments?.some(
+    (segment) => segment.from.length === 0 || segment.to.length === 0 || segment.rate <= 0,
+  )
+    ? "이자율 구간의 시작일, 종료일, 연이율을 모두 입력해 주세요."
+    : "";
 
-function countCalendarDays(startDate: string, endDate: string, includeFirstDay: boolean) {
-  const start = new Date(`${startDate}T00:00:00Z`).getTime();
-  const end = new Date(`${endDate}T00:00:00Z`).getTime();
-
-  if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
-    return 0;
-  }
-
-  const inclusiveDays = Math.floor((end - start) / 86_400_000) + 1;
-  return includeFirstDay ? inclusiveDays : Math.max(inclusiveDays - 1, 0);
-}
-
-function createMockResult(
-  input: InterestInput,
-  preset: LegalRatePresetOption,
-  customRate: number,
-): InterestResult {
-  const fallbackRate = resolvePresetRate(preset, customRate);
-  const sourceSegments =
-    input.segments && input.segments.length > 0
-      ? input.segments
-      : [{ from: input.startDate, to: input.endDate, rate: fallbackRate }];
-
-  const segments = sourceSegments.map((segment) => {
-    const days = countCalendarDays(segment.from, segment.to, input.options.includeFirstDay);
-    const denominator = input.options.leapYear === "actual" ? 366 : 365;
-    const interest = Math.round((input.principal * segment.rate * days) / denominator);
-
-    return {
-      from: segment.from,
-      to: segment.to,
-      days,
-      rate: segment.rate,
-      formula: `${input.principal.toLocaleString("ko-KR")}원 × ${(segment.rate * 100).toLocaleString("ko-KR")}% × ${days.toLocaleString("ko-KR")}일 / ${denominator}`,
-      interest,
-    };
-  });
-
-  const totalInterest = segments.reduce((sum, segment) => sum + segment.interest, 0);
-
-  return {
-    principal: input.principal,
-    segments,
-    totalInterest,
-    grandTotal: input.principal + totalInterest,
-    options: input.options,
-    dataVersion: "mock/w2",
-    computedAt: new Date().toISOString(),
-  };
-}
-
-function validateInput(input: InterestInput) {
   return {
     principal: input.principal > 0 ? "" : "원금은 0보다 큰 정수여야 합니다.",
     dateRange:
       input.startDate.length > 0 && input.endDate.length > 0 && input.endDate >= input.startDate
         ? ""
         : "종료일은 시작일과 같거나 이후여야 합니다.",
+    customRate: preset === "custom" && customRate <= 0 ? "직접 입력 이율은 0보다 커야 합니다." : "",
+    segments: segmentError,
   };
 }
 
@@ -129,28 +83,29 @@ export function App() {
       principal,
       startDate,
       endDate,
-      segments,
+      ...(segments.length > 0 ? { segments } : {}),
       legalRatePreset: toLegalRatePreset(preset, customRate),
       options,
       note,
     }),
     [customRate, endDate, note, options, preset, principal, segments, startDate],
   );
-  const errors = validateInput(input);
-  const [result, setResult] = useState<InterestResult>(() =>
-    createMockResult(defaultInput, "civil", 0.05),
-  );
+  const errors = validateInput(input, preset, customRate);
+  const [calculationError, setCalculationError] = useState("");
+  const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
 
   const handleCalculate = () => {
-    if (errors.principal || errors.dateRange) {
+    if (errors.principal || errors.dateRange || errors.customRate || errors.segments) {
       return;
     }
 
     try {
-      throw new Error("calculateInterest wire is scheduled for W3");
+      setResult(calculateInterest(input));
+      setCalculationError("");
     } catch (error) {
-      console.warn("W3 wire 예정", error);
-      setResult(createMockResult(input, preset, customRate));
+      setCalculationError(
+        error instanceof Error ? error.message : "계산 중 알 수 없는 오류가 발생했습니다.",
+      );
     }
   };
 
@@ -163,7 +118,8 @@ export function App() {
     setPreset("civil");
     setCustomRate(0.05);
     setNote("");
-    setResult(createMockResult(defaultInput, "civil", 0.05));
+    setCalculationError("");
+    setResult(calculateInterest(defaultInput));
   };
 
   const fallbackLabel = legalRateOptions[preset].label;
@@ -197,12 +153,14 @@ export function App() {
               <LegalRatePreset
                 value={preset}
                 customRate={customRate}
+                error={errors.customRate}
                 onValueChange={setPreset}
                 onCustomRateChange={setCustomRate}
               />
               <RateSegmentInput
                 fallbackLabel={fallbackLabel}
                 value={segments}
+                error={errors.segments}
                 onChange={setSegments}
               />
               <OptionsPanel value={options} onChange={setOptions} />
@@ -223,6 +181,11 @@ export function App() {
                   초기화
                 </Button>
               </div>
+              {calculationError ? (
+                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {calculationError}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </section>

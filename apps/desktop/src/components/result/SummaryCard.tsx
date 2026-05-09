@@ -6,11 +6,13 @@ interface SummaryCardProps {
   result: InterestResult;
 }
 
-const currencyFormatter = new Intl.NumberFormat("ko-KR", {
+const numberFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 0,
-  style: "currency",
-  currency: "KRW",
 });
+
+function formatWon(value: number) {
+  return `${numberFormatter.format(value)}원`;
+}
 
 export function SummaryCard({ result }: SummaryCardProps) {
   return (
@@ -20,7 +22,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
           <CardTitle className="text-sm text-muted-foreground">원금</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0 text-xl font-semibold">
-          {currencyFormatter.format(result.principal)}
+          {formatWon(result.principal)}
         </CardContent>
       </Card>
       <Card>
@@ -28,7 +30,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
           <CardTitle className="text-sm text-muted-foreground">이자 합계</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0 text-xl font-semibold">
-          {currencyFormatter.format(result.totalInterest)}
+          {formatWon(result.totalInterest)}
         </CardContent>
       </Card>
       <Card>
@@ -36,7 +38,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
           <CardTitle className="text-sm text-muted-foreground">원리금 합계</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0 text-xl font-semibold">
-          {currencyFormatter.format(result.grandTotal)}
+          {formatWon(result.grandTotal)}
         </CardContent>
       </Card>
     </div>

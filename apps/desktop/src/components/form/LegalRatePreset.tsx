@@ -6,6 +6,7 @@ export type LegalRatePresetOption = "civil" | "commercial" | "promotion" | "cust
 interface LegalRatePresetProps {
   value: LegalRatePresetOption;
   customRate: number;
+  error?: string;
   onValueChange: (value: LegalRatePresetOption) => void;
   onCustomRateChange: (value: number) => void;
 }
@@ -20,6 +21,7 @@ export const legalRateOptions: Record<LegalRatePresetOption, { label: string; ra
 export function LegalRatePreset({
   value,
   customRate,
+  error,
   onValueChange,
   onCustomRateChange,
 }: LegalRatePresetProps) {
@@ -41,6 +43,7 @@ export function LegalRatePreset({
         <label className="grid gap-2 text-sm font-medium">
           직접 입력 이율 (%)
           <Input
+            aria-invalid={Boolean(error)}
             inputMode="decimal"
             min="0"
             placeholder="예: 7.5"
@@ -49,6 +52,7 @@ export function LegalRatePreset({
             value={customRate > 0 ? customRate * 100 : ""}
             onChange={(event) => onCustomRateChange(Number(event.target.value) / 100)}
           />
+          {error ? <span className="text-xs font-normal text-red-600">{error}</span> : null}
         </label>
       ) : null}
     </div>

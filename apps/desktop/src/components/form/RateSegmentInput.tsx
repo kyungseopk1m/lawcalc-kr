@@ -8,6 +8,7 @@ import { Input } from "../ui/input";
 interface RateSegmentInputProps {
   fallbackLabel: string;
   value: RateSegment[];
+  error?: string;
   onChange: (segments: RateSegment[]) => void;
 }
 
@@ -22,7 +23,7 @@ function updateSegment(
   );
 }
 
-export function RateSegmentInput({ fallbackLabel, value, onChange }: RateSegmentInputProps) {
+export function RateSegmentInput({ fallbackLabel, value, error, onChange }: RateSegmentInputProps) {
   const addSegment = () => {
     onChange([...value, { from: "", to: "", rate: 0.05 }]);
   };
@@ -100,6 +101,7 @@ export function RateSegmentInput({ fallbackLabel, value, onChange }: RateSegment
           ))}
         </div>
       )}
+      {error ? <span className="text-xs font-normal text-red-600">{error}</span> : null}
     </div>
   );
 }

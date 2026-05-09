@@ -1,4 +1,4 @@
-import type { InterestResult } from "@lawcalc-kr/core-engine";
+import type { InterestResult, InterestSegment } from "@lawcalc-kr/core-engine";
 
 import { FormulaCell } from "./FormulaCell";
 
@@ -6,11 +6,13 @@ interface SegmentTableProps {
   result: InterestResult;
 }
 
-const currencyFormatter = new Intl.NumberFormat("ko-KR", {
+const numberFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 0,
-  style: "currency",
-  currency: "KRW",
 });
+
+function formatWon(value: number) {
+  return `${numberFormatter.format(value)}원`;
+}
 
 function formatRate(rate: number) {
   return `${(rate * 100).toLocaleString("ko-KR", { maximumFractionDigits: 3 })}%`;
@@ -32,29 +34,35 @@ export function SegmentTable({ result }: SegmentTableProps) {
         </thead>
         <tbody>
           {result.segments.map((segment) => (
-            <tr className="border-t border-border" key={`${segment.from}-${segment.to}`}>
-              <td className="px-3 py-3">{segment.from}</td>
-              <td className="px-3 py-3">{segment.to}</td>
-              <td className="px-3 py-3 text-right">{segment.days.toLocaleString("ko-KR")}일</td>
-              <td className="px-3 py-3 text-right">{formatRate(segment.rate)}</td>
-              <td className="px-3 py-3">
-                <FormulaCell formula={segment.formula} />
-              </td>
-              <td className="px-3 py-3 text-right font-medium">
-                {currencyFormatter.format(segment.interest)}
-              </td>
-            </tr>
+            <SegmentRow key={`${segment.from}-${segment.to}`} segment={segment} />
           ))}
           <tr className="border-t border-border bg-muted/50 font-semibold">
             <td className="px-3 py-3" colSpan={5}>
               합계
             </td>
-            <td className="px-3 py-3 text-right">
-              {currencyFormatter.format(result.totalInterest)}
-            </td>
+            <td className="px-3 py-3 text-right">{formatWon(result.totalInterest)}</td>
           </tr>
         </tbody>
       </table>
     </div>
+  );
+}
+
+interface SegmentRowProps {
+  segment: InterestSegment;
+}
+
+function SegmentRow({ segment }: SegmentRowProps) {
+  return (
+    <tr className="border-t border-border">
+      <td className="px-3 py-3">{segment.from}</td>
+      <td className="px-3 py-3">{segment.to}</td>
+      <td className="px-3 py-3 text-right">{segment.days.toLocaleString("ko-KR")}일</td>
+      <td className="px-3 py-3 text-right">{formatRate(segment.rate)}</td>
+      <td className="px-3 py-3">
+        <FormulaCell formula={segment.formula} />
+      </td>
+      <td className="px-3 py-3 text-right font-medium">{formatWon(segment.interest)}</td>
+    </tr>
   );
 }
