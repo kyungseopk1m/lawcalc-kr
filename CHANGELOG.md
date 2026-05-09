@@ -18,8 +18,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `@lawcalc-kr/core-engine` package scaffold with public interest-calculation types and placeholder tests.
 - Golden-test policy and placeholder wiring for court-output comparison cases.
 - Release checklist for W4 Tauri dry runs and artifact review.
+- Legal-rate dataset v1, interest calculation engine, unit tests, and seven golden fixtures.
+- Multi-session development workflow covering commit-first sync, rebase rules, worktree isolation, stash handling, and CI monitoring.
 
 ### Changed
 
 - Refreshed `pnpm-lock.yaml` after desktop, Tauri, and core-engine package integration.
 - Expanded README, architecture, and testing docs for W2 integration ownership, `.lcalc` compatibility, and CI monitoring.
+- Documented W4 release dry-run prerequisites around clean worktrees and active stash review.

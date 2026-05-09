@@ -83,6 +83,7 @@ pnpm tauri:build
 - [법령 및 공식 자료 참조](docs/LEGAL_REFERENCES.md)
 - [면책 정책](docs/DISCLAIMER.md)
 - [테스트 전략](docs/TESTING.md)
+- [개발 워크플로](docs/DEV_WORKFLOW.md)
 - [릴리스 체크리스트](docs/RELEASE.md)
 
 ## 라이선스

@@ -14,19 +14,25 @@ lawcalc-kr releases are GitHub draft releases built by `tauri-apps/tauri-action`
 
 ## Pre-Tag Checklist
 
-1. Pull and rebase on `main`.
+1. Confirm the working tree is clean. Do not rebase with modified, staged, untracked, or conflicted files.
+
+   ```bash
+   git status --short --branch
+   ```
+
+2. Pull and rebase on `main`.
 
    ```bash
    git pull --rebase origin main
    ```
 
-2. Verify lockfile determinism.
+3. Verify lockfile determinism.
 
    ```bash
    pnpm install --frozen-lockfile
    ```
 
-3. Run the CI-equivalent checks locally.
+4. Run the CI-equivalent checks locally.
 
    ```bash
    pnpm lint
@@ -35,14 +41,16 @@ lawcalc-kr releases are GitHub draft releases built by `tauri-apps/tauri-action`
    pnpm build
    ```
 
-4. Confirm the changelog has a useful `Unreleased` summary for:
+5. Confirm the changelog has a useful `Unreleased` summary for:
    - core engine changes;
    - desktop form and result UI changes;
    - `.lcalc`, CSV, PDF, or clipboard changes;
    - legal-rate data changes;
    - breaking schema or calculation-policy changes.
 
-5. Confirm README screenshots or demo GIF placeholders are either real assets or clearly marked placeholders.
+6. Confirm README screenshots or demo GIF placeholders are either real assets or clearly marked placeholders.
+
+7. Confirm no active multi-session stash contains release, Tauri, or app changes that should ship.
 
 ## W4 Dry Run
 
