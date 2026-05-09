@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::PathBuf;
 
 use serde_json::Value;
@@ -10,6 +11,20 @@ use super::result_view::{
     disclaimer_text, format_currency, format_rate_percent, options_summary, InheritanceResultView,
     ResultView,
 };
+
+/// CSV formula injection defense.
+///
+/// Excel / Numbers / LibreOffice 가 셀 값이 `=`, `+`, `-`, `@`, 탭, CR 로
+/// 시작하면 수식으로 해석한다. 사용자 입력(상속인/피상속인 이름) 또는 음수
+/// 금액(`format_currency(-1234.0) = "-1,234"`)이 그대로 셀에 들어가면 외부
+/// 사용자가 받은 CSV 가 표 도구에서 의도치 않은 수식으로 평가될 수 있다.
+/// 위험 prefix 가 있으면 작은따옴표(`'`)를 붙여 텍스트로 강제한다.
+fn escape_csv_cell(cell: &str) -> Cow<'_, str> {
+    match cell.as_bytes().first() {
+        Some(b'=' | b'+' | b'-' | b'@' | b'\t' | b'\r') => Cow::Owned(format!("'{cell}")),
+        _ => Cow::Borrowed(cell),
+    }
+}
 
 /// Export a calculation result as a UTF-8 BOM CSV at a path chosen by the user.
 ///
@@ -91,24 +106,19 @@ pub fn render_csv_bytes(view: &ResultView) -> Result<Vec<u8>, Error> {
     wtr.write_record(["시작일", "종료일", "일수", "이율", "공식", "이자(원)"])?;
 
     for seg in &view.segments {
-        wtr.write_record([
-            seg.from.as_str(),
-            seg.to.as_str(),
-            &seg.days.to_string(),
-            &format_rate_percent(seg.rate),
-            seg.formula.as_str(),
-            &format_currency(seg.interest),
-        ])?;
+        let row: [String; 6] = [
+            escape_csv_cell(seg.from.as_str()).into_owned(),
+            escape_csv_cell(seg.to.as_str()).into_owned(),
+            escape_csv_cell(&seg.days.to_string()).into_owned(),
+            escape_csv_cell(&format_rate_percent(seg.rate)).into_owned(),
+            escape_csv_cell(seg.formula.as_str()).into_owned(),
+            escape_csv_cell(&format_currency(seg.interest)).into_owned(),
+        ];
+        wtr.write_record(&row)?;
     }
 
-    wtr.write_record([
-        "합계",
-        "",
-        "",
-        "",
-        "",
-        &format_currency(view.total_interest),
-    ])?;
+    let total_cell = escape_csv_cell(&format_currency(view.total_interest)).into_owned();
+    wtr.write_record(["합계", "", "", "", "", total_cell.as_str()])?;
 
     // summary footer rows (key,value pairs, padded so reader still aligns)
     let summary_rows: [(&str, String); 5] = [
@@ -119,10 +129,13 @@ pub fn render_csv_bytes(view: &ResultView) -> Result<Vec<u8>, Error> {
         ("옵션", options_summary(&view.options)),
     ];
     for (key, value) in &summary_rows {
-        wtr.write_record([*key, value.as_str()])?;
+        let escaped = escape_csv_cell(value).into_owned();
+        wtr.write_record([*key, escaped.as_str()])?;
     }
-    wtr.write_record(["계산 시각", view.computed_at.as_str()])?;
-    wtr.write_record(["면책 고지", disclaimer_text(view.disclaimer.as_deref())])?;
+    let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
+    wtr.write_record(["계산 시각", computed_cell.as_str()])?;
+    let disclaimer_cell = escape_csv_cell(disclaimer_text(view.disclaimer.as_deref())).into_owned();
+    wtr.write_record(["면책 고지", disclaimer_cell.as_str()])?;
 
     let inner = wtr
         .into_inner()
@@ -144,19 +157,33 @@ pub fn render_inheritance_csv_bytes(view: &InheritanceResultView) -> Result<Vec<
     wtr.write_record(["상속인", "지분(약분)", "약분 전", "백분율(참고)"])?;
 
     for share in &view.shares {
-        wtr.write_record([
-            share.name.as_str(),
-            &format!("{}/{}", share.numerator, share.denominator),
-            &format!("{}/{}", share.raw_numerator, share.raw_denominator),
-            &format_inheritance_percent(share.numerator, share.denominator),
-        ])?;
+        let row: [String; 4] = [
+            escape_csv_cell(share.name.as_str()).into_owned(),
+            escape_csv_cell(&format!("{}/{}", share.numerator, share.denominator)).into_owned(),
+            escape_csv_cell(&format!(
+                "{}/{}",
+                share.raw_numerator, share.raw_denominator
+            ))
+            .into_owned(),
+            escape_csv_cell(&format_inheritance_percent(
+                share.numerator,
+                share.denominator,
+            ))
+            .into_owned(),
+        ];
+        wtr.write_record(&row)?;
     }
 
-    wtr.write_record(["피상속인", view.decedent.name.as_deref().unwrap_or("-")])?;
-    wtr.write_record(["사망일", view.decedent.deceased_at.as_str()])?;
-    wtr.write_record(["데이터 버전", view.data_version.as_str()])?;
-    wtr.write_record(["계산 시각", view.computed_at.as_str()])?;
-    wtr.write_record(["면책 고지", disclaimer_text(Some(&view.disclaimer))])?;
+    let decedent_cell = escape_csv_cell(view.decedent.name.as_deref().unwrap_or("-")).into_owned();
+    wtr.write_record(["피상속인", decedent_cell.as_str()])?;
+    let deceased_cell = escape_csv_cell(view.decedent.deceased_at.as_str()).into_owned();
+    wtr.write_record(["사망일", deceased_cell.as_str()])?;
+    let data_version_cell = escape_csv_cell(view.data_version.as_str()).into_owned();
+    wtr.write_record(["데이터 버전", data_version_cell.as_str()])?;
+    let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
+    wtr.write_record(["계산 시각", computed_cell.as_str()])?;
+    let disclaimer_cell = escape_csv_cell(disclaimer_text(Some(&view.disclaimer))).into_owned();
+    wtr.write_record(["면책 고지", disclaimer_cell.as_str()])?;
 
     let inner = wtr
         .into_inner()
@@ -313,5 +340,62 @@ mod tests {
         assert!(body.contains("배우자,3/7,3/7,42.86%"));
         assert!(body.contains("inheritance/v1.0.0"));
         assert!(body.contains("면책 고지"));
+    }
+
+    #[test]
+    fn escape_csv_cell_neutralizes_formula_prefixes() {
+        for prefix in ["=", "+", "-", "@", "\t", "\r"] {
+            let payload = format!("{prefix}HYPERLINK(\"x\")");
+            let escaped = escape_csv_cell(&payload);
+            assert_eq!(
+                escaped.chars().next(),
+                Some('\''),
+                "prefix {prefix:?} must be neutralized"
+            );
+            assert!(escaped.ends_with(payload.as_str()));
+        }
+    }
+
+    #[test]
+    fn escape_csv_cell_passes_safe_text_through() {
+        let cases = ["1,000,000원", "5%", "2024-01-01", "본 결과는 검토용", ""];
+        for cell in cases {
+            assert_eq!(escape_csv_cell(cell).as_ref(), cell);
+        }
+    }
+
+    /// Negative currency (e.g. interest cap reductions in future domains)
+    /// already starts with `-`; without escape Excel would read `-1,234`
+    /// as a formula yielding `-1234`.
+    #[test]
+    fn negative_currency_is_quoted_in_csv_output() {
+        let mut view = sample();
+        view.total_interest = -1234.0;
+        view.grand_total = view.principal - 1234.0;
+        let bytes = render_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(
+            body.contains("'-1,234"),
+            "body did not escape negative: {body}"
+        );
+    }
+
+    /// User-controlled name fields must not be evaluated as formulas in the
+    /// inheritance CSV.
+    #[test]
+    fn malicious_share_name_is_escaped_in_inheritance_csv() {
+        let mut view = inheritance_sample();
+        view.shares[0].name = "=HYPERLINK(\"http://x\",\"x\")".to_string();
+        view.decedent.name = Some("@SUM(A1)".to_string());
+        let bytes = render_inheritance_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        // Single-quote prefix prevents Excel/Numbers from evaluating as
+        // formula. CSV writer wraps the cell in double-quotes because the
+        // payload contains commas and embedded double-quotes.
+        assert!(
+            body.contains("\"'=HYPERLINK("),
+            "leading apostrophe missing: {body}"
+        );
+        assert!(body.contains("'@SUM(A1)"));
     }
 }

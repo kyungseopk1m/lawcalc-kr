@@ -33,6 +33,29 @@ const optionModes = new Set<CalcOptions["mode"]>(["period", "totalDays"]);
 const leapYearModes = new Set<CalcOptions["leapYear"]>(["fixed365", "actual"]);
 const roundingModes = new Set<NonNullable<CalcOptions["rounding"]>>(["floor", "ceil", "round"]);
 
+/**
+ * Note 필드 최대 길이 (UTF-16 code units, 즉 JS string length).
+ * 사용자 입력 자유 텍스트가 .lcalc 파일을 통해 무제한으로 들어와 메모리/렌더링
+ * 비용을 비대화시키는 것을 막기 위한 가드. 한글 1글자 = 1 code unit (BMP)
+ * 이므로 한글 기준 약 10,000자까지 허용.
+ */
+export const MAX_NOTE_LENGTH = 10_000;
+
+function requireBoundedNote(value: unknown, field: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  if (value.length > MAX_NOTE_LENGTH) {
+    throw new Error(
+      `.lcalc 파일의 ${field} 필드가 너무 깁니다. 최대 ${MAX_NOTE_LENGTH.toLocaleString("en-US")}자까지 허용됩니다.`,
+    );
+  }
+  return value;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -124,6 +147,8 @@ function parseInterestPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInte
     throw new Error(".lcalc 파일의 payload.result 필드가 올바르지 않습니다.");
   }
 
+  const note = requireBoundedNote(payload.note, "payload.note");
+
   return {
     appVersion: requireString(payload.appVersion, "payload.appVersion"),
     dataVersion: requireString(payload.dataVersion, "payload.dataVersion"),
@@ -131,7 +156,7 @@ function parseInterestPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInte
     input: payload.input as InterestInput,
     options: parseOptions(payload.options),
     result: payload.result as unknown as LcalcInterestPayload["result"],
-    ...(typeof payload.note === "string" ? { note: payload.note } : {}),
+    ...(note === undefined ? {} : { note }),
     disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
   };
 }
@@ -229,13 +254,15 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
     ...(collateralFourth === undefined ? {} : { collateralFourth }),
   };
 
+  const note = requireBoundedNote(payload.note, "payload.note");
+
   return {
     appVersion: requireString(payload.appVersion, "payload.appVersion"),
     dataVersion: requireString(payload.dataVersion, "payload.dataVersion"),
     createdAt: requireString(payload.createdAt, "payload.createdAt"),
     input: inheritanceInput,
     ...(payload.result === undefined ? {} : { result: parseInheritanceResult(payload.result) }),
-    ...(typeof payload.note === "string" ? { note: payload.note } : {}),
+    ...(note === undefined ? {} : { note }),
     disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
   };
 }

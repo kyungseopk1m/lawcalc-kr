@@ -5,6 +5,7 @@ import { STANDARD_DISCLAIMER, calculateInterest } from "@lawcalc-kr/core-engine"
 import type { LcalcFile, LoadableLcalcFile } from "./ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lcalc-migrations";
 import {
+  MAX_NOTE_LENGTH,
   parseLoadedInheritanceLcalcInput,
   parseLoadedLcalcInput,
   validateLcalcEnvelope,
@@ -225,5 +226,49 @@ describe("validateLcalcEnvelope", () => {
     expect(loaded.input.spouse?.name).toBe("배우자");
     expect(loaded.result?.shares).toHaveLength(2);
     expect(loaded.note).toBe("inheritance note");
+  });
+
+  it("rejects an interest file whose note exceeds the bounded length", () => {
+    const oversized: LcalcFile = {
+      ...sampleV2,
+      payload: {
+        ...sampleV2.payload,
+        note: "가".repeat(MAX_NOTE_LENGTH + 1),
+      },
+    };
+    expect(() => validateLcalcEnvelope(oversized)).toThrow(
+      ".lcalc 파일의 payload.note 필드가 너무 깁니다.",
+    );
+  });
+
+  it("accepts an interest file whose note is exactly the bounded length", () => {
+    const onTheLimit: LcalcFile = {
+      ...sampleV2,
+      payload: {
+        ...sampleV2.payload,
+        note: "가".repeat(MAX_NOTE_LENGTH),
+      },
+    };
+    expect(() => validateLcalcEnvelope(onTheLimit)).not.toThrow();
+    const loaded = parseLoadedLcalcInput(onTheLimit);
+    expect(loaded.note?.length).toBe(MAX_NOTE_LENGTH);
+  });
+
+  it("rejects an inheritance file whose note exceeds the bounded length", () => {
+    const inheritanceFile: LcalcFile = {
+      schemaVersion: "2",
+      kind: "inheritance",
+      payload: {
+        appVersion: "0.1.2",
+        dataVersion: "inheritance/v1.0.0",
+        createdAt: "2026-05-09T12:00:00.000Z",
+        input: { decedent: { deceasedAt: "2026-01-01" } },
+        note: "x".repeat(MAX_NOTE_LENGTH + 1),
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+    expect(() => validateLcalcEnvelope(inheritanceFile)).toThrow(
+      ".lcalc 파일의 payload.note 필드가 너무 깁니다.",
+    );
   });
 });

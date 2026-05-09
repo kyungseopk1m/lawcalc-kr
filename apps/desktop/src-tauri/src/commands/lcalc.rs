@@ -14,6 +14,13 @@ use super::result_view::DISCLAIMER_KO;
 pub const SCHEMA_VERSION: &str = "2";
 const SUPPORTED_SCHEMA_VERSIONS: &[&str] = &["1", SCHEMA_VERSION];
 
+/// Maximum accepted `.lcalc` file size at load time (bytes).
+///
+/// 1 MiB 는 정상 사용 한도(긴 segments + 비고 포함)를 충분히 덮으면서, 사용자가
+/// 신뢰할 수 없는 출처에서 받은 비대 JSON 을 파싱하기 전에 거부할 수 있는
+/// 가드. 한도 초과 시 메모리/렌더 비용을 막기 위해 한국어 메시지로 reject.
+pub const MAX_LCALC_BYTES: u64 = 1_048_576;
+
 /// Wire-compatible representation of an `.lcalc` document.
 ///
 /// The Rust shell only extracts `schemaVersion`; all domain-specific payload
@@ -76,6 +83,8 @@ pub async fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
             .into_path()
             .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
+        validate_file_size(std::fs::metadata(&path)?.len())?;
+
         let bytes = std::fs::read(&path)?;
         let parsed: LcalcFile = serde_json::from_slice(&bytes)?;
 
@@ -85,6 +94,17 @@ pub async fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
     })
     .await
     .map_err(|e| Error::Other(format!("dialog task: {e}")))?
+}
+
+fn validate_file_size(bytes_len: u64) -> Result<(), Error> {
+    if bytes_len > MAX_LCALC_BYTES {
+        return Err(Error::Other(format!(
+            ".lcalc 파일이 너무 큽니다. 최대 {} bytes 까지 허용되며 현재 파일은 {} bytes 입니다.",
+            MAX_LCALC_BYTES, bytes_len
+        )));
+    }
+
+    Ok(())
 }
 
 fn validate_schema_version(schema_version: &str) -> Result<(), Error> {
@@ -183,6 +203,21 @@ mod tests {
     fn unsupported_schema_version_uses_korean_message() {
         let message = validate_schema_version("9").unwrap_err().to_string();
         assert!(message.contains("지원하지 않는 .lcalc 버전입니다: 9"));
+    }
+
+    #[test]
+    fn validate_file_size_accepts_under_cap() {
+        validate_file_size(0).unwrap();
+        validate_file_size(MAX_LCALC_BYTES).unwrap();
+    }
+
+    #[test]
+    fn validate_file_size_rejects_over_cap_with_korean_message() {
+        let message = validate_file_size(MAX_LCALC_BYTES + 1)
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains(".lcalc 파일이 너무 큽니다"));
+        assert!(message.contains(&MAX_LCALC_BYTES.to_string()));
     }
 
     #[test]
