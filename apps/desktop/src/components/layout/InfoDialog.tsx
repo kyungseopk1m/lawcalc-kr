@@ -102,7 +102,7 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
             <h3 id="info-version" className="mb-1 font-medium">
               버전
             </h3>
-            <p className="text-muted-foreground">v0.2.0</p>
+            <p className="text-muted-foreground">v0.2.1</p>
           </section>
         </div>
 

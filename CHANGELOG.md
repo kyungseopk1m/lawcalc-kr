@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-10
+
+### Added
+
+- `pnpm build:icons` 스크립트를 추가했습니다. `apps/desktop/src-tauri/icons/icon-source.png` (1254×1254 raster master) 한 장에서 macOS / Windows / Linux 의 PNG 8개 size (16/32/64/128/128@2x/256/512/1024) + `icon.icns` (iconutil 10 multi-res) + `icon.ico` (6 multi-res) + 인앱 Header 마운트용 `apps/desktop/src/assets/brand/lc-mark.png` (128×128) 를 일괄 생성합니다.
+
+### Changed
+
+- 앱 아이콘과 Header 브랜드 마크를 `Lc` 모노그램 (deep navy `#0D1B2A` + 흰색 L + 골드 C `#D4AF37` + amber baseline) 디자인으로 교체했습니다. 기존 Pillow placeholder (~19KB total) 와 lucide `Scale` 아이콘 (저울 emblem — 법원 공식 프로그램 클론 회피 정책 위반) 을 모두 제거하고 시안 raster 한 장에서 9-platform 자산을 일괄 생성합니다. `globals.css` `@theme` 에 `--color-brand-navy` / `--color-brand-gold` 토큰을 추가했습니다.
+- InfoDialog 와 README 첫 단락에 `소개 / 본질에 집중한 법률 계산 워크벤치` 카피를 추가해 브랜드 정체성 일관성을 회복했습니다.
+
 ## [0.2.0] - 2026-05-10
 
 ### Added
@@ -17,7 +28,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - CI 에 `prettier --check` + `tsc --noEmit` 게이트를 추가했습니다.
 - CI에 Rust formatting / Clippy 게이트를 추가했습니다. `apps/desktop/src-tauri`에서 `cargo fmt --all -- --check`와 `cargo clippy --all-targets -- -D warnings`를 실행합니다.
 - v0.1.x 개선 백로그를 `docs/plans/v0.1.x-improvement-backlog.md`로 정리했습니다.
-- `pnpm build:icons` 스크립트를 추가했습니다. `apps/desktop/src-tauri/icons/icon-source.png` (1254×1254 raster master) 한 장에서 macOS / Windows / Linux 의 PNG 8개 size (16/32/64/128/128@2x/256/512/1024) + `icon.icns` (iconutil 10 multi-res) + `icon.ico` (6 multi-res) + 인앱 Header 마운트용 `apps/desktop/src/assets/brand/lc-mark.png` (128×128) 를 일괄 생성합니다.
 
 ### Changed
 
@@ -25,8 +35,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `.lcalc` 파일 크기 1 MiB 상한 + 비고(`note`) 10,000 자 상한을 추가해 비정상 입력을 차단합니다.
 - 릴리스 dry-run 체크리스트에 C-W7/C-W8 post-mortem 기반 실제 `.app`/`.msi` 실행, 5개 export/save/load 버튼 sanity, case-001 `49,863` 결과 확인을 추가했습니다.
 - GitHub Release 본문에 AGPL-3.0-or-later 라이선스 고지를 추가했습니다.
-- 앱 아이콘과 Header 브랜드 마크를 `Lc` 모노그램 (deep navy `#0D1B2A` + 흰색 L + 골드 C `#D4AF37` + amber baseline) 디자인으로 교체했습니다. 기존 Pillow placeholder (~19KB total) 와 lucide `Scale` 아이콘 (저울 emblem — 법원 공식 프로그램 클론 회피 정책 위반) 을 모두 제거하고 시안 raster 한 장에서 9-platform 자산을 일괄 생성합니다. `globals.css` `@theme` 에 `--color-brand-navy` / `--color-brand-gold` 토큰을 추가했습니다.
-- InfoDialog 와 README 첫 단락에 `소개 / 본질에 집중한 법률 계산 워크벤치` 카피를 추가해 브랜드 정체성 일관성을 회복했습니다.
 
 ### Fixed
 
@@ -91,7 +99,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.0
 [0.1.2]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.2
 [0.1.1]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.1
