@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyungseopk1m/lawcalc-kr/blob/main/data/legal-rates/v1.schema.json",
+  "title": "lawcalc-kr Legal Rates Dataset (v1)",
+  "description": "법정이율 데이터셋 v1. 워크스페이스 single source. packages/core-engine/scripts/sync-legal-rates.mjs 가 빌드 타임에 src/legal-rates.dataset.generated.ts 로 인라인. 검증은 LegalRateDataset validate() 와 동등.",
+  "type": "object",
+  "required": ["version", "updatedAt", "rates"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9.-]+)?$",
+      "description": "Semver. result.dataVersion 에 'legal-rates/v{version}' 형태로 기록."
+    },
+    "updatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "데이터셋 갱신일 (YYYY-MM-DD)."
+    },
+    "rates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/LegalRateRecord" },
+      "minItems": 1,
+      "description": "code unique. 동일 code 의 과거 이율은 previousVersions 로."
+    }
+  },
+  "$defs": {
+    "LegalRateRecord": {
+      "type": "object",
+      "required": ["code", "label_ko", "annualRate", "validFrom", "validTo"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": ["civil", "commercial", "promotion"],
+          "description": "민법(379조) / 상법(54조) / 소송촉진법(3조)."
+        },
+        "label_ko": {
+          "type": "string",
+          "minLength": 1,
+          "description": "한국어 표시 라벨 (UI 드롭다운/PDF/CSV)."
+        },
+        "annualRate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "연이율 (예: 0.05 = 연 5%). 음수 금지."
+        },
+        "validFrom": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "현행 이율 시행일."
+        },
+        "validTo": {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+          ],
+          "description": "현행 이율 종료일. null = 무기한 유효."
+        },
+        "previousVersions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PreviousVersion" },
+          "description": "동일 code 의 과거 이율. validFrom 오름차순 권장. validTo < 현행 validFrom 강제."
+        }
+      }
+    },
+    "PreviousVersion": {
+      "type": "object",
+      "required": ["annualRate", "validFrom", "validTo"],
+      "additionalProperties": false,
+      "properties": {
+        "annualRate": { "type": "number", "minimum": 0 },
+        "validFrom": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "validTo": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+      }
+    }
+  }
+}
