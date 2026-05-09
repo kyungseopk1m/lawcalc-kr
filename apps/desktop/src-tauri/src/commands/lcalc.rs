@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::AppHandle;
+use tauri::{async_runtime, AppHandle};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::error::Error;
@@ -33,55 +33,67 @@ pub struct LcalcFile {
     pub disclaimer: String,
 }
 
+/// dialog blocking 변형 + 파일 IO 는 main thread deadlock 회피 위해
+/// `async_runtime::spawn_blocking` 안에서 실행한다 (Tauri 2.x).
 #[tauri::command]
-pub fn save_lcalc(app: AppHandle, payload: LcalcFile) -> Result<Option<String>, Error> {
-    let picked = app
-        .dialog()
-        .file()
-        .add_filter("LawCalc Document", &["lcalc"])
-        .set_file_name("calculation.lcalc")
-        .blocking_save_file();
+pub async fn save_lcalc(app: AppHandle, payload: LcalcFile) -> Result<Option<String>, Error> {
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("LawCalc Document", &["lcalc"])
+            .set_file_name("calculation.lcalc")
+            .blocking_save_file();
 
-    let Some(file_path) = picked else {
-        return Ok(None);
-    };
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
 
-    let path: PathBuf = file_path
-        .into_path()
-        .map_err(|e| Error::InvalidPath(e.to_string()))?;
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
-    let json = serde_json::to_string_pretty(&payload)?;
-    std::fs::write(&path, json)?;
-    Ok(Some(path.to_string_lossy().into_owned()))
+        let json = serde_json::to_string_pretty(&payload)?;
+        std::fs::write(&path, json)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
 }
 
 #[tauri::command]
-pub fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
-    let picked = app
-        .dialog()
-        .file()
-        .add_filter("LawCalc Document", &["lcalc"])
-        .blocking_pick_file();
+pub async fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<LcalcFile>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("LawCalc Document", &["lcalc"])
+            .blocking_pick_file();
 
-    let Some(file_path) = picked else {
-        return Ok(None);
-    };
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
 
-    let path: PathBuf = file_path
-        .into_path()
-        .map_err(|e| Error::InvalidPath(e.to_string()))?;
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
-    let bytes = std::fs::read(&path)?;
-    let parsed: LcalcFile = serde_json::from_slice(&bytes)?;
+        let bytes = std::fs::read(&path)?;
+        let parsed: LcalcFile = serde_json::from_slice(&bytes)?;
 
-    if parsed.schema_version != SCHEMA_VERSION {
-        return Err(Error::InvalidSchema(format!(
-            "스키마 v{} 가 필요하지만 v{} 파일을 받았습니다",
-            SCHEMA_VERSION, parsed.schema_version
-        )));
-    }
+        if parsed.schema_version != SCHEMA_VERSION {
+            return Err(Error::InvalidSchema(format!(
+                "스키마 v{} 가 필요하지만 v{} 파일을 받았습니다",
+                SCHEMA_VERSION, parsed.schema_version
+            )));
+        }
 
-    Ok(Some(parsed))
+        Ok(Some(parsed))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
 }
 
 #[cfg(test)]

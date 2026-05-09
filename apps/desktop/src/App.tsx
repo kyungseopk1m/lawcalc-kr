@@ -59,7 +59,7 @@ const defaultInput: InterestInput = {
 const disclaimerText =
   "이 계산 결과는 검토 보조용이며 법률 자문이나 법원 공식 계산 결과를 대체하지 않습니다.";
 
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.1.2";
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 

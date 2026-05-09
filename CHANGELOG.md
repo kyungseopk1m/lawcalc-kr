@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-09
+
+### Fixed
+
+- 내보내기 / 저장 / 불러오기 5개 버튼 (PDF / CSV / 클립보드 / `.lcalc` 저장 / `.lcalc` 불러오기) 클릭 시 저장 경로 dialog 가 닫힌 후 앱이 멈추던 결함을 수정했습니다. 4개 dialog command (`export_pdf` / `export_csv` / `save_lcalc` / `load_lcalc`) 가 sync `#[tauri::command]` 안에서 `blocking_save_file()` / `blocking_pick_file()` 을 호출해 macOS · Windows main thread deadlock 을 일으켰습니다. async 시그니처 + `tauri::async_runtime::spawn_blocking` 으로 워커 스레드 위임으로 정정했습니다.
+- 빌드 산출물 파일명과 InfoDialog 가 `0.1.0` 으로 표기되던 결함을 수정했습니다. `tauri.conf.json` `version` / `Cargo.toml` `version` / `App.tsx` `APP_VERSION` 셋을 `0.1.2` 로 일괄 갱신했습니다.
+
 ## [0.1.1] - 2026-05-09
 
 ### Fixed
@@ -45,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.2
 [0.1.1]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.1
 [0.1.0]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.0

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use serde_json::Value;
-use tauri::AppHandle;
+use tauri::{async_runtime, AppHandle};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::error::Error;
@@ -15,28 +15,36 @@ use super::result_view::{
 /// The on-wire `result` payload is the JSON shape of `InterestResult`. We
 /// deserialize into [`ResultView`] so a malformed payload fails before the
 /// dialog opens. Returns `Ok(None)` when the user cancels.
+///
+/// dialog blocking 변형 + 파일 IO 는 main thread deadlock 회피 위해
+/// `async_runtime::spawn_blocking` 안에서 실행한다 (Tauri 2.x).
 #[tauri::command]
-pub fn export_csv(app: AppHandle, result: Value) -> Result<Option<String>, Error> {
+pub async fn export_csv(app: AppHandle, result: Value) -> Result<Option<String>, Error> {
     let view: ResultView = serde_json::from_value(result)?;
 
-    let picked = app
-        .dialog()
-        .file()
-        .add_filter("CSV", &["csv"])
-        .set_file_name("calculation.csv")
-        .blocking_save_file();
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("CSV", &["csv"])
+            .set_file_name("calculation.csv")
+            .blocking_save_file();
 
-    let Some(file_path) = picked else {
-        return Ok(None);
-    };
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
 
-    let path: PathBuf = file_path
-        .into_path()
-        .map_err(|e| Error::InvalidPath(e.to_string()))?;
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
-    let bytes = render_csv_bytes(&view)?;
-    std::fs::write(&path, bytes)?;
-    Ok(Some(path.to_string_lossy().into_owned()))
+        let bytes = render_csv_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
 }
 
 /// Build the CSV bytes (BOM + header + segments + total + summary footer).

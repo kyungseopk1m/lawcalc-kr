@@ -19,7 +19,7 @@ use printpdf::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::AppHandle;
+use tauri::{async_runtime, AppHandle};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::error::Error;
@@ -41,8 +41,12 @@ pub struct PdfOptions {
 
 /// Export the calculation result as a PDF at a path chosen by the user.
 /// Returns `Ok(None)` when the user cancels the save dialog.
+///
+/// Tauri 2.x: dialog 의 `blocking_*` 변형은 main thread 에서 호출 시 macOS / Windows 에서
+/// deadlock 한다. async command 안에서 `tauri::async_runtime::spawn_blocking` 으로 워커
+/// 스레드에 위임해야 UI 가 멈추지 않는다.
 #[tauri::command]
-pub fn export_pdf(
+pub async fn export_pdf(
     app: AppHandle,
     result: Value,
     options: Option<PdfOptions>,
@@ -50,24 +54,29 @@ pub fn export_pdf(
     let view: ResultView = serde_json::from_value(result)?;
     let opts = options.unwrap_or_default();
 
-    let picked = app
-        .dialog()
-        .file()
-        .add_filter("PDF", &["pdf"])
-        .set_file_name("calculation.pdf")
-        .blocking_save_file();
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("PDF", &["pdf"])
+            .set_file_name("calculation.pdf")
+            .blocking_save_file();
 
-    let Some(file_path) = picked else {
-        return Ok(None);
-    };
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
 
-    let path: PathBuf = file_path
-        .into_path()
-        .map_err(|e| Error::InvalidPath(e.to_string()))?;
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
-    let bytes = render_pdf_bytes(&view, &opts)?;
-    std::fs::write(&path, bytes)?;
-    Ok(Some(path.to_string_lossy().into_owned()))
+        let bytes = render_pdf_bytes(&view, &opts)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("dialog task: {e}")))?
 }
 
 /// A4 portrait dimensions, top-down layout.
