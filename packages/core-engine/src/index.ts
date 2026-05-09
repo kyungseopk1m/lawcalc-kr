@@ -17,3 +17,4 @@ export { calculateInterest } from "./interest";
 export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "./days";
 export { resolveSegments } from "./segments";
 export { datasetVersionTag, getRateAt, rateHistoryFor } from "./legal-rates";
+export { STANDARD_DISCLAIMER } from "./disclaimers";

@@ -41,7 +41,7 @@ pub struct OptionsView {
 }
 
 /// Disclaimer copy that must accompany every exported artifact.
-/// Mirrors the in-app footer.
+/// Source of truth: `packages/core-engine/src/disclaimers.ts` `STANDARD_DISCLAIMER`.
 pub const DISCLAIMER_KO: &str =
     "본 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인이 필요합니다.";
 

@@ -21,7 +21,7 @@ pub enum Error {
     #[error("CSV 처리 오류: {0}")]
     Csv(#[from] csv::Error),
 
-    #[error("지원하지 않는 .lcalc 형식: {0}")]
+    #[error("{0}")]
     InvalidSchema(String),
 
     #[error("잘못된 파일 경로: {0}")]
@@ -49,9 +49,10 @@ mod tests {
         assert!(Error::InvalidPath("/x/y".into())
             .to_string()
             .starts_with("잘못된 파일 경로"));
-        assert!(Error::InvalidSchema("v9".into())
-            .to_string()
-            .starts_with("지원하지 않는 .lcalc 형식"));
+        assert_eq!(
+            Error::InvalidSchema("지원하지 않는 .lcalc 버전입니다: 9".into()).to_string(),
+            "지원하지 않는 .lcalc 버전입니다: 9"
+        );
         assert_eq!(
             Error::Other("끝수처리 실패".into()).to_string(),
             "끝수처리 실패"

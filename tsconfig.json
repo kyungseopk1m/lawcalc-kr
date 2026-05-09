@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "noEmit": true,
+    "paths": {
+      "@lawcalc-kr/core-engine": ["packages/core-engine/src/index.ts"]
+    }
+  },
+  "include": [
+    "apps/desktop/src",
+    "apps/desktop/vite.config.ts",
+    "apps/desktop/tailwind.config.ts",
+    "packages/core-engine/src",
+    "packages/core-engine/tests"
+  ]
+}

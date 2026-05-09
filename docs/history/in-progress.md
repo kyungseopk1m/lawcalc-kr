@@ -77,3 +77,39 @@ feat(core-engine): B8/B9 dataset single source + inject
 - 손대지 않음 (B 세션 영역): `apps/desktop/src/lib/lcalc-migrations.ts`, `packages/core-engine/src/disclaimers.ts`, `App.tsx`, `lcalc.rs`.
 - 손대지 않음 (C 세션 leap-366 영역): `packages/core-engine/src/days.ts:containsLeapDay`, `interest.ts` numerator 계산.
 - for-claude 측 in-progress.md 는 미수정 (C/D 영역).
+
+## [MIDDLE — B 세션] B10/B11 entry hardening (2026-05-09)
+
+**브랜치**: `feat/b10-b11-migration-disclaimer` (origin/main `2b85ae0` 기반, A 세션 B8/B9 위에 rebase)
+**상태**: 코드 + 테스트 + 검증 완료.
+**Scope**: B10 `.lcalc` renderer-side migration registry infrastructure only, B11 standard disclaimer single source.
+**Constraints**: no `.lcalc` v2 shape or `v1 -> v2` migration function, no legal-rate/leap-day logic changes, no reference material copied into the public repo.
+
+### 변경 요약
+
+- 신규: `packages/core-engine/src/disclaimers.ts` — `STANDARD_DISCLAIMER` 단일 출처. `packages/core-engine/src/index.ts` 에서 re-export.
+- 수정: `apps/desktop/src/components/layout/DisclaimerBar.tsx`, `InfoDialog.tsx`, `apps/desktop/src/App.tsx` — clipboard / `.lcalc` 저장 본문 모두 `STANDARD_DISCLAIMER` 사용.
+- 신규: `apps/desktop/src/lib/lcalc-migrations.ts` — renderer-side migration registry. v1 identity migration 만 등록. unsupported version 은 `지원하지 않는 .lcalc 버전입니다: <ver>` 던짐.
+- 수정: `apps/desktop/src/App.tsx` `load_lcalc` 후처리 — `migrateLcalcFile(file)` 통과 후 `parseLoadedLcalcInput`.
+- 수정: `apps/desktop/src-tauri/src/commands/lcalc.rs` — `validate_schema_version` 분리 + 동일 한국어 메시지. `save_lcalc` payload `disclaimer` 를 `DISCLAIMER_KO` 로 정규화.
+- 수정: `apps/desktop/src-tauri/src/commands/result_view.rs` — `DISCLAIMER_KO` source-of-truth 주석을 TS `disclaimers.ts` 로 명시. CSV/PDF/lcalc Rust 출력처가 모두 이 상수 참조.
+- 수정: `apps/desktop/src-tauri/src/error.rs` — `Error::InvalidSchema(String)` 의 `Display` 를 `{0}` 로 단순화 (한국어 prefix 는 호출처에서 직접).
+- 신규: `apps/desktop/src/env.d.ts`, root `tsconfig.json` — desktop 측 vitest/typecheck 진입 정합.
+- 수정: `apps/desktop/package.json` — `test: vitest run` 스크립트 + `vitest ^4.1.5` (root `pnpm.overrides` 와 일치).
+- 신규 테스트: `packages/core-engine/tests/disclaimers.test.ts`, `apps/desktop/src/lib/lcalc-migrations.test.ts`, `apps/desktop/src-tauri/src/commands/lcalc.rs::unsupported_schema_version_uses_korean_message`.
+
+### 검증 결과 (rebase 전)
+
+- `pnpm test` ✅ — core-engine 96 + desktop 2
+- `pnpm tsc --noEmit` ✅
+- `pnpm lint` ✅
+- `cargo fmt --check` ✅
+- `cargo clippy --all-targets -- -D warnings` ✅
+- `cargo test` ✅ — 20 passed
+
+### 영역 격리 (다중 세션)
+
+- 본 세션이 손댄 파일: 위 변경 요약 참조.
+- 손대지 않음 (A 세션 영역): `packages/core-engine/src/{legal-rates.ts, interest.ts, segments.ts, legal-rates.dataset.generated.ts}`, `data/legal-rates/v1.json`, `scripts/sync-legal-rates.mjs`.
+- 손대지 않음 (C 세션 leap-366 영역): `days.ts:containsLeapDay`, `interest.ts` numerator 계산.
+- for-claude 측 in-progress.md 는 미수정.

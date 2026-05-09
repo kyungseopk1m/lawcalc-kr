@@ -1,6 +1,8 @@
 import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
+
 import { Button } from "../ui/button";
 
 interface InfoDialogProps {
@@ -61,8 +63,7 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
               면책 고지
             </h3>
             <p className="text-muted-foreground">
-              이 도구의 계산 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인이 필요합니다.
-              lawcalc-kr는 법원 공식 프로그램과 무관합니다.
+              {STANDARD_DISCLAIMER} lawcalc-kr는 법원 공식 프로그램과 무관합니다.
             </p>
           </section>
 

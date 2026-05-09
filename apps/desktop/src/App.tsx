@@ -14,6 +14,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import {
+  STANDARD_DISCLAIMER,
   calculateInterest,
   type CalcOptions,
   type InterestInput,
@@ -40,6 +41,7 @@ import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { ipc, type LcalcFile } from "./lib/ipc";
+import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
 import { parseLoadedLcalcInput } from "./lib/lcalc-validation";
 
 const defaultOptions: CalcOptions = {
@@ -57,9 +59,6 @@ const defaultInput: InterestInput = {
   options: defaultOptions,
   note: "",
 };
-
-const disclaimerText =
-  "이 계산 결과는 검토 보조용이며 법률 자문이나 법원 공식 계산 결과를 대체하지 않습니다.";
 
 const APP_VERSION = "0.1.2";
 
@@ -183,20 +182,20 @@ function formatResultForClipboard(result: InterestResult) {
     "시작\t종료\t일수\t이율\t공식\t이자",
     rows,
     "",
-    disclaimerText,
+    STANDARD_DISCLAIMER,
   ].join("\n");
 }
 
 function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile {
   const file: LcalcFile = {
-    schemaVersion: "1",
+    schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     appVersion: APP_VERSION,
     dataVersion: result.dataVersion,
     createdAt: new Date().toISOString(),
     input,
     options: input.options,
     result,
-    disclaimer: disclaimerText,
+    disclaimer: STANDARD_DISCLAIMER,
   };
 
   if (input.note) {
@@ -332,7 +331,8 @@ export function App() {
         return "불러오기를 취소했습니다.";
       }
 
-      const loaded = parseLoadedLcalcInput(file);
+      const migratedFile = migrateLcalcFile(file);
+      const loaded = parseLoadedLcalcInput(migratedFile);
       skipAutoCalculateRef.current = true;
       setPrincipal(loaded.input.principal);
       setStartDate(loaded.input.startDate);
@@ -341,8 +341,8 @@ export function App() {
       setOptions({ ...loaded.input.options, rounding: loaded.input.options.rounding ?? "floor" });
       setPreset(loaded.preset);
       setCustomRate(loaded.customRate);
-      setNote(loaded.input.note ?? file.note ?? "");
-      setResult(file.result);
+      setNote(loaded.input.note ?? migratedFile.note ?? "");
+      setResult(migratedFile.result);
       setCalculationError("");
       window.requestAnimationFrame(() => resultSectionRef.current?.focus());
       return ".lcalc 파일을 불러왔습니다.";

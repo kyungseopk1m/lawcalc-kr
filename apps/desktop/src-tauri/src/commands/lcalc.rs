@@ -7,6 +7,8 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::error::Error;
 
+use super::result_view::DISCLAIMER_KO;
+
 /// Current `.lcalc` schema version. Bumped only on a breaking shape change.
 /// Map of `for-claude/personal/lawcalc-kr/docs/plans/project-design.md` §5.4.
 pub const SCHEMA_VERSION: &str = "1";
@@ -39,6 +41,9 @@ pub struct LcalcFile {
 pub async fn save_lcalc(app: AppHandle, payload: LcalcFile) -> Result<Option<String>, Error> {
     let app2 = app.clone();
     async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let mut payload = payload;
+        payload.disclaimer = DISCLAIMER_KO.to_string();
+
         let picked = app2
             .dialog()
             .file()
@@ -83,17 +88,22 @@ pub async fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
         let bytes = std::fs::read(&path)?;
         let parsed: LcalcFile = serde_json::from_slice(&bytes)?;
 
-        if parsed.schema_version != SCHEMA_VERSION {
-            return Err(Error::InvalidSchema(format!(
-                "스키마 v{} 가 필요하지만 v{} 파일을 받았습니다",
-                SCHEMA_VERSION, parsed.schema_version
-            )));
-        }
+        validate_schema_version(&parsed.schema_version)?;
 
         Ok(Some(parsed))
     })
     .await
     .map_err(|e| Error::Other(format!("dialog task: {e}")))?
+}
+
+fn validate_schema_version(schema_version: &str) -> Result<(), Error> {
+    if schema_version != SCHEMA_VERSION {
+        return Err(Error::InvalidSchema(format!(
+            "지원하지 않는 .lcalc 버전입니다: {schema_version}"
+        )));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -111,7 +121,7 @@ mod tests {
             options: json!({ "mode": "period", "leapYear": "fixed365", "includeFirstDay": true }),
             result: json!({ "totalInterest": 0 }),
             note: Some("note".to_string()),
-            disclaimer: "본 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인 필요".to_string(),
+            disclaimer: DISCLAIMER_KO.to_string(),
         }
     }
 
@@ -139,5 +149,11 @@ mod tests {
         assert!(!s.contains("\"note\""));
         let back: LcalcFile = serde_json::from_str(&s).unwrap();
         assert!(back.note.is_none());
+    }
+
+    #[test]
+    fn unsupported_schema_version_uses_korean_message() {
+        let message = validate_schema_version("9").unwrap_err().to_string();
+        assert!(message.contains("지원하지 않는 .lcalc 버전입니다: 9"));
     }
 }
