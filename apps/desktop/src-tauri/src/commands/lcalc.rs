@@ -76,7 +76,7 @@ pub fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
 
     if parsed.schema_version != SCHEMA_VERSION {
         return Err(Error::InvalidSchema(format!(
-            "expected schemaVersion {}, got {}",
+            "스키마 v{} 가 필요하지만 v{} 파일을 받았습니다",
             SCHEMA_VERSION, parsed.schema_version
         )));
     }

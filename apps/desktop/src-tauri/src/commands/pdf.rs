@@ -99,11 +99,11 @@ pub fn render_pdf_bytes(view: &ResultView, options: &PdfOptions) -> Result<Vec<u
     // the file, keeping per-document size in the tens of KB.
     let font = doc
         .add_external_font_with_subsetting(PRETENDARD_REGULAR, true)
-        .map_err(|e| Error::Other(format!("font embed: {e}")))?;
+        .map_err(|e| Error::Other(format!("PDF 한글 폰트 임베딩 실패: {e}")))?;
     // ASCII fallback for ratio bars / dividers if subsetting trims a glyph.
     let _builtin_helvetica = doc
         .add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| Error::Other(format!("builtin font: {e}")))?;
+        .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
 
     let mut writer = PageWriter::new(&doc, page1, layer1, font);
 
@@ -122,7 +122,7 @@ pub fn render_pdf_bytes(view: &ResultView, options: &PdfOptions) -> Result<Vec<u
 
     let bytes = doc
         .save_to_bytes()
-        .map_err(|e| Error::Other(format!("pdf save: {e}")))?;
+        .map_err(|e| Error::Other(format!("PDF 저장 실패: {e}")))?;
     Ok(bytes)
 }
 
@@ -399,6 +399,21 @@ mod tests {
     #[test]
     fn wrap_text_handles_empty() {
         assert_eq!(wrap_text("", 10), vec![String::new()]);
+    }
+
+    /// Empty segments must still produce a valid PDF (header + footer only).
+    /// Mirrors the CSV edge case so the user never sees a blank/error state
+    /// when the calculation produced no interest segments.
+    #[test]
+    fn empty_segments_renders_pdf() {
+        let mut view = sample();
+        view.segments.clear();
+        view.total_interest = 0.0;
+        view.grand_total = view.principal;
+        let bytes =
+            render_pdf_bytes(&view, &PdfOptions::default()).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+        assert!(bytes.len() > 1500, "pdf suspiciously small: {}", bytes.len());
     }
 
     /// Manual visual check: writes a sample PDF to `/tmp/lawcalc-sample.pdf`

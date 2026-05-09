@@ -85,7 +85,7 @@ pub fn render_csv_bytes(view: &ResultView) -> Result<Vec<u8>, Error> {
 
     let inner = wtr
         .into_inner()
-        .map_err(|e| Error::Other(format!("csv finalize: {e}")))?;
+        .map_err(|e| Error::Other(format!("CSV 마무리 실패: {e}")))?;
 
     let mut out = Vec::with_capacity(inner.len() + 3);
     // UTF-8 BOM so Excel auto-detects encoding for Korean.
@@ -176,5 +176,21 @@ mod tests {
         assert!(body.contains("legal-rates/v1.0.0"));
         assert!(body.contains("면책 고지"));
         assert!(body.contains("검토용 계산"));
+    }
+
+    /// Empty segments must still produce a valid file (header + 0 합계 +
+    /// summary footer). 0원 입력은 사용자 테스트에서 발생할 수 있는 시작 상태.
+    #[test]
+    fn empty_segments_renders_header_and_zero_total() {
+        let mut view = sample();
+        view.segments.clear();
+        view.total_interest = 0.0;
+        view.grand_total = view.principal;
+        let bytes = render_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("시작일"));
+        assert!(body.contains("합계,,,,,0"));
+        assert!(body.contains("이자 합계(원),0"));
+        assert!(body.contains("면책 고지"));
     }
 }
