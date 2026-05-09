@@ -77,7 +77,14 @@ export interface InterestInput {
 export interface InterestSegment {
   from: IsoDate;
   to: IsoDate;
-  /** 옵션(초일 산입/윤년 처리)을 반영한 일수. */
+  /**
+   * 적용 일수.
+   *
+   * - `mode: "totalDays"`: `countDays(from, to, options)` — 초일 산입 / 윤년 옵션 반영한 캘린더 일수.
+   * - `mode: "period"`: `formula` 분자 일수 합 — 풀 1년 cycle 별 실 일수(365 또는 366) + 마지막 partial 일수.
+   *   `addYears` 의 02-29 → 02-28 clip 케이스 등에서 캘린더 inclusive 일수와 어긋날 수 있으나, 사용자가
+   *   결과 표를 formula 분자로 검산할 때 비대칭이 생기지 않도록 정의됐다.
+   */
   days: number;
   /** 적용된 연이율. */
   rate: number;

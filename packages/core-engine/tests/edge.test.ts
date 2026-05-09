@@ -118,6 +118,31 @@ describe("edge: same-day span", () => {
   });
 });
 
+describe("edge: period mode days = formula 분자 일수 합 (TIER-A #1 회귀)", () => {
+  it("윤년 02-29 시작 + 02-28 도달 (addYears clip) + period actual + 초일산입: days = cycle 일수 + partial", () => {
+    // segment.from=2024-02-29, segment.to=2025-02-28, includeFirstDay=true.
+    // 캘린더 inclusive = 365 일이지만, period 분기는 fullYears=1 + partialDays=1 로 분해된다.
+    // - cursor=2024-02-29, addYears(cursor,1)=2025-02-28 (02-29 → 02-28 clip),
+    //   fullYearEnd = addDays(2025-02-28, -1) = 2025-02-27 ≤ 2025-02-28 → fullYears=1.
+    // - cursor=2025-02-28, partialStart=2025-02-28, partialDays = 1.
+    // - cycle 일수 = (2025-02-28 - 2024-02-29) = 365 일.
+    // - days = 365 + 1 = 366 (formula 분자 합과 일치).
+    // 기존 (fix 전) 은 days=countDays(from,to,options) = 365 로, formula "1년 + 1일 / 365" 와 어긋났다.
+    const result = calculateInterest({
+      principal: 1_000_000,
+      startDate: "2024-02-29",
+      endDate: "2025-02-28",
+      legalRatePreset: "civil",
+      options: { mode: "period", leapYear: "actual", includeFirstDay: true },
+    });
+    expect(result.segments[0]!.days).toBe(366);
+    expect(result.segments[0]!.formula).toContain("1년 ×");
+    expect(result.segments[0]!.formula).toContain("× 1일 / 365");
+    // interest: 1_000_000 × 0.05 × (1 + 1/365) = 50_136.986… → floor 50_136
+    expect(result.totalInterest).toBe(50_136);
+  });
+});
+
 describe("edge: explicit segments + period mode 조합", () => {
   it("다년 명시 segments → segment 단위로 period 분해 (1년 풀 + 부분일 합산)", () => {
     const input: InterestInput = {

@@ -45,6 +45,25 @@ function formatRatePercent(rate: number): string {
   return `${Number((rate * 100).toFixed(10))}%`;
 }
 
+/**
+ * period 모드의 segment.days 재계산.
+ *
+ * `formula` 분자 일수 합과 일치시키기 위한 helper. 풀 1년 cycle 마다 실제 캘린더
+ * 일수(365 또는 366, addYears clip 시는 cycle 시작과 다음 cursor 사이의 실 일수)를
+ * 누적하고 마지막 partial 일수를 더한다. 사용자가 결과 표의 days 컬럼을 formula 의
+ * 일수 합으로 검산할 때 비대칭이 생기지 않도록 보장한다.
+ */
+function periodDaysSum(effectiveStart: IsoDate, fullYears: number, partialDays: number): number {
+  let total = partialDays;
+  let cursor: IsoDate = effectiveStart;
+  for (let i = 0; i < fullYears; i++) {
+    const next = addYears(cursor, 1);
+    total += Math.round((parseIsoDateUtc(next) - parseIsoDateUtc(cursor)) / 86_400_000);
+    cursor = next;
+  }
+  return total;
+}
+
 function computeSegmentInterest(
   principal: number,
   rate: number,
@@ -115,7 +134,8 @@ function computeSegmentInterest(
       `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × ${partialDays}일 / ${denom}`,
     );
   }
-  return { days, interestRaw, formula: parts.join(" + ") || "0" };
+  const computedDays = periodDaysSum(effectiveStart, fullYears, partialDays);
+  return { days: computedDays, interestRaw, formula: parts.join(" + ") || "0" };
 }
 
 type RoundingMode = NonNullable<CalcOptions["rounding"]>;
