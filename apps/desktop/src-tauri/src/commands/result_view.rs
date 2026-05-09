@@ -36,6 +36,8 @@ pub struct OptionsView {
     pub mode: String,
     pub leap_year: String,
     pub include_first_day: bool,
+    #[serde(default)]
+    pub rounding: Option<String>,
 }
 
 /// Disclaimer copy that must accompany every exported artifact.
@@ -89,7 +91,13 @@ pub fn options_summary(options: &OptionsView) -> String {
     } else {
         "초일 미산입"
     };
-    format!("{} · {} · {}", mode_ko, leap_ko, first_ko)
+    let rounding_ko = match options.rounding.as_deref().unwrap_or("floor") {
+        "floor" => "절사",
+        "ceil" => "절상",
+        "round" => "사사오입",
+        other => other,
+    };
+    format!("{} · {} · {} · 끝수처리: {}", mode_ko, leap_ko, first_ko, rounding_ko)
 }
 
 #[cfg(test)]
@@ -140,7 +148,22 @@ mod tests {
             mode: "period".into(),
             leap_year: "fixed365".into(),
             include_first_day: false,
+            rounding: None,
         };
-        assert_eq!(options_summary(&opts), "기간식 · 365일 고정 · 초일 미산입");
+        assert_eq!(options_summary(&opts), "기간식 · 365일 고정 · 초일 미산입 · 끝수처리: 절사");
+    }
+
+    #[test]
+    fn options_summary_rounding_variants() {
+        let base = OptionsView {
+            mode: "totalDays".into(),
+            leap_year: "actual".into(),
+            include_first_day: true,
+            rounding: Some("ceil".into()),
+        };
+        assert!(options_summary(&base).ends_with("끝수처리: 절상"));
+
+        let round = OptionsView { rounding: Some("round".into()), ..base };
+        assert!(options_summary(&round).ends_with("끝수처리: 사사오입"));
     }
 }

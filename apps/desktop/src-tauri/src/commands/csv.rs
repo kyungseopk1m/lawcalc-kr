@@ -126,6 +126,7 @@ mod tests {
                 mode: "period".into(),
                 leap_year: "actual".into(),
                 include_first_day: false,
+                rounding: None,
             },
             data_version: "legal-rates/v1.0.0".into(),
             computed_at: "2026-05-09T12:00:00+09:00".into(),
