@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1",
+  "id": "case-003",
+  "title": "배우자 + 자녀1(생존) + 자녀2(사망) → 손자 2명 대습",
+  "source": "engine-internal-v0.2",
+  "notes": "민법 1001조 + 1010조 — 사망 자녀 슬롯 (2/7) 을 손자 2명이 균분 → 1/7 each. 배우자 3/7, 자녀1 2/7, 손자1 1/7, 손자2 1/7. 합 7/7.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "spouse": { "alive": true },
+    "linealDescendants": [
+      { "name": "자녀1", "deceasedBeforeOpening": false },
+      {
+        "name": "자녀2",
+        "deceasedBeforeOpening": true,
+        "representatives": [
+          { "name": "손자1", "deceasedBeforeOpening": false },
+          { "name": "손자2", "deceasedBeforeOpening": false }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [
+      { "name": "배우자", "numerator": 3, "denominator": 7 },
+      { "name": "자녀1", "numerator": 2, "denominator": 7 },
+      { "name": "손자1", "numerator": 1, "denominator": 7 },
+      { "name": "손자2", "numerator": 1, "denominator": 7 }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1",
+  "id": "case-004",
+  "title": "형제자매 3명 균분 (1·2순위·배우자 모두 부재)",
+  "source": "engine-internal-v0.2",
+  "notes": "민법 1000조 ①-3 + 1009조 ① — 3순위 단독, 배우자 동순위 X. 분모 3, 각 1/3.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "siblings": [
+      { "name": "형제1", "deceasedBeforeOpening": false },
+      { "name": "형제2", "deceasedBeforeOpening": false },
+      { "name": "형제3", "deceasedBeforeOpening": false }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [
+      { "name": "형제1", "numerator": 1, "denominator": 3 },
+      { "name": "형제2", "numerator": 1, "denominator": 3 },
+      { "name": "형제3", "numerator": 1, "denominator": 3 }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1",
+  "id": "case-006",
+  "title": "자녀 전원 사망 + 대습자 0 → 직계존속 fall-through (배우자 + 부·모)",
+  "source": "engine-internal-v0.2",
+  "notes": "민법 1001조 (대습은 직계비속 있을 때만) + 매뉴얼 §3 ② 선순위 자동 우선. 자녀가 모두 사망 + 대습자 0 이면 1순위 슬롯이 모두 사라져 2순위 (직계존속) + 배우자 동순위 공동. 분모 = 3 + 2*2 = 7.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "spouse": { "alive": true },
+    "linealDescendants": [{ "name": "자녀1", "deceasedBeforeOpening": true }],
+    "linealAscendants": [
+      { "name": "부", "deceasedBeforeOpening": false },
+      { "name": "모", "deceasedBeforeOpening": false }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [
+      { "name": "배우자", "numerator": 3, "denominator": 7 },
+      { "name": "부", "numerator": 2, "denominator": 7 },
+      { "name": "모", "numerator": 2, "denominator": 7 }
+    ]
+  }
+}

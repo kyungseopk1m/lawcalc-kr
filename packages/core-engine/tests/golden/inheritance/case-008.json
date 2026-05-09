@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "id": "case-008",
+  "title": "2차 대습 → 거부 (v0.2 첫 PR 1차 대습만 지원)",
+  "source": "engine-internal-v0.2",
+  "notes": "v0.2 첫 PR scope 결정 — inheritance-input-model-spike §4 + source-extraction-spike §8.2 #2. 2차 대습은 v0.3+ 일반화 후 지원. 한국어 toast 거부 메시지 출처 = source-extraction-spike §8.3.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "linealDescendants": [
+      {
+        "name": "자녀1",
+        "deceasedBeforeOpening": true,
+        "representatives": [
+          {
+            "name": "손자1",
+            "deceasedBeforeOpening": true,
+            "representatives": [{ "name": "증손자1", "deceasedBeforeOpening": false }]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "kind": "error",
+    "message": "2차 이상 대습은 본 버전에서 지원하지 않습니다."
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "id": "case-005",
+  "title": "동시사망 추정 (배우자·자녀A 동일 위난) + 자녀B 생존 + 자녀A 의 손자 대습",
+  "source": "engine-internal-v0.2",
+  "notes": "민법 30조 동시사망 추정 — 배우자·자녀A 가 피상속인과 동시사망 → 자녀A 슬롯은 사망 처리 + 손자 대습 가능 (1001조). 입력 표현: spouse.alive=false, 자녀A.deceasedBeforeOpening=true. 분모 = 2*2 = 4 → 약분 1/2 each.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "spouse": { "name": "배우자", "alive": false },
+    "linealDescendants": [
+      { "name": "자녀B", "deceasedBeforeOpening": false },
+      {
+        "name": "자녀A",
+        "deceasedBeforeOpening": true,
+        "representatives": [{ "name": "손자C", "deceasedBeforeOpening": false }]
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [
+      { "name": "자녀B", "numerator": 1, "denominator": 2 },
+      { "name": "손자C", "numerator": 1, "denominator": 2 }
+    ]
+  }
+}

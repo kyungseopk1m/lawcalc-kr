@@ -18,3 +18,11 @@ export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear }
 export { resolveSegments } from "./segments";
 export { datasetVersionTag, getRateAt, rateHistoryFor } from "./legal-rates";
 export { STANDARD_DISCLAIMER } from "./disclaimers";
+
+export type {
+  HeirNode,
+  InheritanceInput,
+  InheritanceResult,
+  InheritanceShare,
+} from "./inheritance";
+export { calculateInheritance } from "./inheritance";

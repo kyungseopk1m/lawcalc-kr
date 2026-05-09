@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1",
+  "id": "case-002",
+  "title": "배우자 단독 (자녀·존속·형제자매·방계 모두 부재)",
+  "source": "engine-internal-v0.2",
+  "notes": "민법 1003조 — 1·2순위 부재 시 배우자 단독. 분모 1, 배우자 1/1.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "spouse": { "alive": true }
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [{ "name": "배우자", "numerator": 1, "denominator": 1 }]
+  }
+}

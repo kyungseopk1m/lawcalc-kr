@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1",
+  "id": "case-007",
+  "title": "1991-01-01 이전 사망 → 거부 (RangeError)",
+  "source": "engine-internal-v0.2",
+  "notes": "매뉴얼 §3 'Inheritance.hwp' line 75 — 본 프로그램은 1991-01-01 이후 사망에만 적용. 그 이전은 1990 개정 전 민법 적용 영역으로 본 버전에서 지원하지 않음.",
+  "input": {
+    "decedent": { "deceasedAt": "1990-12-31" },
+    "spouse": { "alive": true },
+    "linealDescendants": [{ "deceasedBeforeOpening": false }]
+  },
+  "expected": {
+    "kind": "error",
+    "message": "1991-01-01 이전 사망 케이스는 본 버전에서 지원하지 않습니다 (입력: 1990-12-31)"
+  }
+}

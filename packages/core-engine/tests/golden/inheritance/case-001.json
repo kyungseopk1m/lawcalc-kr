@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1",
+  "id": "case-001",
+  "title": "배우자 + 자녀 2 (1순위 + 배우자 동순위 공동)",
+  "source": "engine-internal-v0.2",
+  "notes": "민법 1009조 ② 배우자 5할 가산. 분모 = 3 + 2*2 = 7. 배우자 3/7, 자녀 각 2/7.",
+  "input": {
+    "decedent": { "name": "피상속인", "deceasedAt": "2025-01-01" },
+    "spouse": { "alive": true },
+    "linealDescendants": [
+      { "name": "자녀1", "deceasedBeforeOpening": false },
+      { "name": "자녀2", "deceasedBeforeOpening": false }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [
+      { "name": "배우자", "numerator": 3, "denominator": 7 },
+      { "name": "자녀1", "numerator": 2, "denominator": 7 },
+      { "name": "자녀2", "numerator": 2, "denominator": 7 }
+    ]
+  }
+}
