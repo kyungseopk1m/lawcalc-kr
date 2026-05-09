@@ -23,12 +23,12 @@ Each golden case should include:
 - source note explaining how the expected output was obtained;
 - data version.
 
-## W2 Integration Checks
+## Integration Checks
 
 - `pnpm install --frozen-lockfile` must pass after every A/B/C integration push.
 - `pnpm lint`, `pnpm test`, and `pnpm test:golden` are the baseline CI checks.
 - `pnpm build` should be run before release-prep changes or when TypeScript package surfaces change.
-- Golden fixtures may remain placeholders until official black-box comparison outputs are recorded.
+- Golden fixtures that are not backed by a documented source remain internal regression cases until official black-box comparison outputs are recorded.
 
 Recommended local sequence for D after another session pushes:
 
@@ -66,7 +66,7 @@ When a golden case is promoted into CI, record the data source, calculation opti
 
 ## `.lcalc` Compatibility Tests
 
-Once C wires save/load beyond stubs, add tests that cover:
+Save/load tests should cover:
 
 - valid current-schema file loads without mutation;
 - unknown fields survive load/save where practical;

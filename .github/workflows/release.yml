@@ -26,15 +26,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v4.2.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: Setup Rust
@@ -44,14 +44,38 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build and publish Tauri artifacts
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
           releaseName: lawcalc-kr ${{ github.ref_name }}
-          releaseBody: "Draft desktop release. Review CHANGELOG.md, bundled artifacts, and legal disclaimer before publishing."
+          releaseBody: |
+            # lawcalc-kr v0.1.0
+
+            한국 판결금 이자·지연손해금 계산을 검토하기 위한 첫 데스크톱 릴리스입니다.
+
+            ## 다운로드
+
+            - macOS: `.dmg` 또는 `.app.tar.gz` 자산을 내려받아 실행합니다. 아직 Apple notarization을 진행하지 않았으므로 처음 실행할 때 Gatekeeper 경고가 표시될 수 있습니다.
+            - Windows: `.msi` 설치 파일을 내려받아 설치합니다.
+
+            ## 주요 기능
+
+            - 원금, 기간, 법정이율 프리셋, 초일 산입, 윤년 처리 옵션 기반 이자 계산
+            - 민법·상법·소송촉진 등에 관한 특례법 이율 변경 이력 반영
+            - 구간별 일수, 이율, 공식, 이자와 총액 표시
+            - `.lcalc` JSON 저장·로드로 입력값과 결과 재현
+
+            ## 호환성
+
+            - `.lcalc` schemaVersion `1` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
+            - 첫 공개 릴리스이므로 breaking change는 없습니다.
+
+            ## 면책
+
+            이 계산 결과는 검토용이며 법률 자문이 아닙니다. 사건별 특수성은 변호사 등 전문가 확인이 필요합니다. lawcalc-kr는 법원 공식 프로그램과 무관한 독립 오픈소스 프로젝트입니다.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

@@ -66,3 +66,15 @@ gh run view <run-id> --log-failed
 ```
 
 If CI is red in another session's area, record the failing run and owner. Keep D fixes scoped to infrastructure, docs, release workflow, and lockfile issues unless ownership is handed off.
+
+## Release Gate
+
+W4 is complete only when the app is fit for user exposure, not merely when it runs locally.
+
+- User-facing screens must not expose half-implemented actions. Incomplete functions are disabled in v0.1.0 and labeled with the planned future version.
+- README, release notes, and the app must describe the same feature set.
+- The working tree must be clean before tag creation: zero active stash entries, zero untracked files, and no staged files outside the releasing session's ownership.
+- `main` CI must be green after the final release-prep commit.
+- The final v0.1.0 tag is blocked until D records a stop sign confirming artifact review, legal disclaimer visibility, `.lcalc` compatibility, and known deferred features.
+
+Candidate for v0.2: add a pre-commit or pre-push guard that blocks commits when files outside the current session ownership are staged. W4 documents the rule but does not enforce it automatically.

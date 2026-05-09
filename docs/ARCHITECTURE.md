@@ -38,7 +38,7 @@ The directories above are owned by different implementation sessions. D owns rep
 ## Current Integration Surface
 
 - `@lawcalc-kr/core-engine` exposes the public `InterestInput`, `InterestResult`, `CalcOptions`, `RateSegment`, and `LegalRatePreset` types.
-- `apps/desktop` is a React 19 + Vite shell. W2/W3 form work should bind principal, date range, legal-rate preset, options, and rate segments to `InterestInput`.
+- `apps/desktop` is a React 19 + Vite shell that binds principal, date range, legal-rate preset, options, and rate segments to `InterestInput`.
 - `apps/desktop/src/lib/ipc.ts` maps UI actions to Tauri commands: `export_pdf`, `export_csv`, `save_lcalc`, `load_lcalc`, and `copy_to_clipboard`.
 - Rust commands are intentionally narrow. They should stay focused on local file IO, native dialogs, PDF/export, and clipboard integration.
 

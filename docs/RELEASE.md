@@ -20,19 +20,32 @@ lawcalc-kr releases are GitHub draft releases built by `tauri-apps/tauri-action`
    git status --short --branch
    ```
 
-2. Pull and rebase on `main`.
+2. Confirm there are no active stashes and no untracked files.
+
+   ```bash
+   git stash list
+   git status --short
+   ```
+
+3. Confirm the staged set is empty before starting release edits, then includes only D-owned files before the release-prep commit.
+
+   ```bash
+   git diff --cached --name-only
+   ```
+
+4. Pull and rebase on `main`.
 
    ```bash
    git pull --rebase origin main
    ```
 
-3. Verify lockfile determinism.
+5. Verify lockfile determinism.
 
    ```bash
    pnpm install --frozen-lockfile
    ```
 
-4. Run the CI-equivalent checks locally.
+6. Run the CI-equivalent checks locally.
 
    ```bash
    pnpm lint
@@ -41,16 +54,18 @@ lawcalc-kr releases are GitHub draft releases built by `tauri-apps/tauri-action`
    pnpm build
    ```
 
-5. Confirm the changelog has a useful `Unreleased` summary for:
+7. Confirm the changelog has a `0.1.0 - YYYY-MM-DD` section with Korean-first user notes for:
    - core engine changes;
    - desktop form and result UI changes;
    - `.lcalc`, CSV, PDF, or clipboard changes;
    - legal-rate data changes;
    - breaking schema or calculation-policy changes.
 
-6. Confirm README screenshots or demo GIF placeholders are either real assets or clearly marked placeholders.
+8. Confirm README screenshots or demo GIFs are real assets for the release. Do not ship placeholder demo media.
 
-7. Confirm no active multi-session stash contains release, Tauri, or app changes that should ship.
+9. Confirm no active multi-session stash contains release, Tauri, or app changes that should ship.
+
+10. Confirm incomplete v0.2+ features are disabled in the UI and called out as future work, not presented as usable v0.1.0 features.
 
 ## W4 Dry Run
 
@@ -70,6 +85,8 @@ git tag -d v0.0.0-dryrun.1
 git push origin :refs/tags/v0.0.0-dryrun.1
 ```
 
+For v0.1.0, the draft release body must include Korean user notes, download guidance, the legal disclaimer, and `.lcalc` schemaVersion `1` compatibility.
+
 ## Artifact Review
 
 For each draft release, check:
@@ -80,6 +97,18 @@ For each draft release, check:
 - no test fixture, draft JSON, or `_wip` golden file is included;
 - legal disclaimer is visible in the app and exported report path;
 - release notes mention that calculations are review aids, not legal advice.
+
+## Final Stop Sign
+
+Do not create `v0.1.0` until all of the following are true:
+
+- `main` CI is green after the final release-prep commit;
+- macOS and Windows dry-run artifacts exist in a draft release;
+- `pnpm audit` reports zero known vulnerabilities or the accepted risk is documented;
+- license metadata is consistent across root and package manifests;
+- `.lcalc` schemaVersion `1` load/save has been tested;
+- README and CHANGELOG describe the same feature set;
+- D has recorded any deferred v0.2 work in `docs/USER_TEST_PLAN.md` or `CHANGELOG.md`.
 
 ## Failure Handling
 
