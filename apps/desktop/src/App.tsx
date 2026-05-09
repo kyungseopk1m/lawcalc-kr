@@ -43,6 +43,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./com
 import { ipc, type LcalcFile } from "./lib/ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
 import { parseLoadedLcalcInput } from "./lib/lcalc-validation";
+import { InheritanceCalculator } from "./views/InheritanceCalculator";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
@@ -239,6 +240,7 @@ export function App() {
   );
   const [calculationError, setCalculationError] = useState("");
   const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
+  const [activeTab, setActiveTab] = useState<"interest" | "inheritance">("interest");
 
   useEffect(() => {
     if (skipAutoCalculateRef.current) {
@@ -403,153 +405,181 @@ export function App() {
       <Header />
       <DisclaimerBar />
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
-        <section className="space-y-4" aria-labelledby="input-title">
-          <Card>
-            <CardHeader>
-              <CardTitle id="input-title" className="flex items-center gap-2">
-                <Calculator className="h-4 w-4" aria-hidden="true" />
-                이자 계산 입력
-              </CardTitle>
-              <CardDescription>
-                원금, 계산 기간, 이율 구간과 산정 옵션을 입력합니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <PrincipalInput value={principal} error={errors.principal} onChange={setPrincipal} />
-              <DateRangeInput
-                startDate={startDate}
-                endDate={endDate}
-                error={errors.dateRange}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
-              />
-              <LegalRatePreset
-                value={preset}
-                customRate={customRate}
-                error={errors.customRate}
-                onValueChange={setPreset}
-                onCustomRateChange={setCustomRate}
-              />
-              <RateSegmentInput
-                fallbackLabel={fallbackLabel}
-                value={segments}
-                error={errors.segments}
-                onChange={setSegments}
-              />
-              <OptionsPanel value={options} onChange={setOptions} />
-              <label className="grid gap-2 text-sm font-medium">
-                비고
-                <textarea
-                  aria-label="비고"
-                  className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="예: 1심 판결 선고일부터 완제일까지"
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  ref={calculateButtonRef}
-                  type="button"
-                  disabled={hasErrors}
-                  onClick={() => handleCalculate()}
-                >
-                  계산
-                </Button>
-                <Button type="button" variant="outline" onClick={handleReset}>
-                  초기화
-                </Button>
-              </div>
-              {calculationError ? (
-                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {calculationError}
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-        </section>
+      <nav className="border-b border-border bg-background">
+        <div className="mx-auto flex w-full max-w-6xl gap-1 px-4 py-2 sm:px-6">
+          <Button
+            variant={activeTab === "interest" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("interest")}
+            type="button"
+          >
+            이자 계산
+          </Button>
+          <Button
+            variant={activeTab === "inheritance" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("inheritance")}
+            type="button"
+          >
+            상속분 간이 계산
+          </Button>
+        </div>
+      </nav>
 
-        <section
-          ref={resultSectionRef}
-          className="space-y-4 focus:outline-none"
-          aria-labelledby="result-title"
-          tabIndex={-1}
-        >
-          <SummaryCard result={result} />
+      {activeTab === "inheritance" ? <InheritanceCalculator /> : null}
+      {activeTab === "interest" ? (
+        <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+          <section className="space-y-4" aria-labelledby="input-title">
+            <Card>
+              <CardHeader>
+                <CardTitle id="input-title" className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4" aria-hidden="true" />
+                  이자 계산 입력
+                </CardTitle>
+                <CardDescription>
+                  원금, 계산 기간, 이율 구간과 산정 옵션을 입력합니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <PrincipalInput
+                  value={principal}
+                  error={errors.principal}
+                  onChange={setPrincipal}
+                />
+                <DateRangeInput
+                  startDate={startDate}
+                  endDate={endDate}
+                  error={errors.dateRange}
+                  onStartDateChange={setStartDate}
+                  onEndDateChange={setEndDate}
+                />
+                <LegalRatePreset
+                  value={preset}
+                  customRate={customRate}
+                  error={errors.customRate}
+                  onValueChange={setPreset}
+                  onCustomRateChange={setCustomRate}
+                />
+                <RateSegmentInput
+                  fallbackLabel={fallbackLabel}
+                  value={segments}
+                  error={errors.segments}
+                  onChange={setSegments}
+                />
+                <OptionsPanel value={options} onChange={setOptions} />
+                <label className="grid gap-2 text-sm font-medium">
+                  비고
+                  <textarea
+                    aria-label="비고"
+                    className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    placeholder="예: 1심 판결 선고일부터 완제일까지"
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                  />
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    ref={calculateButtonRef}
+                    type="button"
+                    disabled={hasErrors}
+                    onClick={() => handleCalculate()}
+                  >
+                    계산
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleReset}>
+                    초기화
+                  </Button>
+                </div>
+                {calculationError ? (
+                  <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {calculationError}
+                  </p>
+                ) : null}
+              </CardContent>
+            </Card>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle id="result-title" className="flex items-center gap-2">
-                <TableProperties className="h-4 w-4" aria-hidden="true" />
-                결과 표
-              </CardTitle>
-              <CardDescription>
-                구간별 시작일, 종료일, 일수, 이율, 공식, 이자와 합계 행을 표시합니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <SegmentTable result={result} />
-              <LegalCitation dataVersion={result.dataVersion} preset={preset} />
-            </CardContent>
-          </Card>
+          <section
+            ref={resultSectionRef}
+            className="space-y-4 focus:outline-none"
+            aria-labelledby="result-title"
+            tabIndex={-1}
+          >
+            <SummaryCard result={result} />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileJson className="h-4 w-4" aria-hidden="true" />
-                내보내기
-              </CardTitle>
-              <CardDescription>계산 결과를 파일이나 클립보드로 내보냅니다.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                <ActionButton
-                  action="pdf"
-                  icon={FileDown}
-                  label="PDF"
-                  loadingAction={loadingAction}
-                  variant="secondary"
-                  onClick={handleExportPdf}
-                />
-                <ActionButton
-                  action="csv"
-                  icon={FileSpreadsheet}
-                  label="CSV"
-                  loadingAction={loadingAction}
-                  variant="secondary"
-                  onClick={handleExportCsv}
-                />
-                <ActionButton
-                  action="copy"
-                  icon={Clipboard}
-                  label="복사"
-                  loadingAction={loadingAction}
-                  variant="outline"
-                  onClick={handleCopy}
-                />
-                <ActionButton
-                  action="save"
-                  icon={FileJson}
-                  label=".lcalc 저장"
-                  loadingAction={loadingAction}
-                  variant="outline"
-                  onClick={handleSaveLcalc}
-                />
-                <ActionButton
-                  action="load"
-                  icon={FileJson}
-                  label=".lcalc 열기"
-                  loadingAction={loadingAction}
-                  variant="outline"
-                  onClick={handleLoadLcalc}
-                />
-              </div>
-              {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-            </CardContent>
-          </Card>
-        </section>
-      </main>
+            <Card>
+              <CardHeader>
+                <CardTitle id="result-title" className="flex items-center gap-2">
+                  <TableProperties className="h-4 w-4" aria-hidden="true" />
+                  결과 표
+                </CardTitle>
+                <CardDescription>
+                  구간별 시작일, 종료일, 일수, 이율, 공식, 이자와 합계 행을 표시합니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <SegmentTable result={result} />
+                <LegalCitation dataVersion={result.dataVersion} preset={preset} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileJson className="h-4 w-4" aria-hidden="true" />
+                  내보내기
+                </CardTitle>
+                <CardDescription>계산 결과를 파일이나 클립보드로 내보냅니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <ActionButton
+                    action="pdf"
+                    icon={FileDown}
+                    label="PDF"
+                    loadingAction={loadingAction}
+                    variant="secondary"
+                    onClick={handleExportPdf}
+                  />
+                  <ActionButton
+                    action="csv"
+                    icon={FileSpreadsheet}
+                    label="CSV"
+                    loadingAction={loadingAction}
+                    variant="secondary"
+                    onClick={handleExportCsv}
+                  />
+                  <ActionButton
+                    action="copy"
+                    icon={Clipboard}
+                    label="복사"
+                    loadingAction={loadingAction}
+                    variant="outline"
+                    onClick={handleCopy}
+                  />
+                  <ActionButton
+                    action="save"
+                    icon={FileJson}
+                    label=".lcalc 저장"
+                    loadingAction={loadingAction}
+                    variant="outline"
+                    onClick={handleSaveLcalc}
+                  />
+                  <ActionButton
+                    action="load"
+                    icon={FileJson}
+                    label=".lcalc 열기"
+                    loadingAction={loadingAction}
+                    variant="outline"
+                    onClick={handleLoadLcalc}
+                  />
+                </div>
+                {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+              </CardContent>
+            </Card>
+          </section>
+        </main>
+      ) : null}
 
       <Footer />
     </div>
