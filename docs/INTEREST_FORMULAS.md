@@ -131,9 +131,106 @@ Windows VM 으로 `ejpc.scourt.go.kr` 캡처를 진행하면 후속 케이스에
 
 ## 8. 미해결 / 후속
 
-- `options.rounding` (절사/절상/사사오입) — v2 옵션화.
+- `options.rounding` (절사/절상/사사오입) — v2 옵션화. 사전 설계 §9 참조.
 - `mode="totalDays"` + `leapYear="actual"` 의 분모 정의 (구간 윤일 vs 1년 사이 윤일) 는
   매뉴얼이 명시하지 않아 본 엔진은 "구간 안 윤일" 해석을 채택. 법원 결과 캡처 후
   필요 시 보정.
-- 다년 + 명시 segments 조합에서 segment 단위로 `period` 가 적용된다는 점을 UI 가 명확히
-  표시할 것 (B 세션과 W3 합류 시 컨펌).
+- 다년 + 명시 segments 조합 — segment 단위로 `period` 분해된다 (`tests/edge.test.ts`
+  "explicit segments + period mode 조합" 회귀로 고정). UI(B 세션) 도 segment 단위로 결과 표시.
+
+---
+
+## 9. 반올림 정책 v2 (사전 설계, W4 도입 예정)
+
+법원 매뉴얼(`Calculator.hwp`)은 "끝수처리" 옵션으로 절사 / 절상 / 사사오입 세 가지를 모두
+제공한다. v1 은 채권자 보수 default 인 절사(`Math.floor`) 단일 정책으로 출발했고,
+v2 에서 사용자 선택을 노출한다. 본 절은 도입 시 변경 지점을 미리 고정하기 위한 것이며
+코드 수정은 W4 진입 시점에 한 번에 수행한다.
+
+### 9.1 인터페이스 (제안)
+
+```ts
+export interface CalcOptions {
+  mode: "period" | "totalDays";
+  leapYear: "fixed365" | "actual";
+  includeFirstDay: boolean;
+  /**
+   * 원 단위 끝수 처리. 미지정 시 "floor" (v1 default 와 동일 → 모든 v1 골든 회귀 호환).
+   * - "floor"  : 절사 (채권자 보수, 매뉴얼 default)
+   * - "ceil"   : 절상 (채무자 보수)
+   * - "round"  : 사사오입
+   */
+  rounding?: "floor" | "ceil" | "round";
+}
+```
+
+핵심 결정:
+
+- 새 필드는 **선택(`?`)** 으로 추가한다. v1 호출자(B/C 세션 mock, .lcalc v1 파일,
+  기존 골든 7건 + edge.test.ts 케이스) 가 그대로 통과하도록 default 를 `"floor"` 로 고정.
+- `.lcalc` 파일 호환성: `schemaVersion = "1"` 은 그대로 유지하되, `options.rounding` 이
+  없으면 로더가 `"floor"` 로 보정해 결과 재현성을 유지. 새 필드를 의식적으로 저장한
+  파일은 v1 reader 가 알 수 없는 키를 무시할 수 있도록 C 세션의 `LcalcFile` 가 이미
+  `serde_json::Value` 통과 구조로 설계됨 → **Rust 측 변경 없음**.
+
+### 9.2 적용 지점
+
+`packages/core-engine/src/interest.ts` 의 두 곳만 변경:
+
+1. `calculateInterest` 내부의 `Math.floor(interestRaw)` (segment 단위) 와
+   `Math.floor(rawTotal)` (총합) 을 다음 헬퍼로 교체:
+
+   ```ts
+   function applyRounding(value: number, mode: NonNullable<CalcOptions["rounding"]>): number {
+     switch (mode) {
+       case "ceil":
+         return Math.ceil(value);
+       case "round":
+         // 0.5 가 정확히 반올림되도록 epsilon 보정 (JS Math.round 는 -0.5 → 0 인 banker 가 아님)
+         return Math.round(value);
+       case "floor":
+       default:
+         return Math.floor(value);
+     }
+   }
+   ```
+
+2. `interest.ts` 진입부 :
+
+   ```ts
+   const rounding = input.options.rounding ?? "floor";
+   ```
+
+`computeSegmentInterest` 는 raw 값만 계산하므로 변경 없음 — 반올림은
+`calculateInterest` 가 segment / total 모두 적용한다.
+
+### 9.3 매뉴얼 매핑
+
+| 매뉴얼 표기 (Calculator.hwp) | `options.rounding` |
+| ---------------------------- | ------------------ |
+| 절사                         | `"floor"`          |
+| 절상                         | `"ceil"`           |
+| 사사오입                     | `"round"`          |
+
+`Calculator.hwp` 의 추가 옵션(예: 10원 / 100원 단위 절사) 은 v2 에서 도입하지 않는다.
+원 단위 끝수만 v2 범위. 더 큰 단위 절사가 실제 캡처에서 필요하다고 확인되면 v3 후보.
+
+### 9.4 골든 / 단위 테스트 영향
+
+- 기존 `case-001..007` 은 모두 `options.rounding` 을 명시하지 않으므로 default `"floor"`
+  → totalInterest / segments[i].interest 그대로 통과.
+- 외부 캡처(ejpc / Windows VM 결과) 기반 case-008+ 는 매뉴얼 끝수처리 옵션을 그대로
+  골든의 `input.options.rounding` 으로 옮긴다. 매뉴얼 default(절사) 와 일치하면
+  필드 생략, 다른 옵션을 캡처했다면 명시.
+- `edge.test.ts` 의 "floor accumulation" 회귀는 default(`"floor"`) 동작 검증으로 유지.
+  v2 에서 `"ceil"` / `"round"` 분기를 위한 별도 단위 테스트 1세트 추가 (각 모드에서
+  segment.interest 합과 totalInterest 의 관계, mode 별 sign 검증).
+
+### 9.5 마이그레이션 / 롤아웃 순서
+
+1. W4 시작 시 `CalcOptions` 인터페이스에 `rounding?` 추가 + `applyRounding` 도입.
+2. 기존 골든 회귀 — 변경 없이 통과해야 함 (PR 안에서 확인).
+3. `INTEREST_FORMULAS.md §6` 본문을 v2 로 업데이트 (현재 §6 의 "v1" 표기 제거).
+4. UI(B 세션) `OptionsPanel.tsx` 에 끝수 처리 라디오 3옵션 추가, default `"floor"`.
+5. `.lcalc` 입출력은 단순 통과 — Rust 변경 없음. PDF/CSV 출력에는 적용된 끝수 옵션을
+   푸터에 한 줄로 표기 (예: `끝수처리: 절사`).
