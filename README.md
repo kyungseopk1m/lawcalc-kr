@@ -17,9 +17,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/latest"><img alt="macOS 다운로드" src="https://img.shields.io/badge/⬇%20macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/download/v0.2.5/LawCalc.Korea_0.2.5_universal.dmg"><img alt="macOS 다운로드" src="https://img.shields.io/badge/⬇%20macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
   &nbsp;
-  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/latest"><img alt="Windows 다운로드" src="https://img.shields.io/badge/⬇%20Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/download/v0.2.5/LawCalc.Korea_0.2.5_x64-setup.exe"><img alt="Windows 다운로드" src="https://img.shields.io/badge/⬇%20Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
 </p>
 
 > **면책 고지**
@@ -61,15 +61,18 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 
 ### macOS
 
-1. `.dmg` 또는 `.app.tar.gz` 자산을 내려받아 앱을 Applications 폴더로 옮긴 뒤 실행합니다.
+1. 일반 사용자는 `.dmg` 설치 파일을 내려받아 앱을 Applications 폴더로 옮긴 뒤 실행합니다.
 2. 현재는 Apple Notarization 을 진행하지 않아 Gatekeeper 경고가 표시될 수 있습니다.
    - Finder 에서 앱을 **Control-클릭 → 열기** 를 한 번 선택하거나
    - **시스템 설정 → 개인정보 보호 및 보안** 에서 실행을 허용해 주세요.
 
 ### Windows
 
-1. `.msi` 설치 파일을 내려받아 설치 마법사를 따릅니다.
+1. 일반 사용자는 `setup.exe` 설치 파일을 내려받아 설치 마법사를 따릅니다.
+   - 기관/관리자 배포가 필요한 경우 `.msi` 설치 파일을 사용할 수 있습니다.
 2. Windows SmartScreen 이 "게시자 확인 안 됨" 으로 표시될 수 있습니다. 본인이 직접 받은 파일임을 확인한 뒤 **추가 정보 → 실행** 으로 진행합니다.
+
+`latest.json`, `.sig`, `.app.tar.gz` 파일은 인앱 자동업데이트 검증용 자산이므로 일반 사용자가 직접 내려받을 필요는 없습니다.
 
 ## `.lcalc` 파일
 
