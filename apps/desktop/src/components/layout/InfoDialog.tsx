@@ -2,8 +2,20 @@ import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
+import { open as openExternal } from "@tauri-apps/plugin-shell";
 
 import { Button } from "../ui/button";
+
+const REPO_URL = "https://github.com/kyungseopk1m/lawcalc-kr";
+const ISSUES_URL = `${REPO_URL}/issues`;
+const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
+
+function handleExternal(url: string) {
+  return (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    void openExternal(url);
+  };
+}
 
 interface InfoDialogProps {
   open: boolean;
@@ -85,6 +97,44 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
               GNU Affero General Public License v3.0 (이상). 자세한 내용은 LICENSE 파일을
               참조하세요.
             </p>
+          </section>
+
+          <section aria-labelledby="info-resources">
+            <h3 id="info-resources" className="mb-1 font-medium">
+              리소스
+            </h3>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>
+                GitHub 저장소:{" "}
+                <a
+                  href={REPO_URL}
+                  onClick={handleExternal(REPO_URL)}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  github.com/kyungseopk1m/lawcalc-kr
+                </a>
+              </li>
+              <li>
+                버그·기능 제안:{" "}
+                <a
+                  href={ISSUES_URL}
+                  onClick={handleExternal(ISSUES_URL)}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Issues
+                </a>
+              </li>
+              <li>
+                라이선스 본문:{" "}
+                <a
+                  href={LICENSE_URL}
+                  onClick={handleExternal(LICENSE_URL)}
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  LICENSE
+                </a>
+              </li>
+            </ul>
           </section>
 
           <section aria-labelledby="info-shortcuts">
