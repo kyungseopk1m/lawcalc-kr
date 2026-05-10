@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LawCalc Korea",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "identifier": "com.lawcalc.kr.desktop",
   "build": {
     "beforeDevCommand": "pnpm --filter @lawcalc-kr/desktop dev",
@@ -26,6 +26,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "category": "Productivity",
     "shortDescription": "한국 법률 계산 워크벤치 (이자/판결금/지연손해금)",

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-10
+
+### Fixed
+
+- 자동업데이트 파이프라인을 정상화했습니다. v0.2.2/v0.2.3 까지는 `tauri.conf.json` `bundle` 섹션의 `createUpdaterArtifacts` 옵션이 누락돼 GitHub Release 에 `.sig` 시그니처와 `latest.json` 매니페스트가 첨부되지 않았고, 그 결과 `tauri-plugin-updater` 의 `check()` 호출이 silently no-op 으로 끝나 업데이트 알림이 뜨지 않았습니다. v0.2.4 부터는 빌드 시 minisign 서명된 updater artifact 가 생성되어 release 에 함께 업로드됩니다.
+
 ## [0.2.3] - 2026-05-10
 
 ### Changed
