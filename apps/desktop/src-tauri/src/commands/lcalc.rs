@@ -10,7 +10,6 @@ use crate::error::Error;
 use super::result_view::DISCLAIMER_KO;
 
 /// Current `.lcalc` schema version. Bumped only on a breaking shape change.
-/// Map of `for-claude/personal/lawcalc-kr/docs/plans/project-design.md` §5.4.
 pub const SCHEMA_VERSION: &str = "2";
 const SUPPORTED_SCHEMA_VERSIONS: &[&str] = &["1", SCHEMA_VERSION];
 

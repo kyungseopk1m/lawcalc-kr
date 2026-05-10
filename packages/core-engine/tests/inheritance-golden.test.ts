@@ -36,8 +36,7 @@ const cases: GoldenCase[] = Object.entries(modules)
 
 /**
  * inheritance 도메인 골든 — v0.2 첫 PR 8 케이스. interest 골든과 schema 다름
- * (success: shares 분수 / error: throw message). 출처:
- * `for-claude/personal/lawcalc-kr/docs/plans/inheritance-input-model-spike-2026-05-09.md` §7.
+ * (success: shares 분수 / error: throw message).
  */
 describe("inheritance golden cases (v0.2 첫 PR — 도메인 코어)", () => {
   it("loads at least 8 cases", () => {

@@ -1,11 +1,3 @@
-/**
- * 상속분 간이 계산 (inheritance v0.2) — Desktop UI 첫 commit.
- *
- * scope: 입력 + 계산 + 화면 결과 + 출력/저장 액션.
- *
- * 입력 모델 출처: `for-claude/.../inheritance-input-model-spike-2026-05-09.md` §5,
- * UI 라벨 출처: `source-extraction-spike-2026-05-09.md` §8.3 (UI strings verbatim).
- */
 import {
   CheckCircle2,
   Clipboard,
@@ -19,7 +11,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   STANDARD_DISCLAIMER,
@@ -33,6 +25,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { ipc, type LcalcFile, type LcalcInheritancePayload } from "../lib/ipc";
+import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedInheritanceLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 
@@ -102,6 +95,75 @@ function fromHeirNode(h: HeirNode): HeirInput {
         name: representative.name ?? "",
       })) ?? [],
   };
+}
+
+function heirsForDirtySnapshot(heirs: HeirInput[]) {
+  return heirs.map((heir) => ({
+    name: heir.name,
+    deceasedBeforeOpening: heir.deceasedBeforeOpening,
+    representatives: heir.representatives.map((representative) => ({
+      name: representative.name,
+    })),
+  }));
+}
+
+function heirsFromNodesForDirtySnapshot(heirs: HeirNode[] | undefined) {
+  return (
+    heirs?.map((heir) => ({
+      name: heir.name ?? "",
+      deceasedBeforeOpening: heir.deceasedBeforeOpening,
+      representatives:
+        heir.representatives?.map((representative) => ({
+          name: representative.name ?? "",
+        })) ?? [],
+    })) ?? []
+  );
+}
+
+function buildInheritanceDirtySnapshot({
+  decedent,
+  spouse,
+  linealDescendants,
+  linealAscendants,
+  siblings,
+  collateralFourth,
+  note,
+}: {
+  decedent: DecedentInput;
+  spouse: SpouseInput;
+  linealDescendants: HeirInput[];
+  linealAscendants: HeirInput[];
+  siblings: HeirInput[];
+  collateralFourth: HeirInput[];
+  note: string;
+}) {
+  return createLcalcDirtySnapshot({
+    decedent,
+    spouse,
+    linealDescendants: heirsForDirtySnapshot(linealDescendants),
+    linealAscendants: heirsForDirtySnapshot(linealAscendants),
+    siblings: heirsForDirtySnapshot(siblings),
+    collateralFourth: heirsForDirtySnapshot(collateralFourth),
+    note,
+  });
+}
+
+function buildLoadedInheritanceDirtySnapshot(input: InheritanceInput, note: string) {
+  return createLcalcDirtySnapshot({
+    decedent: {
+      name: input.decedent.name ?? "",
+      deceasedAt: input.decedent.deceasedAt,
+    },
+    spouse: {
+      alive: input.spouse?.alive ?? false,
+      name: input.spouse?.name ?? "",
+    },
+    linealDescendants: heirsFromNodesForDirtySnapshot(input.linealDescendants),
+    linealAscendants: heirsFromNodesForDirtySnapshot(input.linealAscendants),
+    siblings: heirsFromNodesForDirtySnapshot(input.siblings),
+    collateralFourth: heirsFromNodesForDirtySnapshot(input.collateralFourth),
+    note,
+  });
 }
 
 interface HeirGroupCardProps {
@@ -298,6 +360,20 @@ export function InheritanceCalculator() {
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const dirtySnapshot = useMemo(
+    () =>
+      buildInheritanceDirtySnapshot({
+        decedent,
+        spouse,
+        linealDescendants,
+        linealAscendants,
+        siblings,
+        collateralFourth,
+        note,
+      }),
+    [collateralFourth, decedent, linealAscendants, linealDescendants, note, siblings, spouse],
+  );
+  const markInheritanceClean = useLcalcDirtyTracker("inheritance", dirtySnapshot);
 
   const buildInput = (): InheritanceInput => ({
     decedent: decedent.name.trim()
@@ -438,6 +514,9 @@ export function InheritanceCalculator() {
         throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       }
       const path = await ipc.saveLcalc(buildLcalcFile(buildInput(), result));
+      if (path) {
+        markInheritanceClean();
+      }
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
@@ -451,11 +530,13 @@ export function InheritanceCalculator() {
       const migratedFile = migrateLcalcFile(file);
       validateLcalcEnvelope(migratedFile);
       const loaded = parseLoadedInheritanceLcalcInput(migratedFile);
+      const loadedNote = loaded.note ?? "";
       applyInput(loaded.input);
-      setNote(loaded.note ?? "");
+      setNote(loadedNote);
       const loadedResult = loaded.result ?? calculateInheritance(loaded.input);
       setResult({ ...loadedResult, disclaimer: STANDARD_DISCLAIMER });
       setError(null);
+      markInheritanceClean(buildLoadedInheritanceDirtySnapshot(loaded.input, loadedNote));
       return ".lcalc 파일을 불러왔습니다.";
     });
 

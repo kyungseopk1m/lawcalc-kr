@@ -13,8 +13,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *
  * tauri.conf.json 의 `plugins.updater.pubkey` 가 비어 있으면 `check()` 가 실패.
  * 본 hook 은 그 경우 silently `Idle` 유지 (dev 환경 + signing key 미생성 상태 가정).
- *
- * @see for-claude/personal/lawcalc-kr/docs/plans/inapp-updater-plan.md
  */
 export type UpdaterState =
   | { status: "idle" }

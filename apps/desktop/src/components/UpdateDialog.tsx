@@ -2,6 +2,7 @@ import { Download, RefreshCw, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { UpdaterApi, UpdaterState } from "../hooks/useUpdater";
+import { useHasUnsavedLcalcChanges } from "../lib/lcalc-dirty-state";
 import { Button } from "./ui/button";
 
 /**
@@ -10,21 +11,19 @@ import { Button } from "./ui/button";
  * - `idle`: 렌더링 안 함.
  * - `available`: "지금 업데이트" / "나중에" 선택.
  * - `downloading`: progress bar (받은 / 전체 byte).
- * - `ready`: "재시작" 버튼. **TODO**: `.lcalc` 미저장 변경 가드 wire-up
- *           (현재는 isDirty store 가 없음 — 향후 hook prop 으로 받을 예정).
+ * - `ready`: `.lcalc` 미저장 변경이 없을 때만 재시작 허용.
  * - `error`: 한국어 메시지 + "다시 시도" / "닫기".
- *
- * @see for-claude/personal/lawcalc-kr/docs/plans/inapp-updater-plan.md §5
  */
 export function UpdateDialog({ api }: { api: UpdaterApi }): ReactNode {
   const { state, confirmInstall, dismiss, relaunch, retry } = api;
+  const hasUnsavedLcalcChanges = useHasUnsavedLcalcChanges();
   if (state.status === "idle") return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end p-4 sm:items-center sm:justify-center sm:p-6">
       <div
         aria-hidden
         className="absolute inset-0 bg-black/40"
-        onClick={state.status === "available" ? dismiss : undefined}
+        onClick={state.status === "downloading" ? undefined : dismiss}
       />
       <div
         role="dialog"
@@ -38,6 +37,7 @@ export function UpdateDialog({ api }: { api: UpdaterApi }): ReactNode {
           onDismiss={dismiss}
           onRelaunch={relaunch}
           onRetry={retry}
+          hasUnsavedLcalcChanges={hasUnsavedLcalcChanges}
         />
       </div>
     </div>
@@ -50,6 +50,7 @@ interface BodyProps {
   onDismiss: () => void;
   onRelaunch: () => Promise<void>;
   onRetry: () => Promise<void>;
+  hasUnsavedLcalcChanges: boolean;
 }
 
 function UpdateDialogBody(props: BodyProps): ReactNode {
@@ -60,7 +61,13 @@ function UpdateDialogBody(props: BodyProps): ReactNode {
     case "downloading":
       return <DownloadingBody state={state} />;
     case "ready":
-      return <ReadyBody onRelaunch={props.onRelaunch} />;
+      return (
+        <ReadyBody
+          hasUnsavedLcalcChanges={props.hasUnsavedLcalcChanges}
+          onRelaunch={props.onRelaunch}
+          onDismiss={props.onDismiss}
+        />
+      );
     case "error":
       return <ErrorBody state={state} onRetry={props.onRetry} onDismiss={props.onDismiss} />;
   }
@@ -139,19 +146,44 @@ function DownloadingBody({
   );
 }
 
-function ReadyBody({ onRelaunch }: { onRelaunch: () => Promise<void> }): ReactNode {
+function ReadyBody({
+  hasUnsavedLcalcChanges,
+  onRelaunch,
+  onDismiss,
+}: {
+  hasUnsavedLcalcChanges: boolean;
+  onRelaunch: () => Promise<void>;
+  onDismiss: () => void;
+}): ReactNode {
   return (
     <>
-      <h2 id="update-dialog-title" className="text-lg font-semibold">
-        업데이트 준비 완료
-      </h2>
+      <div className="flex items-start justify-between gap-2">
+        <h2 id="update-dialog-title" className="text-lg font-semibold">
+          업데이트 준비 완료
+        </h2>
+        <button
+          type="button"
+          aria-label="나중에 재시작"
+          onClick={onDismiss}
+          className="rounded p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
       <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-        설치를 적용하려면 앱을 재시작해야 합니다. 저장하지 않은 변경사항이 있다면 먼저 저장해
-        주세요.
+        설치를 적용하려면 앱을 재시작해야 합니다.
       </p>
-      {/* TODO: .lcalc isDirty 가드 wire-up — 현재 desktop 에 isDirty store 가 없음. */}
-      <div className="mt-4 flex justify-end">
+      {hasUnsavedLcalcChanges ? (
+        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+          저장하지 않은 .lcalc 변경사항이 있습니다. 먼저 저장한 뒤 재시작해 주세요.
+        </p>
+      ) : null}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="ghost" onClick={onDismiss}>
+          나중에 재시작
+        </Button>
         <Button
+          disabled={hasUnsavedLcalcChanges}
           onClick={() => {
             void onRelaunch();
           }}

@@ -44,6 +44,7 @@ import { UpdateDialog } from "./components/UpdateDialog";
 import { useUpdater } from "./hooks/useUpdater";
 import { ipc, type LcalcFile, type LcalcInterestPayload } from "./lib/ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
+import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "./lib/lcalc-dirty-state";
 import { parseLoadedLcalcInput, validateLcalcEnvelope } from "./lib/lcalc-validation";
 import { InheritanceCalculator } from "./views/InheritanceCalculator";
 
@@ -211,6 +212,37 @@ function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile
   };
 }
 
+function buildInterestDirtySnapshot({
+  principal,
+  startDate,
+  endDate,
+  segments,
+  options,
+  preset,
+  customRate,
+  note,
+}: {
+  principal: number;
+  startDate: string;
+  endDate: string;
+  segments: RateSegment[];
+  options: CalcOptions;
+  preset: LegalRatePresetOption;
+  customRate: number;
+  note: string;
+}): string {
+  return createLcalcDirtySnapshot({
+    principal,
+    startDate,
+    endDate,
+    segments,
+    options,
+    preset,
+    customRate,
+    note,
+  });
+}
+
 export function App() {
   const updaterApi = useUpdater();
   const [principal, setPrincipal] = useState(defaultInput.principal);
@@ -226,6 +258,21 @@ export function App() {
   const calculateButtonRef = useRef<HTMLButtonElement>(null);
   const resultSectionRef = useRef<HTMLElement>(null);
   const skipAutoCalculateRef = useRef(false);
+  const dirtySnapshot = useMemo(
+    () =>
+      buildInterestDirtySnapshot({
+        principal,
+        startDate,
+        endDate,
+        segments,
+        options,
+        preset,
+        customRate,
+        note,
+      }),
+    [customRate, endDate, note, options, preset, principal, segments, startDate],
+  );
+  const markInterestClean = useLcalcDirtyTracker("interest", dirtySnapshot);
 
   const input = useMemo<InterestInput>(() => {
     const legalRatePreset = toLegalRatePreset(preset, customRate);
@@ -329,6 +376,9 @@ export function App() {
       }
 
       const path = await ipc.saveLcalc(buildLcalcFile(input, result));
+      if (path) {
+        markInterestClean();
+      }
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
@@ -342,17 +392,33 @@ export function App() {
       const migratedFile = migrateLcalcFile(file);
       validateLcalcEnvelope(migratedFile);
       const loaded = parseLoadedLcalcInput(migratedFile);
+      const loadedOptions = {
+        ...loaded.input.options,
+        rounding: loaded.input.options.rounding ?? "floor",
+      };
+      const loadedNote = loaded.input.note ?? loaded.note ?? "";
+      const cleanSnapshot = buildInterestDirtySnapshot({
+        principal: loaded.input.principal,
+        startDate: loaded.input.startDate,
+        endDate: loaded.input.endDate,
+        segments: loaded.input.segments ?? [],
+        options: loadedOptions,
+        preset: loaded.preset,
+        customRate: loaded.customRate,
+        note: loadedNote,
+      });
       skipAutoCalculateRef.current = true;
       setPrincipal(loaded.input.principal);
       setStartDate(loaded.input.startDate);
       setEndDate(loaded.input.endDate);
       setSegments(loaded.input.segments ?? []);
-      setOptions({ ...loaded.input.options, rounding: loaded.input.options.rounding ?? "floor" });
+      setOptions(loadedOptions);
       setPreset(loaded.preset);
       setCustomRate(loaded.customRate);
-      setNote(loaded.input.note ?? loaded.note ?? "");
+      setNote(loadedNote);
       setResult(loaded.result);
       setCalculationError("");
+      markInterestClean(cleanSnapshot);
       window.requestAnimationFrame(() => resultSectionRef.current?.focus());
       return ".lcalc 파일을 불러왔습니다.";
     });
