@@ -566,7 +566,7 @@ export function App() {
                   </Button>
                 </div>
                 {calculationError ? (
-                  <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
                     {calculationError}
                   </p>
                 ) : null}
@@ -705,8 +705,8 @@ function ToastMessage({ toast, onDismiss }: { toast: ToastState; onDismiss: () =
   const Icon = toast.type === "success" ? CheckCircle2 : XCircle;
   const color =
     toast.type === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : "border-red-200 bg-red-50 text-red-700";
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+      : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200";
 
   return (
     <div

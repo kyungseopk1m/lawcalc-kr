@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
@@ -9,6 +9,9 @@ import { Button } from "../ui/button";
 const REPO_URL = "https://github.com/kyungseopk1m/lawcalc-kr";
 const ISSUES_URL = `${REPO_URL}/issues`;
 const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function handleExternal(url: string) {
   return (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -23,15 +26,47 @@ interface InfoDialogProps {
 }
 
 export function InfoDialog({ open, onClose }: InfoDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (open) {
-      closeButtonRef.current?.focus();
+    if (!open) {
+      return;
     }
+
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    return () => {
+      previousFocusRef.current?.focus();
+    };
   }, [open]);
 
   if (!open) return null;
+
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Tab" && dialogRef.current) {
+      const focusables = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+  };
 
   return (
     <div
@@ -48,10 +83,12 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="info-dialog-title"
         className="w-full max-w-md rounded-lg border border-border bg-background shadow-xl"
+        onKeyDown={handleDialogKeyDown}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 id="info-dialog-title" className="text-base font-semibold">

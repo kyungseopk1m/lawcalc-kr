@@ -1,5 +1,5 @@
 import { Monitor, Moon, Settings, Sun, X, type LucideIcon } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import { useTheme, type ThemePreference } from "../../contexts/ThemeContext";
 import { cn } from "../../lib/utils";
@@ -36,17 +36,88 @@ const themeOptions: Array<{
   },
 ];
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const { theme, resolvedTheme, setTheme } = useTheme();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const radioRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (open) {
-      closeButtonRef.current?.focus();
+    if (!open) {
+      return;
     }
+
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
+
+    return () => {
+      previousFocusRef.current?.focus();
+    };
   }, [open]);
 
   if (!open) return null;
+
+  const handleRadioKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const total = themeOptions.length;
+    let nextIndex: number | null = null;
+
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        nextIndex = (index + 1) % total;
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        nextIndex = (index - 1 + total) % total;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = total - 1;
+        break;
+      default:
+        return;
+    }
+
+    if (nextIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextOption = themeOptions[nextIndex];
+    if (nextOption) {
+      setTheme(nextOption.value);
+      radioRefs.current[nextIndex]?.focus();
+    }
+  };
+
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Tab" && dialogRef.current) {
+      const focusables = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+  };
 
   return (
     <div
@@ -63,10 +134,12 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-dialog-title"
         className="w-full max-w-lg rounded-lg border border-border bg-background shadow-xl"
+        onKeyDown={handleDialogKeyDown}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
@@ -105,17 +178,22 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               role="radiogroup"
               aria-labelledby="settings-theme"
             >
-              {themeOptions.map((option) => {
+              {themeOptions.map((option, index) => {
                 const Icon = option.icon;
                 const selected = theme === option.value;
 
                 return (
                   <button
                     key={option.value}
+                    ref={(node) => {
+                      radioRefs.current[index] = node;
+                    }}
                     type="button"
                     role="radio"
                     aria-checked={selected}
+                    tabIndex={selected ? 0 : -1}
                     onClick={() => setTheme(option.value)}
+                    onKeyDown={(event) => handleRadioKeyDown(event, index)}
                     className={cn(
                       "flex min-h-24 flex-col items-start gap-2 rounded-md border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       selected

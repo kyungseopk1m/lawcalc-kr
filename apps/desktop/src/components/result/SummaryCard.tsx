@@ -68,18 +68,21 @@ function SummaryValue({
     <div
       className={cn(
         "flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-md px-3 py-2",
-        emphasis && "bg-amber-50 ring-1 ring-amber-200",
+        emphasis && "bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:ring-amber-900/60",
       )}
     >
       <span
-        className={cn("text-sm", emphasis ? "font-medium text-amber-900" : "text-muted-foreground")}
+        className={cn(
+          "text-sm",
+          emphasis ? "font-medium text-amber-900 dark:text-amber-200" : "text-muted-foreground",
+        )}
       >
         {label}
       </span>
       <span
         className={cn(
           "font-semibold tabular-nums",
-          emphasis ? "text-2xl tracking-tight text-amber-700" : "text-xl",
+          emphasis ? "text-2xl tracking-tight text-amber-700 dark:text-amber-300" : "text-xl",
         )}
       >
         {value}

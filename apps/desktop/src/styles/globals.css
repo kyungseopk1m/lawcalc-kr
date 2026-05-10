@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   --font-sans:
     "Pretendard Variable", Pretendard, Inter, "Apple SD Gothic Neo", "Noto Sans KR", system-ui,

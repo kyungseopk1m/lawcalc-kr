@@ -12,9 +12,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - 설정 다이얼로그를 추가하고 화면 모드 설정을 지원합니다. `시스템`, `라이트`, `다크` 중 선택할 수 있으며 선택값은 로컬에 저장됩니다.
 
+### Changed
+
+- 다크 모드에서 결과 합계(원리금 합계 카드 / 합계 행), 상속 결과 disclaimer, 입력 에러·계산 에러·작업 결과 토스트의 색상을 어두운 톤으로 정합했습니다. 기존에는 light 전용 amber/emerald/red 50 단계 색만 사용해 다크 배경에서 가독성이 떨어졌습니다.
+- 설정·정보 다이얼로그에 키보드 접근성 개선을 추가했습니다. 화면 모드 라디오 그룹에 화살표 키 (←/→/↑/↓·Home·End) 이동을 지원하고, 두 다이얼로그 모두 Tab/Shift+Tab focus trap 과 닫을 때 트리거 버튼으로 focus 복원을 적용합니다.
+
 ### Removed
 
 - 화면 상단의 고정 disclaimer bar (`DisclaimerBar` 컴포넌트) 를 제거했습니다. 동일 면책 문구가 이미 정보 다이얼로그 (`InfoDialog`) 와 결과 카드, PDF/CSV/`.lcalc`/클립보드 export 5종 모두에 노출되고 있어 상단 고정 표시가 중복이라는 판단입니다. 결과·export 측 disclaimer 는 그대로 유지합니다.
+
+### Fixed
+
+- Tailwind v4 의 `dark:` 변종이 클래스 기반 다크 토글에 반응하지 않던 결함을 수정했습니다. `globals.css` 에 `@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));` 선언을 추가해 `ThemeContext` 가 `documentElement` 에 박는 `data-theme="dark"` 와 Tailwind `dark:*` utility 발화를 정합했습니다. 이전에는 `prefers-color-scheme` 미디어 쿼리만 보고 있어 사용자가 설정에서 "다크" 를 선택해도 일부 컴포넌트(업데이트 다이얼로그 등) 가 라이트 외형을 유지하던 결함이 있었습니다.
 
 ## [0.2.4] - 2026-05-10
 
@@ -135,7 +144,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.5
+[0.2.4]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.4
+[0.2.3]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.3
 [0.2.2]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.2
 [0.2.1]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.0
