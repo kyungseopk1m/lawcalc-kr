@@ -5,7 +5,7 @@
 <h1 align="center">LawCalc Korea</h1>
 
 <p align="center">
-  <b>판결금 이자·지연손해금을 로컬에서 정확하게 계산하는 데스크톱 워크벤치</b><br>
+  <b>판결금 이자·지연손해금과 상속분을 로컬에서 계산하는 데스크톱 워크벤치</b><br>
   <sub>공개 법령과 공식 매뉴얼만 근거로 재구현 · 사건 정보는 외부로 전송하지 않습니다</sub>
 </p>
 
@@ -29,8 +29,9 @@
 ## 이런 걸 할 수 있습니다
 
 - **판결금 이자·지연손해금 계산** — 원금·시작일·종료일·이자율 구간을 입력하면 초일 산입과 윤년 처리 옵션을 반영해 계산합니다.
+- **상속분 간이 계산** — 피상속인, 배우자, 1~4순위 상속인과 1차 대습상속인을 입력해 법정상속분을 계산합니다. 현재는 1991-01-01 이후 사망 케이스와 1차 대습까지만 지원합니다.
 - **법정이율 프리셋 자동 적용** — 민법 5%, 상법 6%, 소송촉진 등에 관한 특례법 이율 변경 이력이 데이터셋으로 관리됩니다.
-- **계산 근거 표시** — 구간별 일수·적용 이율·공식·이자·총액을 함께 출력합니다.
+- **계산 근거 표시** — 이자는 구간별 일수·적용 이율·공식·이자·총액을, 상속분은 약분 전/후 지분과 백분율을 함께 출력합니다.
 - **끝수 처리 옵션** — 원 단위 절사/절상/사사오입 (미지정 시 절사).
 - **로컬 저장 (`.lcalc`)** — 입력값·옵션·결과·데이터 버전을 한 파일로 저장·재현. 외부 서버 전송 0.
 - **내보내기** — PDF (A4, Pretendard 한글 폰트 임베드), CSV (UTF-8 BOM, Excel 한글 호환), 클립보드 텍스트.
@@ -53,9 +54,9 @@
 
 ## `.lcalc` 파일
 
-`.lcalc` 는 입력값·계산 옵션·적용된 법정이율 데이터 버전·결과·면책 고지를 한 데 묶어 저장하는 재현용 JSON 파일입니다. 사건 정보는 외부 서버로 전송하지 않고 로컬 파일로만 저장됩니다.
+`.lcalc` 는 입력값·계산 옵션·적용 데이터 버전·결과·면책 고지를 한 데 묶어 저장하는 재현용 JSON 파일입니다. 사건 정보는 외부 서버로 전송하지 않고 로컬 파일로만 저장됩니다.
 
-v0.1.x 이후 버전은 `schemaVersion: "1"` (또는 마이그레이션 가능한 상위 버전) 파일을 그대로 읽을 수 있어야 합니다. `dataVersion` 은 동일 입력에 대한 계산 재현성을 판단하는 기준입니다.
+현재 저장 형식은 `schemaVersion: "2"` envelope 입니다. `kind` 값으로 `interest` 또는 `inheritance` 계산 유형을 구분하고, v0.1.x 의 `schemaVersion: "1"` 이자 계산 파일은 불러올 때 v2 로 자동 마이그레이션됩니다. `dataVersion` 은 동일 입력에 대한 계산 재현성을 판단하는 기준입니다.
 
 ## 개발
 
@@ -91,8 +92,8 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 ## English
 
-LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest and statutory delay damages. It is independent of Korean court software and does not use court logos, screens, or reverse-engineered program internals.
+LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, and simplified inheritance shares. It is independent of Korean court software and does not use court logos, screens, or reverse-engineered program internals.
 
-The current release focuses on local-only interest calculation, transparent formulas, versioned legal-rate data, and reproducible `.lcalc` files on macOS and Windows.
+The current release focuses on local-only interest and inheritance calculations, transparent result traces, versioned data, and reproducible `.lcalc` files on macOS and Windows.
 
 Distributed under the GNU Affero General Public License v3.0 or later. Any modified version made available to users over a network — or redistributed as a derivative work — must be released under the same license with source code available. See [LICENSE](LICENSE) for the full text. For commercial licensing inquiries, please contact the Licensor (kyungseopk1m).

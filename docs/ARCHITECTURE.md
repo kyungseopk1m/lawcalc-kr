@@ -1,12 +1,12 @@
 # Architecture
 
-lawcalc-kr is a local-first desktop application for Korean legal calculations. The MVP calculates judgment interest and statutory delay damages.
+lawcalc-kr is a local-first desktop application for Korean legal calculations. The current app calculates judgment interest, statutory delay damages, and simplified inheritance shares.
 
 ## Principles
 
 - Keep all case data on the user's machine.
-- Make calculation steps auditable: inputs, segmented periods, rates, formulas, totals, and data version must be visible.
-- Treat legal-rate data as versioned source data, not hard-coded UI text.
+- Make calculation steps auditable: inputs, intermediate rows, formulas or shares, totals, and data version must be visible.
+- Treat legal/domain data as versioned source data, not hard-coded UI text.
 - Keep the calculation engine pure TypeScript so it can be tested independently from Tauri.
 - Keep Tauri commands narrow: file IO, PDF/export, native dialogs, and desktop packaging.
 
@@ -29,28 +29,28 @@ The directories above are owned by different implementation sessions. D owns rep
 
 ## Data Flow
 
-1. The desktop UI collects principal, date range, rate segments, options, and notes.
-2. `packages/core-engine` normalizes input and splits periods by rate intervals.
-3. The engine returns a structured result with segment formulas and totals.
-4. The UI renders the result table and legal citations.
+1. The desktop UI collects domain-specific inputs and notes.
+2. `packages/core-engine` validates input and runs a pure TypeScript domain engine.
+3. The engine returns a structured result with calculation trace, totals or shares, disclaimer, and data version.
+4. The UI renders the result table and legal references.
 5. Tauri commands handle local save/load, CSV/PDF export, and native dialogs.
 
 ## Current Integration Surface
 
-- `@lawcalc-kr/core-engine` exposes the public `InterestInput`, `InterestResult`, `CalcOptions`, `RateSegment`, and `LegalRatePreset` types.
-- `apps/desktop` is a React 19 + Vite shell that binds principal, date range, legal-rate preset, options, and rate segments to `InterestInput`.
-- `apps/desktop/src/lib/ipc.ts` maps UI actions to Tauri commands: `export_pdf`, `export_csv`, `save_lcalc`, `load_lcalc`, and `copy_to_clipboard`.
+- `@lawcalc-kr/core-engine` exposes interest types/functions (`InterestInput`, `InterestResult`, `calculateInterest`) and inheritance types/functions (`InheritanceInput`, `InheritanceResult`, `calculateInheritance`).
+- `apps/desktop` is a React 19 + Vite shell with separate interest and inheritance calculator views.
+- `apps/desktop/src/lib/ipc.ts` maps UI actions to Tauri commands: interest/inheritance PDF and CSV export, `.lcalc` save/load, and clipboard copy.
 - Rust commands are intentionally narrow. They should stay focused on local file IO, native dialogs, PDF/export, and clipboard integration.
 
 ## Module Responsibilities
 
-| Module                   | Owns                                                                                                       | Must not own                                                           |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `packages/core-engine`   | validation, date/day-count rules, rate segmentation, interest totals, formula strings, data-version output | browser state, file dialogs, PDF rendering, native clipboard           |
-| `apps/desktop/src`       | form state, result presentation, accessibility, user-triggered export actions                              | filesystem writes outside Tauri commands, duplicated calculation rules |
-| `apps/desktop/src-tauri` | local file IO, native dialogs, export backends, clipboard integration, packaging metadata                  | legal-rate calculation policy, UI-only formatting                      |
-| `data/legal-rates`       | versioned legal-rate source data and citations                                                             | runtime user case data                                                 |
-| `docs` / CI              | operating contracts, release checklist, lockfile and workflow guardrails                                   | feature implementation details owned by A/B/C                          |
+| Module                   | Owns                                                                                                                                            | Must not own                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `packages/core-engine`   | validation, date/day-count rules, rate segmentation, inheritance share distribution, result totals/shares, formula strings, data-version output | browser state, file dialogs, PDF rendering, native clipboard           |
+| `apps/desktop/src`       | form state, result presentation, accessibility, user-triggered export actions                                                                   | filesystem writes outside Tauri commands, duplicated calculation rules |
+| `apps/desktop/src-tauri` | local file IO, native dialogs, export backends, clipboard integration, packaging metadata                                                       | legal-rate calculation policy, UI-only formatting                      |
+| `data/legal-rates`       | versioned legal-rate source data and citations                                                                                                  | runtime user case data                                                 |
+| `docs` / CI              | operating contracts, release checklist, lockfile and workflow guardrails                                                                        | feature implementation details owned by A/B/C                          |
 
 The UI may format numbers and dates for display, but calculation-significant rounding and day-count choices must come from the engine result. This keeps PDF/CSV/clipboard output aligned with the on-screen table.
 
@@ -58,9 +58,9 @@ The UI may format numbers and dates for display, but calculation-significant rou
 
 `.lcalc` files are JSON documents used for reproducible local saves. The schema should include:
 
-- `schemaVersion`, `appVersion`, `dataVersion`, and `createdAt`;
-- `input` and `options` matching the core-engine public types;
-- `result` matching `InterestResult`;
+- `schemaVersion`, `kind`, and a domain-specific `payload`;
+- `payload.appVersion`, `payload.dataVersion`, and `payload.createdAt`;
+- `payload.input` and `payload.result` matching the core-engine public types;
 - optional `note`;
 - the disclaimer text that was shown or exported with the calculation.
 
@@ -70,35 +70,40 @@ Example:
 
 ```json
 {
-  "schemaVersion": "1",
-  "appVersion": "0.0.0",
-  "dataVersion": "legal-rates/v1.0.0",
-  "createdAt": "2026-05-09T12:34:56+09:00",
-  "input": {
-    "principal": 10000000,
-    "startDate": "2024-01-01",
-    "endDate": "2024-12-31",
-    "legalRatePreset": "civil",
+  "schemaVersion": "2",
+  "kind": "interest",
+  "payload": {
+    "appVersion": "0.2.1",
+    "dataVersion": "legal-rates/v1.0.0",
+    "createdAt": "2026-05-10T12:34:56+09:00",
+    "input": {
+      "principal": 10000000,
+      "startDate": "2024-01-01",
+      "endDate": "2024-12-31",
+      "legalRatePreset": "civil",
+      "options": {
+        "mode": "period",
+        "leapYear": "fixed365",
+        "includeFirstDay": false,
+        "rounding": "floor"
+      }
+    },
     "options": {
       "mode": "period",
       "leapYear": "fixed365",
-      "includeFirstDay": false
-    }
-  },
-  "options": {
-    "mode": "period",
-    "leapYear": "fixed365",
-    "includeFirstDay": false
-  },
-  "result": {
-    "principal": 10000000,
-    "segments": [],
-    "totalInterest": 0,
-    "grandTotal": 10000000,
-    "dataVersion": "legal-rates/v1.0.0"
-  },
-  "note": "optional user note",
-  "disclaimer": "This calculation is for review only."
+      "includeFirstDay": false,
+      "rounding": "floor"
+    },
+    "result": {
+      "principal": 10000000,
+      "segments": [],
+      "totalInterest": 0,
+      "grandTotal": 10000000,
+      "dataVersion": "legal-rates/v1.0.0"
+    },
+    "note": "optional user note",
+    "disclaimer": "본 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인이 필요합니다."
+  }
 }
 ```
 
@@ -106,8 +111,9 @@ Compatibility rules:
 
 - increment `schemaVersion` only when readers need migration logic;
 - never infer a missing `dataVersion` for promoted files;
-- preserve `note` and unknown top-level fields on load/save when possible;
-- reject files that do not contain a parseable `input` object.
+- preserve `note` where practical;
+- reject files that do not contain a parseable domain `payload.input`;
+- migrate v0.1.x interest-only `schemaVersion: "1"` files into the v2 `kind: "interest"` envelope on load.
 
 ## PDF Engine
 

@@ -1,9 +1,9 @@
 # @lawcalc-kr/core-engine
 
-판결금·지연손해금 이자 계산을 위한 순수 TypeScript 엔진. lawcalc-kr 데스크톱 앱의 계산 모듈을
+판결금·지연손해금 이자 계산과 상속분 간이 계산을 위한 순수 TypeScript 엔진. lawcalc-kr 데스크톱 앱의 계산 모듈을
 독립 패키지로 분리해, UI 나 Tauri 셸 없이도 단위 테스트와 골든 테스트로 검증할 수 있게 한다.
 
-> **상태 (2026-05-09, v0.2 entry hardening)**: 공개 API 안정. 102 단위 회귀 / 11 골든 게이트 통과. 반올림 정책 v2 (`options.rounding`) + 데이터셋 주입 (`calculateInterest(input, { dataset })`, B9) 도입 완료.
+> **상태 (2026-05-10, v0.2.1)**: 공개 API 안정. core-engine 단위 회귀 115개 / 골든 게이트 21개 통과. 이자 엔진은 반올림 정책 v2 (`options.rounding`) + 데이터셋 주입 (`calculateInterest(input, { dataset })`) 을 지원하고, 상속분 엔진은 1991-01-01 이후 사망 케이스와 1차 대습상속까지 지원한다.
 
 본 엔진의 알고리즘 / 옵션 / 분모 결정 / 구간 분해 / 골든 케이스 매핑 상세는
 루트 [`docs/INTEREST_FORMULAS.md`](../../docs/INTEREST_FORMULAS.md) 가 단일 출처다.
@@ -18,7 +18,7 @@ pnpm install
 본 패키지는 사설 워크스페이스 패키지이며 npm 에 별도 배포되지 않는다. 데스크톱 앱
 (`apps/desktop`) 이 `workspace:*` 로 import 하며, 외부 npm 배포는 v0.2 이후 검토.
 
-## 빠른 사용
+## 이자 계산 빠른 사용
 
 ```ts
 import {
@@ -107,8 +107,35 @@ const inj = calculateInterest(input, { dataset: future });
 주입된 dataset 도 `validate()` 를 통과해야 한다 (code unique, `validTo >= validFrom`, `annualRate >= 0`).
 검증 실패 시 `RangeError` / `Error` 가 던져진다.
 
-향후 도메인이 추가되면 `deps` 타입은 `{ datasets: { legalRates?, inheritance? } }` 로 일반화될 수 있다
-(roadmap §"Inheritance Dataset-Dependence Spike" 참조). 현 시점은 `legalRates` 단일 dataset 만 다룬다.
+향후 법정이율 외 dataset 을 쓰는 도메인이 추가되면 `deps` 타입은 `{ datasets: { legalRates?, ... } }`
+형태로 일반화될 수 있다. 현 시점에서 외부 주입이 필요한 dataset 은 `legalRates` 하나다.
+
+## 상속분 간이 계산 빠른 사용
+
+```ts
+import { calculateInheritance, type InheritanceInput } from "@lawcalc-kr/core-engine";
+
+const input: InheritanceInput = {
+  decedent: { name: "피상속인", deceasedAt: "2025-01-01" },
+  spouse: { name: "배우자", alive: true },
+  linealDescendants: [
+    { name: "자녀1", deceasedBeforeOpening: false },
+    { name: "자녀2", deceasedBeforeOpening: false },
+  ],
+};
+
+const result = calculateInheritance(input);
+// 배우자 3/7, 자녀1 2/7, 자녀2 2/7
+// result.dataVersion = "inheritance/v1.0.0"
+```
+
+상속 엔진은 민법 제1000·1001·1003·1009·1010조에 따른 법정상속분 surface 만 다룬다.
+현재 런타임 정책은 `calculate.ts` 에 고정돼 있다.
+
+- 피상속인 사망일은 1991-01-01 이후만 지원한다.
+- 배우자는 1·2순위와 동순위 공동상속, 1·2순위가 없으면 단독상속으로 처리한다.
+- 1순위 직계비속과 3순위 형제자매만 1차 대습상속을 지원한다.
+- 2차 이상 대습, 직계존속/4촌이내 방계혈족 대습은 명시적으로 거부한다.
 
 ## 옵션 (`CalcOptions`)
 
@@ -168,6 +195,11 @@ packages/core-engine/
 │   ├── legal-rates.ts                 # 데이터셋 검증 + getRateAt / rateHistoryFor / datasetVersionTag
 │   ├── legal-rates.dataset.generated.ts  # 자동 생성 — 수동 편집 금지
 │   ├── interest.ts                    # calculateInterest(input, deps?) — 메인 엔트리, applyRounding (v2)
+│   ├── inheritance/                    # calculateInheritance(input) — 상속분 간이 계산
+│   │   ├── calculate.ts
+│   │   ├── fraction.ts
+│   │   ├── index.ts
+│   │   └── types.ts
 │   └── index.ts                       # public surface 재출력
 ├── tests/
 │   ├── days.test.ts
@@ -177,9 +209,12 @@ packages/core-engine/
 │   ├── edge.test.ts                   # 긴 기간/큰 원금/same-day/0 rate/floor 누적
 │   ├── rounding.test.ts               # v2 floor/ceil/round 분기 + invariant
 │   ├── dataset-injection.test.ts      # B8 byte-equivalence + B9 결정성
+│   ├── inheritance.test.ts            # 상속 입력 검증 / 거부 케이스
+│   ├── inheritance-golden.test.ts     # 상속 골든 fixture
 │   ├── smoke.test.ts                  # 패키지 surface
 │   ├── golden.test.ts                 # GOLDEN_FIXTURE_SCHEMA gate + cases
 │   ├── golden/                        # case-001..010.json
+│   │   └── inheritance/               # 상속 case-001..008.json
 │   ├── golden-pending/                # case-008-input.json (외부 캡처 대기)
 │   └── import-meta.d.ts               # vite/client 없이 import.meta.glob 시그니처
 ├── tsconfig.json         # lint/dev (noEmit)
@@ -203,16 +238,16 @@ packages/core-engine/
 
 ## 골든 케이스
 
-- `tests/golden/case-XXX.json` 에 입력 + 기대 출력으로 동결.
+- 이자: `tests/golden/case-XXX.json` 에 입력 + 기대 출력으로 동결.
 - `case-001..006` 은 엔진 내부 회귀 (`source: engine-internal-w2`).
 - `case-007` 은 법원 매뉴얼 (`Interest.hwp`) 예시 직접 인용 (`mode="period"`, `leapYear="actual"`,
   2015-05-01 시작 → 1년 사이 2016-02-29 포함 → 분모 366).
 - `case-009 / case-010` 은 후속 회귀 케이스 (반올림 v2 / TIER-A #2 윤년 만기 등).
 - `case-008-input.json` (golden-pending) 은 외부 캡처 대기용 입력 시트. 한국 IP / VPN 으로 ejpc.scourt.go.kr
   결과를 받거나 Windows VM 에서 `CourtCalcExSetup.msi` 결과를 받으면 골든화한다.
+- 상속: `tests/golden/inheritance/case-001..008.json` 에 기본 순위, 배우자, 대습, cutoff, 거부 케이스를 동결한다.
 
-각 fixture 는 `"schemaVersion": "1"` 을 가지며, `golden.test.ts` 의 `GOLDEN_FIXTURE_SCHEMA`
-gate 가 누락 / 불일치를 명시 실패로 잡는다 (v2 옵션 추가 시 fixture 동시 진화 강제).
+각 도메인 fixture 는 해당 golden runner 의 schema gate 가 누락 / 불일치를 명시 실패로 잡는다.
 
 ## 출처 / 참고
 
