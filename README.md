@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/readme-hero.svg" alt="LawCalc Korea 서비스 소개 이미지" width="900">
+  <img src="docs/assets/readme-hero.png" alt="LawCalc Korea 서비스 소개 이미지" width="900">
 </p>
 
 <h1 align="center">LawCalc Korea</h1>
