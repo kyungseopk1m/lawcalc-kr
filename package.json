@@ -27,6 +27,15 @@
     "lawcalc"
   ],
   "license": "AGPL-3.0-or-later",
+  "author": "kyungseopk1m",
+  "homepage": "https://github.com/kyungseopk1m/lawcalc-kr#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kyungseopk1m/lawcalc-kr.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kyungseopk1m/lawcalc-kr/issues"
+  },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
     "eslint": "^9.26.0",
