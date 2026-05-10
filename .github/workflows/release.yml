@@ -101,3 +101,38 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  update-readme:
+    name: Update README download URLs
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rewrite README direct download URLs to ${{ github.ref_name }}
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          sed -i -E "s|releases/download/v[0-9]+\.[0-9]+\.[0-9]+/LawCalc\.Korea_[0-9]+\.[0-9]+\.[0-9]+_universal\.dmg|releases/download/${TAG}/LawCalc.Korea_${VERSION}_universal.dmg|g" README.md
+          sed -i -E "s|releases/download/v[0-9]+\.[0-9]+\.[0-9]+/LawCalc\.Korea_[0-9]+\.[0-9]+\.[0-9]+_x64-setup\.exe|releases/download/${TAG}/LawCalc.Korea_${VERSION}_x64-setup.exe|g" README.md
+
+      - name: Commit and push README update
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if git diff --quiet README.md; then
+            echo "README already references ${TAG}, no update needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs(readme): bump download URLs to ${TAG}"
+          git push origin main
