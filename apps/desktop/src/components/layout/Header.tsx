@@ -1,12 +1,14 @@
-import { Info } from "lucide-react";
+import { Info, Settings } from "lucide-react";
 import { useState } from "react";
 
 import lcMark from "../../assets/brand/lc-mark.png";
 import { Button } from "../ui/button";
 import { InfoDialog } from "./InfoDialog";
+import { SettingsDialog } from "./SettingsDialog";
 
 export function Header() {
   const [infoOpen, setInfoOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
@@ -21,17 +23,30 @@ export function Header() {
               <p className="text-sm text-muted-foreground">법률 계산 워크벤치</p>
             </div>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setInfoOpen(true)}
-            className="gap-1.5"
-          >
-            <Info className="h-4 w-4" aria-hidden="true" />
-            정보
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="설정"
+              title="설정"
+            >
+              <Settings className="h-4 w-4" aria-hidden="true" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setInfoOpen(true)}
+              className="gap-1.5"
+            >
+              <Info className="h-4 w-4" aria-hidden="true" />
+              정보
+            </Button>
+          </div>
         </div>
       </header>
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <InfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
     </>
   );

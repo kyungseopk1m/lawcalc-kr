@@ -36,6 +36,24 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+[data-theme="dark"] {
+  --color-background: hsl(222.2 47.4% 7.5%);
+  --color-foreground: hsl(210 40% 96%);
+  --color-card: hsl(222.2 47.4% 9.5%);
+  --color-card-foreground: hsl(210 40% 96%);
+  --color-primary: hsl(43 68% 55%);
+  --color-primary-foreground: hsl(222.2 47.4% 8%);
+  --color-secondary: hsl(217.2 32.6% 17.5%);
+  --color-secondary-foreground: hsl(210 40% 96%);
+  --color-muted: hsl(217.2 32.6% 15.5%);
+  --color-muted-foreground: hsl(215 20.2% 65.1%);
+  --color-accent: hsl(217.2 32.6% 17.5%);
+  --color-accent-foreground: hsl(210 40% 96%);
+  --color-border: hsl(217.2 32.6% 21%);
+  --color-input: hsl(217.2 32.6% 24%);
+  --color-ring: hsl(43 68% 55%);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -44,6 +62,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--color-background);
   word-break: keep-all;
 }
 

@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-05-10
+
+### Added
+
+- 설정 다이얼로그를 추가하고 화면 모드 설정을 지원합니다. `시스템`, `라이트`, `다크` 중 선택할 수 있으며 선택값은 로컬에 저장됩니다.
+
+### Removed
+
+- 화면 상단의 고정 disclaimer bar (`DisclaimerBar` 컴포넌트) 를 제거했습니다. 동일 면책 문구가 이미 정보 다이얼로그 (`InfoDialog`) 와 결과 카드, PDF/CSV/`.lcalc`/클립보드 export 5종 모두에 노출되고 있어 상단 고정 표시가 중복이라는 판단입니다. 결과·export 측 disclaimer 는 그대로 유지합니다.
+
 ## [0.2.4] - 2026-05-10
 
 ### Fixed

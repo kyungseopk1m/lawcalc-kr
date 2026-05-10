@@ -23,7 +23,6 @@ import {
   type RateSegment,
 } from "@lawcalc-kr/core-engine";
 
-import { DisclaimerBar } from "./components/layout/DisclaimerBar";
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { DateRangeInput } from "./components/form/DateRangeInput";
@@ -64,7 +63,7 @@ const defaultInput: InterestInput = {
   note: "",
 };
 
-const APP_VERSION = "0.2.4";
+const APP_VERSION = "0.2.5";
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 
@@ -480,7 +479,6 @@ export function App() {
       onKeyDown={handleKeyDown}
     >
       <Header />
-      <DisclaimerBar />
 
       <nav className="border-b border-border bg-background">
         <div className="mx-auto flex w-full max-w-6xl gap-1 px-4 py-2 sm:px-6">
