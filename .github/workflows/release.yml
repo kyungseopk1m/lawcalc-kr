@@ -65,8 +65,9 @@ jobs:
 
             ## 다운로드
 
-            - macOS: `.dmg` 또는 `.app.tar.gz` 자산을 내려받아 실행합니다. 아직 Apple notarization을 진행하지 않았으므로 처음 실행할 때 Gatekeeper 경고가 표시될 수 있습니다.
-            - Windows: `.msi` 설치 파일을 내려받아 설치합니다.
+            - macOS: 일반 사용자는 `.dmg` 설치 파일을 내려받아 설치합니다. 아직 Apple notarization을 진행하지 않았으므로 처음 실행할 때 Gatekeeper 경고가 표시될 수 있습니다.
+            - Windows: 일반 사용자는 `setup.exe` 설치 파일을 내려받아 실행합니다. 기관/관리자 배포가 필요한 경우 `.msi` 설치 파일을 사용할 수 있습니다.
+            - `latest.json`, `.sig`, `.app.tar.gz` 파일은 인앱 자동업데이트 검증용 자산이므로 일반 사용자가 직접 내려받을 필요는 없습니다.
 
             ## 주요 기능
 
