@@ -1,0 +1,61 @@
+<svg width="1600" height="720" viewBox="0 0 1600 720" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">LawCalc Korea 서비스 소개 이미지</title>
+  <desc id="desc">법률 계산의 기준을 더 분명하게. 판결금 이자, 지연손해금, 상속분 계산을 로컬에서 정리하고 결과와 근거를 남기는 데스크톱 워크벤치.</desc>
+  <rect width="1600" height="720" fill="#F7F9FC"/>
+  <rect width="1600" height="14" fill="#0D1B2A"/>
+  <rect y="14" width="1600" height="4" fill="#D4AF37"/>
+  <circle cx="1280" cy="360" r="254" fill="#FFFFFF" opacity="0.72"/>
+  <circle cx="1280" cy="360" r="180" stroke="#E1E7F0" stroke-width="1"/>
+  <circle cx="1280" cy="360" r="118" stroke="#E1E7F0" stroke-width="1"/>
+
+  <g filter="url(#cardShadow)">
+    <rect x="1040" y="160" width="400" height="400" rx="36" fill="#FFFFFF" stroke="#D9E1EC"/>
+  </g>
+  <rect x="1088" y="206" width="304" height="58" rx="14" fill="#F4F7FB" stroke="#DCE4EF"/>
+  <rect x="1088" y="294" width="304" height="58" rx="14" fill="#F4F7FB" stroke="#DCE4EF"/>
+  <rect x="1088" y="382" width="304" height="58" rx="14" fill="#F4F7FB" stroke="#DCE4EF"/>
+  <path d="M1240 264V294" stroke="#C5CFDD" stroke-width="3" stroke-linecap="round"/>
+  <path d="M1240 352V382" stroke="#C5CFDD" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="1124" cy="235" r="10" fill="#D4AF37"/>
+  <circle cx="1124" cy="323" r="10" fill="#D4AF37"/>
+  <circle cx="1124" cy="411" r="10" fill="#D4AF37"/>
+  <text x="1152" y="244" fill="#172033" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="22" font-weight="800" letter-spacing="0">입력</text>
+  <text x="1152" y="332" fill="#172033" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="22" font-weight="800" letter-spacing="0">근거</text>
+  <text x="1152" y="420" fill="#172033" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="22" font-weight="800" letter-spacing="0">결과</text>
+  <rect x="1090" y="488" width="300" height="2" fill="#E5EAF2"/>
+  <text x="1120" y="524" fill="#58657A" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="20" font-weight="700" letter-spacing="0">local-only · reproducible</text>
+
+  <rect x="112" y="136" width="82" height="82" rx="20" fill="#0D1B2A"/>
+  <text x="136" y="190" fill="#FFFFFF" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="38" font-weight="900" letter-spacing="0">L</text>
+  <text x="162" y="190" fill="#D4AF37" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="38" font-weight="900" letter-spacing="0">c</text>
+
+  <text x="112" y="268" fill="#9A6B08" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="24" font-weight="800" letter-spacing="0">LawCalc Korea</text>
+  <text x="112" y="352" fill="#0D1728" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="74" font-weight="900" letter-spacing="0">법률 계산의 기준을</text>
+  <text x="112" y="438" fill="#0D1728" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="74" font-weight="900" letter-spacing="0">더 분명하게</text>
+  <text x="112" y="500" fill="#4B5870" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="27" font-weight="600" letter-spacing="0">판결금 이자·지연손해금과 상속분을 로컬에서 정리하고,</text>
+  <text x="112" y="542" fill="#4B5870" font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="27" font-weight="600" letter-spacing="0">결과표와 계산 근거를 재현 가능한 파일로 남깁니다.</text>
+
+  <g font-family="Inter, Apple SD Gothic Neo, Noto Sans KR, system-ui, sans-serif" font-size="21" font-weight="800" letter-spacing="0">
+    <rect x="112" y="596" width="124" height="52" rx="26" fill="#FFFFFF" stroke="#D8E0EB"/>
+    <text x="138" y="630" fill="#21304A">로컬 전용</text>
+    <rect x="252" y="596" width="124" height="52" rx="26" fill="#FFFFFF" stroke="#D8E0EB"/>
+    <text x="278" y="630" fill="#21304A">근거 표시</text>
+    <rect x="392" y="596" width="124" height="52" rx="26" fill="#FFFFFF" stroke="#D8E0EB"/>
+    <text x="418" y="630" fill="#21304A">재현 파일</text>
+    <rect x="532" y="596" width="148" height="52" rx="26" fill="#FFFFFF" stroke="#D8E0EB"/>
+    <text x="558" y="630" fill="#21304A">PDF · CSV</text>
+  </g>
+
+  <defs>
+    <filter id="cardShadow" x="1000" y="124" width="480" height="480" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="20"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.05 0 0 0 0 0.1 0 0 0 0 0.18 0 0 0 0.12 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+  </defs>
+</svg>

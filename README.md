@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="docs/assets/판결금-이자-계산기-demo.gif" alt="LawCalc Korea 데모" width="720">
+  <img src="docs/assets/readme-hero.svg" alt="LawCalc Korea 서비스 소개 이미지" width="900">
 </p>
 
 <h1 align="center">LawCalc Korea</h1>
 
 <p align="center">
   <b>판결금 이자·지연손해금과 상속분을 로컬에서 계산하는 데스크톱 워크벤치</b><br>
-  <sub>공개 법령과 공식 매뉴얼만 근거로 재구현 · 사건 정보는 외부로 전송하지 않습니다</sub>
+  <sub>본질에 집중한 법률 계산 워크벤치 · 사건 정보는 외부로 전송하지 않습니다</sub>
 </p>
 
 <p align="center">
@@ -23,18 +23,37 @@
 </p>
 
 > **면책 고지**
-> 이 도구의 계산 결과는 **검토용**이며 법률 자문이 아닙니다. 사건별 특수성은 변호사 등 전문가의 확인이 필요합니다. lawcalc-kr는 법원 공식 프로그램과 무관합니다.
-> 자세한 출처: [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)
+> 이 도구의 계산 결과는 **검토용**이며 법률 자문이 아닙니다. 사건별 특수성은 변호사 등 전문가의 확인이 필요합니다.
+> 계산 근거와 독립성 명시: [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)
 
-## 이런 걸 할 수 있습니다
+LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리하는 로컬 데스크톱 앱입니다. 원금·기간·이율처럼 자주 바뀌는 입력값부터 결과표, 적용 근거, 저장·내보내기까지 한 흐름에서 다룹니다.
 
-- **판결금 이자·지연손해금 계산** — 원금·시작일·종료일·이자율 구간을 입력하면 초일 산입과 윤년 처리 옵션을 반영해 계산합니다.
-- **상속분 간이 계산** — 피상속인, 배우자, 1~4순위 상속인과 1차 대습상속인을 입력해 법정상속분을 계산합니다. 현재는 1991-01-01 이후 사망 케이스와 1차 대습까지만 지원합니다.
-- **법정이율 프리셋 자동 적용** — 민법 5%, 상법 6%, 소송촉진 등에 관한 특례법 이율 변경 이력이 데이터셋으로 관리됩니다.
-- **계산 근거 표시** — 이자는 구간별 일수·적용 이율·공식·이자·총액을, 상속분은 약분 전/후 지분과 백분율을 함께 출력합니다.
-- **끝수 처리 옵션** — 원 단위 절사/절상/사사오입 (미지정 시 절사).
-- **로컬 저장 (`.lcalc`)** — 입력값·옵션·결과·데이터 버전을 한 파일로 저장·재현. 외부 서버 전송 0.
-- **내보내기** — PDF (A4, Pretendard 한글 폰트 임베드), CSV (UTF-8 BOM, Excel 한글 호환), 클립보드 텍스트.
+## 주요 기능
+
+### 판결금 이자·지연손해금 계산
+
+<p align="center">
+  <img src="docs/assets/readme-interest.png" alt="판결금 이자 계산 화면" width="820">
+</p>
+
+원금, 계산 기간, 법정이율 프리셋, 직접 지정한 이율 구간을 조합해 계산합니다. 결과표에는 구간별 일수, 적용 이율, 계산 공식, 이자, 원리금 합계가 함께 표시됩니다.
+
+### 상속분 간이 계산
+
+<p align="center">
+  <img src="docs/assets/readme-inheritance.png" alt="상속분 간이 계산 화면" width="820">
+</p>
+
+피상속인, 배우자, 1~4순위 상속인과 1차 대습상속인을 입력해 법정상속분을 계산합니다. 결과에는 약분 전/후 지분과 백분율을 함께 표시해 검산하기 쉽게 정리합니다.
+
+현재 상속분 계산은 1991-01-01 이후 사망 케이스와 1차 대습상속까지만 지원합니다. 자세한 범위는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “Current Inheritance Scope”를 확인해 주세요.
+
+### 공통 워크플로
+
+- **법정이율 데이터셋** — 민법 5%, 상법 6%, 소송촉진 등에 관한 특례법 이율 변경 이력을 버전 관리합니다.
+- **계산 옵션** — 초일 산입 여부, 윤년 처리, 원 단위 절사·절상·사사오입을 선택할 수 있습니다.
+- **로컬 저장 (`.lcalc`)** — 입력값, 옵션, 결과, 데이터 버전을 한 파일로 저장해 같은 계산을 다시 열 수 있습니다.
+- **내보내기** — PDF, CSV, 클립보드 텍스트로 계산 결과를 정리합니다.
 
 ## 다운로드
 
@@ -92,7 +111,7 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 ## English
 
-LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, and simplified inheritance shares. It is independent of Korean court software and does not use court logos, screens, or reverse-engineered program internals.
+LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, and simplified inheritance shares.
 
 The current release focuses on local-only interest and inheritance calculations, transparent result traces, versioned data, and reproducible `.lcalc` files on macOS and Windows.
 
