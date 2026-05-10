@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kyungseopk1m/lawcalc-kr/blob/main/data/interest-limits/v1.schema.json",
+  "title": "lawcalc-kr Interest Limits Dataset (v1)",
+  "description": "이자제한법 / 대부업법 시기별 최고이자율 cap dataset v1. 워크스페이스 single source. packages/core-engine/scripts/sync-interest-limits.mjs 가 빌드 타임에 src/interest-limits.dataset.generated.ts 로 인라인. 검증은 InterestLimitDataset validate() 와 동등. v1.0.0 = 이자제한법 only — 대부업법 (등록/미등록) 은 G3 게이트 (사용자 시행령 캡처) 충족 후 v1.1+ 추가.",
+  "type": "object",
+  "required": ["version", "updatedAt", "slices"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9.-]+)?$",
+      "description": "Semver. AppropriationResult.dataVersions.interestLimits 에 'interest-limits/v{version}' 형태로 기록."
+    },
+    "updatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "데이터셋 갱신일 (YYYY-MM-DD)."
+    },
+    "slices": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/InterestLimitSlice" },
+      "minItems": 1,
+      "description": "law + from 으로 unique. 같은 law 내에서 from 오름차순 + 인접 slice 의 to 가 다음 slice 의 from-1 일과 일치 강제 (gap/overlap 0)."
+    }
+  },
+  "$defs": {
+    "InterestLimitSlice": {
+      "type": "object",
+      "required": ["law", "from", "to", "capRate", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "law": {
+          "type": "string",
+          "enum": ["interestLimitAct", "loanBusinessRegistered", "loanBusinessUnregistered"],
+          "description": "적용 법규. 이자제한법 / 대부업법(등록) / 대부업법(미등록)."
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "본 cap 시행일 (포함)."
+        },
+        "to": {
+          "anyOf": [{ "type": "null" }, { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }],
+          "description": "본 cap 종료일 (포함). null = 무기한 유효 (현행 cap)."
+        },
+        "capRate": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "description": "연 cap 이율 (예: 0.20 = 연 20%). 0 초과 1 이하."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "법령명 + 시행일 + 대통령령/법률 번호. 감사 가능성 보장."
+        }
+      }
+    }
+  }
+}

@@ -30,10 +30,12 @@
   ],
   "scripts": {
     "sync:legal-rates": "node scripts/sync-legal-rates.mjs",
-    "prebuild": "node scripts/sync-legal-rates.mjs",
+    "sync:interest-limits": "node scripts/sync-interest-limits.mjs",
+    "sync:datasets": "node scripts/sync-legal-rates.mjs && node scripts/sync-interest-limits.mjs",
+    "prebuild": "pnpm sync:datasets",
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src tests",
-    "pretest": "node scripts/sync-legal-rates.mjs",
+    "pretest": "pnpm sync:datasets",
     "test": "vitest run",
     "test:golden": "vitest run --config vitest.golden.config.ts"
   },
