@@ -40,6 +40,8 @@ import { SegmentTable } from "./components/result/SegmentTable";
 import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { UpdateDialog } from "./components/UpdateDialog";
+import { useUpdater } from "./hooks/useUpdater";
 import { ipc, type LcalcFile, type LcalcInterestPayload } from "./lib/ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
 import { parseLoadedLcalcInput, validateLcalcEnvelope } from "./lib/lcalc-validation";
@@ -210,6 +212,7 @@ function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile
 }
 
 export function App() {
+  const updaterApi = useUpdater();
   const [principal, setPrincipal] = useState(defaultInput.principal);
   const [startDate, setStartDate] = useState(defaultInput.startDate);
   const [endDate, setEndDate] = useState(defaultInput.endDate);
@@ -590,6 +593,7 @@ export function App() {
       ) : null}
 
       <Footer />
+      <UpdateDialog api={updaterApi} />
     </div>
   );
 }
