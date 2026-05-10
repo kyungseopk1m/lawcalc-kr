@@ -52,6 +52,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
@@ -68,6 +70,10 @@ jobs:
 
             ## 주요 기능
 
+            - 인앱 자동업데이트: `tauri-plugin-updater` 기반으로 새 버전 확인, 다운로드 진행률, 설치 후 재시작 흐름을 제공합니다.
+            - `.lcalc` 미저장 변경사항이 있으면 업데이트 재시작을 막고 저장 후 진행하도록 안내합니다.
+            - interest-limits/v1 dataset: 이자제한법 제한이율 변경 이력 4개 구간을 버전 관리 데이터로 포함했습니다.
+            - interest 엔진 shared helper 추출: 이자 계산 공통 로직을 내부 helper 로 정리했습니다. 사용자-facing 계산 결과 변경은 없습니다.
             - 원금, 기간, 법정이율 프리셋, 초일 산입, 윤년 처리 옵션 기반 이자 계산
             - 민법·상법·소송촉진 등에 관한 특례법 이율 변경 이력 반영
             - 구간별 일수, 이율, 공식, 이자와 총액 표시

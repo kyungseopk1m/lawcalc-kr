@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LawCalc Korea",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "identifier": "com.lawcalc.kr.desktop",
   "build": {
     "beforeDevCommand": "pnpm --filter @lawcalc-kr/desktop dev",
@@ -42,5 +42,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxNDhGQkQ5NjBCMUE4MTIKUldRU3FMRmcyZnRJc1VPejA4ZmllK28wbzJDa3dqSzhNRy9xSFc2UEdJcUdFUlYzdXhIK1lqeTIK",
+      "endpoints": [
+        "https://github.com/kyungseopk1m/lawcalc-kr/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

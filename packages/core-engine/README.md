@@ -3,7 +3,7 @@
 판결금·지연손해금 이자 계산과 상속분 간이 계산을 위한 순수 TypeScript 엔진. lawcalc-kr 데스크톱 앱의 계산 모듈을
 독립 패키지로 분리해, UI 나 Tauri 셸 없이도 단위 테스트와 골든 테스트로 검증할 수 있게 한다.
 
-> **상태 (2026-05-10, v0.2.1)**: 공개 API 안정. core-engine 단위 회귀 115개 / 골든 게이트 21개 통과. 이자 엔진은 반올림 정책 v2 (`options.rounding`) + 데이터셋 주입 (`calculateInterest(input, { dataset })`) 을 지원하고, 상속분 엔진은 1991-01-01 이후 사망 케이스와 1차 대습상속까지 지원한다.
+> **상태 (2026-05-10, v0.2.2)**: 공개 API 안정. core-engine 단위 회귀 115개 / 골든 게이트 21개 통과. 이자 엔진은 반올림 정책 v2 (`options.rounding`) + 데이터셋 주입 (`calculateInterest(input, { dataset })`) 을 지원하고, 상속분 엔진은 1991-01-01 이후 사망 케이스와 1차 대습상속까지 지원한다.
 
 본 엔진의 알고리즘 / 옵션 / 분모 결정 / 구간 분해 / 골든 케이스 매핑 상세는
 루트 [`docs/INTEREST_FORMULAS.md`](../../docs/INTEREST_FORMULAS.md) 가 단일 출처다.

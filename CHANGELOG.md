@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-05-10
+
+### Added
+
+- 인앱 자동업데이트를 추가했습니다. `tauri-plugin-updater` 기반으로 앱 시작 시 새 버전을 확인하고, hop 차용 state machine UI 로 사용 가능 알림 → 다운로드 진행률 → 설치 완료 → 재시작 흐름을 제공합니다.
+- `.lcalc` 미저장 변경사항 dirty guard 를 업데이트 재시작 단계에 연결했습니다. 저장하지 않은 변경사항이 있으면 재시작 버튼을 비활성화하고 저장 후 진행하도록 안내합니다.
+- `interest-limits/v1` dataset 을 추가했습니다. 이자제한법 제한이율 변경 이력 4개 구간(30% / 25% / 24% / 20%)을 버전 관리 데이터로 포함합니다.
+
+### Changed
+
+- interest 엔진의 accrual / format / rounding 공통 로직을 내부 shared helper 로 추출했습니다. 사용자-facing 계산 결과 변경은 없습니다.
+- v0.2.2 patch 릴리스를 위해 데스크톱 앱 버전 표기와 Tauri 패키징 버전을 동기화했습니다.
+
 ## [0.2.1] - 2026-05-10
 
 ### Added
@@ -99,7 +112,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.2
 [0.2.1]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.0
 [0.1.2]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.1.2
