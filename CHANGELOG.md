@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-10
+
+### Changed
+
+- 앱 아이콘과 인앱 브랜드 마크 (`lc-mark.png`) 를 정제했습니다. 외곽 흰 halo 를 제거해 macOS Dock / Windows 작업 표시줄에서 다른 앱과 톤이 어긋나지 않도록 정리하고, 다른 앱 대비 커 보이던 optical size 를 축소했습니다. LC 모노그램 (deep navy + 흰색 L + 골드 C + amber baseline) 정체성은 그대로 유지합니다.
+- v0.2.3 patch 릴리스를 위해 데스크톱 앱 버전 표기와 Tauri 패키징 버전을 동기화했습니다.
+
 ## [0.2.2] - 2026-05-10
 
 ### Added

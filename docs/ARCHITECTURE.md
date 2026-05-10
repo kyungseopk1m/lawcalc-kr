@@ -73,7 +73,7 @@ Example:
   "schemaVersion": "2",
   "kind": "interest",
   "payload": {
-    "appVersion": "0.2.2",
+    "appVersion": "0.2.3",
     "dataVersion": "legal-rates/v1.0.0",
     "createdAt": "2026-05-10T12:34:56+09:00",
     "input": {

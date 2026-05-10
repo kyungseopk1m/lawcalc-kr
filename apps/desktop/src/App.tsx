@@ -64,7 +64,7 @@ const defaultInput: InterestInput = {
   note: "",
 };
 
-const APP_VERSION = "0.2.2";
+const APP_VERSION = "0.2.3";
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 
