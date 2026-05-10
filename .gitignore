@@ -43,3 +43,6 @@ apps/*/src-tauri/.taurignore
 .idea/
 .vscode/
 *.swp
+
+# Local backlog / private design notes (mirrored in for-claude/)
+docs/plans/
