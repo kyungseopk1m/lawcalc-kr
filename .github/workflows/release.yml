@@ -61,43 +61,28 @@ jobs:
           releaseBody: |
             # lawcalc-kr ${{ github.ref_name }}
 
-            한국 판결금 이자·지연손해금 계산 데스크톱 워크벤치 릴리스입니다.
+            한국 법률 계산 데스크톱 워크벤치 ${{ github.ref_name }} 릴리스입니다.
+
+            자세한 변경 내역은 [CHANGELOG.md](https://github.com/kyungseopk1m/lawcalc-kr/blob/${{ github.ref_name }}/CHANGELOG.md) 의 해당 버전 섹션을 참고해 주세요. 본 draft 의 본문은 publish 전에 GitHub UI 또는 `gh release edit` 으로 변경 내역을 보강해 사용합니다.
 
             ## 다운로드
 
-            - macOS: 일반 사용자는 `.dmg` 설치 파일을 내려받아 설치합니다. 아직 Apple notarization을 진행하지 않았으므로 처음 실행할 때 Gatekeeper 경고가 표시될 수 있습니다.
-            - Windows: 일반 사용자는 `setup.exe` 설치 파일을 내려받아 실행합니다. 기관/관리자 배포가 필요한 경우 `.msi` 설치 파일을 사용할 수 있습니다.
-            - `latest.json`, `.sig`, `.app.tar.gz` 파일은 인앱 자동업데이트 검증용 자산이므로 일반 사용자가 직접 내려받을 필요는 없습니다.
+            - **macOS**: `.dmg` 설치 파일을 내려받아 Applications 폴더로 옮긴 뒤 실행합니다. 아직 Apple notarization 을 진행하지 않아 Gatekeeper 경고가 표시될 수 있습니다 — Finder 에서 **Control-클릭 → 열기** 또는 **시스템 설정 → 개인정보 보호 및 보안** 에서 허용해 주세요.
+            - **Windows**: `setup.exe` 를 내려받아 설치 마법사를 따릅니다. 기관/관리자 배포가 필요한 경우 `.msi` 를 사용할 수 있습니다. SmartScreen 의 "게시자 확인 안 됨" 경고는 **추가 정보 → 실행** 으로 진행합니다.
+            - `latest.json`, `.sig`, `.app.tar.gz` 는 인앱 자동업데이트 검증용 자산이므로 일반 사용자가 직접 내려받을 필요는 없습니다.
 
-            ## 주요 기능
+            ## 자동업데이트 / 호환성
 
-            - 인앱 자동업데이트: `tauri-plugin-updater` 기반으로 새 버전 확인, 다운로드 진행률, 설치 후 재시작 흐름을 제공합니다.
-            - `.lcalc` 미저장 변경사항이 있으면 업데이트 재시작을 막고 저장 후 진행하도록 안내합니다.
-            - interest-limits/v1 dataset: 이자제한법 제한이율 변경 이력 4개 구간을 버전 관리 데이터로 포함했습니다.
-            - interest 엔진 shared helper 추출: 이자 계산 공통 로직을 내부 helper 로 정리했습니다. 사용자-facing 계산 결과 변경은 없습니다.
-            - 원금, 기간, 법정이율 프리셋, 초일 산입, 윤년 처리 옵션 기반 이자 계산
-            - 민법·상법·소송촉진 등에 관한 특례법 이율 변경 이력 반영
-            - 구간별 일수, 이율, 공식, 이자와 총액 표시
-            - 상속분 간이 계산 탭 (외부 reference 매뉴얼 (private) 기반, 8 골든 케이스)
-            - `.lcalc` v2 envelope (`{ schemaVersion: "2", kind, payload }`) 로 다중 도메인 저장·로드. v1 (interest 단일) 파일은 자동 마이그레이션
-            - PDF(A4, 한글 Pretendard 폰트 임베드) / CSV(UTF-8 BOM, Excel 한글 호환, formula injection 방어) / 클립보드 텍스트 내보내기
-            - `.lcalc` 1 MiB 상한 + 비고 10,000 자 상한
-            - toast 오류 메시지의 절대 경로·사용자 계정명·스택 프레임 redact
-            - CI `prettier --check` + `tsc --noEmit` + `cargo fmt --check` + `cargo clippy -- -D warnings` 게이트
-            - 5개 export/save/load 버튼 (PDF / CSV / 클립보드 / `.lcalc` 저장 / `.lcalc` 불러오기) 의 macOS·Windows main thread deadlock 해소
-
-            ## 호환성
-
-            - `.lcalc` v1 (`schemaVersion: "1"`) 파일은 불러올 때 v2 envelope 로 자동 마이그레이션됩니다.
-            - v0.2.x 에서 저장한 v2 envelope 파일은 v0.1.x 앱에서 열리지 않습니다.
-
-            ## 라이선스
-
-            - AGPL-3.0-or-later 라이선스로 배포됩니다.
+            - 인앱 자동업데이트 (`tauri-plugin-updater` + minisign signature 검증) 가 v0.2.x 이후 사용자에게 새 버전을 안내합니다. 미저장 변경사항이 있을 때 재시작을 막고 저장 후 진행하도록 안내합니다.
+            - `.lcalc` 파일은 현행 v3 envelope (`schemaVersion: "3"`, `envelopeFeatures`, `dataVersions`) 을 사용합니다. v0.1.x 의 v1 / v0.2.x 의 v2 파일은 불러올 때 자동으로 v3 으로 마이그레이션됩니다 (한 방향).
 
             ## 면책
 
-            이 계산 결과는 검토용이며 법률 자문이 아닙니다. 사건별 특수성은 변호사 등 전문가 확인이 필요합니다. 자세한 출처 / 무관성 명시: [LEGAL_REFERENCES.md](https://github.com/kyungseopk1m/lawcalc-kr/blob/main/docs/LEGAL_REFERENCES.md)
+            이 도구의 계산 결과는 검토용 계산이며, 사건별 특수성은 변호사 등 전문가 확인이 필요합니다. **법률 자문이 아닙니다.** 자세한 출처 / 무관성 명시: [LEGAL_REFERENCES.md](https://github.com/kyungseopk1m/lawcalc-kr/blob/main/docs/LEGAL_REFERENCES.md)
+
+            ## 라이선스
+
+            AGPL-3.0-or-later. 자세한 내용은 [LICENSE](https://github.com/kyungseopk1m/lawcalc-kr/blob/main/LICENSE) 를 확인하세요.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
