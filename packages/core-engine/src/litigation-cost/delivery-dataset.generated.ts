@@ -5,8 +5,8 @@
 import type { DeliveryDataset } from "./delivery-dataset";
 
 export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
-  "version": "1.0.0",
-  "updatedAt": "2026-05-11",
+  "version": "1.1.0",
+  "updatedAt": "2026-05-12",
   "sourceLaw": {
     "name": "송달료규칙",
     "lsId": "223133",
@@ -17,8 +17,10 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
   "matrixDelegation": {
     "name": "송달료규칙의 시행에 따른 업무처리요령",
     "alias": "재일 87-4",
-    "sourceUrl": "https://glaw.scourt.go.kr/wsjo/gchick/sjo330.do?contId=3203547",
-    "note": "사건구분별 송달 횟수 매트릭스는 본 재판예규 별표 1 에 위임"
+    "currentEffectiveFrom": "2026-03-01",
+    "currentRuleNumber": "재판예규 제1950호",
+    "sourceUrl": "https://portal.scourt.go.kr/pgp/main.on?w2xPath=PGP1051M04&jisCntntsSrno=2026000031884&c=900&srchwd=%EC%9E%AC%EC%9D%BC%2087-4%20%EB%B3%84%ED%91%9C%201",
+    "note": "사건구분별 송달 횟수 매트릭스는 본 재판예규 별표 1 에 위임. 본 dataset 의 countMatrix 는 재판예규 제1950호 (2026-02-26 개정 / 2026-03-01 시행) 별표 1 본문 직접 인용."
   },
   "unitPriceHistory": [
     {
@@ -191,25 +193,32 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
       "verifiedBy": [
         "easylaw.go.kr"
       ]
-    }
-  ],
-  "unverifiedMatrix": [
+    },
     {
       "caseType": "paymentOrder",
       "labelKo": "독촉사건 (지급명령, 차)",
-      "draftFormula": {
+      "formula": {
         "kind": "simplePerParty",
-        "countPerParty": 5
+        "countPerParty": 6
       },
-      "verificationPending": "재일 87-4 별표 1 본문 직접 확보 (glaw.scourt.go.kr contId=3203547) 대기 — v0.3.1 patch 영역. 실무상 신청서·각하·이의신청 등으로 3~5회 추정."
+      "verifiedBy": [
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) — 독촉사건(차) 6회, 채권자·채무자",
+        "portal.scourt.go.kr jisCntntsSrno=2026000031884"
+      ]
     }
   ],
+  "unverifiedMatrix": [],
   "historyNote": {
     "ruleChanges": [
       {
+        "effectiveFrom": "2026-03-01",
+        "ruleNumber": "재판예규 제1950호",
+        "summary": "별표 1 (적용대상사건 및 당사자 1인당 송달료납부기준) 개정 — 본 dataset 의 countMatrix 정본 출처 슬라이스"
+      },
+      {
         "effectiveFrom": "2020-11-26",
         "ruleNumber": "대법원규칙 제2921호",
-        "summary": "일부개정 (본 dataset 기준 슬라이스)"
+        "summary": "일부개정 (송달료규칙 본문 기준 슬라이스)"
       },
       {
         "effectiveFrom": "2012-12-03",

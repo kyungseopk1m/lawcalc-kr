@@ -1,4 +1,5 @@
 import {
+  appliedDomains,
   validateDeliveryFeeInput,
   validateLawyerFeeInput,
   validateStampDutyInput,
@@ -442,7 +443,9 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
           filingDate: requireString(lawyerRecord.filingDate, "payload.input.lawyerFee.filingDate"),
         }),
   };
-  validateLawyerFeeInput(lawyerFee);
+  if (appliedDomains(lawyerFee.caseType).includes("lawyerFee")) {
+    validateLawyerFeeInput(lawyerFee);
+  }
 
   const distributionValue = input.distribution;
   if (distributionValue === undefined) {

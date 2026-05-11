@@ -23,16 +23,15 @@ function input(overrides: Partial<DeliveryFeeInput> = {}): DeliveryFeeInput {
 describe("loadDeliveryDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadDeliveryDataset();
-    expect(ds.version).toBe("1.0.0");
+    expect(ds.version).toBe("1.1.0");
     expect(ds.unitPriceHistory).toHaveLength(4);
     expect(ds.unitPriceHistory[0]!.unitPriceWon).toBe(5500);
-    expect(ds.countMatrix).toHaveLength(12);
-    expect(ds.unverifiedMatrix).toHaveLength(1);
-    expect(ds.unverifiedMatrix[0]!.caseType).toBe("paymentOrder");
+    expect(ds.countMatrix).toHaveLength(13);
+    expect(ds.unverifiedMatrix).toHaveLength(0);
   });
 
-  it("deliveryDatasetVersionTag 는 delivery/v1.0.0", () => {
-    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.0.0");
+  it("deliveryDatasetVersionTag 는 delivery/v1.1.0", () => {
+    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.1.0");
   });
 
   it("음수 unitPriceWon 거부", () => {
@@ -181,8 +180,9 @@ describe("getDeliveryCount / 매트릭스 lookup", () => {
     expect(entry.formula).toEqual({ kind: "simplePerParty", countPerParty: 3 });
   });
 
-  it("paymentOrder (차) → throw (unverified, 정본 출처 대기)", () => {
-    expect(() => getDeliveryCount(ds, "paymentOrder")).toThrow(/정본 출처 확보 대기/);
+  it("paymentOrder (차) → simplePerParty 6회 (재일 87-4 별표 1 정본)", () => {
+    const entry = getDeliveryCount(ds, "paymentOrder");
+    expect(entry.formula).toEqual({ kind: "simplePerParty", countPerParty: 6 });
   });
 });
 
@@ -197,7 +197,7 @@ describe("computeDeliveryFee / 산식 분기 + 시기별 단가", () => {
     expect(r.deliveryCount).toBe(30);
     expect(r.perDeliveryUnitPriceWon).toBe(5500);
     expect(r.amount).toBe(165_000);
-    expect(r.dataVersion).toBe("delivery/v1.0.0");
+    expect(r.dataVersion).toBe("delivery/v1.1.0");
     expect(r.computedAt).toBe(FROZEN_AT);
   });
 
@@ -239,10 +239,14 @@ describe("computeDeliveryFee / 산식 분기 + 시기별 단가", () => {
     expect(r.amount).toBe(110_000);
   });
 
-  it("paymentOrder (차) 호출 시 RangeError — unverified 매트릭스", () => {
-    expect(() => computeDeliveryFee(input({ caseType: "paymentOrder", partyCount: 1 }))).toThrow(
-      /정본 출처 확보 대기/,
-    );
+  it("paymentOrder (차), 당사자 2명 (채권자·채무자) = 2 × 6 × 5,500 = 66,000원", () => {
+    const r = computeDeliveryFee(input({ caseType: "paymentOrder", partyCount: 2 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.deliveryCount).toBe(12);
+    expect(r.perDeliveryUnitPriceWon).toBe(5500);
+    expect(r.amount).toBe(66_000);
+    expect(r.dataVersion).toBe("delivery/v1.1.0");
   });
 
   it("filingDate=2020-06-30 → 4,800원 적용 (2019-05-01 슬라이스)", () => {
@@ -404,7 +408,7 @@ describe("computeDeliveryFee / dataset injection 결정성", () => {
   it("default 호출 → bundled dataset 사용 (5,500원)", () => {
     const r = computeDeliveryFee(input({ partyCount: 1 }), { computedAt: FROZEN_AT });
     expect(r.perDeliveryUnitPriceWon).toBe(5500);
-    expect(r.dataVersion).toBe("delivery/v1.0.0");
+    expect(r.dataVersion).toBe("delivery/v1.1.0");
   });
 
   it("custom dataset 주입 → dataVersion 변경", () => {

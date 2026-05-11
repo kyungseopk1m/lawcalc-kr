@@ -38,7 +38,7 @@ import {
   validateLcalcEnvelope,
 } from "../lib/lcalc-validation";
 
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "0.3.1";
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 type DistributionMode = "equal" | "proportional";
@@ -73,6 +73,18 @@ function parsePositiveInteger(value: string, fallback: number): number {
 function parseNonNegativeInteger(value: string, fallback: number): number {
   const parsed = Number(value.replaceAll(",", ""));
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+const wonInputFormatter = new Intl.NumberFormat("ko-KR");
+
+function formatWonInput(text: string): string {
+  const digits = text.replaceAll(",", "").replace(/[^\d]/g, "");
+  if (digits.length === 0) return "";
+  return wonInputFormatter.format(Number(digits));
+}
+
+function parseWonText(text: string): string {
+  return text.replaceAll(",", "").replace(/[^\d]/g, "");
 }
 
 const PROPORTIONAL_VALUE_TOKEN = /^\d{1,3}(?:,\d{3})+$|^\d+$/;
@@ -186,28 +198,31 @@ export function LitigationCostCalculator() {
   const input = useMemo<LitigationCostInput>(() => {
     const caseValue = parseNonNegativeInteger(caseValueText, 0);
     const partyCount = parsePositiveInteger(partyCountText, 1);
+    const lawyerFeeAppliesNow = appliedDomains(caseType).includes("lawyerFee");
     const lawyerCaseValue =
       appealsLevel === "firstInstance"
         ? caseValue
         : parseNonNegativeInteger(appealValueText, caseValue);
     const discounts: LawyerFeeDiscount[] = [];
-    if (applyNoOral) {
-      discounts.push({ kind: "noOralHearingOrAdmission", reason: "noOralHearing" });
-    }
-    if (applyProvisionalDiscount) {
-      discounts.push({ kind: "provisionalCase", hasOralHearing: false });
-    }
-    if (applyKlac) {
-      discounts.push({ kind: "klac" });
-    }
-    if (useCourtMultiplier) {
-      discounts.push({
-        kind: "courtDiscretion",
-        multiplier: Number(courtMultiplierText),
-      });
-    }
-    if (useCustomRate) {
-      discounts.push({ kind: "customPercent", rate: Number(customRateText) });
+    if (lawyerFeeAppliesNow) {
+      if (applyNoOral) {
+        discounts.push({ kind: "noOralHearingOrAdmission", reason: "noOralHearing" });
+      }
+      if (applyProvisionalDiscount) {
+        discounts.push({ kind: "provisionalCase", hasOralHearing: false });
+      }
+      if (applyKlac) {
+        discounts.push({ kind: "klac" });
+      }
+      if (useCourtMultiplier) {
+        discounts.push({
+          kind: "courtDiscretion",
+          multiplier: Number(courtMultiplierText),
+        });
+      }
+      if (useCustomRate) {
+        discounts.push({ kind: "customPercent", rate: Number(customRateText) });
+      }
     }
 
     const base: LitigationCostInput = {
@@ -229,7 +244,7 @@ export function LitigationCostCalculator() {
         caseType,
         discounts,
         ...(filingDate ? { filingDate } : {}),
-        ...(klacAgreedFeeText.trim()
+        ...(lawyerFeeAppliesNow && klacAgreedFeeText.trim()
           ? { klacAgreedFeeWon: parseNonNegativeInteger(klacAgreedFeeText, 0) }
           : {}),
       },
@@ -267,6 +282,10 @@ export function LitigationCostCalculator() {
     useCourtMultiplier,
     useCustomRate,
   ]);
+  const lawyerFeeApplies = useMemo(
+    () => appliedDomains(caseType).includes("lawyerFee"),
+    [caseType],
+  );
   const dirtySnapshot = useMemo(() => buildDirtySnapshot(input, note), [input, note]);
   const markLitigationCostClean = useLcalcDirtyTracker("litigation-cost", dirtySnapshot);
 
@@ -390,10 +409,11 @@ export function LitigationCostCalculator() {
               사건구분
               <Select value={caseType} onChange={(e) => setCaseType(e.target.value as CaseType)}>
                 {caseTypeOptions.map(({ caseType: value, meta }) => {
-                  const disabled = !appliedDomains(value).includes("lawyerFee");
+                  const lawyerFeeExcluded = !appliedDomains(value).includes("lawyerFee");
                   return (
-                    <option key={value} value={value} disabled={disabled}>
-                      {meta.nameKo} ({caseCode(value)}){disabled ? " - 변호사보수 적용 외" : ""}
+                    <option key={value} value={value}>
+                      {meta.nameKo} ({caseCode(value)})
+                      {lawyerFeeExcluded ? " - 변호사보수 산입 외" : ""}
                     </option>
                   );
                 })}
@@ -403,9 +423,10 @@ export function LitigationCostCalculator() {
               <label className="grid gap-2 text-sm font-medium">
                 소가
                 <Input
-                  value={caseValueText}
+                  value={formatWonInput(caseValueText)}
                   inputMode="numeric"
-                  onChange={(e) => setCaseValueText(e.target.value)}
+                  placeholder="예: 30,000,000"
+                  onChange={(e) => setCaseValueText(parseWonText(e.target.value))}
                 />
               </label>
               <label className="grid gap-2 text-sm font-medium">
@@ -432,10 +453,11 @@ export function LitigationCostCalculator() {
               <label className="grid gap-2 text-sm font-medium">
                 항소·상고 불복 범위
                 <Input
-                  value={appealValueText}
+                  value={formatWonInput(appealValueText)}
                   inputMode="numeric"
+                  placeholder="예: 30,000,000"
                   disabled={appealsLevel === "firstInstance"}
-                  onChange={(e) => setAppealValueText(e.target.value)}
+                  onChange={(e) => setAppealValueText(parseWonText(e.target.value))}
                 />
               </label>
             </div>
@@ -481,64 +503,75 @@ export function LitigationCostCalculator() {
             <CardTitle className="text-sm">변호사보수 옵션</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={applyNoOral}
-                onChange={(e) => setApplyNoOral(e.target.checked)}
-              />
-              무변론·자백 등 제5조 감액
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={applyProvisionalDiscount}
-                onChange={(e) => setApplyProvisionalDiscount(e.target.checked)}
-              />
-              보전처분 변론·심문기일 없음
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={applyKlac}
-                onChange={(e) => setApplyKlac(e.target.checked)}
-              />
-              KLAC 기준 적용
-            </label>
-            <Input
-              aria-label="KLAC 약정보수액"
-              placeholder="KLAC 약정보수액 (선택)"
-              value={klacAgreedFeeText}
-              inputMode="numeric"
-              onChange={(e) => setKlacAgreedFeeText(e.target.value)}
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-2">
-                <span className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={useCourtMultiplier}
-                    onChange={(e) => setUseCourtMultiplier(e.target.checked)}
-                  />
-                  재량 배율
-                </span>
-                <Input
-                  value={courtMultiplierText}
-                  onChange={(e) => setCourtMultiplierText(e.target.value)}
+            {!lawyerFeeApplies ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                선택한 사건구분은 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①항 본안 사건에
+                해당하지 않아 변호사보수가 산입되지 않습니다. 인지대·송달료만 계산됩니다.
+              </div>
+            ) : null}
+            <fieldset disabled={!lawyerFeeApplies} className="grid gap-3 disabled:opacity-60">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={applyNoOral}
+                  onChange={(e) => setApplyNoOral(e.target.checked)}
                 />
+                무변론·자백 등 제5조 감액
               </label>
-              <label className="grid gap-2">
-                <span className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={useCustomRate}
-                    onChange={(e) => setUseCustomRate(e.target.checked)}
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={applyProvisionalDiscount}
+                  onChange={(e) => setApplyProvisionalDiscount(e.target.checked)}
+                />
+                보전처분 변론·심문기일 없음
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={applyKlac}
+                  onChange={(e) => setApplyKlac(e.target.checked)}
+                />
+                KLAC 기준 적용
+              </label>
+              <Input
+                aria-label="KLAC 약정보수액"
+                placeholder="KLAC 약정보수액 (선택)"
+                value={formatWonInput(klacAgreedFeeText)}
+                inputMode="numeric"
+                onChange={(e) => setKlacAgreedFeeText(parseWonText(e.target.value))}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={useCourtMultiplier}
+                      onChange={(e) => setUseCourtMultiplier(e.target.checked)}
+                    />
+                    재량 배율
+                  </span>
+                  <Input
+                    value={courtMultiplierText}
+                    onChange={(e) => setCourtMultiplierText(e.target.value)}
                   />
-                  직접 배율
-                </span>
-                <Input value={customRateText} onChange={(e) => setCustomRateText(e.target.value)} />
-              </label>
-            </div>
+                </label>
+                <label className="grid gap-2">
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={useCustomRate}
+                      onChange={(e) => setUseCustomRate(e.target.checked)}
+                    />
+                    직접 배율
+                  </span>
+                  <Input
+                    value={customRateText}
+                    onChange={(e) => setCustomRateText(e.target.value)}
+                  />
+                </label>
+              </div>
+            </fieldset>
           </CardContent>
         </Card>
 

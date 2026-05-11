@@ -424,6 +424,53 @@ describe("validateLcalcEnvelope", () => {
     expect(loaded.note).toBe("litigation note");
   });
 
+  it("round-trips a paymentOrder (변호사보수 산입 외) litigation-cost file without throwing on load", () => {
+    const input = {
+      stampDuty: {
+        caseValue: 30_000_000,
+        caseType: "paymentOrder" as const,
+        appealsLevel: "firstInstance" as const,
+        isPaymentOrder: true,
+      },
+      deliveryFee: {
+        caseType: "paymentOrder" as const,
+        partyCount: 2,
+      },
+      lawyerFee: {
+        caseValue: 30_000_000,
+        caseType: "paymentOrder" as const,
+        discounts: [],
+      },
+      distribution: { mode: "equal" as const, partyCount: 2 },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-05-12T12:00:00.000Z" });
+    const litigationFile: LcalcFile = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": result.dataVersions["stamp-duty"]!,
+        delivery: result.dataVersions.delivery!,
+        "lawyer-fee": result.dataVersions["lawyer-fee"]!,
+      },
+      payload: {
+        appVersion: "0.3.1",
+        createdAt: "2026-05-12T12:00:00.000Z",
+        input,
+        result,
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    validateLcalcEnvelope(litigationFile);
+    // 핵심 회귀 가드: validateLawyerFeeInput 가 paymentOrder 에서 throw 하지 않도록 분기 처리되어 round-trip 정상 동작.
+    const loaded = parseLoadedLitigationCostLcalcInput(litigationFile);
+    expect(loaded.input.lawyerFee.caseType).toBe("paymentOrder");
+    expect(loaded.input.lawyerFee.discounts).toEqual([]);
+    expect(loaded.result?.lawyerFee.amount).toBe(0);
+    expect(loaded.result?.deliveryFee.amount).toBe(66_000);
+  });
+
   it("rejects a litigation-cost file missing a required dataVersion", () => {
     const input = {
       stampDuty: {

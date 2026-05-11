@@ -226,7 +226,7 @@ mod tests {
             "deliveryFee": {
                 "amount": 165000,
                 "formulaText": "송달료 산식",
-                "dataVersion": "delivery/v1.0.0",
+                "dataVersion": "delivery/v1.1.0",
                 "computedAt": "2026-05-11T12:00:00+09:00"
             },
             "lawyerFee": {
@@ -246,7 +246,7 @@ mod tests {
             "disclaimer": DISCLAIMER_KO,
             "dataVersions": {
                 "stamp-duty": "stamp-duty/v1.0.0",
-                "delivery": "delivery/v1.0.0",
+                "delivery": "delivery/v1.1.0",
                 "lawyer-fee": "lawyer-fee/v1.0.0"
             },
             "computedAt": "2026-05-11T12:00:00+09:00"

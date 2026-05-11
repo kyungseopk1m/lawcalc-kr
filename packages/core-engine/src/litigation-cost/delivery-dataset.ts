@@ -32,6 +32,10 @@ export interface DeliveryMatrixDelegation {
   alias: string;
   sourceUrl: string;
   note: string;
+  /** 본 dataset 의 countMatrix 가 인용하는 재판예규 시행일 (ISO). */
+  currentEffectiveFrom?: IsoDate;
+  /** 본 dataset 의 countMatrix 가 인용하는 재판예규 번호 (예: "재판예규 제1950호"). */
+  currentRuleNumber?: string;
 }
 
 export interface DeliveryUnitPriceHistoryEntry {

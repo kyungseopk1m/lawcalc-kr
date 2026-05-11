@@ -307,7 +307,7 @@ mod tests {
             "dataVersions".to_string(),
             json!({
                 "stamp-duty": "stamp-duty/v1.0.0",
-                "delivery": "delivery/v1.0.0",
+                "delivery": "delivery/v1.1.0",
                 "lawyer-fee": "lawyer-fee/v1.0.0"
             }),
         );

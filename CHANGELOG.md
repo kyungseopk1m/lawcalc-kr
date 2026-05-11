@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-12
+
+### Added
+
+- 「재일 87-4」 별표 1 (재판예규 제1950호, 시행 2026-03-01) 의 독촉사건(차) 행을 송달료 매트릭스에 정본 인용으로 추가했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①항이 본안 사건에 한정되므로 독촉사건은 인지대·송달료만 계산하고 변호사보수는 0원으로 표시합니다. `data/delivery/v1.json` 의 `unverifiedMatrix` 가 비워지고 `countMatrix` 가 13건으로 확장되며, dataset 버전이 `delivery/v1.0.0` 에서 `delivery/v1.1.0` 으로 patch bump 됩니다.
+- `computeLitigationCost` 가 변호사보수 산입 외 사건구분에 대해 lawyer-fee 결과를 zero-fill 로 합성하고 안내 산식을 노출합니다. 인지대·송달료는 정상 계산됩니다.
+
+### Changed
+
+- `DeliveryMatrixDelegation` 타입에 선택 필드 `currentEffectiveFrom` / `currentRuleNumber` 를 추가해 dataset 의 정본 슬라이스 시행일과 예규 번호를 타입 안전하게 보존합니다.
+
+### Fixed
+
+- 소송비용 입력 카드의 `소가`, `항소·상고 불복 범위`, `KLAC 약정보수액` 입력에서 천 단위 구분 기호(콤마)가 표시되지 않던 결함을 수정했습니다. 이자 탭 `PrincipalInput` 과 동일한 `Intl.NumberFormat("ko-KR")` display + 입력 시 콤마 strip 패턴을 적용해 자릿수 검토를 쉽게 했습니다. parsing 동작은 기존과 동일합니다.
+- 소송비용 입력의 `사건구분 — 독촉사건 (지급명령) (차)` 옵션을 변호사보수 산입 외 라는 이유로 선택 자체가 막혀 인지대·송달료 계산까지 차단되던 결함을 수정했습니다. 옵션을 활성화하고, 선택 시 변호사보수 옵션 카드를 비활성화하면서 결과의 변호사보수만 0원으로 표시합니다. 인지대·송달료는 정상 계산됩니다.
+- 독촉사건 등 변호사보수 산입 외 사건구분의 `.lcalc` 파일을 다시 불러올 때 `validateLawyerFeeInput` 의 도메인 검증이 던지는 오류로 로드가 실패하던 round-trip 결함을 수정했습니다. `lcalc-validation` 이 도메인 적용 여부를 먼저 확인하고 산입 외 사건구분에서는 변호사보수 검증을 건너뛰도록 정리했습니다.
+- 변호사보수 옵션을 켠 상태에서 사건구분만 독촉사건 등 산입 외 케이스로 전환할 때 `discounts` 와 `klacAgreedFeeWon` 값이 그대로 payload 에 잔존해 round-trip 시 검증 충돌과 dirty-state noise 를 일으키던 결함을 수정했습니다. 입력 useMemo 가 산입 외 사건구분에서는 두 필드를 자동으로 빈 값으로 정규화합니다.
+
 ## [0.3.0] - 2026-05-11
 
 ### Added
@@ -162,7 +180,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.5
 [0.2.4]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.4

@@ -32,7 +32,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
     expect(result.dataVersions).toEqual({
       "stamp-duty": "stamp-duty/v1.0.0",
-      delivery: "delivery/v1.0.0",
+      delivery: "delivery/v1.1.0",
       "lawyer-fee": "lawyer-fee/v1.0.0",
     });
     expect(result.computedAt).toBe(computedAt);
@@ -99,5 +99,50 @@ describe("litigation-cost / computeLitigationCost", () => {
         { computedAt },
       ),
     ).toThrow("안분에는 partyValuesWon 이 필요합니다");
+  });
+
+  it("paymentOrder: 인지대(×0.1) + 송달료(2 × 6 × 5,500) 정상 계산, 변호사보수 산입 외", () => {
+    const input: LitigationCostInput = {
+      stampDuty: {
+        caseValue: 30_000_000,
+        caseType: "paymentOrder",
+        appealsLevel: "firstInstance",
+        isPaymentOrder: true,
+      },
+      deliveryFee: {
+        caseType: "paymentOrder",
+        partyCount: 2,
+      },
+      lawyerFee: {
+        caseValue: 30_000_000,
+        caseType: "paymentOrder",
+        discounts: [],
+      },
+    };
+
+    const result = computeLitigationCost(input, { computedAt });
+
+    // 변호사보수 zero-fill (산입 외 사건구분)
+    expect(result.lawyerFee.amount).toBe(0);
+    expect(result.lawyerFee.baseAmount).toBe(0);
+    expect(result.lawyerFee.multiplier).toBe(0);
+    expect(result.lawyerFee.appliedDiscounts).toEqual([]);
+    expect(result.lawyerFee.klacWarnings).toEqual([]);
+    expect(result.lawyerFee.formulaText).toContain("변호사보수 산입 외 사건구분");
+    expect(result.lawyerFee.dataVersion).toBe("lawyer-fee/v1.0.0");
+    expect(result.lawyerFee.computedAt).toBe(computedAt);
+
+    // 송달료: 재일 87-4 별표 1 — 독촉사건 6회 × 채권자·채무자 2명 × 5,500원
+    expect(result.deliveryFee.deliveryCount).toBe(12);
+    expect(result.deliveryFee.amount).toBe(66_000);
+
+    // 인지대: 30,000,000 × 0.0045 + 5,000 = 140,000 정도, ×0.1 (지급명령) ≈ 14,000원대 (100원 절사)
+    expect(result.stampDuty.amount).toBeGreaterThan(0);
+    expect(result.totalAmount).toBe(result.stampDuty.amount + result.deliveryFee.amount);
+    expect(result.dataVersions).toEqual({
+      "stamp-duty": "stamp-duty/v1.0.0",
+      delivery: "delivery/v1.1.0",
+      "lawyer-fee": "lawyer-fee/v1.0.0",
+    });
   });
 });
