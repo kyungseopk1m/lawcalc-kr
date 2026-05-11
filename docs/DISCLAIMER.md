@@ -1,31 +1,31 @@
-# Disclaimer
+# 면책 고지
 
-lawcalc-kr is an independent open-source project for reviewing Korean legal calculation scenarios.
+lawcalc-kr 는 한국 법률 계산 시나리오를 검토하기 위한 독립 오픈소스 프로젝트입니다.
 
-## Core Notice
+## 핵심 고지
 
 이 도구의 계산 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인 필요합니다.
 
 자세한 출처 / 무관성 명시: [docs/LEGAL_REFERENCES.md](../docs/LEGAL_REFERENCES.md)
 
-## Scope
+## 범위
 
-The MVP focuses on judgment interest and statutory delay damages. It does not determine whether a claim is legally valid, whether a specific statutory interest rate applies to a dispute, or whether a court will accept a calculation in a particular case.
+MVP 는 판결금 이자와 지연손해금을 중심으로 합니다. 청구의 법적 유효 여부, 분쟁에 특정 법정이율이 적용되는지, 법원이 특정 사건에서 본 계산을 수용할지를 판단하지 않습니다.
 
-## User Responsibility
+## 사용자 책임
 
-Users should verify:
+사용자는 다음 사항을 직접 확인해야 합니다.
 
-- the applicable law and effective date;
-- whether a special statute, contract, judgment text, or settlement changes the rate;
-- whether the first day is included or excluded;
-- whether leap-year handling follows the required method;
-- whether partial payments, setoff, expanded claims, appeals, or other procedural facts affect the calculation.
+- 적용 법령과 시행일
+- 특별법, 계약, 판결문, 화해 등이 이율을 변경하는지 여부
+- 초일 산입/불산입 처리 방식
+- 윤년 처리 방식이 요구되는 방법론을 따르는지 여부
+- 일부 변제, 상계, 확장 청구, 항소, 그 밖의 절차적 사실이 계산에 영향을 주는지 여부
 
-## No Legal Advice
+## 법률 자문이 아님
 
-The project provides calculation tooling and source references. It does not provide legal advice, representation, or case-specific professional judgment.
+본 프로젝트는 계산 도구와 출처 참조를 제공합니다. 법률 자문, 대리, 사건별 전문가 판단을 제공하지 않습니다.
 
-## Official Materials
+## 공식 자료
 
-Official manuals, installers, logos, screens, and other protected materials are not included in this repository. Publicly available legal sources may be referenced by title and URL only.
+공식 매뉴얼, 설치 파일, 로고, 화면, 그 밖의 보호 자료는 본 저장소에 포함되지 않습니다. 공개된 법령 자료는 제목과 URL 만 참조합니다.

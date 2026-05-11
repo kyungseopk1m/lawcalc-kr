@@ -46,7 +46,7 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 
 피상속인, 배우자, 1~4순위 상속인과 1차 대습상속인을 입력해 법정상속분을 계산합니다. 결과에는 약분 전/후 지분과 백분율을 함께 표시해 검산하기 쉽게 정리합니다.
 
-현재 상속분 계산은 1991-01-01 이후 사망 케이스와 1차 대습상속까지만 지원합니다. 자세한 범위는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “Current Inheritance Scope”를 확인해 주세요.
+현재 상속분 계산은 1991-01-01 이후 사망 케이스와 1차 대습상속까지만 지원합니다. 자세한 범위는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “현재 상속 범위” 섹션을 확인해 주세요.
 
 ### 소송비용 계산
 
@@ -56,7 +56,7 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 
 인지대, 송달료, 변호사보수를 함께 계산하고 합계와 분배표를 확인합니다. 사건구분, 소가, 당사자수, 항소·상고 불복 범위, 전자소송, 지급명령·화해, 변호사보수 감액 옵션, KLAC 기준, 접수일을 입력할 수 있습니다.
 
-결과에는 각 항목의 금액과 한국어 산식, 데이터 버전, KLAC 적용 경고, 균등 또는 소가비례 분배표가 함께 표시됩니다. 자세한 범위와 근거는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “Current Litigation-Cost Scope”를 확인해 주세요.
+결과에는 각 항목의 금액과 한국어 산식, 데이터 버전, KLAC 적용 경고, 균등 또는 소가비례 분배표가 함께 표시됩니다. 자세한 범위와 근거는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “현재 소송비용 범위” 섹션을 확인해 주세요.
 
 ### 공통 워크플로
 
