@@ -1,0 +1,203 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-05-11",
+  "sourceLaw": {
+    "name": "변호사보수의 소송비용 산입에 관한 규칙",
+    "lsId": "005866",
+    "currentEffectiveFrom": "2020-12-28",
+    "currentRuleNumber": "대법원규칙 제2936호",
+    "bracketTableEffectiveFrom": "2018-04-01",
+    "bracketTableRuleNumber": "대법원규칙 제2779호",
+    "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=225413"
+  },
+  "brackets": [
+    {
+      "name": "1구간 (300만원까지)",
+      "sortOrder": 1,
+      "scopeStart": 0,
+      "scopeEnd": 3000000,
+      "baseAmount": 300000,
+      "rate": 0,
+      "rateText": "정액 30만원",
+      "label": "최저기준액"
+    },
+    {
+      "name": "2구간 (300만원~2,000만원)",
+      "sortOrder": 2,
+      "scopeStart": 3000000,
+      "scopeEnd": 20000000,
+      "baseAmount": 300000,
+      "rate": 0.1,
+      "rateText": "100분의 10"
+    },
+    {
+      "name": "3구간 (2,000만원~5,000만원)",
+      "sortOrder": 3,
+      "scopeStart": 20000000,
+      "scopeEnd": 50000000,
+      "baseAmount": 2000000,
+      "rate": 0.08,
+      "rateText": "100분의 8"
+    },
+    {
+      "name": "4구간 (5,000만원~1억원)",
+      "sortOrder": 4,
+      "scopeStart": 50000000,
+      "scopeEnd": 100000000,
+      "baseAmount": 4400000,
+      "rate": 0.06,
+      "rateText": "100분의 6"
+    },
+    {
+      "name": "5구간 (1억원~1.5억원)",
+      "sortOrder": 5,
+      "scopeStart": 100000000,
+      "scopeEnd": 150000000,
+      "baseAmount": 7400000,
+      "rate": 0.04,
+      "rateText": "100분의 4"
+    },
+    {
+      "name": "6구간 (1.5억원~2억원)",
+      "sortOrder": 6,
+      "scopeStart": 150000000,
+      "scopeEnd": 200000000,
+      "baseAmount": 9400000,
+      "rate": 0.02,
+      "rateText": "100분의 2"
+    },
+    {
+      "name": "7구간 (2억원~5억원)",
+      "sortOrder": 7,
+      "scopeStart": 200000000,
+      "scopeEnd": 500000000,
+      "baseAmount": 10400000,
+      "rate": 0.01,
+      "rateText": "100분의 1"
+    },
+    {
+      "name": "8구간 (5억원 초과)",
+      "sortOrder": 8,
+      "scopeStart": 500000000,
+      "scopeEnd": null,
+      "baseAmount": 13400000,
+      "rate": 0.005,
+      "rateText": "1000분의 5",
+      "label": "5억 초과"
+    }
+  ],
+  "appealsRule": {
+    "policy": "perInstanceIndependent",
+    "note": "각 심급마다 별표 그대로 적용. 항소심·상고심의 소가는 상소로써 불복하는 범위 (제3조 ③항).",
+    "sourceArticle": "제3조 ①·③항"
+  },
+  "modifiers": {
+    "provisionalSeizureOrInjunction": {
+      "multiplier": 0.5,
+      "exception": "변론 또는 심문기일이 있는 경우 그대로 (1.0 적용)",
+      "sourceArticle": "제3조 ②항",
+      "enumVariant": "provisionalCase"
+    },
+    "noOralHearingOrAdmission": {
+      "multiplier": 0.5,
+      "triggers": [
+        {
+          "reason": "admission",
+          "labelKo": "피고의 전부자백"
+        },
+        {
+          "reason": "defaultAdmission",
+          "labelKo": "피고의 자백간주 (답변서 부제출 등)"
+        },
+        {
+          "reason": "noOralHearing",
+          "labelKo": "무변론 판결"
+        },
+        {
+          "reason": "orderForPerformance",
+          "labelKo": "이행권고결정 확정",
+          "effectiveFrom": "2020-12-28",
+          "ruleNumber": "대법원규칙 제2936호"
+        }
+      ],
+      "sourceArticle": "제5조",
+      "enumVariant": "noOralHearingOrAdmission"
+    },
+    "courtDiscretion": {
+      "decreaseUnlimited": true,
+      "increaseMaxMultiplier": 1.5,
+      "note": "별표 기준 + 1/2 한도 증액 가능. 증액은 당사자 신청 요건.",
+      "sourceArticle": "제6조",
+      "enumVariant": "courtDiscretion",
+      "supremeCourtFactors": [
+        "소송목적의 값",
+        "별표 기준 보수액의 규모",
+        "소송의 경과와 기간",
+        "소송종결 사유",
+        "사건의 성질과 난이도",
+        "변호사가 들인 노력의 정도",
+        "본안사건의 확정 경과 및 소송행위 내용"
+      ],
+      "sourceCase": "대법원 2017마6274 결정 (2022-05-12 자)",
+      "sourceCaseUrl": "https://casenote.kr/대법원/2017마6274"
+    },
+    "klac": {
+      "multiplier": 0.42,
+      "applicableCases": ["민사", "가사"],
+      "nonApplicableCases": ["행정", "보전", "지급명령", "도산", "형사"],
+      "note": "기준 중위소득 125% 이하 의뢰인. 별표 × 0.42 cap (KLAC 약정보수액).",
+      "source": "대한법률구조공단 사이버 상담",
+      "sourceUrl": "https://www.klac.or.kr/legalstruct/cyberConsultation.do",
+      "enumVariant": "klac"
+    },
+    "customPercent": {
+      "note": "본 규칙 외 합의/특약 (예: 보수 일부 면제 약정). rate 0.0 ~ 1.5 자유 입력.",
+      "enumVariant": "customPercent"
+    }
+  },
+  "stackingPolicy": {
+    "default": "compound",
+    "minMultiplierCap": 0.0,
+    "maxMultiplierCap": 1.5,
+    "note": "제3조 ②항 (사건구분) × 제5조 (종결 사유) 의 직교 조합 — 누적 (compound) 적용이 본 규칙 구조와 정합. 제6조 ②항 cap = ×1.5.",
+    "sourceBasis": "본 규칙 본문 구조 + 대법원 2017마6274 종합 고려 7요소"
+  },
+  "interpretiveCases": {
+    "scopeOfAgreedFee": {
+      "caseNumber": "대법원 2021마7301 결정 (2022-04-08 자)",
+      "url": "https://casenote.kr/대법원/2021마7301",
+      "note": "제3조 ①항 '지급보수액 범위 내' 해석 — 특정금액 지급의무 발생 여부만 따짐, 실제 지급 방식·여부 무관."
+    }
+  },
+  "historyNote": {
+    "bracketTableChanges": [
+      {
+        "effectiveFrom": "2018-04-01",
+        "ruleNumber": "대법원규칙 제2779호",
+        "summary": "9구간 → 8구간 재편 + 최저기준액 30만원 정액 도입 (본 슬라이스 기준)"
+      },
+      {
+        "effectiveFrom": "2013-12-01",
+        "ruleNumber": "대법원규칙 제2496호",
+        "summary": "최저기준액 10만 → 30만 상향 (별표 본체는 9구간 유지)"
+      },
+      {
+        "effectiveFrom": "2008-01-01",
+        "ruleNumber": "대법원규칙 제2116호",
+        "summary": "별표 9구간 (1,000만 이하 8% 시작)"
+      },
+      {
+        "effectiveFrom": "1990-09-01",
+        "ruleNumber": "대법원규칙 제1123호",
+        "summary": "가압류·가처분 1/2 적용 신설 (제3조 ②항)"
+      }
+    ],
+    "modifierChanges": [
+      {
+        "effectiveFrom": "2020-12-28",
+        "ruleNumber": "대법원규칙 제2936호",
+        "summary": "제5조에 이행권고결정 사유 추가. 별표 본체 무변경."
+      }
+    ]
+  }
+}

@@ -89,3 +89,31 @@ export {
 export type { ComputeDeliveryFeeDeps } from "./compute-delivery-fee";
 
 export { computeDeliveryFee } from "./compute-delivery-fee";
+
+export type {
+  LawyerFeeAppealsRuleMeta,
+  LawyerFeeBracketTableChange,
+  LawyerFeeCourtDiscretionModifier,
+  LawyerFeeCustomPercentModifier,
+  LawyerFeeDataset,
+  LawyerFeeHistoryNote,
+  LawyerFeeInterpretiveCases,
+  LawyerFeeKlacModifier,
+  LawyerFeeModifierChange,
+  LawyerFeeModifiers,
+  LawyerFeeNoOralHearingModifier,
+  LawyerFeeNoOralHearingTrigger,
+  LawyerFeeProvisionalModifier,
+  LawyerFeeSourceLaw,
+  LawyerFeeStackingPolicy,
+} from "./lawyer-fee-dataset";
+
+export {
+  getLawyerFeeBracket,
+  lawyerFeeDatasetVersionTag,
+  loadLawyerFeeDataset,
+} from "./lawyer-fee-dataset";
+
+export type { ComputeLawyerFeeDeps } from "./compute-lawyer-fee";
+
+export { computeLawyerFee } from "./compute-lawyer-fee";

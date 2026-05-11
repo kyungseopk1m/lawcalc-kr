@@ -218,7 +218,13 @@ export interface LawyerFeeResult {
   amount: number;
   baseAmount: number;
   multiplier: number;
+  /** clamp 전 누적 multiplier — `applyLawyerFeeDiscounts` 의 `rawMultiplier`. */
+  rawMultiplier: number;
+  /** clamp 0.0~1.5 적용 여부 — `applyLawyerFeeDiscounts` 의 `clamped`. */
+  multiplierClamped: boolean;
   appliedDiscounts: LawyerFeeDiscount[];
+  /** KLAC 적용 사건 범위 검증 결과 — 비차단 경고 (UI 측 노출용). */
+  klacWarnings: KlacScopeWarning[];
   formulaText: string;
   dataVersion: string;
   computedAt: string;
