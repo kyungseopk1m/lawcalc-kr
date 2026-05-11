@@ -17,9 +17,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/download/v0.2.5/LawCalc.Korea_0.2.5_universal.dmg"><img alt="macOS 다운로드" src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
+  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/download/v0.3.0/LawCalc.Korea_0.3.0_universal.dmg"><img alt="macOS 다운로드" src="https://img.shields.io/badge/macOS-Download-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
   &nbsp;
-  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/download/v0.2.5/LawCalc.Korea_0.2.5_x64-setup.exe"><img alt="Windows 다운로드" src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
+  <a href="https://github.com/kyungseopk1m/lawcalc-kr/releases/download/v0.3.0/LawCalc.Korea_0.3.0_x64-setup.exe"><img alt="Windows 다운로드" src="https://img.shields.io/badge/Windows-Download-0078D4?style=for-the-badge&logo=windows&logoColor=white"></a>
 </p>
 
 > **면책 고지**
