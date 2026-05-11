@@ -36,6 +36,14 @@ interface LcalcFileV1 {
   disclaimer: string;
 }
 
+/**
+ * Legacy v2 `.lcalc` root document. Kept only as a renderer-side migration
+ * input shape for files saved by v0.2.x.
+ */
+type LcalcFileV2 =
+  | { schemaVersion: "2"; kind: "interest"; payload: LcalcInterestPayload }
+  | { schemaVersion: "2"; kind: "inheritance"; payload: LcalcInheritancePayload };
+
 export interface LcalcInterestPayload {
   appVersion: string;
   dataVersion: string;
@@ -57,11 +65,37 @@ export interface LcalcInheritancePayload {
   disclaimer: string;
 }
 
+/**
+ * v3 envelope — capability 메타 (envelopeFeatures) 와 데이터 슬라이스
+ * (dataVersions) 를 envelope-level 로 분리한 형식. v0.3.0 부터 신규 저장
+ * 파일은 v3 로만 저장된다. 기존 v1/v2 파일은 reader 의 migration registry
+ * 에서 v3 로 변환된 뒤 검증/처리된다.
+ *
+ * - `envelopeFeatures`: `"{domain}@{engineMajor}"` 형식의 capability id 배열.
+ *   reader 호환성 검증 (`fast-reject`) 에 사용되며, 미지원 capability 시
+ *   payload 진입 없이 envelope 만 보고 한국어 메시지로 reject.
+ * - `dataVersions`: 도메인별 dataset 슬라이스 식별자 맵. 단일 도메인에서는
+ *   `{ [kind]: payload.dataVersion }` 와 동치이며, 향후 multi-sub-dataset
+ *   도메인 (예: 인지/송달/변호사보수/사건구분 4 sub-domain 통합) 진입 시
+ *   schema bump 없이 sub-dataset 추가가 가능하다.
+ */
 export type LcalcFile =
-  | { schemaVersion: "2"; kind: "interest"; payload: LcalcInterestPayload }
-  | { schemaVersion: "2"; kind: "inheritance"; payload: LcalcInheritancePayload };
+  | {
+      schemaVersion: "3";
+      kind: "interest";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcInterestPayload;
+    }
+  | {
+      schemaVersion: "3";
+      kind: "inheritance";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcInheritancePayload;
+    };
 
-export type LoadableLcalcFile = LcalcFile | LcalcFileV1;
+export type LoadableLcalcFile = LcalcFile | LcalcFileV2 | LcalcFileV1;
 
 export const ipc = {
   /**

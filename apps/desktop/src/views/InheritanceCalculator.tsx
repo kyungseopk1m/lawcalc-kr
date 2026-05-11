@@ -428,6 +428,8 @@ export function InheritanceCalculator() {
     return {
       schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
       kind: "inheritance",
+      envelopeFeatures: ["inheritance@1"],
+      dataVersions: { inheritance: calculated.dataVersion },
       payload,
     };
   };

@@ -11,7 +11,7 @@ import {
   validateLcalcEnvelope,
 } from "./lcalc-validation";
 
-const sampleV1: LoadableLcalcFile = {
+const sampleV1: Extract<LoadableLcalcFile, { schemaVersion: "1" }> = {
   schemaVersion: "1",
   appVersion: "0.1.2",
   dataVersion: "legal-rates/v1.0.0",
@@ -52,8 +52,8 @@ const sampleV1: LoadableLcalcFile = {
   disclaimer: STANDARD_DISCLAIMER,
 };
 
-const sampleV2: LcalcFile = {
-  schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
+const sampleV2: Extract<LoadableLcalcFile, { schemaVersion: "2" }> = {
+  schemaVersion: "2",
   kind: "interest",
   payload: {
     appVersion: "0.1.2",
@@ -67,14 +67,23 @@ const sampleV2: LcalcFile = {
   },
 };
 
+const sampleV3: LcalcFile = {
+  schemaVersion: "3",
+  kind: "interest",
+  envelopeFeatures: ["interest@1"],
+  dataVersions: { interest: "legal-rates/v1.0.0" },
+  payload: sampleV2.payload,
+};
+
 describe("migrateLcalcFile", () => {
-  it("wraps legacy v1 interest files in the v2 interest envelope", () => {
-    expect(migrateLcalcFile(sampleV1)).toEqual(sampleV2);
+  it("wraps legacy v1 interest files into the v3 envelope with capability meta", () => {
+    expect(migrateLcalcFile(sampleV1)).toEqual(sampleV3);
   });
 
-  it("preserves v1 input, options, and note fields exactly during migration", () => {
+  it("preserves v1 input, options, and note fields exactly through the chain", () => {
     const migrated = migrateLcalcFile(sampleV1);
 
+    expect(migrated.schemaVersion).toBe(CURRENT_LCALC_SCHEMA_VERSION);
     expect(migrated.kind).toBe("interest");
     if (migrated.kind !== "interest") {
       throw new Error("unexpected kind");
@@ -82,6 +91,42 @@ describe("migrateLcalcFile", () => {
     expect(migrated.payload.input).toEqual(sampleV1.input);
     expect(migrated.payload.options).toEqual(sampleV1.options);
     expect(migrated.payload.note).toBe(sampleV1.note);
+    expect(migrated.envelopeFeatures).toEqual(["interest@1"]);
+    expect(migrated.dataVersions).toEqual({ interest: "legal-rates/v1.0.0" });
+  });
+
+  it("hoists v2 interest payload.dataVersion into v3 envelope-level dataVersions", () => {
+    const migrated = migrateLcalcFile(sampleV2);
+
+    expect(migrated.schemaVersion).toBe("3");
+    expect(migrated.envelopeFeatures).toEqual(["interest@1"]);
+    expect(migrated.dataVersions).toEqual({ interest: "legal-rates/v1.0.0" });
+    expect(migrated.payload).toEqual(sampleV2.payload);
+  });
+
+  it("hoists v2 inheritance payload.dataVersion into v3 envelope-level dataVersions", () => {
+    const v2Inheritance: Extract<LoadableLcalcFile, { schemaVersion: "2" }> = {
+      schemaVersion: "2",
+      kind: "inheritance",
+      payload: {
+        appVersion: "0.1.2",
+        dataVersion: "inheritance/v1.0.0",
+        createdAt: "2026-05-09T12:00:00.000Z",
+        input: { decedent: { deceasedAt: "2026-01-01" } },
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    const migrated = migrateLcalcFile(v2Inheritance);
+
+    expect(migrated.schemaVersion).toBe("3");
+    expect(migrated.kind).toBe("inheritance");
+    expect(migrated.envelopeFeatures).toEqual(["inheritance@1"]);
+    expect(migrated.dataVersions).toEqual({ inheritance: "inheritance/v1.0.0" });
+  });
+
+  it("passes a v3 envelope through migrateLcalcFile unchanged", () => {
+    expect(migrateLcalcFile(sampleV3)).toEqual(sampleV3);
   });
 
   it("rejects unsupported versions with a Korean user-facing message", () => {
@@ -90,7 +135,7 @@ describe("migrateLcalcFile", () => {
     );
   });
 
-  it.each(["3", "99"])("rejects future schemaVersion %s", (schemaVersion) => {
+  it.each(["4", "99"])("rejects future schemaVersion %s", (schemaVersion) => {
     expect(() => migrateLcalcFile({ ...sampleV1, schemaVersion })).toThrow(
       `지원하지 않는 .lcalc 버전입니다: ${schemaVersion}`,
     );
@@ -104,20 +149,67 @@ describe("migrateLcalcFile", () => {
 });
 
 describe("validateLcalcEnvelope", () => {
-  it("rejects unknown v2 kinds with a Korean user-facing message", () => {
+  it("rejects unknown capability ids with the capability id shown in the message", () => {
     expect(() =>
       validateLcalcEnvelope({
-        ...sampleV2,
+        schemaVersion: "3",
         kind: "compensation",
+        envelopeFeatures: ["compensation@1"],
+        dataVersions: { compensation: "compensation/v1.0.0" },
+        payload: {},
       }),
-    ).toThrow("현재 버전에서 지원하지 않습니다");
+    ).toThrow("이 파일에는 compensation@1 기능이 필요합니다.");
+  });
+
+  it("rejects malformed capability ids in envelopeFeatures", () => {
+    expect(() =>
+      validateLcalcEnvelope({
+        schemaVersion: "3",
+        kind: "interest",
+        envelopeFeatures: ["interest"], // missing @{n}
+        dataVersions: { interest: "legal-rates/v1.0.0" },
+        payload: sampleV3.payload,
+      }),
+    ).toThrow(".lcalc 파일의 envelopeFeatures[0] 필드가 올바르지 않습니다.");
+  });
+
+  it("rejects an empty envelopeFeatures array", () => {
+    expect(() =>
+      validateLcalcEnvelope({
+        schemaVersion: "3",
+        kind: "interest",
+        envelopeFeatures: [],
+        dataVersions: { interest: "legal-rates/v1.0.0" },
+        payload: sampleV3.payload,
+      }),
+    ).toThrow(".lcalc 파일의 envelopeFeatures 필드가 올바르지 않습니다.");
+  });
+
+  it("rejects a v3 envelope whose dataVersions field is missing", () => {
+    expect(() =>
+      validateLcalcEnvelope({
+        ...sampleV3,
+        dataVersions: null as unknown as Record<string, string>,
+      }),
+    ).toThrow(".lcalc 파일의 dataVersions 필드가 올바르지 않습니다.");
+  });
+
+  it("rejects a v3 envelope whose dataVersions entry is a non-string", () => {
+    expect(() =>
+      validateLcalcEnvelope({
+        ...sampleV3,
+        dataVersions: { interest: 1 as unknown as string },
+      }),
+    ).toThrow('.lcalc 파일의 dataVersions["interest"] 필드가 올바르지 않습니다.');
   });
 
   it("rejects interest kind with inheritance-shaped payload", () => {
     expect(() =>
       validateLcalcEnvelope({
-        schemaVersion: "2",
+        schemaVersion: "3",
         kind: "interest",
+        envelopeFeatures: ["interest@1"],
+        dataVersions: { interest: "inheritance/v1.0.0" },
         payload: {
           appVersion: "0.1.2",
           dataVersion: "inheritance/v1.0.0",
@@ -132,15 +224,17 @@ describe("validateLcalcEnvelope", () => {
   it("rejects inheritance kind with interest-shaped payload", () => {
     expect(() =>
       validateLcalcEnvelope({
-        schemaVersion: "2",
+        schemaVersion: "3",
         kind: "inheritance",
-        payload: sampleV2.payload,
+        envelopeFeatures: ["inheritance@1"],
+        dataVersions: { inheritance: "legal-rates/v1.0.0" },
+        payload: sampleV3.payload,
       }),
     ).toThrow("payload.input.decedent");
   });
 
-  it("round-trips a v2 interest file through JSON and parser without changing the result", () => {
-    const back = JSON.parse(JSON.stringify(sampleV2)) as LcalcFile;
+  it("round-trips a v3 interest file through JSON and parser without changing the result", () => {
+    const back = JSON.parse(JSON.stringify(sampleV3)) as LcalcFile;
     validateLcalcEnvelope(back);
     const loaded = parseLoadedLcalcInput(back);
 
@@ -149,7 +243,7 @@ describe("validateLcalcEnvelope", () => {
     expect(loaded.note).toBe("legacy note");
   });
 
-  it("loads a migrated v1 golden input with the same calculated result as a v2 save", () => {
+  it("loads a migrated v1 golden input with the same calculated result as a v3 save", () => {
     const input = {
       ...sampleV1.input,
       principal: 10_000_000,
@@ -158,9 +252,11 @@ describe("validateLcalcEnvelope", () => {
     };
     const result = calculateInterest(input);
     const v1: LoadableLcalcFile = { ...sampleV1, input, result };
-    const v2: LcalcFile = {
-      schemaVersion: "2",
+    const v3: LcalcFile = {
+      schemaVersion: "3",
       kind: "interest",
+      envelopeFeatures: ["interest@1"],
+      dataVersions: { interest: result.dataVersion },
       payload: {
         appVersion: "0.1.2",
         dataVersion: result.dataVersion,
@@ -174,17 +270,19 @@ describe("validateLcalcEnvelope", () => {
 
     const migrated = migrateLcalcFile(v1);
     validateLcalcEnvelope(migrated);
-    validateLcalcEnvelope(v2);
+    validateLcalcEnvelope(v3);
 
     expect(parseLoadedLcalcInput(migrated).result.totalInterest).toBe(
-      parseLoadedLcalcInput(v2).result.totalInterest,
+      parseLoadedLcalcInput(v3).result.totalInterest,
     );
   });
 
-  it("parses a v2 inheritance file for the inheritance tab", () => {
+  it("parses a v3 inheritance file for the inheritance tab", () => {
     const inheritanceFile: LcalcFile = {
-      schemaVersion: "2",
+      schemaVersion: "3",
       kind: "inheritance",
+      envelopeFeatures: ["inheritance@1"],
+      dataVersions: { inheritance: "inheritance/v1.0.0" },
       payload: {
         appVersion: "0.1.2",
         dataVersion: "inheritance/v1.0.0",
@@ -230,9 +328,9 @@ describe("validateLcalcEnvelope", () => {
 
   it("rejects an interest file whose note exceeds the bounded length", () => {
     const oversized: LcalcFile = {
-      ...sampleV2,
+      ...sampleV3,
       payload: {
-        ...sampleV2.payload,
+        ...sampleV3.payload,
         note: "가".repeat(MAX_NOTE_LENGTH + 1),
       },
     };
@@ -243,9 +341,9 @@ describe("validateLcalcEnvelope", () => {
 
   it("accepts an interest file whose note is exactly the bounded length", () => {
     const onTheLimit: LcalcFile = {
-      ...sampleV2,
+      ...sampleV3,
       payload: {
-        ...sampleV2.payload,
+        ...sampleV3.payload,
         note: "가".repeat(MAX_NOTE_LENGTH),
       },
     };
@@ -256,8 +354,10 @@ describe("validateLcalcEnvelope", () => {
 
   it("rejects an inheritance file whose note exceeds the bounded length", () => {
     const inheritanceFile: LcalcFile = {
-      schemaVersion: "2",
+      schemaVersion: "3",
       kind: "inheritance",
+      envelopeFeatures: ["inheritance@1"],
+      dataVersions: { inheritance: "inheritance/v1.0.0" },
       payload: {
         appVersion: "0.1.2",
         dataVersion: "inheritance/v1.0.0",

@@ -207,6 +207,8 @@ function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile
   return {
     schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     kind: "interest",
+    envelopeFeatures: ["interest@1"],
+    dataVersions: { interest: result.dataVersion },
     payload,
   };
 }

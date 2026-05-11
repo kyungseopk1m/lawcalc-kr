@@ -12,7 +12,23 @@ import type { LcalcFile, LcalcInheritancePayload, LcalcInterestPayload } from ".
 
 export type LoadedLegalRatePreset = LegalRateCode | "custom";
 
-type UnknownLcalcEnvelope = { schemaVersion: "2"; kind: string; payload: unknown };
+type UnknownLcalcEnvelope = {
+  schemaVersion: "3";
+  kind: string;
+  envelopeFeatures: string[];
+  dataVersions: Record<string, string>;
+  payload: unknown;
+};
+
+/**
+ * v3 envelope 가 reader 호환성 검증 (fast-reject) 에 사용하는 capability id
+ * 화이트리스트. capability id = `"{domain}@{engineMajor}"` 형식. v0.3.0 시점
+ * 단일 도메인 capability 만 보유하며, litigation-cost 등 향후 도메인 추가 시
+ * 본 set 에 합류한다.
+ */
+const SUPPORTED_LCALC_CAPABILITIES = new Set<string>(["interest@1", "inheritance@1"]);
+
+const CAPABILITY_ID_PATTERN = /^[a-z][a-z0-9-]*@[1-9][0-9]*$/;
 
 interface ParsedLcalcInput {
   input: InterestInput;
@@ -80,8 +96,8 @@ function requirePositiveNumber(value: unknown, field: string) {
   return value;
 }
 
-function unsupportedKindMessage(kind: string) {
-  return `이 파일의 계산 유형(${kind})은 현재 버전에서 지원하지 않습니다. 앱을 업데이트한 뒤 다시 시도해 주세요.`;
+function unsupportedCapabilityMessage(capabilityId: string) {
+  return `이 파일에는 ${capabilityId} 기능이 필요합니다. 앱을 업데이트한 뒤 다시 시도해 주세요.`;
 }
 
 function requireRecord(value: unknown, field: string) {
@@ -138,7 +154,7 @@ function parseInterestPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInte
       throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
     }
 
-    throw new Error(unsupportedKindMessage(file.kind));
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
   }
 
   const payload = requireRecord(file.payload, "payload");
@@ -209,7 +225,7 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
       throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
     }
 
-    throw new Error(unsupportedKindMessage(file.kind));
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
   }
 
   const payload = requireRecord(file.payload, "payload");
@@ -267,12 +283,50 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
   };
 }
 
+function validateEnvelopeFeatures(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(
+      ".lcalc 파일의 envelopeFeatures 필드가 올바르지 않습니다. 파일을 새로 저장한 뒤 다시 열어 주세요.",
+    );
+  }
+
+  return value.map((capabilityId, index) => {
+    if (typeof capabilityId !== "string" || !CAPABILITY_ID_PATTERN.test(capabilityId)) {
+      throw new Error(`.lcalc 파일의 envelopeFeatures[${index}] 필드가 올바르지 않습니다.`);
+    }
+
+    if (!SUPPORTED_LCALC_CAPABILITIES.has(capabilityId)) {
+      throw new Error(unsupportedCapabilityMessage(capabilityId));
+    }
+
+    return capabilityId;
+  });
+}
+
+function validateDataVersions(value: unknown): Record<string, string> {
+  if (!isRecord(value)) {
+    throw new Error(".lcalc 파일의 dataVersions 필드가 올바르지 않습니다.");
+  }
+
+  const result: Record<string, string> = {};
+  for (const [domain, version] of Object.entries(value)) {
+    if (typeof version !== "string" || version.length === 0) {
+      throw new Error(`.lcalc 파일의 dataVersions["${domain}"] 필드가 올바르지 않습니다.`);
+    }
+    result[domain] = version;
+  }
+  return result;
+}
+
 export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): void {
-  if (file.schemaVersion !== "2") {
+  if (file.schemaVersion !== "3") {
     throw new Error(
       ".lcalc 파일 형식이 올바르지 않습니다. 파일을 새로 저장한 뒤 다시 열어 주세요.",
     );
   }
+
+  validateEnvelopeFeatures(file.envelopeFeatures);
+  validateDataVersions(file.dataVersions);
 
   if (file.kind === "interest") {
     void parseInterestPayload(file);
@@ -284,7 +338,7 @@ export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): v
     return;
   }
 
-  throw new Error(unsupportedKindMessage(file.kind));
+  throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
 }
 
 function parseOptions(value: unknown): CalcOptions {

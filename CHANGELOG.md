@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- `.lcalc` 파일 형식을 v3 envelope 로 갱신했습니다. v0.3.0 부터 도메인 추가 시 `schemaVersion` bump 없이 reader 호환성을 확장할 수 있도록 `envelopeFeatures` capability 메타와 `dataVersions` 데이터 슬라이스 맵을 envelope-level 로 도입했습니다. v1 / v2 로 저장된 기존 파일은 reader 의 마이그레이션 체인을 거쳐 자동으로 v3 형식으로 변환됩니다.
+
 ## [0.2.5] - 2026-05-10
 
 ### Added

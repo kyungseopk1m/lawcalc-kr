@@ -10,8 +10,8 @@ use crate::error::Error;
 use super::result_view::DISCLAIMER_KO;
 
 /// Current `.lcalc` schema version. Bumped only on a breaking shape change.
-pub const SCHEMA_VERSION: &str = "2";
-const SUPPORTED_SCHEMA_VERSIONS: &[&str] = &["1", SCHEMA_VERSION];
+pub const SCHEMA_VERSION: &str = "3";
+const SUPPORTED_SCHEMA_VERSIONS: &[&str] = &["1", "2", SCHEMA_VERSION];
 
 /// Maximum accepted `.lcalc` file size at load time (bytes).
 ///
@@ -156,6 +156,14 @@ mod tests {
         let mut body = Map::new();
         body.insert("kind".to_string(), Value::String("interest".to_string()));
         body.insert(
+            "envelopeFeatures".to_string(),
+            json!(["interest@1"]),
+        );
+        body.insert(
+            "dataVersions".to_string(),
+            json!({ "interest": "legal-rates/v1.0.0" }),
+        );
+        body.insert(
             "payload".to_string(),
             json!({
                 "appVersion": "0.1.2",
@@ -182,6 +190,8 @@ mod tests {
         // camelCase on the wire
         assert!(s.contains("\"schemaVersion\""));
         assert!(s.contains("\"kind\""));
+        assert!(s.contains("\"envelopeFeatures\""));
+        assert!(s.contains("\"dataVersions\""));
         assert!(s.contains("\"payload\""));
         assert!(!s.contains("\"schema_version\""));
         let back: LcalcFile = serde_json::from_str(&s).unwrap();
@@ -190,12 +200,29 @@ mod tests {
             back.body.get("kind").and_then(Value::as_str),
             Some("interest")
         );
+        // v3 envelope-level capability + dataset 메타가 wire format 에서 보존되는지 확인.
+        let features = back
+            .body
+            .get("envelopeFeatures")
+            .and_then(Value::as_array)
+            .expect("envelopeFeatures present");
+        assert_eq!(features.len(), 1);
+        assert_eq!(features[0].as_str(), Some("interest@1"));
+        assert_eq!(
+            back.body
+                .get("dataVersions")
+                .and_then(Value::as_object)
+                .and_then(|m| m.get("interest"))
+                .and_then(Value::as_str),
+            Some("legal-rates/v1.0.0"),
+        );
     }
 
     #[test]
-    fn accepts_legacy_v1_and_current_v2_schema_versions() {
+    fn accepts_legacy_v1_v2_and_current_v3_schema_versions() {
         validate_schema_version("1").unwrap();
         validate_schema_version("2").unwrap();
+        validate_schema_version("3").unwrap();
     }
 
     #[test]
