@@ -46,3 +46,24 @@ export {
   validateLawyerFeeInput,
   validateStampDutyInput,
 } from "./validators";
+
+export type {
+  StampDutyAppealsMultipliers,
+  StampDutyDataset,
+  StampDutyElectronicFilingDiscount,
+  StampDutyHistoryNote,
+  StampDutySourceLaw,
+  StampDutySpecialProcedureEntry,
+  StampDutySpecialProcedures,
+} from "./stamp-duty-dataset";
+
+export {
+  getAppealsMultiplier,
+  getStampDutyBracket,
+  loadStampDutyDataset,
+  stampDutyVersionTag,
+} from "./stamp-duty-dataset";
+
+export type { ComputeStampDutyDeps } from "./compute-stamp-duty";
+
+export { applyStampDutyRounding, computeStampDuty } from "./compute-stamp-duty";

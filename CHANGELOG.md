@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- 인지대 (`stamp-duty`) 엔진과 데이터셋을 도입했습니다. 「민사소송 등 인지법」 제2조 (4 구간 누진표 + 1,000원 floor + 100원 절사) · 제3조 (항소 ×1.5 / 상고 ×2.0) · 제7조 (지급명령 ×0.1 / 화해 ×0.2) · 제16조 (전자소송 ×0.9) 를 wire-up 했으며, 재심 (제8조) 은 심급별 동일 산식으로 처리합니다. 데이터셋은 `data/stamp-duty/v1.json` 을 single source 로 사용하고 `loadStampDutyDataset` / `stampDutyVersionTag` / `getStampDutyBracket` / `applyStampDutyRounding` / `computeStampDuty(input, deps?)` 를 공개하며, deps 를 통한 외부 데이터셋 주입으로 시기별 슬라이스 확장과 결정성을 보장합니다.
 - 소송비용 산정 도메인 (`litigation-cost`) 의 입력·결과 타입과 검증기를 도입했습니다. 인지대·송달료·변호사보수 3 sub-domain 의 input/result 인터페이스, 사건구분 13 종 enum (민사·가사·행정·보전·지급명령), 변호사보수 감액 옵션 5 variant (`LawyerFeeDiscount`), 감액 누적 적용 helper (`applyLawyerFeeDiscounts`, ×1.5 상한 clamp), KLAC 적용 사건 범위 비차단 경고 (`validateKlacDiscountScope`) 가 포함되며 도메인별 한국어 prefix RangeError 검증기를 제공합니다. 엔진 로직과 데이터셋은 후속 릴리스에서 추가됩니다.
 
 ### Changed
