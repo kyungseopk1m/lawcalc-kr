@@ -16,7 +16,9 @@
     "test:golden": "pnpm -r --if-present test:golden",
     "tauri:dev": "pnpm --filter @lawcalc-kr/desktop tauri dev",
     "tauri:build": "pnpm --filter @lawcalc-kr/desktop tauri build",
-    "build:icons": "node scripts/build-icons.mjs"
+    "build:icons": "node scripts/build-icons.mjs",
+    "bump-version": "node scripts/bump-version.mjs",
+    "check:hardcoded-version": "node scripts/check-hardcoded-version.mjs"
   },
   "keywords": [
     "korean-law",

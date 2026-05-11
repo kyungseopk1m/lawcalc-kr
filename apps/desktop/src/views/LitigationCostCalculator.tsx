@@ -30,6 +30,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
+import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { ipc, type LcalcFile, type LcalcLitigationCostPayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
@@ -38,7 +39,7 @@ import {
   validateLcalcEnvelope,
 } from "../lib/lcalc-validation";
 
-const APP_VERSION = "0.3.1";
+const APP_VERSION = __APP_VERSION__;
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 type DistributionMode = "equal" | "proportional";
@@ -376,6 +377,13 @@ export function LitigationCostCalculator() {
       if (path) markLitigationCostClean();
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
+
+  useFormShortcuts({
+    onSave: () => {
+      void handleSaveLcalc();
+    },
+    onCalculate: handleCalculate,
+  });
 
   const handleLoadLcalc = () =>
     runAction("load", async () => {

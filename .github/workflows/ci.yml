@@ -49,6 +49,9 @@ jobs:
       - name: Golden tests
         run: pnpm test:golden
 
+      - name: Check hardcoded version literals
+        run: pnpm check:hardcoded-version
+
   rust-lint:
     name: Rust fmt and clippy
     runs-on: ubuntu-latest

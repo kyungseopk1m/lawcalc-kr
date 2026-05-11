@@ -24,6 +24,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { ipc, type LcalcFile, type LcalcInheritancePayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
@@ -46,7 +47,7 @@ interface DecedentInput {
   deceasedAt: string;
 }
 
-const APP_VERSION = "0.3.1";
+const APP_VERSION = __APP_VERSION__;
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 
@@ -521,6 +522,14 @@ export function InheritanceCalculator() {
       }
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
+
+  useFormShortcuts({
+    onSave: () => {
+      void handleSaveLcalc();
+    },
+    onCalculate: handleCalculate,
+    onReset: handleReset,
+  });
 
   const handleLoadLcalc = () =>
     runAction("load", async () => {

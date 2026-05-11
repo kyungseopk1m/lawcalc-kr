@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-12
+
+### Added
+
+- `__APP_VERSION__` 빌드 타임 define 을 `vite.config.ts` 에 도입해 `apps/desktop/package.json` 의 `version` 을 React 4 surface (`App.tsx`, `LitigationCostCalculator.tsx`, `InheritanceCalculator.tsx`, `InfoDialog.tsx`) 의 단일 source 로 통합했습니다. 이제 버전 표기가 누락된 채로 release 가 출하될 수 없습니다.
+- `pnpm bump-version <X.Y.Z>` 스크립트를 추가했습니다. `apps/desktop/package.json` / `tauri.conf.json` / `Cargo.toml` 의 버전을 일괄 갱신하고 `CHANGELOG.md` 의 `[Unreleased]` 섹션을 `[<X.Y.Z>] - <오늘 (KST)>` 로 격상하면서 비교 링크를 추가합니다.
+- CI 에 `pnpm check:hardcoded-version` 게이트를 추가했습니다. `apps/desktop/src` 안의 `.ts` / `.tsx` 파일에 `"X.Y.Z"` 또는 `>vX.Y.Z<` 형태의 하드코딩된 버전 리터럴이 들어가면 빌드가 실패합니다. 테스트 fixture 파일은 의도된 리터럴을 보존하기 위해 제외됩니다.
+- `useFormShortcuts` 공용 hook 을 추가했습니다. window-level keydown 리스너로 `Cmd/Ctrl+S` (저장), `Cmd/Ctrl+Enter` (계산), `Esc` (입력 필드 밖에서 초기화) 를 처리하며 각 view 에서 활성 탭의 핸들러만 wire 합니다.
+
+### Changed
+
+- 정보 다이얼로그의 "버전" 섹션이 `apps/desktop/package.json` 의 `version` 을 빌드 타임에 그대로 읽어 표시하도록 정리했습니다.
+
+### Fixed
+
+- 정보 다이얼로그가 `v0.2.5` 로 고정 표시되어 v0.2.5 이후 모든 릴리스에서 잘못된 버전이 출하되던 결함을 수정했습니다. 매 릴리스마다 단축키·다이얼로그·기타 React surface 에 누락된 버전 표기가 다시 발생하지 않도록 `__APP_VERSION__` 단일 source 로 통합하고 CI 검증을 강제합니다.
+- `Cmd/Ctrl+S`, `Cmd/Ctrl+Enter`, `Esc` 키보드 단축키가 소송비용·상속분 탭과 빈 포커스 상태에서 작동하지 않던 결함을 수정했습니다. 기존에는 `App.tsx` 의 `onKeyDown` 이 이자 탭의 한 div 에만 wire 되어 있어 다른 탭이 활성이거나 포커스가 div 밖에 있을 때 키 이벤트가 전달되지 않았습니다. 새 `useFormShortcuts` hook 이 window 레벨 keydown 리스너로 동작하면서 활성 탭의 핸들러를 직접 호출합니다.
+
 ## [0.3.1] - 2026-05-12
 
 ### Added
@@ -180,7 +198,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.5

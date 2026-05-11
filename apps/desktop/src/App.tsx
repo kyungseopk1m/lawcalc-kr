@@ -11,7 +11,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   STANDARD_DISCLAIMER,
@@ -40,6 +40,7 @@ import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { UpdateDialog } from "./components/UpdateDialog";
+import { useFormShortcuts } from "./hooks/use-form-shortcuts";
 import { useUpdater } from "./hooks/useUpdater";
 import { ipc, type LcalcFile, type LcalcInterestPayload } from "./lib/ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
@@ -64,7 +65,7 @@ const defaultInput: InterestInput = {
   note: "",
 };
 
-const APP_VERSION = "0.3.1";
+const APP_VERSION = __APP_VERSION__;
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 
@@ -445,44 +446,19 @@ export function App() {
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (activeTab !== "interest") {
-      return;
-    }
-
-    if (event.key === "Escape") {
-      const target = event.target;
-      const isFormInput =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement;
-      if (isFormInput) {
-        return;
-      }
-      event.preventDefault();
-      handleReset();
-      return;
-    }
-
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      handleCalculate();
-      return;
-    }
-
-    if (event.key.toLowerCase() === "s" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
+  useFormShortcuts({
+    onSave: () => {
       void handleSaveLcalc();
-    }
-  };
+    },
+    onCalculate: () => handleCalculate(),
+    onReset: handleReset,
+    enabled: activeTab === "interest",
+  });
 
   const fallbackLabel = legalRateOptions[preset].label;
 
   return (
-    <div
-      className="flex min-h-screen flex-col bg-muted/30 text-foreground"
-      onKeyDown={handleKeyDown}
-    >
+    <div className="flex min-h-screen flex-col bg-muted/30 text-foreground">
       <Header />
 
       <nav className="border-b border-border bg-background">
