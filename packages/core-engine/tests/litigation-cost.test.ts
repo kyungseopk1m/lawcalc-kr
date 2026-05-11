@@ -84,10 +84,11 @@ describe("litigation-cost / CaseType meta", () => {
   it("listCaseTypes returns all 13 entries with meta", () => {
     const list = listCaseTypes();
     expect(list).toHaveLength(13);
-    expect(list[0]).toHaveProperty("caseType");
-    expect(list[0]).toHaveProperty("meta");
-    expect(list[0].meta).toHaveProperty("code");
-    expect(list[0].meta).toHaveProperty("nameKo");
+    const head = list[0]!;
+    expect(head).toHaveProperty("caseType");
+    expect(head).toHaveProperty("meta");
+    expect(head.meta).toHaveProperty("code");
+    expect(head.meta).toHaveProperty("nameKo");
   });
 });
 
@@ -379,14 +380,15 @@ describe("litigation-cost / validateKlacDiscountScope", () => {
   it("행정 + KLAC → klacScopeNotCivilOrFamily warning", () => {
     const warnings = validateKlacDiscountScope("administrativeFirstInstance", [{ kind: "klac" }]);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0].reason).toBe("klacScopeNotCivilOrFamily");
-    expect(warnings[0].messageKo).toContain("민·가사");
+    const first = warnings[0]!;
+    expect(first.reason).toBe("klacScopeNotCivilOrFamily");
+    expect(first.messageKo).toContain("민·가사");
   });
 
   it("보전 + KLAC → klacScopeNotCivilOrFamily warning", () => {
     const warnings = validateKlacDiscountScope("provisionalMeasureCollegial", [{ kind: "klac" }]);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0].reason).toBe("klacScopeNotCivilOrFamily");
+    expect(warnings[0]!.reason).toBe("klacScopeNotCivilOrFamily");
   });
 
   it("KLAC + 다른 multiplier 누적 → klacScopeOverridden warning", () => {
@@ -395,7 +397,7 @@ describe("litigation-cost / validateKlacDiscountScope", () => {
       { kind: "noOralHearingOrAdmission", reason: "admission" },
     ]);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0].reason).toBe("klacScopeOverridden");
+    expect(warnings[0]!.reason).toBe("klacScopeOverridden");
   });
 
   it("행정 + KLAC + 다른 multiplier → 2 warning 동시", () => {
