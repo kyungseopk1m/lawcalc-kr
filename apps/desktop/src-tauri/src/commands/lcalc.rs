@@ -155,10 +155,7 @@ mod tests {
     fn sample() -> LcalcFile {
         let mut body = Map::new();
         body.insert("kind".to_string(), Value::String("interest".to_string()));
-        body.insert(
-            "envelopeFeatures".to_string(),
-            json!(["interest@1"]),
-        );
+        body.insert("envelopeFeatures".to_string(), json!(["interest@1"]));
         body.insert(
             "dataVersions".to_string(),
             json!({ "interest": "legal-rates/v1.0.0" }),
