@@ -26,7 +26,7 @@ use crate::error::Error;
 
 use super::result_view::{
     disclaimer_text, format_currency, format_rate_percent, options_summary, InheritanceResultView,
-    ResultView,
+    LitigationCostResultView, ResultView,
 };
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
@@ -111,6 +111,38 @@ pub async fn export_inheritance_pdf(
     .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
 }
 
+#[tauri::command]
+pub async fn export_litigation_cost_pdf(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: LitigationCostResultView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("PDF", &["pdf"])
+            .set_file_name("litigation-cost-calculation.pdf")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_litigation_cost_pdf_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
+}
+
 /// A4 portrait dimensions, top-down layout.
 const PAGE_W_MM: f32 = 210.0;
 const PAGE_H_MM: f32 = 297.0;
@@ -188,6 +220,34 @@ pub fn render_inheritance_pdf_bytes(view: &InheritanceResultView) -> Result<Vec<
     writer.draw_inheritance_summary(view);
     writer.draw_inheritance_table(view);
     writer.draw_inheritance_footer(view);
+
+    let bytes = doc
+        .save_to_bytes()
+        .map_err(|e| Error::Other(format!("PDF 저장 실패: {e}")))?;
+    Ok(bytes)
+}
+
+pub fn render_litigation_cost_pdf_bytes(view: &LitigationCostResultView) -> Result<Vec<u8>, Error> {
+    let (doc, page1, layer1) = PdfDocument::new(
+        "LawCalc Korea — 소송비용 계산서",
+        Mm(PAGE_W_MM),
+        Mm(PAGE_H_MM),
+        "Layer 1",
+    );
+
+    let font = doc
+        .add_external_font_with_subsetting(PRETENDARD_REGULAR, true)
+        .map_err(|e| Error::Other(format!("PDF 한글 폰트 임베딩 실패: {e}")))?;
+    let _builtin_helvetica = doc
+        .add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
+
+    let mut writer = PageWriter::new(&doc, page1, layer1, font);
+    writer.draw_title("LawCalc Korea — 소송비용 계산서");
+    writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
+    writer.draw_litigation_cost_summary(view);
+    writer.draw_litigation_cost_distribution(view);
+    writer.draw_litigation_cost_footer(view);
 
     let bytes = doc
         .save_to_bytes()
@@ -309,6 +369,50 @@ impl<'a> PageWriter<'a> {
         self.advance(2.0);
     }
 
+    fn draw_litigation_cost_summary(&mut self, view: &LitigationCostResultView) {
+        let lines: [(String, String); 5] = [
+            (
+                "인지대".into(),
+                format!("{} 원", format_currency(view.stamp_duty.amount)),
+            ),
+            (
+                "송달료".into(),
+                format!("{} 원", format_currency(view.delivery_fee.amount)),
+            ),
+            (
+                "변호사보수".into(),
+                format!("{} 원", format_currency(view.lawyer_fee.amount)),
+            ),
+            (
+                "합계".into(),
+                format!("{} 원", format_currency(view.total_amount)),
+            ),
+            ("계산 시각".into(), view.computed_at.clone()),
+        ];
+        let label_w = 32.0;
+        for (label, value) in &lines {
+            self.text(label, 10.0, self.left(), self.y - 4.0);
+            self.text(value, 10.0, self.left() + label_w, self.y - 4.0);
+            self.advance(5.6);
+        }
+        self.advance(2.0);
+
+        let formulas = [
+            ("인지대 산식", view.stamp_duty.formula_text.as_str()),
+            ("송달료 산식", view.delivery_fee.formula_text.as_str()),
+            ("변호사보수 산식", view.lawyer_fee.formula_text.as_str()),
+        ];
+        for (label, formula) in formulas {
+            self.text(label, 8.5, self.left(), self.y - 3.5);
+            self.advance(4.6);
+            for line in wrap_text(formula, 78) {
+                self.text(&line, 7.8, self.left() + 4.0, self.y - 3.0);
+                self.advance(4.0);
+            }
+            self.advance(1.2);
+        }
+    }
+
     fn draw_segment_table(&mut self, view: &ResultView) {
         let inner_w: f32 = COL_WIDTHS.iter().sum();
         let right = self.left() + inner_w;
@@ -407,6 +511,60 @@ impl<'a> PageWriter<'a> {
         self.advance(2.0);
     }
 
+    fn draw_litigation_cost_distribution(&mut self, view: &LitigationCostResultView) {
+        let Some(distribution) = &view.distribution else {
+            return;
+        };
+
+        self.advance(3.0);
+        self.text("분배표", 10.0, self.left(), self.y - 3.5);
+        self.advance(6.0);
+        self.text(
+            &format!(
+                "방식 {} · 잔여원 {}",
+                distribution.mode, distribution.remainder
+            ),
+            8.5,
+            self.left(),
+            self.y - 3.0,
+        );
+        self.advance(5.0);
+
+        let widths: [f32; 2] = [72.0, 52.0];
+        let inner_w: f32 = widths.iter().sum();
+        let right = self.left() + inner_w;
+        self.hline(self.left(), right, self.y);
+        self.advance(5.0);
+        self.text("당사자", 9.0, self.left() + 1.0, self.y - 3.5);
+        self.text(
+            "분배액(원)",
+            9.0,
+            self.left() + widths[0] + 1.0,
+            self.y - 3.5,
+        );
+        self.advance(5.0);
+        self.hline(self.left(), right, self.y);
+
+        for (index, amount) in distribution.per_party.iter().enumerate() {
+            self.advance(5.4);
+            self.text(
+                &format!("당사자 {}", index + 1),
+                8.5,
+                self.left() + 1.0,
+                self.y - 1.0,
+            );
+            self.text(
+                &format_currency(*amount as f64),
+                8.5,
+                self.left() + widths[0] + 1.0,
+                self.y - 1.0,
+            );
+        }
+        self.advance(2.0);
+        self.hline(self.left(), right, self.y);
+        self.advance(2.0);
+    }
+
     fn draw_note(&mut self, note: &str) {
         self.advance(4.0);
         self.text("비고", 9.0, self.left(), self.y - 3.5);
@@ -455,6 +613,33 @@ impl<'a> PageWriter<'a> {
                 view.data_version, view.computed_at
             ),
             7.5,
+            self.left(),
+            footer_y - 9.0,
+        );
+    }
+
+    fn draw_litigation_cost_footer(&mut self, view: &LitigationCostResultView) {
+        let inner_right = PAGE_W_MM - MARGIN_MM;
+        let footer_y = MARGIN_MM + 14.0;
+        self.hline(self.left(), inner_right, footer_y);
+        self.text(
+            disclaimer_text(Some(&view.disclaimer)),
+            8.0,
+            self.left(),
+            footer_y - 4.0,
+        );
+        let versions = view
+            .data_versions
+            .iter()
+            .map(|(key, value)| format!("{key}: {value}"))
+            .collect::<Vec<_>>()
+            .join(" / ");
+        self.text(
+            &format!(
+                "데이터 버전 {}  |  계산 시각 {}",
+                versions, view.computed_at
+            ),
+            7.0,
             self.left(),
             footer_y - 9.0,
         );

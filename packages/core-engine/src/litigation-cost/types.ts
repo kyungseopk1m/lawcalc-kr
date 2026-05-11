@@ -395,6 +395,29 @@ export interface LitigationCostInput {
   stampDuty: StampDutyInput;
   deliveryFee: DeliveryFeeInput;
   lawyerFee: LawyerFeeInput;
+  distribution?: LitigationCostDistributionDirective;
+}
+
+export type LitigationCostDistributionMode = "equal" | "proportional";
+
+export interface LitigationCostDistributionDirective {
+  mode: LitigationCostDistributionMode;
+  /**
+   * 균등 분배 전용. 미지정 시 deliveryFee.partyCount 를 사용한다.
+   */
+  partyCount?: number;
+  /**
+   * 안분 전용. 각 당사자의 소가 또는 부담 기준액. 합계 대비 비례 배분한다.
+   */
+  partyValuesWon?: number[];
+}
+
+export interface LitigationCostDistributionResult {
+  mode: LitigationCostDistributionMode;
+  totalWon: number;
+  perParty: number[];
+  remainder: number;
+  basis: "partyCount" | "partyValuesWon";
 }
 
 export interface LitigationCostResult {
@@ -402,6 +425,7 @@ export interface LitigationCostResult {
   deliveryFee: DeliveryFeeResult;
   lawyerFee: LawyerFeeResult;
   totalAmount: number;
+  distribution?: LitigationCostDistributionResult;
   /** B11 단일 source — `STANDARD_DISCLAIMER` 그대로. */
   disclaimer: string;
   /** 도메인별 dataset 슬라이스 식별자. `.lcalc` envelope v3 의 `dataVersions` 에 그대로 hoist. */

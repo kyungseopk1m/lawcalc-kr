@@ -13,6 +13,9 @@ export type {
   LawyerFeeDiscount,
   LawyerFeeInput,
   LawyerFeeResult,
+  LitigationCostDistributionDirective,
+  LitigationCostDistributionMode,
+  LitigationCostDistributionResult,
   LitigationCostInput,
   LitigationCostResult,
   NoOralHearingReason,
@@ -117,3 +120,16 @@ export {
 export type { ComputeLawyerFeeDeps } from "./compute-lawyer-fee";
 
 export { computeLawyerFee } from "./compute-lawyer-fee";
+
+export type { LitigationCostDistributionParts } from "./distribute";
+
+export {
+  divideEqually,
+  divideProportionally,
+  validateDistributeEqualInput,
+  validateDistributeProportionalInput,
+} from "./distribute";
+
+export type { ComputeLitigationCostDeps } from "./compute-litigation-cost";
+
+export { computeLitigationCost } from "./compute-litigation-cost";

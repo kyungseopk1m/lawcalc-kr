@@ -70,6 +70,39 @@ pub struct InheritanceShareView {
     pub raw_denominator: i64,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LitigationCostResultView {
+    pub stamp_duty: LitigationCostComponentView,
+    pub delivery_fee: LitigationCostComponentView,
+    pub lawyer_fee: LitigationCostComponentView,
+    pub total_amount: f64,
+    #[serde(default)]
+    pub distribution: Option<LitigationCostDistributionView>,
+    pub disclaimer: String,
+    pub data_versions: std::collections::BTreeMap<String, String>,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LitigationCostComponentView {
+    pub amount: f64,
+    pub formula_text: String,
+    pub data_version: String,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LitigationCostDistributionView {
+    pub mode: String,
+    pub total_won: i64,
+    pub per_party: Vec<i64>,
+    pub remainder: i64,
+    pub basis: String,
+}
+
 /// Disclaimer copy that must accompany every exported artifact.
 /// Source of truth: `packages/core-engine/src/disclaimers.ts` `STANDARD_DISCLAIMER`.
 pub const DISCLAIMER_KO: &str =
@@ -179,6 +212,50 @@ mod tests {
         let view: InheritanceResultView = serde_json::from_value(v).unwrap();
         assert_eq!(view.decedent.deceased_at, "2025-01-01");
         assert_eq!(view.shares[0].raw_denominator, 7);
+    }
+
+    #[test]
+    fn deserializes_litigation_cost_camel_case_payload() {
+        let v = json!({
+            "stampDuty": {
+                "amount": 95000,
+                "formulaText": "인지대 산식",
+                "dataVersion": "stamp-duty/v1.0.0",
+                "computedAt": "2026-05-11T12:00:00+09:00"
+            },
+            "deliveryFee": {
+                "amount": 165000,
+                "formulaText": "송달료 산식",
+                "dataVersion": "delivery/v1.0.0",
+                "computedAt": "2026-05-11T12:00:00+09:00"
+            },
+            "lawyerFee": {
+                "amount": 2800000,
+                "formulaText": "변호사보수 산식",
+                "dataVersion": "lawyer-fee/v1.0.0",
+                "computedAt": "2026-05-11T12:00:00+09:00"
+            },
+            "totalAmount": 3060000,
+            "distribution": {
+                "mode": "equal",
+                "totalWon": 3060000,
+                "perParty": [1530000, 1530000],
+                "remainder": 0,
+                "basis": "partyCount"
+            },
+            "disclaimer": DISCLAIMER_KO,
+            "dataVersions": {
+                "stamp-duty": "stamp-duty/v1.0.0",
+                "delivery": "delivery/v1.0.0",
+                "lawyer-fee": "lawyer-fee/v1.0.0"
+            },
+            "computedAt": "2026-05-11T12:00:00+09:00"
+        });
+        let view: LitigationCostResultView = serde_json::from_value(v).unwrap();
+        assert_eq!(view.stamp_duty.amount as i64, 95000);
+        assert_eq!(view.delivery_fee.amount as i64, 165000);
+        assert_eq!(view.lawyer_fee.amount as i64, 2800000);
+        assert_eq!(view.distribution.unwrap().per_party.len(), 2);
     }
 
     #[test]

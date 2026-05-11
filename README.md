@@ -5,7 +5,7 @@
 <h1 align="center">LawCalc Korea</h1>
 
 <p align="center">
-  <b>판결금 이자·지연손해금과 상속분을 로컬에서 계산하는 데스크톱 워크벤치</b><br>
+  <b>판결금 이자·지연손해금, 상속분, 소송비용을 로컬에서 계산하는 데스크톱 워크벤치</b><br>
   <sub>본질에 집중한 법률 계산 워크벤치 · 사건 정보는 외부로 전송하지 않습니다</sub>
 </p>
 
@@ -26,7 +26,7 @@
 > 이 도구의 계산 결과는 **검토용**이며 법률 자문이 아닙니다. 사건별 특수성은 변호사 등 전문가의 확인이 필요합니다.
 > 계산 근거와 독립성 명시: [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)
 
-LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리하는 로컬 데스크톱 앱입니다. 원금·기간·이율처럼 자주 바뀌는 입력값부터 결과표, 적용 근거, 저장·내보내기까지 한 흐름에서 다룹니다.
+LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리하는 로컬 데스크톱 앱입니다. 원금·기간·이율, 상속인, 소가·당사자수처럼 자주 바뀌는 입력값부터 결과표, 적용 근거, 저장·내보내기까지 한 흐름에서 다룹니다.
 
 ## 주요 기능
 
@@ -47,6 +47,12 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 피상속인, 배우자, 1~4순위 상속인과 1차 대습상속인을 입력해 법정상속분을 계산합니다. 결과에는 약분 전/후 지분과 백분율을 함께 표시해 검산하기 쉽게 정리합니다.
 
 현재 상속분 계산은 1991-01-01 이후 사망 케이스와 1차 대습상속까지만 지원합니다. 자세한 범위는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “Current Inheritance Scope”를 확인해 주세요.
+
+### 소송비용 계산
+
+인지대, 송달료, 변호사보수를 함께 계산하고 합계와 분배표를 확인합니다. 사건구분, 소가, 당사자수, 항소·상고 불복 범위, 전자소송, 지급명령·화해, 변호사보수 감액 옵션, KLAC 기준, 접수일을 입력할 수 있습니다.
+
+결과에는 각 항목의 금액과 한국어 산식, 데이터 버전, KLAC 적용 경고, 균등 또는 소가비례 분배표가 함께 표시됩니다. 자세한 범위와 근거는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “Current Litigation-Cost Scope”를 확인해 주세요.
 
 ### 공통 워크플로
 
@@ -78,7 +84,7 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 
 `.lcalc` 는 입력값·계산 옵션·적용 데이터 버전·결과·면책 고지를 한 데 묶어 저장하는 재현용 JSON 파일입니다. 사건 정보는 외부 서버로 전송하지 않고 로컬 파일로만 저장됩니다.
 
-현재 저장 형식은 `schemaVersion: "2"` envelope 입니다. `kind` 값으로 `interest` 또는 `inheritance` 계산 유형을 구분하고, v0.1.x 의 `schemaVersion: "1"` 이자 계산 파일은 불러올 때 v2 로 자동 마이그레이션됩니다. `dataVersion` 은 동일 입력에 대한 계산 재현성을 판단하는 기준입니다.
+현재 저장 형식은 `schemaVersion: "3"` envelope 입니다. `kind` 값으로 `interest`, `inheritance`, `litigation-cost` 계산 유형을 구분하고, `envelopeFeatures` 와 `dataVersions` 로 파일 호환성과 데이터셋 버전을 빠르게 확인합니다. v0.1.x/v0.2.x 파일은 불러올 때 v3 로 자동 마이그레이션됩니다.
 
 ## 개발
 
@@ -116,6 +122,6 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, and simplified inheritance shares.
 
-The current release focuses on local-only interest and inheritance calculations, transparent result traces, versioned data, and reproducible `.lcalc` files on macOS and Windows.
+The current release focuses on local-only interest, inheritance, and litigation-cost calculations, transparent result traces, versioned data, and reproducible `.lcalc` files on macOS and Windows.
 
 Distributed under the GNU Affero General Public License v3.0 or later. Any modified version made available to users over a network — or redistributed as a derivative work — must be released under the same license with source code available. See [LICENSE](LICENSE) for the full text. For commercial licensing inquiries, please contact the Licensor (kyungseopk1m).

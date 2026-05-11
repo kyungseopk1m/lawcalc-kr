@@ -128,7 +128,7 @@ fn enforce_disclaimer(payload: &mut LcalcFile) {
     let Some(Value::String(kind)) = payload.body.get("kind") else {
         return;
     };
-    if kind != "interest" && kind != "inheritance" {
+    if kind != "interest" && kind != "inheritance" && kind != "litigation-cost" {
         return;
     }
 
@@ -266,6 +266,51 @@ mod tests {
         let mut file = sample();
         file.body
             .insert("kind".to_string(), Value::String("inheritance".to_string()));
+        if let Some(Value::Object(payload)) = file.body.get_mut("payload") {
+            payload.insert("disclaimer".to_string(), Value::String("stale".to_string()));
+            payload.insert(
+                "result".to_string(),
+                json!({ "disclaimer": "stale result" }),
+            );
+        }
+
+        enforce_disclaimer(&mut file);
+
+        let disclaimer = file
+            .body
+            .get("payload")
+            .and_then(Value::as_object)
+            .and_then(|payload| payload.get("disclaimer"))
+            .and_then(Value::as_str);
+        assert_eq!(disclaimer, Some(DISCLAIMER_KO));
+        let result_disclaimer = file
+            .body
+            .get("payload")
+            .and_then(Value::as_object)
+            .and_then(|payload| payload.get("result"))
+            .and_then(Value::as_object)
+            .and_then(|result| result.get("disclaimer"))
+            .and_then(Value::as_str);
+        assert_eq!(result_disclaimer, Some(DISCLAIMER_KO));
+    }
+
+    #[test]
+    fn enforce_disclaimer_updates_litigation_cost_payload() {
+        let mut file = sample();
+        file.body.insert(
+            "kind".to_string(),
+            Value::String("litigation-cost".to_string()),
+        );
+        file.body
+            .insert("envelopeFeatures".to_string(), json!(["litigation-cost@1"]));
+        file.body.insert(
+            "dataVersions".to_string(),
+            json!({
+                "stamp-duty": "stamp-duty/v1.0.0",
+                "delivery": "delivery/v1.0.0",
+                "lawyer-fee": "lawyer-fee/v1.0.0"
+            }),
+        );
         if let Some(Value::Object(payload)) = file.body.get_mut("payload") {
             payload.insert("disclaimer".to_string(), Value::String("stale".to_string()));
             payload.insert(

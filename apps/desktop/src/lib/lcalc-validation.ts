@@ -1,14 +1,25 @@
-import type {
-  CalcOptions,
-  HeirNode,
-  InheritanceInput,
-  InheritanceResult,
-  InterestInput,
-  LegalRateCode,
-  RateSegment,
+import {
+  validateDeliveryFeeInput,
+  validateLawyerFeeInput,
+  validateStampDutyInput,
+  type CalcOptions,
+  type CaseType,
+  type HeirNode,
+  type InheritanceInput,
+  type InheritanceResult,
+  type InterestInput,
+  type LegalRateCode,
+  type LitigationCostInput,
+  type LitigationCostResult,
+  type RateSegment,
 } from "@lawcalc-kr/core-engine";
 
-import type { LcalcFile, LcalcInheritancePayload, LcalcInterestPayload } from "./ipc";
+import type {
+  LcalcFile,
+  LcalcInheritancePayload,
+  LcalcInterestPayload,
+  LcalcLitigationCostPayload,
+} from "./ipc";
 
 export type LoadedLegalRatePreset = LegalRateCode | "custom";
 
@@ -26,7 +37,11 @@ type UnknownLcalcEnvelope = {
  * 단일 도메인 capability 만 보유하며, litigation-cost 등 향후 도메인 추가 시
  * 본 set 에 합류한다.
  */
-const SUPPORTED_LCALC_CAPABILITIES = new Set<string>(["interest@1", "inheritance@1"]);
+const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
+  "interest@1",
+  "inheritance@1",
+  "litigation-cost@1",
+]);
 
 const CAPABILITY_ID_PATTERN = /^[a-z][a-z0-9-]*@[1-9][0-9]*$/;
 
@@ -41,6 +56,12 @@ interface ParsedLcalcInput {
 interface ParsedInheritanceLcalcInput {
   input: InheritanceInput;
   result?: InheritanceResult;
+  note?: string;
+}
+
+interface ParsedLitigationCostLcalcInput {
+  input: LitigationCostInput;
+  result?: LitigationCostResult;
   note?: string;
 }
 
@@ -93,6 +114,25 @@ function requirePositiveNumber(value: unknown, field: string) {
     throw new Error(`.lcalc 파일의 ${field} 필드는 0보다 큰 숫자여야 합니다.`);
   }
 
+  return value;
+}
+
+function requireNonNegativeNumber(value: unknown, field: string) {
+  if (!isFiniteNumber(value) || value < 0) {
+    throw new Error(`.lcalc 파일의 ${field} 필드는 0 이상 숫자여야 합니다.`);
+  }
+
+  return value;
+}
+
+function optionalBoolean(record: Record<string, unknown>, key: string, field: string) {
+  const value = record[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`.lcalc 파일의 ${field} 필드가 올바르지 않습니다.`);
+  }
   return value;
 }
 
@@ -283,6 +323,222 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
   };
 }
 
+function parseLitigationCostInput(value: unknown): LitigationCostInput {
+  const input = requireRecord(value, "payload.input");
+  const stampDutyRecord = requireRecord(input.stampDuty, "payload.input.stampDuty");
+  const deliveryRecord = requireRecord(input.deliveryFee, "payload.input.deliveryFee");
+  const lawyerRecord = requireRecord(input.lawyerFee, "payload.input.lawyerFee");
+  const isPaymentOrder = optionalBoolean(
+    stampDutyRecord,
+    "isPaymentOrder",
+    "payload.input.stampDuty.isPaymentOrder",
+  );
+  const isSettlement = optionalBoolean(
+    stampDutyRecord,
+    "isSettlement",
+    "payload.input.stampDuty.isSettlement",
+  );
+  const isElectronicFiling = optionalBoolean(
+    stampDutyRecord,
+    "isElectronicFiling",
+    "payload.input.stampDuty.isElectronicFiling",
+  );
+  const isRetrial = optionalBoolean(
+    stampDutyRecord,
+    "isRetrial",
+    "payload.input.stampDuty.isRetrial",
+  );
+
+  const stampDuty: LitigationCostInput["stampDuty"] = {
+    caseValue: requireNonNegativeNumber(
+      stampDutyRecord.caseValue,
+      "payload.input.stampDuty.caseValue",
+    ),
+    caseType: requireString(
+      stampDutyRecord.caseType,
+      "payload.input.stampDuty.caseType",
+    ) as CaseType,
+    appealsLevel: requireString(
+      stampDutyRecord.appealsLevel,
+      "payload.input.stampDuty.appealsLevel",
+    ) as LitigationCostInput["stampDuty"]["appealsLevel"],
+    ...(isPaymentOrder === undefined ? {} : { isPaymentOrder }),
+    ...(isSettlement === undefined ? {} : { isSettlement }),
+    ...(isElectronicFiling === undefined ? {} : { isElectronicFiling }),
+    ...(isRetrial === undefined ? {} : { isRetrial }),
+  };
+  validateStampDutyInput(stampDuty);
+
+  const deliveryFee: LitigationCostInput["deliveryFee"] = {
+    caseType: requireString(
+      deliveryRecord.caseType,
+      "payload.input.deliveryFee.caseType",
+    ) as CaseType,
+    partyCount: requirePositiveNumber(
+      deliveryRecord.partyCount,
+      "payload.input.deliveryFee.partyCount",
+    ),
+    ...(deliveryRecord.creditorCount === undefined
+      ? {}
+      : {
+          creditorCount: requireNonNegativeNumber(
+            deliveryRecord.creditorCount,
+            "payload.input.deliveryFee.creditorCount",
+          ),
+        }),
+    ...(deliveryRecord.customCount === undefined
+      ? {}
+      : {
+          customCount: requirePositiveNumber(
+            deliveryRecord.customCount,
+            "payload.input.deliveryFee.customCount",
+          ),
+        }),
+    ...(deliveryRecord.perDeliveryUnitPriceWon === undefined
+      ? {}
+      : {
+          perDeliveryUnitPriceWon: requireNonNegativeNumber(
+            deliveryRecord.perDeliveryUnitPriceWon,
+            "payload.input.deliveryFee.perDeliveryUnitPriceWon",
+          ),
+        }),
+    ...(deliveryRecord.filingDate === undefined
+      ? {}
+      : {
+          filingDate: requireString(
+            deliveryRecord.filingDate,
+            "payload.input.deliveryFee.filingDate",
+          ),
+        }),
+  };
+  validateDeliveryFeeInput(deliveryFee);
+
+  const discounts = lawyerRecord.discounts;
+  if (!Array.isArray(discounts)) {
+    throw new Error(".lcalc 파일의 payload.input.lawyerFee.discounts 필드가 올바르지 않습니다.");
+  }
+  const lawyerFee: LitigationCostInput["lawyerFee"] = {
+    caseValue: requireNonNegativeNumber(
+      lawyerRecord.caseValue,
+      "payload.input.lawyerFee.caseValue",
+    ),
+    caseType: requireString(lawyerRecord.caseType, "payload.input.lawyerFee.caseType") as CaseType,
+    discounts: discounts as LitigationCostInput["lawyerFee"]["discounts"],
+    ...(lawyerRecord.klacAgreedFeeWon === undefined
+      ? {}
+      : {
+          klacAgreedFeeWon: requireNonNegativeNumber(
+            lawyerRecord.klacAgreedFeeWon,
+            "payload.input.lawyerFee.klacAgreedFeeWon",
+          ),
+        }),
+    ...(lawyerRecord.filingDate === undefined
+      ? {}
+      : {
+          filingDate: requireString(lawyerRecord.filingDate, "payload.input.lawyerFee.filingDate"),
+        }),
+  };
+  validateLawyerFeeInput(lawyerFee);
+
+  const distributionValue = input.distribution;
+  if (distributionValue === undefined) {
+    return { stampDuty, deliveryFee, lawyerFee };
+  }
+  const distributionRecord = requireRecord(distributionValue, "payload.input.distribution");
+  const mode = requireString(distributionRecord.mode, "payload.input.distribution.mode");
+  if (mode === "equal") {
+    return {
+      stampDuty,
+      deliveryFee,
+      lawyerFee,
+      distribution: {
+        mode,
+        ...(distributionRecord.partyCount === undefined
+          ? {}
+          : {
+              partyCount: requirePositiveNumber(
+                distributionRecord.partyCount,
+                "payload.input.distribution.partyCount",
+              ),
+            }),
+      },
+    };
+  }
+  if (mode === "proportional") {
+    if (!Array.isArray(distributionRecord.partyValuesWon)) {
+      throw new Error(
+        ".lcalc 파일의 payload.input.distribution.partyValuesWon 필드가 올바르지 않습니다.",
+      );
+    }
+    return {
+      stampDuty,
+      deliveryFee,
+      lawyerFee,
+      distribution: {
+        mode,
+        partyValuesWon: distributionRecord.partyValuesWon.map((value, index) =>
+          requirePositiveNumber(value, `payload.input.distribution.partyValuesWon[${index}]`),
+        ),
+      },
+    };
+  }
+
+  throw new Error(".lcalc 파일의 payload.input.distribution.mode 필드가 올바르지 않습니다.");
+}
+
+function requireLitigationCostDataVersions(dataVersions: Record<string, string>): void {
+  for (const key of ["stamp-duty", "delivery", "lawyer-fee"] as const) {
+    if (typeof dataVersions[key] !== "string" || dataVersions[key].length === 0) {
+      throw new Error(`.lcalc 파일의 dataVersions["${key}"] 필드가 올바르지 않습니다.`);
+    }
+  }
+}
+
+function parseLitigationCostResult(value: unknown): LitigationCostResult {
+  const result = requireRecord(value, "payload.result");
+  requireRecord(result.stampDuty, "payload.result.stampDuty");
+  requireRecord(result.deliveryFee, "payload.result.deliveryFee");
+  requireRecord(result.lawyerFee, "payload.result.lawyerFee");
+  const dataVersions = validateDataVersions(result.dataVersions);
+  requireLitigationCostDataVersions(dataVersions);
+
+  return {
+    ...(result as unknown as LitigationCostResult),
+    disclaimer: requireString(result.disclaimer, "payload.result.disclaimer"),
+    dataVersions,
+    computedAt: requireString(result.computedAt, "payload.result.computedAt"),
+    totalAmount: requireNonNegativeNumber(result.totalAmount, "payload.result.totalAmount"),
+  };
+}
+
+function parseLitigationCostPayload(
+  file: LcalcFile | UnknownLcalcEnvelope,
+): LcalcLitigationCostPayload {
+  if (file.kind !== "litigation-cost") {
+    if (file.kind === "interest") {
+      throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "inheritance") {
+      throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
+    }
+
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
+  }
+
+  requireLitigationCostDataVersions(validateDataVersions(file.dataVersions));
+  const payload = requireRecord(file.payload, "payload");
+  const note = requireBoundedNote(payload.note, "payload.note");
+
+  return {
+    appVersion: requireString(payload.appVersion, "payload.appVersion"),
+    createdAt: requireString(payload.createdAt, "payload.createdAt"),
+    input: parseLitigationCostInput(payload.input),
+    ...(payload.result === undefined ? {} : { result: parseLitigationCostResult(payload.result) }),
+    ...(note === undefined ? {} : { note }),
+    disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
+  };
+}
+
 function validateEnvelopeFeatures(value: unknown): string[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(
@@ -335,6 +591,11 @@ export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): v
 
   if (file.kind === "inheritance") {
     void parseInheritancePayload(file);
+    return;
+  }
+
+  if (file.kind === "litigation-cost") {
+    void parseLitigationCostPayload(file);
     return;
   }
 
@@ -457,6 +718,17 @@ export function parseLoadedLcalcInput(file: LcalcFile): ParsedLcalcInput {
 
 export function parseLoadedInheritanceLcalcInput(file: LcalcFile): ParsedInheritanceLcalcInput {
   const payload = parseInheritancePayload(file);
+  return {
+    input: payload.input,
+    ...(payload.result === undefined ? {} : { result: payload.result }),
+    ...(payload.note === undefined ? {} : { note: payload.note }),
+  };
+}
+
+export function parseLoadedLitigationCostLcalcInput(
+  file: LcalcFile,
+): ParsedLitigationCostLcalcInput {
+  const payload = parseLitigationCostPayload(file);
   return {
     input: payload.input,
     ...(payload.result === undefined ? {} : { result: payload.result }),

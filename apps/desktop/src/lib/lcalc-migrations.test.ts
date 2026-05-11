@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { STANDARD_DISCLAIMER, calculateInterest } from "@lawcalc-kr/core-engine";
+import {
+  STANDARD_DISCLAIMER,
+  calculateInterest,
+  computeLitigationCost,
+} from "@lawcalc-kr/core-engine";
 
 import type { LcalcFile, LoadableLcalcFile } from "./ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lcalc-migrations";
 import {
   MAX_NOTE_LENGTH,
   parseLoadedInheritanceLcalcInput,
+  parseLoadedLitigationCostLcalcInput,
   parseLoadedLcalcInput,
   validateLcalcEnvelope,
 } from "./lcalc-validation";
@@ -369,6 +374,91 @@ describe("validateLcalcEnvelope", () => {
     };
     expect(() => validateLcalcEnvelope(inheritanceFile)).toThrow(
       ".lcalc 파일의 payload.note 필드가 너무 깁니다.",
+    );
+  });
+
+  it("parses a v3 litigation-cost file with three dataVersions", () => {
+    const input = {
+      stampDuty: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceSingle" as const,
+        appealsLevel: "firstInstance" as const,
+      },
+      deliveryFee: {
+        caseType: "civilFirstInstanceSingle" as const,
+        partyCount: 2,
+      },
+      lawyerFee: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceSingle" as const,
+        discounts: [],
+      },
+      distribution: { mode: "equal" as const, partyCount: 2 },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-05-11T12:00:00.000Z" });
+    const litigationFile: LcalcFile = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": result.dataVersions["stamp-duty"]!,
+        delivery: result.dataVersions.delivery!,
+        "lawyer-fee": result.dataVersions["lawyer-fee"]!,
+      },
+      payload: {
+        appVersion: "0.3.0",
+        createdAt: "2026-05-11T12:00:00.000Z",
+        input,
+        result,
+        note: "litigation note",
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    validateLcalcEnvelope(litigationFile);
+    const loaded = parseLoadedLitigationCostLcalcInput(litigationFile);
+    expect(loaded.input.distribution?.mode).toBe("equal");
+    expect(loaded.result?.totalAmount).toBe(3_060_000);
+    expect(loaded.note).toBe("litigation note");
+  });
+
+  it("rejects a litigation-cost file missing a required dataVersion", () => {
+    const input = {
+      stampDuty: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceSingle" as const,
+        appealsLevel: "firstInstance" as const,
+      },
+      deliveryFee: {
+        caseType: "civilFirstInstanceSingle" as const,
+        partyCount: 2,
+      },
+      lawyerFee: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceSingle" as const,
+        discounts: [],
+      },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-05-11T12:00:00.000Z" });
+    const litigationFile: LcalcFile = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": result.dataVersions["stamp-duty"]!,
+        delivery: result.dataVersions.delivery!,
+      },
+      payload: {
+        appVersion: "0.3.0",
+        createdAt: "2026-05-11T12:00:00.000Z",
+        input,
+        result,
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    expect(() => validateLcalcEnvelope(litigationFile)).toThrow(
+      '.lcalc 파일의 dataVersions["lawyer-fee"] 필드가 올바르지 않습니다.',
     );
   });
 });

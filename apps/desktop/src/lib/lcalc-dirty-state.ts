@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
-export type LcalcDocumentKey = "interest" | "inheritance";
+export type LcalcDocumentKey = "interest" | "inheritance" | "litigation-cost";
 
 type Listener = () => void;
 

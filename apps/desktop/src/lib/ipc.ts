@@ -6,6 +6,8 @@ import type {
   InheritanceResult,
   InterestInput,
   InterestResult,
+  LitigationCostInput,
+  LitigationCostResult,
 } from "@lawcalc-kr/core-engine";
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 
@@ -65,6 +67,15 @@ export interface LcalcInheritancePayload {
   disclaimer: string;
 }
 
+export interface LcalcLitigationCostPayload {
+  appVersion: string;
+  createdAt: string;
+  input: LitigationCostInput;
+  result?: LitigationCostResult;
+  note?: string;
+  disclaimer: string;
+}
+
 /**
  * v3 envelope — capability 메타 (envelopeFeatures) 와 데이터 슬라이스
  * (dataVersions) 를 envelope-level 로 분리한 형식. v0.3.0 부터 신규 저장
@@ -93,6 +104,13 @@ export type LcalcFile =
       envelopeFeatures: string[];
       dataVersions: Record<string, string>;
       payload: LcalcInheritancePayload;
+    }
+  | {
+      schemaVersion: "3";
+      kind: "litigation-cost";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcLitigationCostPayload;
     };
 
 export type LoadableLcalcFile = LcalcFile | LcalcFileV2 | LcalcFileV1;
@@ -126,6 +144,12 @@ export const ipc = {
   },
   exportInheritanceCsv(result: InheritanceResult): Promise<string | null> {
     return invoke<string | null>("export_inheritance_csv", { result });
+  },
+  exportLitigationCostPdf(result: LitigationCostResult): Promise<string | null> {
+    return invoke<string | null>("export_litigation_cost_pdf", { result });
+  },
+  exportLitigationCostCsv(result: LitigationCostResult): Promise<string | null> {
+    return invoke<string | null>("export_litigation_cost_csv", { result });
   },
   /**
    * Opens a save dialog and writes the payload as pretty-printed JSON.

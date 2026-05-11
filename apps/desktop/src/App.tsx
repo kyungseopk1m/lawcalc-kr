@@ -46,6 +46,7 @@ import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migr
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "./lib/lcalc-dirty-state";
 import { parseLoadedLcalcInput, validateLcalcEnvelope } from "./lib/lcalc-validation";
 import { InheritanceCalculator } from "./views/InheritanceCalculator";
+import { LitigationCostCalculator } from "./views/LitigationCostCalculator";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
@@ -63,7 +64,7 @@ const defaultInput: InterestInput = {
   note: "",
 };
 
-const APP_VERSION = "0.2.5";
+const APP_VERSION = "0.3.0";
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 
@@ -294,7 +295,9 @@ export function App() {
   );
   const [calculationError, setCalculationError] = useState("");
   const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
-  const [activeTab, setActiveTab] = useState<"interest" | "inheritance">("interest");
+  const [activeTab, setActiveTab] = useState<"interest" | "inheritance" | "litigationCost">(
+    "interest",
+  );
 
   useEffect(() => {
     if (skipAutoCalculateRef.current) {
@@ -500,10 +503,19 @@ export function App() {
           >
             상속분 간이 계산
           </Button>
+          <Button
+            variant={activeTab === "litigationCost" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("litigationCost")}
+            type="button"
+          >
+            소송비용
+          </Button>
         </div>
       </nav>
 
       {activeTab === "inheritance" ? <InheritanceCalculator /> : null}
+      {activeTab === "litigationCost" ? <LitigationCostCalculator /> : null}
       {activeTab === "interest" ? (
         <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
           <section className="space-y-4" aria-labelledby="input-title">

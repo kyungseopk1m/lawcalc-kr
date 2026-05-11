@@ -9,7 +9,7 @@ use crate::error::Error;
 
 use super::result_view::{
     disclaimer_text, format_currency, format_rate_percent, options_summary, InheritanceResultView,
-    ResultView,
+    LitigationCostResultView, ResultView,
 };
 
 /// CSV formula injection defense.
@@ -88,6 +88,38 @@ pub async fn export_inheritance_csv(
             .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
         let bytes = render_inheritance_csv_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
+}
+
+#[tauri::command]
+pub async fn export_litigation_cost_csv(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: LitigationCostResultView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("CSV", &["csv"])
+            .set_file_name("litigation-cost-calculation.csv")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_litigation_cost_csv_bytes(&view)?;
         std::fs::write(&path, bytes)?;
         Ok(Some(path.to_string_lossy().into_owned()))
     })
@@ -180,6 +212,71 @@ pub fn render_inheritance_csv_bytes(view: &InheritanceResultView) -> Result<Vec<
     wtr.write_record(["사망일", deceased_cell.as_str()])?;
     let data_version_cell = escape_csv_cell(view.data_version.as_str()).into_owned();
     wtr.write_record(["데이터 버전", data_version_cell.as_str()])?;
+    let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
+    wtr.write_record(["계산 시각", computed_cell.as_str()])?;
+    let disclaimer_cell = escape_csv_cell(disclaimer_text(Some(&view.disclaimer))).into_owned();
+    wtr.write_record(["면책 고지", disclaimer_cell.as_str()])?;
+
+    let inner = wtr
+        .into_inner()
+        .map_err(|e| Error::Other(format!("CSV 마무리 실패: {e}")))?;
+
+    let mut out = Vec::with_capacity(inner.len() + 3);
+    out.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+    out.extend_from_slice(&inner);
+    Ok(out)
+}
+
+pub fn render_litigation_cost_csv_bytes(view: &LitigationCostResultView) -> Result<Vec<u8>, Error> {
+    let mut wtr = csv::WriterBuilder::new()
+        .delimiter(b',')
+        .flexible(true)
+        .from_writer(vec![]);
+
+    wtr.write_record(["항목", "금액(원)", "산식", "데이터 버전"])?;
+    let rows = [
+        ("인지대", &view.stamp_duty),
+        ("송달료", &view.delivery_fee),
+        ("변호사보수", &view.lawyer_fee),
+    ];
+    for (label, component) in rows {
+        let amount_cell = escape_csv_cell(&format_currency(component.amount)).into_owned();
+        let formula_cell = escape_csv_cell(component.formula_text.as_str()).into_owned();
+        let version_cell = escape_csv_cell(component.data_version.as_str()).into_owned();
+        wtr.write_record([
+            label,
+            amount_cell.as_str(),
+            formula_cell.as_str(),
+            version_cell.as_str(),
+        ])?;
+    }
+    let total_cell = escape_csv_cell(&format_currency(view.total_amount)).into_owned();
+    wtr.write_record(["합계", total_cell.as_str(), "", ""])?;
+
+    if let Some(distribution) = &view.distribution {
+        wtr.write_record([""])?;
+        wtr.write_record(["분배 방식", distribution.mode.as_str()])?;
+        wtr.write_record([
+            "분배 대상 합계",
+            &format_currency(distribution.total_won as f64),
+        ])?;
+        wtr.write_record(["당사자", "분배액(원)"])?;
+        for (index, amount) in distribution.per_party.iter().enumerate() {
+            let label = format!("당사자 {}", index + 1);
+            let amount_cell = escape_csv_cell(&format_currency(*amount as f64)).into_owned();
+            wtr.write_record([label.as_str(), amount_cell.as_str()])?;
+        }
+        wtr.write_record(["잔여원", &distribution.remainder.to_string()])?;
+    }
+
+    let versions = view
+        .data_versions
+        .iter()
+        .map(|(key, value)| format!("{key}: {value}"))
+        .collect::<Vec<_>>()
+        .join(" / ");
+    let versions_cell = escape_csv_cell(&versions).into_owned();
+    wtr.write_record(["데이터 버전", versions_cell.as_str()])?;
     let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
     wtr.write_record(["계산 시각", computed_cell.as_str()])?;
     let disclaimer_cell = escape_csv_cell(disclaimer_text(Some(&view.disclaimer))).into_owned();

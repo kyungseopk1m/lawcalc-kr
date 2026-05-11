@@ -6,8 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-11
+
 ### Added
 
+- 소송비용 통합 계산 탭을 추가했습니다. 인지대, 송달료, 변호사보수 engine 을 한 화면에서 호출하고 합계, 한국어 산식, dataset version, KLAC warning, 면책 고지, 균등/소가비례 분배표를 표시합니다. 계산 결과는 PDF, CSV, 클립보드, `.lcalc` 로 내보낼 수 있습니다.
+- 소송비용 분배 모듈을 추가했습니다. `divideEqually(totalWon, partyCount)` 와 `divideProportionally(totalWon, partyValuesWon)` 은 원 단위 정수 검증 후 floor 배정 + 잔여원 선순위 배정 정책을 사용합니다.
+- `computeLitigationCost(input, deps?)` 통합 engine 을 추가했습니다. `computeStampDuty` / `computeDeliveryFee` / `computeLawyerFee` 를 같은 `computedAt` 으로 호출하고 `dataVersions["stamp-duty" | "delivery" | "lawyer-fee"]`, `STANDARD_DISCLAIMER`, 선택 분배표를 포함한 `LitigationCostResult` 를 반환합니다.
+- `.lcalc` v3 envelope 에 `litigation-cost@1` capability 를 추가했습니다. 소송비용 파일은 세 sub-domain dataVersion 을 envelope-level 로 저장하고 renderer/Rust shell 모두 면책 고지를 강제합니다.
+- `docs/LEGAL_REFERENCES.md` 에 소송비용 v0.3.0 근거를 추가했습니다. 「민사소송 등 인지법」, 「송달료규칙」, 「재일 87-4」 별표 1, 「변호사보수의 소송비용 산입에 관한 규칙」, 「사건별 부호문자의 부여에 관한 예규」, 대법원 2017마6274 / 2021마7301, KLAC 보수 기준을 현재 지원 범위와 연결했습니다.
 - 변호사보수 (`lawyer-fee`) 엔진과 데이터셋을 도입했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 별표 8 구간 (300만/2,000만/5,000만/1억/1.5억/2억/5억 + 5억 초과) · 제3조 ②항 (가압류·가처분 ×0.5, 변론·심문기일 시 ×1.0) · 제5조 (무변론·자백·이행권고결정 ×0.5) · 제6조 (재량 감액 무한 / 증액 ×1.5 cap) 와 KLAC (대한법률구조공단 ×0.42) 을 wire-up 했습니다. 데이터셋은 `data/lawyer-fee/v1.json` 을 single source 로 사용하고 `loadLawyerFeeDataset` / `lawyerFeeDatasetVersionTag` / `getLawyerFeeBracket` / `computeLawyerFee(input, deps?)` 를 공개하며, 누적 (compound) 적용 + clamp [0.0, 1.5] (제6조 ②항 cap) 와 KLAC 적용 사건 범위 비차단 경고를 포함합니다. 항소심·상고심은 제3조 ①·③항 정합 `perInstanceIndependent` 패턴 — caller 가 불복 범위를 `caseValue` 로 명시 입력합니다.
 - 송달료 (`delivery`) 엔진과 데이터셋을 도입했습니다. 「송달료규칙」 (대법원규칙 제2921호) 의 회당 단가 + 「송달료규칙의 시행에 따른 업무처리요령 (재일 87-4)」 별표 1 의 사건구분별 송달 횟수 매트릭스를 wire-up 했으며, 시기별 단가 4 슬라이스 (2019-05-01 / 2020-07-01 / 2021-09-01 / 2025-06-01) 와 사건구분 12 종 verified 매트릭스 + 지급명령 unverified entry 를 보존합니다. 데이터셋은 `data/delivery/v1.json` 을 single source 로 사용하고 `loadDeliveryDataset` / `deliveryDatasetVersionTag` / `getDeliveryCount` / `getDeliveryUnitPriceAt` / `computeDeliveryFee(input, deps?)` 를 공개하며, `filingDate` 기준 시기별 단가 lookup 과 입력 override 모두 지원합니다.
 - 인지대 (`stamp-duty`) 엔진과 데이터셋을 도입했습니다. 「민사소송 등 인지법」 제2조 (4 구간 누진표 + 1,000원 floor + 100원 절사) · 제3조 (항소 ×1.5 / 상고 ×2.0) · 제7조 (지급명령 ×0.1 / 화해 ×0.2) · 제16조 (전자소송 ×0.9) 를 wire-up 했으며, 재심 (제8조) 은 심급별 동일 산식으로 처리합니다. 데이터셋은 `data/stamp-duty/v1.json` 을 single source 로 사용하고 `loadStampDutyDataset` / `stampDutyVersionTag` / `getStampDutyBracket` / `applyStampDutyRounding` / `computeStampDuty(input, deps?)` 를 공개하며, deps 를 통한 외부 데이터셋 주입으로 시기별 슬라이스 확장과 결정성을 보장합니다.
@@ -155,7 +162,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.5
 [0.2.4]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.4
 [0.2.3]: https://github.com/kyungseopk1m/lawcalc-kr/releases/tag/v0.2.3

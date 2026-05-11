@@ -14,8 +14,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::pdf::export_pdf,
             commands::pdf::export_inheritance_pdf,
+            commands::pdf::export_litigation_cost_pdf,
             commands::csv::export_csv,
             commands::csv::export_inheritance_csv,
+            commands::csv::export_litigation_cost_csv,
             commands::lcalc::save_lcalc,
             commands::lcalc::load_lcalc,
             commands::clipboard::copy_to_clipboard,
