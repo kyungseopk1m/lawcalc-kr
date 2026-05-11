@@ -103,7 +103,7 @@ function isFiniteNumber(value: unknown): value is number {
 
 function requireString(value: unknown, field: string) {
   if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`.lcalc 파일의 ${field} 필드가 올바르지 않습니다.`);
+    throw new Error(`.lcalc 파일의 ${field} 필드는 비어 있지 않은 문자열이어야 합니다.`);
   }
 
   return value;
@@ -131,7 +131,7 @@ function optionalBoolean(record: Record<string, unknown>, key: string, field: st
     return undefined;
   }
   if (typeof value !== "boolean") {
-    throw new Error(`.lcalc 파일의 ${field} 필드가 올바르지 않습니다.`);
+    throw new Error(`.lcalc 파일의 ${field} 필드는 true 또는 false 여야 합니다.`);
   }
   return value;
 }
@@ -142,7 +142,7 @@ function unsupportedCapabilityMessage(capabilityId: string) {
 
 function requireRecord(value: unknown, field: string) {
   if (!isRecord(value)) {
-    throw new Error(`.lcalc 파일의 ${field} 필드가 올바르지 않습니다.`);
+    throw new Error(`.lcalc 파일의 ${field} 필드는 객체여야 합니다.`);
   }
 
   return value;
@@ -155,10 +155,12 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
   const representatives = record.representatives;
 
   if (name !== undefined && typeof name !== "string") {
-    throw new Error(`.lcalc 파일의 ${field}.name 필드가 올바르지 않습니다.`);
+    throw new Error(`.lcalc 파일의 ${field}.name 필드는 문자열이어야 합니다.`);
   }
   if (typeof deceasedBeforeOpening !== "boolean") {
-    throw new Error(`.lcalc 파일의 ${field}.deceasedBeforeOpening 필드가 올바르지 않습니다.`);
+    throw new Error(
+      `.lcalc 파일의 ${field}.deceasedBeforeOpening 필드는 true 또는 false 여야 합니다.`,
+    );
   }
 
   const node: HeirNode = {
@@ -168,7 +170,7 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
 
   if (representatives !== undefined) {
     if (!Array.isArray(representatives)) {
-      throw new Error(`.lcalc 파일의 ${field}.representatives 필드가 올바르지 않습니다.`);
+      throw new Error(`.lcalc 파일의 ${field}.representatives 필드는 배열이어야 합니다.`);
     }
     node.representatives = representatives.map((representative, index) =>
       parseHeirNode(representative, `${field}.representatives[${index}]`),
@@ -183,7 +185,7 @@ function parseHeirGroup(value: unknown, field: string): HeirNode[] | undefined {
     return undefined;
   }
   if (!Array.isArray(value)) {
-    throw new Error(`.lcalc 파일의 ${field} 필드가 올바르지 않습니다.`);
+    throw new Error(`.lcalc 파일의 ${field} 필드는 배열이어야 합니다.`);
   }
   return value.map((heir, index) => parseHeirNode(heir, `${field}[${index}]`));
 }
@@ -200,7 +202,7 @@ function parseInterestPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInte
   const payload = requireRecord(file.payload, "payload");
 
   if (!isRecord(payload.result)) {
-    throw new Error(".lcalc 파일의 payload.result 필드가 올바르지 않습니다.");
+    throw new Error(".lcalc 파일의 payload.result 필드는 객체여야 합니다.");
   }
 
   const note = requireBoundedNote(payload.note, "payload.note");
@@ -223,7 +225,7 @@ function parseInheritanceResult(value: unknown): InheritanceResult {
   const shares = result.shares;
 
   if (!Array.isArray(shares)) {
-    throw new Error(".lcalc 파일의 payload.result.shares 필드가 올바르지 않습니다.");
+    throw new Error(".lcalc 파일의 payload.result.shares 필드는 배열이어야 합니다.");
   }
 
   return {
@@ -284,10 +286,12 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
 
   if (spouseRecord !== undefined) {
     if (spouseRecord.name !== undefined && typeof spouseRecord.name !== "string") {
-      throw new Error(".lcalc 파일의 payload.input.spouse.name 필드가 올바르지 않습니다.");
+      throw new Error(".lcalc 파일의 payload.input.spouse.name 필드는 문자열이어야 합니다.");
     }
     if (typeof spouseRecord.alive !== "boolean") {
-      throw new Error(".lcalc 파일의 payload.input.spouse.alive 필드가 올바르지 않습니다.");
+      throw new Error(
+        ".lcalc 파일의 payload.input.spouse.alive 필드는 true 또는 false 여야 합니다.",
+      );
     }
   }
 
@@ -415,7 +419,7 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
 
   const discounts = lawyerRecord.discounts;
   if (!Array.isArray(discounts)) {
-    throw new Error(".lcalc 파일의 payload.input.lawyerFee.discounts 필드가 올바르지 않습니다.");
+    throw new Error(".lcalc 파일의 payload.input.lawyerFee.discounts 필드는 배열이어야 합니다.");
   }
   const lawyerFee: LitigationCostInput["lawyerFee"] = {
     caseValue: requireNonNegativeNumber(
@@ -467,7 +471,7 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
   if (mode === "proportional") {
     if (!Array.isArray(distributionRecord.partyValuesWon)) {
       throw new Error(
-        ".lcalc 파일의 payload.input.distribution.partyValuesWon 필드가 올바르지 않습니다.",
+        ".lcalc 파일의 payload.input.distribution.partyValuesWon 필드는 배열이어야 합니다.",
       );
     }
     return {
@@ -483,13 +487,17 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
     };
   }
 
-  throw new Error(".lcalc 파일의 payload.input.distribution.mode 필드가 올바르지 않습니다.");
+  throw new Error(
+    '.lcalc 파일의 payload.input.distribution.mode 필드는 "equal" 또는 "proportional" 이어야 합니다.',
+  );
 }
 
 function requireLitigationCostDataVersions(dataVersions: Record<string, string>): void {
   for (const key of ["stamp-duty", "delivery", "lawyer-fee"] as const) {
     if (typeof dataVersions[key] !== "string" || dataVersions[key].length === 0) {
-      throw new Error(`.lcalc 파일의 dataVersions["${key}"] 필드가 올바르지 않습니다.`);
+      throw new Error(
+        `.lcalc 파일의 dataVersions["${key}"] 필드는 비어 있지 않은 문자열이어야 합니다.`,
+      );
     }
   }
 }
@@ -548,7 +556,9 @@ function validateEnvelopeFeatures(value: unknown): string[] {
 
   return value.map((capabilityId, index) => {
     if (typeof capabilityId !== "string" || !CAPABILITY_ID_PATTERN.test(capabilityId)) {
-      throw new Error(`.lcalc 파일의 envelopeFeatures[${index}] 필드가 올바르지 않습니다.`);
+      throw new Error(
+        `.lcalc 파일의 envelopeFeatures[${index}] 필드는 capability id 형식이어야 합니다 (예: "interest@1").`,
+      );
     }
 
     if (!SUPPORTED_LCALC_CAPABILITIES.has(capabilityId)) {
@@ -561,13 +571,15 @@ function validateEnvelopeFeatures(value: unknown): string[] {
 
 function validateDataVersions(value: unknown): Record<string, string> {
   if (!isRecord(value)) {
-    throw new Error(".lcalc 파일의 dataVersions 필드가 올바르지 않습니다.");
+    throw new Error(".lcalc 파일의 dataVersions 필드는 객체여야 합니다.");
   }
 
   const result: Record<string, string> = {};
   for (const [domain, version] of Object.entries(value)) {
     if (typeof version !== "string" || version.length === 0) {
-      throw new Error(`.lcalc 파일의 dataVersions["${domain}"] 필드가 올바르지 않습니다.`);
+      throw new Error(
+        `.lcalc 파일의 dataVersions["${domain}"] 필드는 비어 있지 않은 문자열이어야 합니다.`,
+      );
     }
     result[domain] = version;
   }
@@ -613,15 +625,17 @@ function parseOptions(value: unknown): CalcOptions {
   const rounding = value.rounding;
 
   if (typeof mode !== "string" || !optionModes.has(mode as CalcOptions["mode"])) {
-    throw new Error(".lcalc 파일의 options.mode 필드가 올바르지 않습니다.");
+    throw new Error('.lcalc 파일의 options.mode 필드는 "period" 또는 "totalDays" 여야 합니다.');
   }
 
   if (typeof leapYear !== "string" || !leapYearModes.has(leapYear as CalcOptions["leapYear"])) {
-    throw new Error(".lcalc 파일의 options.leapYear 필드가 올바르지 않습니다.");
+    throw new Error(
+      '.lcalc 파일의 options.leapYear 필드는 "fixed365" 또는 "actual" 이어야 합니다.',
+    );
   }
 
   if (typeof includeFirstDay !== "boolean") {
-    throw new Error(".lcalc 파일의 options.includeFirstDay 필드가 올바르지 않습니다.");
+    throw new Error(".lcalc 파일의 options.includeFirstDay 필드는 true 또는 false 여야 합니다.");
   }
 
   if (
@@ -629,7 +643,9 @@ function parseOptions(value: unknown): CalcOptions {
     (typeof rounding !== "string" ||
       !roundingModes.has(rounding as NonNullable<CalcOptions["rounding"]>))
   ) {
-    throw new Error(".lcalc 파일의 options.rounding 필드가 올바르지 않습니다.");
+    throw new Error(
+      '.lcalc 파일의 options.rounding 필드는 "floor", "ceil", "round" 중 하나여야 합니다.',
+    );
   }
 
   return {
@@ -648,12 +664,12 @@ function parseSegments(value: unknown): RateSegment[] | undefined {
   }
 
   if (!Array.isArray(value)) {
-    throw new Error(".lcalc 파일의 segments 필드가 올바르지 않습니다.");
+    throw new Error(".lcalc 파일의 segments 필드는 배열이어야 합니다.");
   }
 
   return value.map((segment, index) => {
     if (!isRecord(segment)) {
-      throw new Error(`.lcalc 파일의 segments[${index}] 필드가 올바르지 않습니다.`);
+      throw new Error(`.lcalc 파일의 segments[${index}] 필드는 객체여야 합니다.`);
     }
 
     return {
@@ -699,7 +715,9 @@ export function parseLoadedLcalcInput(file: LcalcFile): ParsedLcalcInput {
   }
 
   if (!isRecord(legalRatePreset) || !Object.hasOwn(legalRatePreset, "customRate")) {
-    throw new Error(".lcalc 파일의 legalRatePreset 필드가 올바르지 않습니다.");
+    throw new Error(
+      '.lcalc 파일의 legalRatePreset 필드는 "civil", "commercial", "promotion" 중 하나이거나 customRate 를 가진 객체여야 합니다.',
+    );
   }
 
   const customRate = requirePositiveNumber(

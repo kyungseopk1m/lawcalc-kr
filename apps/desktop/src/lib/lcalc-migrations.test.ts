@@ -175,7 +175,9 @@ describe("validateLcalcEnvelope", () => {
         dataVersions: { interest: "legal-rates/v1.0.0" },
         payload: sampleV3.payload,
       }),
-    ).toThrow(".lcalc 파일의 envelopeFeatures[0] 필드가 올바르지 않습니다.");
+    ).toThrow(
+      '.lcalc 파일의 envelopeFeatures[0] 필드는 capability id 형식이어야 합니다 (예: "interest@1").',
+    );
   });
 
   it("rejects an empty envelopeFeatures array", () => {
@@ -196,7 +198,7 @@ describe("validateLcalcEnvelope", () => {
         ...sampleV3,
         dataVersions: null as unknown as Record<string, string>,
       }),
-    ).toThrow(".lcalc 파일의 dataVersions 필드가 올바르지 않습니다.");
+    ).toThrow(".lcalc 파일의 dataVersions 필드는 객체여야 합니다.");
   });
 
   it("rejects a v3 envelope whose dataVersions entry is a non-string", () => {
@@ -205,7 +207,7 @@ describe("validateLcalcEnvelope", () => {
         ...sampleV3,
         dataVersions: { interest: 1 as unknown as string },
       }),
-    ).toThrow('.lcalc 파일의 dataVersions["interest"] 필드가 올바르지 않습니다.');
+    ).toThrow('.lcalc 파일의 dataVersions["interest"] 필드는 비어 있지 않은 문자열이어야 합니다.');
   });
 
   it("rejects interest kind with inheritance-shaped payload", () => {
@@ -458,7 +460,7 @@ describe("validateLcalcEnvelope", () => {
     };
 
     expect(() => validateLcalcEnvelope(litigationFile)).toThrow(
-      '.lcalc 파일의 dataVersions["lawyer-fee"] 필드가 올바르지 않습니다.',
+      '.lcalc 파일의 dataVersions["lawyer-fee"] 필드는 비어 있지 않은 문자열이어야 합니다.',
     );
   });
 });
