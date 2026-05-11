@@ -75,10 +75,14 @@ function parseNonNegativeInteger(value: string, fallback: number): number {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
-function parseProportionalValues(value: string): number[] {
-  return Array.from(value.matchAll(/\d{1,3}(?:,\d{3})+|\d+/g), ([match]) =>
-    Number(match.replaceAll(",", "")),
-  ).filter((n) => Number.isInteger(n) && n > 0);
+const PROPORTIONAL_VALUE_TOKEN = /^\d{1,3}(?:,\d{3})+$|^\d+$/;
+
+export function parseProportionalValues(value: string): number[] {
+  return value
+    .split(/(?:,\s+|\s+|\/)+/)
+    .filter((part) => PROPORTIONAL_VALUE_TOKEN.test(part))
+    .map((part) => Number(part.replaceAll(",", "")))
+    .filter((n) => Number.isInteger(n) && n > 0);
 }
 
 function distributionLabel(mode: DistributionMode) {
