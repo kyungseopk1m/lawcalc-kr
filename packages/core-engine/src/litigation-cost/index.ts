@@ -67,3 +67,25 @@ export {
 export type { ComputeStampDutyDeps } from "./compute-stamp-duty";
 
 export { applyStampDutyRounding, computeStampDuty } from "./compute-stamp-duty";
+
+export type {
+  DeliveryCountMatrixEntry,
+  DeliveryDataset,
+  DeliveryHistoryNote,
+  DeliveryMatrixDelegation,
+  DeliveryRuleChange,
+  DeliverySourceLaw,
+  DeliveryUnitPriceHistoryEntry,
+  DeliveryUnverifiedEntry,
+} from "./delivery-dataset";
+
+export {
+  deliveryDatasetVersionTag,
+  getDeliveryCount,
+  getDeliveryUnitPriceAt,
+  loadDeliveryDataset,
+} from "./delivery-dataset";
+
+export type { ComputeDeliveryFeeDeps } from "./compute-delivery-fee";
+
+export { computeDeliveryFee } from "./compute-delivery-fee";

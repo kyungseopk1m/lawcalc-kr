@@ -124,8 +124,10 @@ export interface DeliveryFeeInput {
   creditorCount?: number;
   /** range 분기 전용. 항고/재항고의 실제 송달 횟수 직접 입력. */
   customCount?: number;
-  /** 회당 단가 override. 미지정 시 dataset 의 현행 단가 사용. */
+  /** 회당 단가 override. 미지정 시 dataset 의 시기별 슬라이스 (filingDate 기준) 또는 현행 단가 사용. */
   perDeliveryUnitPriceWon?: number;
+  /** 접수일 — 시기별 단가 슬라이스 분기용 (PR 3 wire-up). 미지정 시 dataset 의 현행 단가 사용. */
+  filingDate?: IsoDate;
 }
 
 export interface DeliveryFeeResult {

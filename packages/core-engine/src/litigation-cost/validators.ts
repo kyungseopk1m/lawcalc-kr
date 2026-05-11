@@ -113,6 +113,9 @@ export function validateDeliveryFeeInput(input: DeliveryFeeInput): void {
   ) {
     fail(prefix, `회당 단가가 유효하지 않습니다 (입력: ${String(input.perDeliveryUnitPriceWon)})`);
   }
+  if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
+    fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
+  }
 }
 
 // ===== Lawyer Fee =====
