@@ -576,7 +576,7 @@ export function InheritanceCalculator() {
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">배우자</CardTitle>
             <p className="text-xs text-muted-foreground">
-              1·2순위와 동순위 공동 (민법 1003조). 배우자는 한 명 이상 입력할 수 없습니다.
+              1·2순위와 동순위 공동 (민법 1003조). 배우자는 한 명만 입력할 수 있습니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
