@@ -57,7 +57,7 @@ export function periodDaysSum(
  *   - leapYear="fixed365": denom = 365
  *   - leapYear="actual":   윤일(2/29)이 [from, to]에 포함되면 366, 아니면 365
  *
- * mode="period" (법원 매뉴얼 기간식):
+ * mode="period" (외부 reference 매뉴얼 기간식):
  *   1년 단위로 분할. 풀 1년 단위는 principal × rate (분모/분모 = 1).
  *   마지막 1년 미만 구간은 principal × rate × days / denom.
  *   - leapYear="fixed365": denom = 365

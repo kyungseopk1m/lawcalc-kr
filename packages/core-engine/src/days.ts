@@ -39,7 +39,7 @@ function formatIsoDateUtc(ms: number): IsoDate {
 /**
  * 두 날짜 사이의 일수를 옵션에 따라 계산한다.
  *
- * 규약 (법원 매뉴얼/실무 기준):
+ * 규약 (외부 reference 매뉴얼/실무 기준):
  * - `to` 는 항상 산입한다 (말일 산입).
  * - `includeFirstDay` 가 false 면 시작일 1일을 차감한다 (민법 제157조 초일 불산입 원칙).
  * - 같은 날짜 + 초일 산입 → 1일, 같은 날짜 + 초일 불산입 → 0일.
@@ -78,7 +78,7 @@ export function daysInYear(year: number, leapYear: CalcOptions["leapYear"]): num
 
 /**
  * `from` 부터 `to` (둘 다 포함)까지에 윤일(2/29)이 포함되어 있는지 검사한다.
- * 기간식 분모 결정에 사용된다 (법원 매뉴얼: 1년 사이에 윤달 있으면 366).
+ * 기간식 분모 결정에 사용된다 (외부 reference 매뉴얼: 1년 사이에 윤달 있으면 366).
  */
 export function containsLeapDay(from: IsoDate, to: IsoDate): boolean {
   const a = parseParts(from);

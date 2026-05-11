@@ -5,7 +5,7 @@ export type RoundingMode = NonNullable<CalcOptions["rounding"]>;
 /**
  * 원 단위 끝수 처리. v2 도입.
  *
- * 매뉴얼(Calculator.hwp) 매핑:
+ * 매뉴얼 매핑 (외부 reference 매뉴얼, private):
  * - "floor" → 절사 (채권자 보수, default)
  * - "ceil"  → 절상 (채무자 보수)
  * - "round" → 사사오입 (`Math.round` 의 half-away-from-zero, JS 표준)

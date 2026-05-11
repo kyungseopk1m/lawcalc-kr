@@ -141,10 +141,10 @@ const result = calculateInheritance(input);
 
 | 필드              | 값                                                           | 의미                                                                 |
 | ----------------- | ------------------------------------------------------------ | -------------------------------------------------------------------- |
-| `mode`            | `"period"` \| `"totalDays"`                                  | 기간식 / 총일수식 (법원 매뉴얼 두 정의)                              |
+| `mode`            | `"period"` \| `"totalDays"`                                  | 기간식 / 총일수식 (외부 reference 매뉴얼 두 정의)                    |
 | `leapYear`        | `"fixed365"` \| `"actual"`                                   | 분모 결정 — 365 고정 vs 윤일/윤달 포함 시 366                        |
 | `includeFirstDay` | `boolean`                                                    | 초일 산입 여부. 민법 제157조 원칙은 불산입 (`false`)                 |
-| `rounding`        | `"floor"` \| `"ceil"` \| `"round"` (선택, default `"floor"`) | 원 단위 끝수 처리 — 절사 / 절상 / 사사오입 (`Calculator.hwp` 매뉴얼) |
+| `rounding`        | `"floor"` \| `"ceil"` \| `"round"` (선택, default `"floor"`) | 원 단위 끝수 처리 — 절사 / 절상 / 사사오입 (외부 reference 매뉴얼)   |
 
 `rounding` 미지정 시 `"floor"` 가 적용되어 v1 호환을 유지한다 — `.lcalc` v1 파일,
 기존 골든, 외부 호출자가 무변경 통과한다.
@@ -240,11 +240,11 @@ packages/core-engine/
 
 - 이자: `tests/golden/case-XXX.json` 에 입력 + 기대 출력으로 동결.
 - `case-001..006` 은 엔진 내부 회귀 (`source: engine-internal-w2`).
-- `case-007` 은 법원 매뉴얼 (`Interest.hwp`) 예시 직접 인용 (`mode="period"`, `leapYear="actual"`,
+- `case-007` 은 외부 reference 매뉴얼 (private) 예시 직접 인용 (`mode="period"`, `leapYear="actual"`,
   2015-05-01 시작 → 1년 사이 2016-02-29 포함 → 분모 366).
 - `case-009 / case-010` 은 후속 회귀 케이스 (반올림 v2 / TIER-A #2 윤년 만기 등).
-- `case-008-input.json` (golden-pending) 은 외부 캡처 대기용 입력 시트. 한국 IP / VPN 으로 ejpc.scourt.go.kr
-  결과를 받거나 Windows VM 에서 `CourtCalcExSetup.msi` 결과를 받으면 골든화한다.
+- `case-008-input.json` (golden-pending) 은 외부 캡처 대기용 입력 시트. 한국 IP / VPN 으로 외부 reference site (private)
+  결과를 받거나 Windows VM 에서 외부 설치자 (private) 결과를 받으면 골든화한다.
 - 상속: `tests/golden/inheritance/case-001..008.json` 에 기본 순위, 배우자, 대습, cutoff, 거부 케이스를 동결한다.
 
 각 도메인 fixture 는 해당 golden runner 의 schema gate 가 누락 / 불일치를 명시 실패로 잡는다.

@@ -48,10 +48,10 @@ const cases: GoldenCase[] = Object.entries(modules)
 /**
  * 골든 테스트는 두 가지 의미를 동시에 갖는다:
  * 1. 회귀 테스트 — 엔진의 의도된 동작을 고정 (`source: engine-internal-w2`)
- * 2. 외부 기준 일치 — 법원 프로그램/매뉴얼 캡처 (`source: ...`)
+ * 2. 외부 기준 일치 — 외부 reference 도구/매뉴얼 캡처 (`source: ...`)
  *
  * W2에서는 1번 위주, 매뉴얼 예시 인용 케이스 1건 포함 (case-007).
- * Windows VM에서 ejpc.scourt.go.kr 캡처 케이스는 후속 W에서 추가하며,
+ * Windows VM에서 외부 reference site 캡처 케이스는 후속 W에서 추가하며,
  * 그때 source 필드를 그대로 갱신해 출처 변화를 추적한다.
  *
  * 주의: tests/golden.test.ts는 vitest.golden.config.ts 로 격리 실행한다 (`pnpm test:golden`).

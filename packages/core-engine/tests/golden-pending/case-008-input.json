@@ -3,11 +3,11 @@
   "id": "case-008",
   "title": "외부 캡처 대기: 민법 5% × 윤년 1년 (totalDays / fixed365)",
   "captureGuide": {
-    "purpose": "engine vs 법원 손해배상 등 계산프로그램 결과 1차 cross-check (case-007 매뉴얼 인용 외 첫 외부 출처).",
-    "blockedFrom": "macOS Darwin (한국 외부 IP) 환경에서 ejpc.scourt.go.kr HTTPS timeout / HTTP web firewall 차단. Windows VM (CourtCalcExSetup.msi) 별도 셋업 필요.",
+    "purpose": "engine vs 외부 reference 도구 결과 1차 cross-check (case-007 매뉴얼 인용 외 첫 외부 출처).",
+    "blockedFrom": "macOS Darwin (한국 외부 IP) 환경에서 외부 reference site HTTPS timeout / HTTP web firewall 차단. Windows VM (외부 설치자, private) 별도 셋업 필요.",
     "options": [
-      "(A) 한국 IP / VPN 경유로 http://ejpc.scourt.go.kr/ 접속 → 입력 그대로 입력 → 결과 캡처",
-      "(B) Windows 11 VM (UTM/Parallels) + CourtCalcExSetup.msi 실행 → 결과 캡처",
+      "(A) 한국 IP / VPN 경유로 외부 reference site (private) 접속 → 입력 그대로 입력 → 결과 캡처",
+      "(B) Windows 11 VM (UTM/Parallels) + 외부 설치자 (private) 실행 → 결과 캡처",
       "(C) 모바일 핫스팟 + 한국 IP 우회"
     ],
     "captureFields": [
@@ -20,11 +20,11 @@
     "afterCapture": [
       "본 파일을 tests/golden/case-008.json 으로 이동",
       "captureGuide 블록 제거, expected 블록 추가 (case-001 형식)",
-      "source 를 'ejpc.scourt.go.kr capture (YYYY-MM-DD)' 또는 'Windows VM CourtCalcExSetup.msi capture (YYYY-MM-DD)' 로 명시",
+      "source 를 '외부 reference site capture (YYYY-MM-DD)' 또는 'Windows VM 외부 설치자 capture (YYYY-MM-DD)' 로 명시",
       "options.rounding 은 캡처한 옵션과 일치하면 명시, 매뉴얼 default(절사)면 생략 가능"
     ]
   },
-  "source": "pending external capture (ejpc.scourt.go.kr 또는 Windows VM)",
+  "source": "pending external capture (외부 reference site 또는 Windows VM)",
   "notes": "윤년(2024) 1년 전 구간 + totalDays + fixed365 분모 365 → 분모 365 vs 366 정의 cross-check 가능 (leapYear=actual 시 366 으로 갈리는 분기는 case-004 가 이미 회귀 고정).",
   "input": {
     "principal": 50000000,

@@ -1,8 +1,7 @@
 /**
  * Public domain types for the lawcalc-kr inheritance (상속분 간이) calculation engine.
  *
- * 근거: 대법원 손해배상 등 계산프로그램 매뉴얼 (Inheritance.hwp).
- * 공식 사이트: http://ejpc.scourt.go.kr/
+ * 근거: 외부 reference 매뉴얼 (private). 적용 조항을 직접 명시한다.
  * 적용 조항: 민법 제1000조, 제1001조, 제1003조, 제1009조, 제1010조.
  *
  * 적용 시점: 1991. 1. 1. 이후 피상속인 사망 케이스만 (1990 개정민법 시행).

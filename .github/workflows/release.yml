@@ -78,7 +78,7 @@ jobs:
             - 원금, 기간, 법정이율 프리셋, 초일 산입, 윤년 처리 옵션 기반 이자 계산
             - 민법·상법·소송촉진 등에 관한 특례법 이율 변경 이력 반영
             - 구간별 일수, 이율, 공식, 이자와 총액 표시
-            - 상속분 간이 계산 탭 (`Inheritance.hwp` 매뉴얼 기반, 8 골든 케이스)
+            - 상속분 간이 계산 탭 (외부 reference 매뉴얼 (private) 기반, 8 골든 케이스)
             - `.lcalc` v2 envelope (`{ schemaVersion: "2", kind, payload }`) 로 다중 도메인 저장·로드. v1 (interest 단일) 파일은 자동 마이그레이션
             - PDF(A4, 한글 Pretendard 폰트 임베드) / CSV(UTF-8 BOM, Excel 한글 호환, formula injection 방어) / 클립보드 텍스트 내보내기
             - `.lcalc` 1 MiB 상한 + 비고 10,000 자 상한

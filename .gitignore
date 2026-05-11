@@ -46,3 +46,6 @@ apps/*/src-tauri/.taurignore
 
 # Local backlog / private design notes (mirrored in for-claude/)
 docs/plans/
+
+# Internal spec/plan docs (not part of OSS distribution)
+docs/INTEREST_FORMULAS.md

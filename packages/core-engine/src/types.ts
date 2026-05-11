@@ -1,8 +1,7 @@
 /**
  * Public domain types for the lawcalc-kr interest calculation engine.
  *
- * 근거: 대법원 손해배상 등 계산프로그램 매뉴얼 (Interest.hwp / Calculator.hwp)
- * 공식 사이트: http://ejpc.scourt.go.kr/
+ * 근거: 외부 reference 매뉴얼 (private). 적용 조항을 직접 명시한다.
  * 적용 조항: 민법 제379조 / 상법 제54조 / 소송촉진 등에 관한 특례법 제3조
  */
 
@@ -31,7 +30,7 @@ export interface RateSegment {
 
 export interface CalcOptions {
   /**
-   * - "period": 기간식 — 월/일 단위로 분할 후 합산 (법원 매뉴얼 기본)
+   * - "period": 기간식 — 월/일 단위로 분할 후 합산 (통상 매뉴얼 기본)
    * - "totalDays": 총일수식 — 전체 일수에 대해 한 번에 계산
    */
   mode: "period" | "totalDays";
@@ -48,7 +47,7 @@ export interface CalcOptions {
    * - "ceil":  절상 (채무자 보수)
    * - "round": 사사오입
    *
-   * 매뉴얼 매핑 — Calculator.hwp 의 끝수처리: 절사 / 절상 / 사사오입.
+   * 매뉴얼 매핑 — 외부 reference 매뉴얼의 끝수처리: 절사 / 절상 / 사사오입.
    */
   rounding?: "floor" | "ceil" | "round";
 }

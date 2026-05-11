@@ -66,7 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- 상속분 간이 계산 탭을 추가했습니다. `Inheritance.hwp` 매뉴얼을 근거로 한 8 골든 케이스 + 단위 테스트가 포함됩니다.
+- 상속분 간이 계산 탭을 추가했습니다. 외부 reference 매뉴얼 (private) 을 근거로 한 8 골든 케이스 + 단위 테스트가 포함됩니다.
 - `.lcalc` 파일 형식을 v2 envelope (`{ schemaVersion: "2", kind: "interest" | "inheritance", payload }`) 로 확장하고, v1 (interest 단일) 파일을 자동으로 v2 로 변환하는 마이그레이션 registry 를 추가했습니다.
 - 면책 고지 단일 source (`STANDARD_DISCLAIMER` from `@lawcalc-kr/core-engine`) 를 도입해 화면 / PDF / CSV / 클립보드 / `.lcalc` 5 surface 에 동일 문구를 적용합니다.
 - 법정이율 dataset 주입 API 를 추가했습니다. `calculateInterest(input, { dataset })` 형태로 호출할 수 있으며, 기본 dataset 은 codegen 으로 `data/legal-rates/v1.json` 단일 출처에서 생성됩니다.
