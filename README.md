@@ -105,7 +105,7 @@ pnpm lint           # ESLint + Prettier
 
 기여 절차·릴리스 워크플로·테스트 정책은 [`CONTRIBUTING.md`](CONTRIBUTING.md) 를 참고해 주세요. 버그 신고와 기능 제안은 [Issues](https://github.com/kyungseopk1m/lawcalc-kr/issues) 에서 받습니다.
 
-## Acknowledgments
+## 헌사
 
 이 프로젝트는 2007년 광주지방법원 정경현 부장판사님이 업무용 계산프로그램(VK.EXE)을 일반에 공개하면서 시작된 흐름 위에 있습니다. 법률 계산 도구를 모두에게 열어 주신 그 결정에 깊은 경의를 표합니다.
 
@@ -113,14 +113,14 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 ## 라이선스
 
-이 프로젝트는 GNU Affero General Public License v3.0 (이상)으로 배포됩니다. 누구나 자유롭게 사용·수정·재배포할 수 있으며, 수정본을 네트워크 서비스로 제공하거나 재배포할 경우 동일 라이선스로 source code 를 공개해야 합니다. 자세한 내용은 [LICENSE](LICENSE) 를 확인하세요.
+이 프로젝트는 GNU Affero General Public License v3.0 (이상)으로 배포됩니다. 누구나 자유롭게 사용·수정·재배포할 수 있으며, 수정본을 네트워크 서비스로 제공하거나 재배포할 경우 동일 라이선스로 소스 코드를 공개해야 합니다. 자세한 내용은 [LICENSE](LICENSE) 를 확인하세요.
 
 상업 라이선스가 필요한 경우 Licensor (kyungseopk1m) 에게 문의해 주세요.
 
 > **사용 예시 / 의무 발동 조건**
 >
-> - 변호사·법무팀이 본인 사무소·기업 내부에서 stand-alone 데스크톱 앱으로 사용 → AGPL 의무 발동 0 (internal use).
-> - 본 코드를 자체 SaaS·웹·다중 사용자 시스템에 통합해 외부에 제공 → 동일 라이선스로 source 공개 강제.
+> - 변호사·법무팀이 본인 사무소·기업 내부에서 독립 실행형 데스크톱 앱으로 사용 → AGPL 의무 발동 0 (내부 사용).
+> - 본 코드를 자체 SaaS·웹·다중 사용자 시스템에 통합해 외부에 제공 → 동일 라이선스로 소스 공개 강제.
 
 ## English
 
