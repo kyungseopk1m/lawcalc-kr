@@ -122,7 +122,7 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
               면책 고지
             </h3>
             <p className="text-muted-foreground">
-              {STANDARD_DISCLAIMER} lawcalc-kr는 법원 공식 프로그램과 무관합니다.
+              {STANDARD_DISCLAIMER} LawCalc Korea는 법원 공식 프로그램과 무관합니다.
             </p>
           </section>
 

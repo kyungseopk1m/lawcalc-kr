@@ -87,7 +87,7 @@ function requireBoundedNote(value: unknown, field: string): string | undefined {
   }
   if (value.length > MAX_NOTE_LENGTH) {
     throw new Error(
-      `.lcalc 파일의 ${field} 필드가 너무 깁니다. 최대 ${MAX_NOTE_LENGTH.toLocaleString("en-US")}자까지 허용됩니다.`,
+      `.lcalc 파일의 ${field} 필드가 너무 깁니다. 최대 ${MAX_NOTE_LENGTH.toLocaleString("ko-KR")}자까지 허용됩니다.`,
     );
   }
   return value;
