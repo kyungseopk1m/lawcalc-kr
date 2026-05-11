@@ -50,6 +50,10 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 
 ### 소송비용 계산
 
+<p align="center">
+  <img src="docs/assets/readme-litigation-cost.png" alt="소송비용 계산 화면" width="820">
+</p>
+
 인지대, 송달료, 변호사보수를 함께 계산하고 합계와 분배표를 확인합니다. 사건구분, 소가, 당사자수, 항소·상고 불복 범위, 전자소송, 지급명령·화해, 변호사보수 감액 옵션, KLAC 기준, 접수일을 입력할 수 있습니다.
 
 결과에는 각 항목의 금액과 한국어 산식, 데이터 버전, KLAC 적용 경고, 균등 또는 소가비례 분배표가 함께 표시됩니다. 자세한 범위와 근거는 [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)의 “Current Litigation-Cost Scope”를 확인해 주세요.
@@ -120,7 +124,7 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 ## English
 
-LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, and simplified inheritance shares.
+LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, simplified inheritance shares, and litigation costs.
 
 The current release focuses on local-only interest, inheritance, and litigation-cost calculations, transparent result traces, versioned data, and reproducible `.lcalc` files on macOS and Windows.
 

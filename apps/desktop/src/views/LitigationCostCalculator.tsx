@@ -76,10 +76,9 @@ function parseNonNegativeInteger(value: string, fallback: number): number {
 }
 
 function parseProportionalValues(value: string): number[] {
-  return value
-    .split(/[,\n]/)
-    .map((part) => Number(part.trim().replaceAll(",", "")))
-    .filter((n) => Number.isInteger(n) && n > 0);
+  return Array.from(value.matchAll(/\d{1,3}(?:,\d{3})+|\d+/g), ([match]) =>
+    Number(match.replaceAll(",", "")),
+  ).filter((n) => Number.isInteger(n) && n > 0);
 }
 
 function distributionLabel(mode: DistributionMode) {
@@ -567,6 +566,7 @@ export function LitigationCostCalculator() {
                 당사자별 소가
                 <textarea
                   className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="예: 10,000,000 / 20,000,000"
                   value={proportionalValuesText}
                   onChange={(e) => setProportionalValuesText(e.target.value)}
                 />
