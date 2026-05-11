@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- 소송비용 산정 도메인 (`litigation-cost`) 의 입력·결과 타입과 검증기를 도입했습니다. 인지대·송달료·변호사보수 3 sub-domain 의 input/result 인터페이스, 사건구분 13 종 enum (민사·가사·행정·보전·지급명령), 변호사보수 감액 옵션 5 variant (`LawyerFeeDiscount`), 감액 누적 적용 helper (`applyLawyerFeeDiscounts`, ×1.5 상한 clamp), KLAC 적용 사건 범위 비차단 경고 (`validateKlacDiscountScope`) 가 포함되며 도메인별 한국어 prefix RangeError 검증기를 제공합니다. 엔진 로직과 데이터셋은 후속 릴리스에서 추가됩니다.
+
 ### Changed
 
 - `.lcalc` 파일 형식을 v3 envelope 로 갱신했습니다. v0.3.0 부터 도메인 추가 시 `schemaVersion` bump 없이 reader 호환성을 확장할 수 있도록 `envelopeFeatures` capability 메타와 `dataVersions` 데이터 슬라이스 맵을 envelope-level 로 도입했습니다. v1 / v2 로 저장된 기존 파일은 reader 의 마이그레이션 체인을 거쳐 자동으로 v3 형식으로 변환됩니다.

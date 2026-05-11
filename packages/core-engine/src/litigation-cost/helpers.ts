@@ -1,0 +1,169 @@
+/**
+ * litigation-cost 도메인의 pure helper 함수.
+ *
+ * 본 PR 1 에서는 engine 미작성 — 본 파일의 함수들은 types.ts 의 const lookup 과
+ * LawyerFeeDiscount 의 multiplier 산정만 담당. PR 2/3/4 의 engine 이 본 helper 들을 import.
+ */
+
+import {
+  CASE_TYPE_META,
+  type CaseType,
+  type CaseTypeMeta,
+  type Domain,
+  type LawyerFeeDiscount,
+} from "./types";
+
+/**
+ * 사건구분 부호 (한글). 예: `civilFirstInstanceCollegial` → `"가합"`.
+ */
+export function caseCode(caseType: CaseType): string {
+  return CASE_TYPE_META[caseType].code;
+}
+
+/**
+ * 사건구분 정본 사건명. 예: `civilFirstInstanceCollegial` → `"민사1심합의사건"`.
+ * 정본 source: 「사건별 부호문자의 부여에 관한 예규」 (재판예규 제1677호).
+ */
+export function caseNameKo(caseType: CaseType): string {
+  return CASE_TYPE_META[caseType].nameKo;
+}
+
+/**
+ * 사건구분이 적용되는 도메인 목록. 예: `paymentOrder` → `["stampDuty", "deliveryFee"]` (보수 적용 외).
+ */
+export function appliedDomains(caseType: CaseType): readonly Domain[] {
+  return CASE_TYPE_META[caseType].appliedDomains;
+}
+
+/**
+ * 사건구분이 민·가사 사건인지 (KLAC 적용 사건 범위 검증용).
+ *
+ * KLAC 정본 source ("민·가사 사건 등") 기준 — 행정/보전/지급명령 default 미적용.
+ */
+export function isCivilOrFamily(caseType: CaseType): boolean {
+  return CASE_TYPE_META[caseType].isCivilOrFamily;
+}
+
+/**
+ * 사건구분 전체 lookup. UI dropdown / select 등의 enumeration 용.
+ */
+export function listCaseTypes(): ReadonlyArray<{
+  caseType: CaseType;
+  meta: CaseTypeMeta;
+}> {
+  return (Object.keys(CASE_TYPE_META) as CaseType[]).map((caseType) => ({
+    caseType,
+    meta: CASE_TYPE_META[caseType],
+  }));
+}
+
+/**
+ * 미지의 값이 `CaseType` 인지 type guard.
+ */
+export function isCaseType(value: unknown): value is CaseType {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(CASE_TYPE_META, value);
+}
+
+// ===== Lawyer Fee Discount Multiplier =====
+
+/**
+ * KLAC 약정보수액 default rate (별표 × 0.42). KLAC 정본 source:
+ *   "기준 중위소득 125% 이하의 국민은 민·가사 사건 등에 대하여 대법원이 정한 변호사보수의
+ *    약 42%에 해당하는 보수와 인지대 등 실비만 받고 소송구조를 실시"
+ *   — https://www.klac.or.kr/legalstruct/cyberConsultation.do
+ */
+export const KLAC_DEFAULT_RATE = 0.42;
+
+/**
+ * 변호사보수 multiplier clamp range. 제6조 ②항 cap = 1/2 한도 증액 → ×1.5 상한.
+ * 감액은 본 규칙상 명시 cap 없음 — 안전망으로 0.0 floor.
+ */
+export const LAWYER_FEE_MULTIPLIER_MIN = 0.0;
+export const LAWYER_FEE_MULTIPLIER_MAX = 1.5;
+
+/**
+ * LawyerFeeDiscount 한 variant 의 multiplier 산출.
+ *
+ * KLAC variant 의 경우 klacAgreedFeeWon 이 제공되면 (agreed/base) 비율 사용,
+ * 미지정 시 0.42 default.
+ *
+ * 본 함수는 단일 variant 의 multiplier 만 반환 — 누적 적용은 `applyLawyerFeeDiscounts` 사용.
+ */
+export function lawyerFeeDiscountMultiplier(
+  discount: LawyerFeeDiscount,
+  baseFeeWon: number,
+  klacAgreedFeeWon?: number,
+): number {
+  switch (discount.kind) {
+    case "noOralHearingOrAdmission":
+      return 0.5;
+    case "provisionalCase":
+      return discount.hasOralHearing ? 1.0 : 0.5;
+    case "klac":
+      if (
+        klacAgreedFeeWon !== undefined &&
+        Number.isFinite(klacAgreedFeeWon) &&
+        klacAgreedFeeWon >= 0 &&
+        baseFeeWon > 0
+      ) {
+        const ratio = klacAgreedFeeWon / baseFeeWon;
+        return ratio < 1.0 ? ratio : 1.0;
+      }
+      return KLAC_DEFAULT_RATE;
+    case "courtDiscretion":
+      return discount.multiplier;
+    case "customPercent":
+      return discount.rate;
+  }
+}
+
+/**
+ * 누적 multiplier 적용 결과.
+ *
+ *   - `amountWon`: 최종 변호사보수 (`baseFeeWon × multiplier`)
+ *   - `multiplier`: clamp 후 적용 multiplier (0.0 ~ 1.5)
+ *   - `rawMultiplier`: clamp 전 누적 multiplier (디버그/감사용)
+ *   - `clamped`: clamp 적용 여부 (rawMultiplier 가 [0.0, 1.5] 범위 외였으면 true)
+ */
+export interface ApplyLawyerFeeDiscountsResult {
+  amountWon: number;
+  multiplier: number;
+  rawMultiplier: number;
+  clamped: boolean;
+}
+
+/**
+ * LawyerFeeDiscount 누적 (compound) 적용.
+ *
+ * 정책 (G5 §5):
+ *   - default = compound (`final = base × ∏ multiplier`)
+ *   - 제6조 ②항 cap = 증액 1/2 한도 (×1.5 상한)
+ *   - 안전망: clamp 0.0 ~ 1.5
+ *
+ * 본 규칙 본문 구조 (사건구분 × 종결 사유 의 직교 조합) 가 누적 적용을 전제 — G5 research note §5.1.
+ */
+export function applyLawyerFeeDiscounts(
+  baseFeeWon: number,
+  discounts: ReadonlyArray<LawyerFeeDiscount>,
+  klacAgreedFeeWon?: number,
+): ApplyLawyerFeeDiscountsResult {
+  let multiplier = 1.0;
+  for (const d of discounts) {
+    multiplier *= lawyerFeeDiscountMultiplier(d, baseFeeWon, klacAgreedFeeWon);
+  }
+  const rawMultiplier = multiplier;
+  let clamped = false;
+  if (multiplier < LAWYER_FEE_MULTIPLIER_MIN) {
+    multiplier = LAWYER_FEE_MULTIPLIER_MIN;
+    clamped = true;
+  } else if (multiplier > LAWYER_FEE_MULTIPLIER_MAX) {
+    multiplier = LAWYER_FEE_MULTIPLIER_MAX;
+    clamped = true;
+  }
+  return {
+    amountWon: baseFeeWon * multiplier,
+    multiplier,
+    rawMultiplier,
+    clamped,
+  };
+}
