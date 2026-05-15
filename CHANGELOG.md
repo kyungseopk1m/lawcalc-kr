@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- 자×부상 손해배상 도메인 진입을 위한 정적 dataset 으로 호프만 단리연금현가율 표 (`hoffman/v1.0.0`, 월 단위 1~480개월, 240 cap 메타) 와 라이프니츠 복리현가율 표 (`leibniz/v1.0.0`, 월 단위 1~480개월, 할인율 5%/년) 를 번들 했습니다. dataset 만 도입하고 엔진 wire-up 은 후속 트랙에서 진행합니다.
+
 ## [0.4.1] - 2026-05-15
 
 ### Changed
