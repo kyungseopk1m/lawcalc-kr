@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-15
+
 ### Added
 
 - 변제충당 도메인을 추가했습니다. `computeAppropriation` 엔진은 단일 변제 이벤트와 여러 채권 잔액을 입력받아 지정충당·법정충당과 비용→이자→원본 순서를 적용하며, 결과에는 `STANDARD_DISCLAIMER` 와 `appropriation/policy-v1` 데이터 버전을 포함합니다.
@@ -210,7 +212,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.2.5...v0.3.0
