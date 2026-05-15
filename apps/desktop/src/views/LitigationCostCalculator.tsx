@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { formatWonInput, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcFile, type LcalcLitigationCostPayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
@@ -74,18 +75,6 @@ function parsePositiveInteger(value: string, fallback: number): number {
 function parseNonNegativeInteger(value: string, fallback: number): number {
   const parsed = Number(value.replaceAll(",", ""));
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-const wonInputFormatter = new Intl.NumberFormat("ko-KR");
-
-function formatWonInput(text: string): string {
-  const digits = text.replaceAll(",", "").replace(/[^\d]/g, "");
-  if (digits.length === 0) return "";
-  return wonInputFormatter.format(Number(digits));
-}
-
-function parseWonText(text: string): string {
-  return text.replaceAll(",", "").replace(/[^\d]/g, "");
 }
 
 const PROPORTIONAL_VALUE_TOKEN = /^\d{1,3}(?:,\d{3})+$|^\d+$/;

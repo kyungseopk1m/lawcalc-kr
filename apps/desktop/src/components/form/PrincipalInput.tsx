@@ -1,5 +1,6 @@
 import type { ChangeEvent } from "react";
 
+import { formatWonInput, parseWonAmount } from "../../lib/format-won";
 import { Input } from "../ui/input";
 
 interface PrincipalInputProps {
@@ -8,16 +9,9 @@ interface PrincipalInputProps {
   onChange: (value: number) => void;
 }
 
-const numberFormatter = new Intl.NumberFormat("ko-KR");
-
-function parsePrincipal(value: string) {
-  const normalized = value.replaceAll(",", "").replace(/[^\d]/g, "");
-  return normalized.length > 0 ? Number(normalized) : 0;
-}
-
 export function PrincipalInput({ value, error, onChange }: PrincipalInputProps) {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onChange(parsePrincipal(event.target.value));
+    onChange(parseWonAmount(event.target.value, 0));
   };
   const errorId = "principal-error";
 
@@ -29,7 +23,7 @@ export function PrincipalInput({ value, error, onChange }: PrincipalInputProps) 
         aria-invalid={Boolean(error)}
         inputMode="numeric"
         placeholder="예: 10,000,000"
-        value={value > 0 ? numberFormatter.format(value) : ""}
+        value={value > 0 ? formatWonInput(String(value)) : ""}
         onChange={handleChange}
       />
       {error ? (
