@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - "v*.*.*"
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -13,7 +11,6 @@ permissions:
 jobs:
   publish-tauri:
     name: Build Tauri app (${{ matrix.platform }})
-    if: github.event_name == 'push'
     # W4 dry-run prep: create a temporary v* tag and verify draft artifacts on
     # macOS and Windows before publishing a user-facing release.
     strategy:
@@ -90,36 +87,8 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-  update-homebrew-tap:
-    name: Update Homebrew tap
-    if: github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    env:
-      GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GH_TOKEN }}
-      GITHUB_REF_NAME: ${{ github.event.release.tag_name }}
-      TAP_REPOSITORY: kyungseopk1m/homebrew-lawcalc-kr
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Install minisign
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y minisign
-
-      - name: Update tap Cask
-        run: node scripts/update-homebrew-tap.mjs
-
   update-readme:
     name: Update README download URLs
-    if: github.event_name == 'push'
     needs: publish-tauri
     runs-on: ubuntu-latest
     permissions:
