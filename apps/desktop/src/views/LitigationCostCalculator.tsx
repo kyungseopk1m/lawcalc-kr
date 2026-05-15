@@ -26,6 +26,7 @@ import {
   type LitigationCostResult,
 } from "@lawcalc-kr/core-engine";
 
+import { ProportionalPillInput } from "../components/form/ProportionalPillInput";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -598,11 +599,11 @@ export function LitigationCostCalculator() {
             {distributionMode === "proportional" ? (
               <label className="grid gap-2 text-sm font-medium">
                 당사자별 소가
-                <textarea
-                  className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  placeholder="예: 10,000,000 / 20,000,000"
+                <ProportionalPillInput
                   value={proportionalValuesText}
-                  onChange={(e) => setProportionalValuesText(e.target.value)}
+                  onChange={setProportionalValuesText}
+                  placeholder="예: 10,000,000"
+                  ariaLabel="당사자별 소가"
                 />
               </label>
             ) : null}
