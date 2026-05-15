@@ -35,6 +35,26 @@ export type {
 export { calculateInheritance } from "./inheritance";
 
 export type {
+  AllocationTarget,
+  AppropriationAllocationDirective,
+  AppropriationAllocationType,
+  AppropriationClaimInput,
+  AppropriationClaimResult,
+  AppropriationInput,
+  AppropriationPaymentInput,
+  AppropriationPaymentResult,
+  AppropriationProportionalShare,
+  AppropriationResult,
+  AppropriationStatutoryRank,
+  AppropriationTotals,
+} from "./appropriation";
+export {
+  APPROPRIATION_DATA_VERSION,
+  computeAppropriation,
+  validateAppropriationInput,
+} from "./appropriation";
+
+export type {
   AppealsLevel,
   ApplyLawyerFeeDiscountsResult,
   CaseType,

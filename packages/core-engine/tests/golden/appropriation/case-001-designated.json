@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1",
+  "id": "case-001-designated",
+  "title": "지정충당 (debtorDesignation) — 단일 채권 + 478조 cost→interest→principal 순",
+  "source": "민법 제476조 (지정충당) + 제478조 (비용·이자·원본 순)",
+  "input": {
+    "claims": [
+      {
+        "id": "loan-1",
+        "name": "대여금 원본",
+        "costBalance": 1000,
+        "interestBalance": 2000,
+        "principalBalance": 10000,
+        "dueAt": "2025-01-01"
+      }
+    ],
+    "payment": {
+      "amount": 5000,
+      "allocation": {
+        "type": "debtorDesignation",
+        "targets": [{ "claimId": "loan-1", "amount": 5000 }]
+      }
+    },
+    "computedAt": "2026-05-15"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 5000,
+      "allocationType": "debtorDesignation",
+      "appliedAmount": 5000,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 1000,
+      "totalInterestApplied": 2000,
+      "totalPrincipalApplied": 2000,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 8000,
+      "remainingGrandTotal": 8000
+    },
+    "claims": [
+      {
+        "claimId": "loan-1",
+        "costApplied": 1000,
+        "interestApplied": 2000,
+        "principalApplied": 2000,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 8000,
+        "totalApplied": 5000
+      }
+    ]
+  }
+}

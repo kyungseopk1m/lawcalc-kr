@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1",
+  "id": "case-002-statutory-priority",
+  "title": "법정충당 (477조) — 변제기 도래 채권 우선, 미도래 채권 0 차감",
+  "source": "민법 제477조 1호 (이행기 도래 채무 우선)",
+  "input": {
+    "claims": [
+      { "id": "due-claim", "principalBalance": 5000, "dueAt": "2025-01-01" },
+      { "id": "future-claim", "principalBalance": 5000, "dueAt": "2026-12-31" }
+    ],
+    "payment": { "amount": 3000, "allocation": { "type": "legal" } },
+    "computedAt": "2026-05-15"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 3000,
+      "allocationType": "legal",
+      "appliedAmount": 3000,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 0,
+      "totalInterestApplied": 0,
+      "totalPrincipalApplied": 3000,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 7000,
+      "remainingGrandTotal": 7000
+    },
+    "claims": [
+      {
+        "claimId": "due-claim",
+        "costApplied": 0,
+        "interestApplied": 0,
+        "principalApplied": 3000,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 2000,
+        "totalApplied": 3000
+      },
+      {
+        "claimId": "future-claim",
+        "costApplied": 0,
+        "interestApplied": 0,
+        "principalApplied": 0,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 5000,
+        "totalApplied": 0
+      }
+    ]
+  }
+}

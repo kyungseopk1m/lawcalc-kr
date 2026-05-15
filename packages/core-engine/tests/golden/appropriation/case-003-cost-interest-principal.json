@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1",
+  "id": "case-003-cost-interest-principal",
+  "title": "법정충당 + 478조 — 단일 채권 안에서 비용→이자→원본 순 차감 검증",
+  "source": "민법 제478조 (비용·이자·원본 순서)",
+  "input": {
+    "claims": [
+      {
+        "id": "single-claim",
+        "costBalance": 500,
+        "interestBalance": 300,
+        "principalBalance": 10000,
+        "dueAt": "2025-01-01"
+      }
+    ],
+    "payment": { "amount": 900, "allocation": { "type": "legal" } },
+    "computedAt": "2026-05-15"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 900,
+      "allocationType": "legal",
+      "appliedAmount": 900,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 500,
+      "totalInterestApplied": 300,
+      "totalPrincipalApplied": 100,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 9900,
+      "remainingGrandTotal": 9900
+    },
+    "claims": [
+      {
+        "claimId": "single-claim",
+        "costApplied": 500,
+        "interestApplied": 300,
+        "principalApplied": 100,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 9900,
+        "totalApplied": 900
+      }
+    ]
+  }
+}

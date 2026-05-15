@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1",
+  "id": "case-004-multi-debt-equal-priority",
+  "title": "법정충당 (477조) — 동순위 (rank·dueAt 동일) 시 잔액 비례 안분",
+  "source": "민법 제477조 4호 (이상 모두 동등 시 채무액 비례 충당)",
+  "input": {
+    "claims": [
+      { "id": "small", "principalBalance": 1000, "dueAt": "2025-01-01" },
+      { "id": "large", "principalBalance": 3000, "dueAt": "2025-01-01" }
+    ],
+    "payment": { "amount": 2000, "allocation": { "type": "legal" } },
+    "computedAt": "2026-05-15"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 2000,
+      "allocationType": "legal",
+      "appliedAmount": 2000,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 0,
+      "totalInterestApplied": 0,
+      "totalPrincipalApplied": 2000,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 2000,
+      "remainingGrandTotal": 2000
+    },
+    "claims": [
+      {
+        "claimId": "small",
+        "costApplied": 0,
+        "interestApplied": 0,
+        "principalApplied": 500,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 500,
+        "totalApplied": 500
+      },
+      {
+        "claimId": "large",
+        "costApplied": 0,
+        "interestApplied": 0,
+        "principalApplied": 1500,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 1500,
+        "totalApplied": 1500
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1",
+  "id": "case-005-partial-payment",
+  "title": "법정충당 — payment 가 모든 잔액 초과 시 unapplied (returnedToPayer)",
+  "source": "민법 제477조 + 변제충당 잉여 정책 (default returnedToPayer)",
+  "input": {
+    "claims": [{ "id": "only-claim", "principalBalance": 1000, "dueAt": "2025-01-01" }],
+    "payment": { "amount": 5000, "allocation": { "type": "legal" } },
+    "computedAt": "2026-05-15"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 5000,
+      "allocationType": "legal",
+      "appliedAmount": 1000,
+      "unappliedAmount": 4000
+    },
+    "totals": {
+      "totalCostApplied": 0,
+      "totalInterestApplied": 0,
+      "totalPrincipalApplied": 1000,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 0,
+      "remainingGrandTotal": 0
+    },
+    "claims": [
+      {
+        "claimId": "only-claim",
+        "costApplied": 0,
+        "interestApplied": 0,
+        "principalApplied": 1000,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 0,
+        "totalApplied": 1000
+      }
+    ]
+  }
+}
