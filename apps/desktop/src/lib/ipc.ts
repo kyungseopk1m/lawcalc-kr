@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AppropriationInput,
+  AppropriationResult,
   CalcOptions,
   InheritanceInput,
   InheritanceResult,
@@ -76,6 +78,15 @@ export interface LcalcLitigationCostPayload {
   disclaimer: string;
 }
 
+export interface LcalcAppropriationPayload {
+  appVersion: string;
+  createdAt: string;
+  input: AppropriationInput;
+  result?: AppropriationResult;
+  note?: string;
+  disclaimer: string;
+}
+
 /**
  * v3 envelope — capability 메타 (envelopeFeatures) 와 데이터 슬라이스
  * (dataVersions) 를 envelope-level 로 분리한 형식. v0.3.0 부터 신규 저장
@@ -111,6 +122,13 @@ export type LcalcFile =
       envelopeFeatures: string[];
       dataVersions: Record<string, string>;
       payload: LcalcLitigationCostPayload;
+    }
+  | {
+      schemaVersion: "3";
+      kind: "appropriation";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcAppropriationPayload;
     };
 
 export type LoadableLcalcFile = LcalcFile | LcalcFileV2 | LcalcFileV1;

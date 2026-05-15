@@ -1,8 +1,11 @@
 import {
   appliedDomains,
+  validateAppropriationInput,
   validateDeliveryFeeInput,
   validateLawyerFeeInput,
   validateStampDutyInput,
+  type AppropriationInput,
+  type AppropriationResult,
   type CalcOptions,
   type CaseType,
   type HeirNode,
@@ -16,6 +19,7 @@ import {
 } from "@lawcalc-kr/core-engine";
 
 import type {
+  LcalcAppropriationPayload,
   LcalcFile,
   LcalcInheritancePayload,
   LcalcInterestPayload,
@@ -42,6 +46,7 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "interest@1",
   "inheritance@1",
   "litigation-cost@1",
+  "appropriation@1",
 ]);
 
 const CAPABILITY_ID_PATTERN = /^[a-z][a-z0-9-]*@[1-9][0-9]*$/;
@@ -63,6 +68,12 @@ interface ParsedInheritanceLcalcInput {
 interface ParsedLitigationCostLcalcInput {
   input: LitigationCostInput;
   result?: LitigationCostResult;
+  note?: string;
+}
+
+interface ParsedAppropriationLcalcInput {
+  input: AppropriationInput;
+  result?: AppropriationResult;
   note?: string;
 }
 
@@ -550,6 +561,60 @@ function parseLitigationCostPayload(
   };
 }
 
+function parseAppropriationInput(value: unknown): AppropriationInput {
+  const input = requireRecord(value, "payload.input");
+  // 본 validator 는 core-engine 의 Korean RangeError 분기에 위임.
+  // 즉 .lcalc envelope 측은 raw shape 만 받고 도메인 validator 가 invariant 강제.
+  validateAppropriationInput(input as unknown as AppropriationInput);
+  return input as unknown as AppropriationInput;
+}
+
+function parseAppropriationResult(value: unknown): AppropriationResult {
+  const result = requireRecord(value, "payload.result");
+  return {
+    ...(result as unknown as AppropriationResult),
+    disclaimer: requireString(result.disclaimer, "payload.result.disclaimer"),
+    dataVersion: requireString(result.dataVersion, "payload.result.dataVersion"),
+    computedAt: requireString(result.computedAt, "payload.result.computedAt"),
+  };
+}
+
+function parseAppropriationPayload(
+  file: LcalcFile | UnknownLcalcEnvelope,
+): LcalcAppropriationPayload {
+  if (file.kind !== "appropriation") {
+    if (file.kind === "interest") {
+      throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "inheritance") {
+      throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "litigation-cost") {
+      throw new Error("소송비용 .lcalc 파일은 소송비용 탭에서 열어 주세요.");
+    }
+
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
+  }
+
+  const dataVersions = validateDataVersions(file.dataVersions);
+  if (typeof dataVersions.appropriation !== "string" || dataVersions.appropriation.length === 0) {
+    throw new Error(
+      '.lcalc 파일의 dataVersions["appropriation"] 필드는 비어 있지 않은 문자열이어야 합니다.',
+    );
+  }
+  const payload = requireRecord(file.payload, "payload");
+  const note = requireBoundedNote(payload.note, "payload.note");
+
+  return {
+    appVersion: requireString(payload.appVersion, "payload.appVersion"),
+    createdAt: requireString(payload.createdAt, "payload.createdAt"),
+    input: parseAppropriationInput(payload.input),
+    ...(payload.result === undefined ? {} : { result: parseAppropriationResult(payload.result) }),
+    ...(note === undefined ? {} : { note }),
+    disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
+  };
+}
+
 function validateEnvelopeFeatures(value: unknown): string[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(
@@ -611,6 +676,11 @@ export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): v
 
   if (file.kind === "litigation-cost") {
     void parseLitigationCostPayload(file);
+    return;
+  }
+
+  if (file.kind === "appropriation") {
+    void parseAppropriationPayload(file);
     return;
   }
 
@@ -750,6 +820,15 @@ export function parseLoadedLitigationCostLcalcInput(
   file: LcalcFile,
 ): ParsedLitigationCostLcalcInput {
   const payload = parseLitigationCostPayload(file);
+  return {
+    input: payload.input,
+    ...(payload.result === undefined ? {} : { result: payload.result }),
+    ...(payload.note === undefined ? {} : { note: payload.note }),
+  };
+}
+
+export function parseLoadedAppropriationLcalcInput(file: LcalcFile): ParsedAppropriationLcalcInput {
+  const payload = parseAppropriationPayload(file);
   return {
     input: payload.input,
     ...(payload.result === undefined ? {} : { result: payload.result }),

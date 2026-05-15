@@ -3,13 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   STANDARD_DISCLAIMER,
   calculateInterest,
+  computeAppropriation,
   computeLitigationCost,
+  type AppropriationInput,
 } from "@lawcalc-kr/core-engine";
 
 import type { LcalcFile, LoadableLcalcFile } from "./ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lcalc-migrations";
 import {
   MAX_NOTE_LENGTH,
+  parseLoadedAppropriationLcalcInput,
   parseLoadedInheritanceLcalcInput,
   parseLoadedLitigationCostLcalcInput,
   parseLoadedLcalcInput,
@@ -509,5 +512,72 @@ describe("validateLcalcEnvelope", () => {
     expect(() => validateLcalcEnvelope(litigationFile)).toThrow(
       '.lcalc 파일의 dataVersions["lawyer-fee"] 필드는 비어 있지 않은 문자열이어야 합니다.',
     );
+  });
+});
+
+describe("v3 appropriation envelope", () => {
+  function buildAppropriationFile(): LcalcFile {
+    const input: AppropriationInput = {
+      claims: [
+        {
+          id: "loan-1",
+          name: "대여금A",
+          costBalance: 1000,
+          interestBalance: 2000,
+          principalBalance: 10000,
+          dueAt: "2025-01-01",
+        },
+      ],
+      payment: {
+        amount: 5000,
+        allocation: {
+          type: "debtorDesignation",
+          targets: [{ claimId: "loan-1", amount: 5000 }],
+        },
+      },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    return {
+      schemaVersion: "3",
+      kind: "appropriation",
+      envelopeFeatures: ["appropriation@1"],
+      dataVersions: { appropriation: result.dataVersion },
+      payload: {
+        appVersion: "0.4.0",
+        createdAt: "2026-05-15T00:00:00.000Z",
+        input,
+        result,
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+  }
+
+  it("envelope validation 통과 + parseLoadedAppropriationLcalcInput round-trip", () => {
+    const file = buildAppropriationFile();
+    expect(() => validateLcalcEnvelope(file)).not.toThrow();
+    const loaded = parseLoadedAppropriationLcalcInput(file);
+    expect(loaded.input.claims).toHaveLength(1);
+    expect(loaded.input.claims[0]?.id).toBe("loan-1");
+    expect(loaded.input.payment.amount).toBe(5000);
+    expect(loaded.input.payment.allocation.type).toBe("debtorDesignation");
+    expect(loaded.result?.dataVersion).toBe("appropriation/policy-v1");
+    expect(loaded.result?.payment.appliedAmount).toBe(5000);
+  });
+
+  it("rejects an unknown capability id (compensation@1)", () => {
+    const file = {
+      schemaVersion: "3" as const,
+      kind: "compensation",
+      envelopeFeatures: ["compensation@1"],
+      dataVersions: { compensation: "compensation/v1.0.0" },
+      payload: {
+        appVersion: "0.5.0",
+        createdAt: "2026-06-01T00:00:00.000Z",
+        input: {},
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+    expect(() => validateLcalcEnvelope(file as never)).toThrow(/compensation@1 기능이 필요합니다/);
   });
 });
