@@ -78,7 +78,7 @@ jobs:
 
             ## 면책
 
-            이 도구의 계산 결과는 검토용 계산이며, 사건별 특수성은 변호사 등 전문가 확인이 필요합니다. **법률 자문이 아닙니다.** 자세한 출처 / 무관성 명시: [LEGAL_REFERENCES.md](https://github.com/kyungseopk1m/lawcalc-kr/blob/main/docs/LEGAL_REFERENCES.md)
+            본 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인이 필요합니다. 자세한 출처 / 무관성 명시: [LEGAL_REFERENCES.md](https://github.com/kyungseopk1m/lawcalc-kr/blob/main/docs/LEGAL_REFERENCES.md)
 
             ## 라이선스
 
