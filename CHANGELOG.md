@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- 변제충당 도메인을 추가했습니다. `computeAppropriation` 엔진은 단일 변제 이벤트와 여러 채권 잔액을 입력받아 지정충당·법정충당과 비용→이자→원본 순서를 적용하며, 결과에는 `STANDARD_DISCLAIMER` 와 `appropriation/policy-v1` 데이터 버전을 포함합니다.
+- 변제충당 탭과 `.lcalc` v3 `appropriation@1` capability 를 추가했습니다. 채권별 비용·이자·원본 잔액, 변제액, 충당 directive 를 입력하고 결과를 클립보드 또는 `.lcalc` 파일로 저장·불러올 수 있습니다.
+- Homebrew tap 자동 업데이트 준비 파일을 추가했습니다. `scripts/update-homebrew-tap.mjs` 는 릴리스 산출물의 macOS updater minisign signature 를 검증하고 `.dmg` sha256 을 계산한 뒤 tap 레포에 Cask 업데이트 PR 을 만들도록 작성했습니다.
+- README 스크린샷을 v0.4.0 기준으로 재캡처하고 변제충당 탭과 정보 다이얼로그 이미지를 추가했습니다.
+
+### Changed
+
+- 원화 입력 포맷을 `apps/desktop/src/lib/format-won.ts` 공용 헬퍼로 통합하고 이자 원금, 소송비용 금액 입력, 변제충당 금액 입력이 같은 콤마 표시·파싱 규칙을 사용하도록 정리했습니다.
+- 소송비용 소가비례 분배 입력을 textarea 에서 pill/chip 입력으로 교체해 여러 당사자별 소가를 더 명확하게 검토할 수 있게 했습니다.
+
 ## [0.3.2] - 2026-05-12
 
 ### Added
