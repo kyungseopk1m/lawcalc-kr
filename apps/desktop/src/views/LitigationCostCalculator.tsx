@@ -172,8 +172,8 @@ export function LitigationCostCalculator() {
   const [isSettlement, setIsSettlement] = useState(false);
   const [applyNoOral, setApplyNoOral] = useState(false);
   const [applyProvisionalDiscount, setApplyProvisionalDiscount] = useState(false);
-  const [applyKlac, setApplyKlac] = useState(false);
-  const [klacAgreedFeeText, setKlacAgreedFeeText] = useState("");
+  const [applyKoreaLegalAid, setApplyKoreaLegalAid] = useState(false);
+  const [koreaLegalAidAgreedFeeText, setKoreaLegalAidAgreedFeeText] = useState("");
   const [courtMultiplierText, setCourtMultiplierText] = useState("1");
   const [customRateText, setCustomRateText] = useState("1");
   const [useCourtMultiplier, setUseCourtMultiplier] = useState(false);
@@ -202,8 +202,8 @@ export function LitigationCostCalculator() {
       if (applyProvisionalDiscount) {
         discounts.push({ kind: "provisionalCase", hasOralHearing: false });
       }
-      if (applyKlac) {
-        discounts.push({ kind: "klac" });
+      if (applyKoreaLegalAid) {
+        discounts.push({ kind: "koreaLegalAid" });
       }
       if (useCourtMultiplier) {
         discounts.push({
@@ -235,8 +235,8 @@ export function LitigationCostCalculator() {
         caseType,
         discounts,
         ...(filingDate ? { filingDate } : {}),
-        ...(lawyerFeeAppliesNow && klacAgreedFeeText.trim()
-          ? { klacAgreedFeeWon: parseNonNegativeInteger(klacAgreedFeeText, 0) }
+        ...(lawyerFeeAppliesNow && koreaLegalAidAgreedFeeText.trim()
+          ? { koreaLegalAidAgreedFeeWon: parseNonNegativeInteger(koreaLegalAidAgreedFeeText, 0) }
           : {}),
       },
     };
@@ -255,7 +255,7 @@ export function LitigationCostCalculator() {
   }, [
     appealValueText,
     appealsLevel,
-    applyKlac,
+    applyKoreaLegalAid,
     applyNoOral,
     applyProvisionalDiscount,
     caseType,
@@ -267,7 +267,7 @@ export function LitigationCostCalculator() {
     isElectronicFiling,
     isPaymentOrder,
     isSettlement,
-    klacAgreedFeeText,
+    koreaLegalAidAgreedFeeText,
     partyCountText,
     proportionalValuesText,
     useCourtMultiplier,
@@ -294,17 +294,17 @@ export function LitigationCostCalculator() {
     setApplyProvisionalDiscount(
       loaded.lawyerFee.discounts.some((d) => d.kind === "provisionalCase"),
     );
-    setApplyKlac(loaded.lawyerFee.discounts.some((d) => d.kind === "klac"));
+    setApplyKoreaLegalAid(loaded.lawyerFee.discounts.some((d) => d.kind === "koreaLegalAid"));
     const court = loaded.lawyerFee.discounts.find((d) => d.kind === "courtDiscretion");
     setUseCourtMultiplier(court !== undefined);
     setCourtMultiplierText(court?.kind === "courtDiscretion" ? String(court.multiplier) : "1");
     const custom = loaded.lawyerFee.discounts.find((d) => d.kind === "customPercent");
     setUseCustomRate(custom !== undefined);
     setCustomRateText(custom?.kind === "customPercent" ? String(custom.rate) : "1");
-    setKlacAgreedFeeText(
-      loaded.lawyerFee.klacAgreedFeeWon === undefined
+    setKoreaLegalAidAgreedFeeText(
+      loaded.lawyerFee.koreaLegalAidAgreedFeeWon === undefined
         ? ""
-        : String(loaded.lawyerFee.klacAgreedFeeWon),
+        : String(loaded.lawyerFee.koreaLegalAidAgreedFeeWon),
     );
     setDistributionMode(loaded.distribution?.mode ?? "equal");
     setProportionalValuesText(loaded.distribution?.partyValuesWon?.join(", ") ?? "");
@@ -527,17 +527,17 @@ export function LitigationCostCalculator() {
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  checked={applyKlac}
-                  onChange={(e) => setApplyKlac(e.target.checked)}
+                  checked={applyKoreaLegalAid}
+                  onChange={(e) => setApplyKoreaLegalAid(e.target.checked)}
                 />
-                KLAC 기준 적용
+                대한법률구조공단 기준 적용
               </label>
               <Input
-                aria-label="KLAC 약정보수액"
-                placeholder="KLAC 약정보수액 (선택)"
-                value={formatWonInput(klacAgreedFeeText)}
+                aria-label="대한법률구조공단 약정보수액"
+                placeholder="대한법률구조공단 약정보수액 (선택)"
+                value={formatWonInput(koreaLegalAidAgreedFeeText)}
                 inputMode="numeric"
-                onChange={(e) => setKlacAgreedFeeText(parseWonText(e.target.value))}
+                onChange={(e) => setKoreaLegalAidAgreedFeeText(parseWonText(e.target.value))}
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-2">
@@ -667,10 +667,12 @@ export function LitigationCostCalculator() {
               </CardContent>
             </Card>
 
-            {result.lawyerFee.klacWarnings.length > 0 ? (
+            {result.lawyerFee.koreaLegalAidWarnings.length > 0 ? (
               <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{result.lawyerFee.klacWarnings.map((w) => w.messageKo).join(" / ")}</span>
+                <span>
+                  {result.lawyerFee.koreaLegalAidWarnings.map((w) => w.messageKo).join(" / ")}
+                </span>
               </div>
             ) : null}
 

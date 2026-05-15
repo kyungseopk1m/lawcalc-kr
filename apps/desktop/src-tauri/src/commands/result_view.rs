@@ -232,7 +232,7 @@ mod tests {
             "lawyerFee": {
                 "amount": 2800000,
                 "formulaText": "변호사보수 산식",
-                "dataVersion": "lawyer-fee/v1.0.0",
+                "dataVersion": "lawyer-fee/v1.1.0",
                 "computedAt": "2026-05-11T12:00:00+09:00"
             },
             "totalAmount": 3060000,
@@ -247,7 +247,7 @@ mod tests {
             "dataVersions": {
                 "stamp-duty": "stamp-duty/v1.0.0",
                 "delivery": "delivery/v1.1.0",
-                "lawyer-fee": "lawyer-fee/v1.0.0"
+                "lawyer-fee": "lawyer-fee/v1.1.0"
             },
             "computedAt": "2026-05-11T12:00:00+09:00"
         });

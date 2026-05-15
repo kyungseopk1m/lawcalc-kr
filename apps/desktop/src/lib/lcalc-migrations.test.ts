@@ -137,6 +137,88 @@ describe("migrateLcalcFile", () => {
     expect(migrateLcalcFile(sampleV3)).toEqual(sampleV3);
   });
 
+  it("normalizes legacy v3 litigation-cost KLAC modifier keys in-place", () => {
+    const input = {
+      stampDuty: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceCollegial" as const,
+        appealsLevel: "firstInstance" as const,
+      },
+      deliveryFee: {
+        caseType: "civilFirstInstanceCollegial" as const,
+        partyCount: 2,
+      },
+      lawyerFee: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceCollegial" as const,
+        discounts: [
+          { kind: "koreaLegalAid" as const },
+          { kind: "customPercent" as const, rate: 0.5 },
+        ],
+        koreaLegalAidAgreedFeeWon: 1_000_000,
+      },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-05-15T00:00:00.000Z" });
+    const legacyLawyerFee = {
+      caseValue: input.lawyerFee.caseValue,
+      caseType: input.lawyerFee.caseType,
+      discounts: input.lawyerFee.discounts,
+    };
+    const legacy = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": result.dataVersions["stamp-duty"],
+        delivery: result.dataVersions.delivery,
+        "lawyer-fee": "lawyer-fee/v1.0.0",
+      },
+      payload: {
+        appVersion: "0.4.0",
+        createdAt: "2026-05-15T00:00:00.000Z",
+        input: {
+          ...input,
+          lawyerFee: {
+            ...legacyLawyerFee,
+            discounts: [{ kind: "klac" }, { kind: "customPercent", rate: 0.5 }],
+            klacAgreedFeeWon: 1_000_000,
+          },
+        },
+        result: {
+          ...result,
+          lawyerFee: {
+            ...result.lawyerFee,
+            appliedDiscounts: [{ kind: "klac" }, { kind: "customPercent", rate: 0.5 }],
+            klacWarnings: [
+              {
+                caseType: "civilFirstInstanceCollegial",
+                reason: "klacScopeOverridden",
+                messageKo: "KLAC variant 와 다른 multiplier 의 누적은 이중 감액 위험이 있습니다",
+              },
+            ],
+            formulaText: "KLAC (대한법률구조공단, ×0.42 default)",
+          },
+        },
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    const migrated = migrateLcalcFile(legacy);
+    validateLcalcEnvelope(migrated);
+    const loaded = parseLoadedLitigationCostLcalcInput(migrated);
+
+    expect(loaded.input.lawyerFee.discounts).toEqual([
+      { kind: "koreaLegalAid" },
+      { kind: "customPercent", rate: 0.5 },
+    ]);
+    expect(loaded.input.lawyerFee.koreaLegalAidAgreedFeeWon).toBe(1_000_000);
+    expect(loaded.result?.lawyerFee.appliedDiscounts[0]).toEqual({ kind: "koreaLegalAid" });
+    expect(loaded.result?.lawyerFee.koreaLegalAidWarnings[0]?.reason).toBe(
+      "koreaLegalAidScopeOverridden",
+    );
+    expect(loaded.result?.lawyerFee.formulaText).toBe("대한법률구조공단 (×0.42 default)");
+  });
+
   it("rejects unsupported versions with a Korean user-facing message", () => {
     expect(() => migrateLcalcFile({ ...sampleV1, schemaVersion: "9" })).toThrow(
       "지원하지 않는 .lcalc 버전입니다: 9",

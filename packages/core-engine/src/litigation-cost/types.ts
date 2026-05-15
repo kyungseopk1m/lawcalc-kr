@@ -185,7 +185,7 @@ export type NoOralHearingReason =
  *
  *   - `noOralHearingOrAdmission`: 제5조 (×0.5)
  *   - `provisionalCase`: 제3조 ②항 (×0.5 또는 ×1.0 — 변론·심문기일 분기)
- *   - `klac`: KLAC 약정보수액 cap (별표 × 0.42 default, 민·가사 한정)
+ *   - `koreaLegalAid`: 대한법률구조공단 약정보수액 cap (별표 × 0.42 default, 민·가사 한정)
  *   - `courtDiscretion`: 제6조 (감액 0.0~1.0, 증액 1.0~1.5)
  *   - `customPercent`: 본 규칙 외 합의/특약
  *
@@ -195,7 +195,7 @@ export type NoOralHearingReason =
 export type LawyerFeeDiscount =
   | { kind: "noOralHearingOrAdmission"; reason: NoOralHearingReason }
   | { kind: "provisionalCase"; hasOralHearing: boolean }
-  | { kind: "klac" }
+  | { kind: "koreaLegalAid" }
   | { kind: "courtDiscretion"; multiplier: number }
   | { kind: "customPercent"; rate: number };
 
@@ -205,11 +205,11 @@ export interface LawyerFeeInput {
   /** 감액/조정 옵션. 빈 배열 = 별표 그대로 (×1.0). 누적 (compound) 적용 + clamp 0.0~1.5. */
   discounts: LawyerFeeDiscount[];
   /**
-   * KLAC 약정보수액 (의뢰인이 KLAC 와 계약한 약정 금액).
-   * `klac` variant 사용 시 cap 으로 작용 — 별표 × (klacAgreedFeeWon / baseFeeWon).
-   * 미지정 시 0.42 default (KLAC 정본 source).
+   * 대한법률구조공단 약정보수액 (의뢰인이 대한법률구조공단과 계약한 약정 금액).
+   * `koreaLegalAid` variant 사용 시 cap 으로 작용 — 별표 × (koreaLegalAidAgreedFeeWon / baseFeeWon).
+   * 미지정 시 0.42 default (대한법률구조공단 정본 source).
    */
-  klacAgreedFeeWon?: number;
+  koreaLegalAidAgreedFeeWon?: number;
   /** 접수일 — 시기별 슬라이스 분기용. PR 4 dataset 진입 시 wire-up. */
   filingDate?: IsoDate;
 }
@@ -223,24 +223,24 @@ export interface LawyerFeeResult {
   /** clamp 0.0~1.5 적용 여부 — `applyLawyerFeeDiscounts` 의 `clamped`. */
   multiplierClamped: boolean;
   appliedDiscounts: LawyerFeeDiscount[];
-  /** KLAC 적용 사건 범위 검증 결과 — 비차단 경고 (UI 측 노출용). */
-  klacWarnings: KlacScopeWarning[];
+  /** 대한법률구조공단 적용 사건 범위 검증 결과 — 비차단 경고 (UI 측 노출용). */
+  koreaLegalAidWarnings: KoreaLegalAidScopeWarning[];
   formulaText: string;
   dataVersion: string;
   computedAt: string;
 }
 
 /**
- * KLAC 적용 사건 범위 위반 경고. RangeError 비차단 — UI 측 경고 채널로 전달.
+ * 대한법률구조공단 적용 사건 범위 위반 경고. RangeError 비차단 — UI 측 경고 채널로 전달.
  *
- *   - `klacScopeNotCivilOrFamily`: KLAC variant 가 민·가사 외 사건구분에 적용됨
- *   - `klacScopeOverridden`: KLAC variant 와 다른 multiplier 가 누적되어 이중 감액 risk
+ *   - `koreaLegalAidScopeNotCivilOrFamily`: 대한법률구조공단 variant 가 민·가사 외 사건구분에 적용됨
+ *   - `koreaLegalAidScopeOverridden`: 대한법률구조공단 variant 와 다른 multiplier 가 누적되어 이중 감액 risk
  *
  * G5 §3.3 권고 — UI 측 경고로 노출, 차단 X.
  */
-export interface KlacScopeWarning {
+export interface KoreaLegalAidScopeWarning {
   caseType: CaseType;
-  reason: "klacScopeNotCivilOrFamily" | "klacScopeOverridden";
+  reason: "koreaLegalAidScopeNotCivilOrFamily" | "koreaLegalAidScopeOverridden";
   messageKo: string;
 }
 
@@ -289,7 +289,7 @@ export interface CaseTypeMeta {
  *   - 보전 (카합/카단): 3종 모두 — 보수는 제3조 ②항 1/2 적용
  *   - 지급명령 (차): 인지 + 송달만 (실무상 보수 산입 외)
  *
- * `isCivilOrFamily` 결정 근거: KLAC 정본 source ("민·가사 사건 등") — 행정·보전·지급명령 default 미적용.
+ * `isCivilOrFamily` 결정 근거: 대한법률구조공단 정본 source ("민·가사 사건 등") — 행정·보전·지급명령 default 미적용.
  */
 export const CASE_TYPE_META: Readonly<Record<CaseType, CaseTypeMeta>> = {
   civilFirstInstanceCollegial: {

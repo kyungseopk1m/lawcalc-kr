@@ -109,6 +109,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function normalizeLegacyLawyerFeeDiscount(discount: unknown): unknown {
+  if (!isRecord(discount)) {
+    return discount;
+  }
+  if (discount.kind === "klac") {
+    return { ...discount, kind: "koreaLegalAid" };
+  }
+  return discount;
+}
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -433,19 +443,22 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
   if (!Array.isArray(discounts)) {
     throw new Error(".lcalc 파일의 payload.input.lawyerFee.discounts 필드는 배열이어야 합니다.");
   }
+  const normalizedDiscounts = discounts.map(normalizeLegacyLawyerFeeDiscount);
+  const koreaLegalAidAgreedFeeWon =
+    lawyerRecord.koreaLegalAidAgreedFeeWon ?? lawyerRecord.klacAgreedFeeWon;
   const lawyerFee: LitigationCostInput["lawyerFee"] = {
     caseValue: requireNonNegativeNumber(
       lawyerRecord.caseValue,
       "payload.input.lawyerFee.caseValue",
     ),
     caseType: requireString(lawyerRecord.caseType, "payload.input.lawyerFee.caseType") as CaseType,
-    discounts: discounts as LitigationCostInput["lawyerFee"]["discounts"],
-    ...(lawyerRecord.klacAgreedFeeWon === undefined
+    discounts: normalizedDiscounts as LitigationCostInput["lawyerFee"]["discounts"],
+    ...(koreaLegalAidAgreedFeeWon === undefined
       ? {}
       : {
-          klacAgreedFeeWon: requireNonNegativeNumber(
-            lawyerRecord.klacAgreedFeeWon,
-            "payload.input.lawyerFee.klacAgreedFeeWon",
+          koreaLegalAidAgreedFeeWon: requireNonNegativeNumber(
+            koreaLegalAidAgreedFeeWon,
+            "payload.input.lawyerFee.koreaLegalAidAgreedFeeWon",
           ),
         }),
     ...(lawyerRecord.filingDate === undefined

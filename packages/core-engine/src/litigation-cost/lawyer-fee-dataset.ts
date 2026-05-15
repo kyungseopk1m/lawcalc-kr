@@ -3,7 +3,7 @@ import { DEFAULT_LAWYER_FEE_DATASET } from "./lawyer-fee-dataset.generated";
 import type { LawyerFeeAppealsRule, LawyerFeeBracket, NoOralHearingReason } from "./types";
 
 /**
- * 변호사보수 dataset shape. `data/lawyer-fee/v1.json` 이 single source — `scripts/sync-lawyer-fee.mjs`
+ * 변호사보수 dataset shape. `data/lawyer-fee/v2.json` 이 single source — `scripts/sync-lawyer-fee.mjs`
  * 가 빌드 타임에 본 모듈의 `lawyer-fee-dataset.generated.ts` 로 인라인.
  *
  * 적용 조문 (G2 + G5 final 확정):
@@ -11,9 +11,9 @@ import type { LawyerFeeAppealsRule, LawyerFeeBracket, NoOralHearingReason } from
  *   - 동 규칙 제3조 ②항 (가압류·가처분 ×1/2, 변론·심문기일 시 ×1.0)
  *   - 동 규칙 제5조 (무변론·자백·이행권고결정 ×1/2)
  *   - 동 규칙 제6조 ①항·②항 (재량 감액 무한 / 증액 ×1.5 cap)
- *   - 대한법률구조공단 보수 기준 (KLAC × 0.42)
+ *   - Korea Legal Aid Corporation (KLAC) 보수 기준 (대한법률구조공단 × 0.42)
  *
- * `previousVersions` 패턴 (legal-rates) 대신 본 v1.0.0 은 현행 단일 슬라이스 (2018-04-01
+ * `previousVersions` 패턴 (legal-rates) 대신 본 v1.1.0 은 현행 단일 슬라이스 (2018-04-01
  * 별표) + `historyNote.bracketTableChanges` 메타로 시기별 변경 시점만 보존. history-aware
  * 슬라이스 (2008/2013/2018) 확장은 v0.3.1+ 영역.
  */
@@ -66,14 +66,14 @@ export interface LawyerFeeCourtDiscretionModifier {
   sourceCaseUrl: string;
 }
 
-export interface LawyerFeeKlacModifier {
+export interface LawyerFeeKoreaLegalAidModifier {
   multiplier: number;
   applicableCases: string[];
   nonApplicableCases: string[];
   note: string;
   source: string;
   sourceUrl: string;
-  enumVariant: "klac";
+  enumVariant: "koreaLegalAid";
 }
 
 export interface LawyerFeeCustomPercentModifier {
@@ -85,7 +85,7 @@ export interface LawyerFeeModifiers {
   provisionalSeizureOrInjunction: LawyerFeeProvisionalModifier;
   noOralHearingOrAdmission: LawyerFeeNoOralHearingModifier;
   courtDiscretion: LawyerFeeCourtDiscretionModifier;
-  klac: LawyerFeeKlacModifier;
+  koreaLegalAid: LawyerFeeKoreaLegalAidModifier;
   customPercent: LawyerFeeCustomPercentModifier;
 }
 
@@ -255,7 +255,11 @@ function validate(dataset: LawyerFeeDataset): void {
   ) {
     throw new Error("modifiers.noOralHearingOrAdmission.triggers must be a non-empty array");
   }
-  assertMultiplierInRange(modifiers.klac.multiplier, 1.5, "modifiers.klac.multiplier");
+  assertMultiplierInRange(
+    modifiers.koreaLegalAid.multiplier,
+    1.5,
+    "modifiers.koreaLegalAid.multiplier",
+  );
   assertFiniteNonNegative(
     modifiers.courtDiscretion.increaseMaxMultiplier,
     "modifiers.courtDiscretion.increaseMaxMultiplier",

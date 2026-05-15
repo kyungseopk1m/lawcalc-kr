@@ -68,7 +68,7 @@ function buildExcludedLawyerFeeResult(
     rawMultiplier: 0,
     multiplierClamped: false,
     appliedDiscounts: [],
-    klacWarnings: [],
+    koreaLegalAidWarnings: [],
     formulaText:
       "변호사보수 산입 외 사건구분 — 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①항 본안 사건 한정",
     dataVersion: lawyerFeeDatasetVersionTag(dataset),

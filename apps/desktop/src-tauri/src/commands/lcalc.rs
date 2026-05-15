@@ -308,7 +308,7 @@ mod tests {
             json!({
                 "stamp-duty": "stamp-duty/v1.0.0",
                 "delivery": "delivery/v1.1.0",
-                "lawyer-fee": "lawyer-fee/v1.0.0"
+                "lawyer-fee": "lawyer-fee/v1.1.0"
             }),
         );
         if let Some(Value::Object(payload)) = file.body.get_mut("payload") {

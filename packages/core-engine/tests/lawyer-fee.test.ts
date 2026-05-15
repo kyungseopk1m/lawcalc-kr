@@ -23,7 +23,7 @@ function input(overrides: Partial<LawyerFeeInput> = {}): LawyerFeeInput {
 describe("loadLawyerFeeDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadLawyerFeeDataset();
-    expect(ds.version).toBe("1.0.0");
+    expect(ds.version).toBe("1.1.0");
     expect(ds.brackets).toHaveLength(8);
     expect(ds.brackets.map((b) => b.baseAmount)).toEqual([
       300_000, 300_000, 2_000_000, 4_400_000, 7_400_000, 9_400_000, 10_400_000, 13_400_000,
@@ -32,8 +32,8 @@ describe("loadLawyerFeeDataset / 기본 dataset", () => {
     expect(ds.appealsRule.policy).toBe("perInstanceIndependent");
   });
 
-  it("lawyerFeeDatasetVersionTag 는 lawyer-fee/v1.0.0", () => {
-    expect(lawyerFeeDatasetVersionTag(loadLawyerFeeDataset())).toBe("lawyer-fee/v1.0.0");
+  it("lawyerFeeDatasetVersionTag 는 lawyer-fee/v1.1.0", () => {
+    expect(lawyerFeeDatasetVersionTag(loadLawyerFeeDataset())).toBe("lawyer-fee/v1.1.0");
   });
 
   it("override 도 동일하게 검증한다", () => {
@@ -173,7 +173,7 @@ describe("computeLawyerFee / bracket 산식", () => {
     expect(r.baseAmount).toBe(300_000);
     expect(r.amount).toBe(300_000);
     expect(r.multiplier).toBe(1.0);
-    expect(r.dataVersion).toBe("lawyer-fee/v1.0.0");
+    expect(r.dataVersion).toBe("lawyer-fee/v1.1.0");
     expect(r.computedAt).toBe(FROZEN_AT);
   });
 
@@ -250,20 +250,23 @@ describe("computeLawyerFee / 5 discount variant", () => {
     expect(r.amount).toBe(2_800_000);
   });
 
-  it("klac (×0.42 default)", () => {
-    const r = computeLawyerFee(input({ caseValue: 30_000_000, discounts: [{ kind: "klac" }] }), {
-      computedAt: FROZEN_AT,
-    });
+  it("koreaLegalAid (×0.42 default)", () => {
+    const r = computeLawyerFee(
+      input({ caseValue: 30_000_000, discounts: [{ kind: "koreaLegalAid" }] }),
+      {
+        computedAt: FROZEN_AT,
+      },
+    );
     expect(r.multiplier).toBeCloseTo(0.42);
     expect(r.amount).toBeCloseTo(2_800_000 * 0.42);
   });
 
-  it("klac + klacAgreedFeeWon override (지급보수액 cap)", () => {
+  it("koreaLegalAid + koreaLegalAidAgreedFeeWon override (지급보수액 cap)", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
-        discounts: [{ kind: "klac" }],
-        klacAgreedFeeWon: 1_000_000,
+        discounts: [{ kind: "koreaLegalAid" }],
+        koreaLegalAidAgreedFeeWon: 1_000_000,
       }),
       { computedAt: FROZEN_AT },
     );
@@ -310,12 +313,12 @@ describe("computeLawyerFee / 5 discount variant", () => {
 });
 
 describe("computeLawyerFee / 누적 (compound) + clamp", () => {
-  it("klac × noOralHearingOrAdmission = 0.42 × 0.5 = 0.21 (누적)", () => {
+  it("koreaLegalAid × noOralHearingOrAdmission = 0.42 × 0.5 = 0.21 (누적)", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
         discounts: [
-          { kind: "klac" },
+          { kind: "koreaLegalAid" },
           { kind: "noOralHearingOrAdmission", reason: "noOralHearing" },
         ],
       }),
@@ -355,69 +358,75 @@ describe("computeLawyerFee / 누적 (compound) + clamp", () => {
   });
 });
 
-describe("computeLawyerFee / KLAC scope warning", () => {
-  it("민사 + klac → warning 0", () => {
+describe("computeLawyerFee / 대한법률구조공단 scope warning", () => {
+  it("민사 + koreaLegalAid → warning 0", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
         caseType: "civilFirstInstanceCollegial",
-        discounts: [{ kind: "klac" }],
+        discounts: [{ kind: "koreaLegalAid" }],
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.klacWarnings).toHaveLength(0);
+    expect(r.koreaLegalAidWarnings).toHaveLength(0);
   });
 
-  it("가사 + klac → warning 0", () => {
+  it("가사 + koreaLegalAid → warning 0", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
         caseType: "familyFirstInstanceCollegial",
-        discounts: [{ kind: "klac" }],
+        discounts: [{ kind: "koreaLegalAid" }],
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.klacWarnings).toHaveLength(0);
+    expect(r.koreaLegalAidWarnings).toHaveLength(0);
   });
 
-  it("행정 + klac → klacScopeNotCivilOrFamily 경고", () => {
+  it("행정 + koreaLegalAid → koreaLegalAidScopeNotCivilOrFamily 경고", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
         caseType: "administrativeFirstInstance",
-        discounts: [{ kind: "klac" }],
+        discounts: [{ kind: "koreaLegalAid" }],
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.klacWarnings.length).toBeGreaterThanOrEqual(1);
-    expect(r.klacWarnings.some((w) => w.reason === "klacScopeNotCivilOrFamily")).toBe(true);
+    expect(r.koreaLegalAidWarnings.length).toBeGreaterThanOrEqual(1);
+    expect(
+      r.koreaLegalAidWarnings.some((w) => w.reason === "koreaLegalAidScopeNotCivilOrFamily"),
+    ).toBe(true);
   });
 
-  it("보전 + klac → klacScopeNotCivilOrFamily 경고", () => {
+  it("보전 + koreaLegalAid → koreaLegalAidScopeNotCivilOrFamily 경고", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
         caseType: "provisionalMeasureCollegial",
-        discounts: [{ kind: "klac" }],
+        discounts: [{ kind: "koreaLegalAid" }],
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.klacWarnings.some((w) => w.reason === "klacScopeNotCivilOrFamily")).toBe(true);
+    expect(
+      r.koreaLegalAidWarnings.some((w) => w.reason === "koreaLegalAidScopeNotCivilOrFamily"),
+    ).toBe(true);
   });
 
-  it("민사 + klac + customPercent → klacScopeOverridden 경고", () => {
+  it("민사 + koreaLegalAid + customPercent → koreaLegalAidScopeOverridden 경고", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
         caseType: "civilFirstInstanceCollegial",
-        discounts: [{ kind: "klac" }, { kind: "customPercent", rate: 0.5 }],
+        discounts: [{ kind: "koreaLegalAid" }, { kind: "customPercent", rate: 0.5 }],
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.klacWarnings.some((w) => w.reason === "klacScopeOverridden")).toBe(true);
+    expect(r.koreaLegalAidWarnings.some((w) => w.reason === "koreaLegalAidScopeOverridden")).toBe(
+      true,
+    );
   });
 
-  it("klac 미사용 → warning 0 (다른 discount 만)", () => {
+  it("koreaLegalAid 미사용 → warning 0 (다른 discount 만)", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
@@ -426,7 +435,7 @@ describe("computeLawyerFee / KLAC scope warning", () => {
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.klacWarnings).toHaveLength(0);
+    expect(r.koreaLegalAidWarnings).toHaveLength(0);
   });
 });
 
@@ -462,9 +471,9 @@ describe("computeLawyerFee / validator integration", () => {
 });
 
 describe("computeLawyerFee / dataset injection 결정성", () => {
-  it("default 호출 → bundled dataset 사용 (lawyer-fee/v1.0.0)", () => {
+  it("default 호출 → bundled dataset 사용 (lawyer-fee/v1.1.0)", () => {
     const r = computeLawyerFee(input(), { computedAt: FROZEN_AT });
-    expect(r.dataVersion).toBe("lawyer-fee/v1.0.0");
+    expect(r.dataVersion).toBe("lawyer-fee/v1.1.0");
   });
 
   it("custom dataset 주입 → dataVersion 변경", () => {
@@ -500,12 +509,12 @@ describe("computeLawyerFee / formulaText 회귀", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
-        discounts: [{ kind: "klac" }],
+        discounts: [{ kind: "koreaLegalAid" }],
       }),
       { computedAt: FROZEN_AT },
     );
     expect(r.formulaText).toContain("별표 3구간");
-    expect(r.formulaText).toContain("KLAC");
+    expect(r.formulaText).toContain("대한법률구조공단");
   });
 
   it("clamp 적용 시 formulaText 에 raw → clamped 표시", () => {

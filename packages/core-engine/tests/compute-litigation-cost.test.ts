@@ -33,7 +33,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.dataVersions).toEqual({
       "stamp-duty": "stamp-duty/v1.0.0",
       delivery: "delivery/v1.1.0",
-      "lawyer-fee": "lawyer-fee/v1.0.0",
+      "lawyer-fee": "lawyer-fee/v1.1.0",
     });
     expect(result.computedAt).toBe(computedAt);
     expect(result.stampDuty.computedAt).toBe(computedAt);
@@ -127,9 +127,9 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.lawyerFee.baseAmount).toBe(0);
     expect(result.lawyerFee.multiplier).toBe(0);
     expect(result.lawyerFee.appliedDiscounts).toEqual([]);
-    expect(result.lawyerFee.klacWarnings).toEqual([]);
+    expect(result.lawyerFee.koreaLegalAidWarnings).toEqual([]);
     expect(result.lawyerFee.formulaText).toContain("변호사보수 산입 외 사건구분");
-    expect(result.lawyerFee.dataVersion).toBe("lawyer-fee/v1.0.0");
+    expect(result.lawyerFee.dataVersion).toBe("lawyer-fee/v1.1.0");
     expect(result.lawyerFee.computedAt).toBe(computedAt);
 
     // 송달료: 재일 87-4 별표 1 — 독촉사건 6회 × 채권자·채무자 2명 × 5,500원
@@ -142,7 +142,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.dataVersions).toEqual({
       "stamp-duty": "stamp-duty/v1.0.0",
       delivery: "delivery/v1.1.0",
-      "lawyer-fee": "lawyer-fee/v1.0.0",
+      "lawyer-fee": "lawyer-fee/v1.1.0",
     });
   });
 });

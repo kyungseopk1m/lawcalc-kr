@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-15
+
+### Changed
+
+- 소송비용 탭과 문서에서 대한법률구조공단 보수 기준 표기를 한국어 정식 명칭 중심으로 정리했습니다. 한국어 사용자 화면은 "대한법률구조공단"을 사용하고, 공식 영문 출처 맥락에서는 "Korea Legal Aid Corporation (KLAC)" 표기를 보존합니다.
+
+### Migration
+
+- 기존 `.lcalc` v3 소송비용 파일의 `kind: "klac"` modifier 와 `klacAgreedFeeWon` 필드는 불러올 때 `kind: "koreaLegalAid"` / `koreaLegalAidAgreedFeeWon` 으로 자동 변환됩니다.
+
 ## [0.4.0] - 2026-05-15
 
 ### Added
@@ -211,7 +221,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.0...v0.3.1

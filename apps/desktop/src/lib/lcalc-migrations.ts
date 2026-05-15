@@ -13,6 +13,56 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function normalizeLegacyLawyerFeeValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeLegacyLawyerFeeValue(item));
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  const normalized: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "klacAgreedFeeWon") {
+      normalized.koreaLegalAidAgreedFeeWon = child;
+      continue;
+    }
+    if (key === "klacWarnings") {
+      normalized.koreaLegalAidWarnings = normalizeLegacyLawyerFeeValue(child);
+      continue;
+    }
+    normalized[key] = normalizeLegacyLawyerFeeValue(child);
+  }
+
+  if (normalized.kind === "klac") {
+    normalized.kind = "koreaLegalAid";
+  }
+  if (normalized.reason === "klacScopeNotCivilOrFamily") {
+    normalized.reason = "koreaLegalAidScopeNotCivilOrFamily";
+  } else if (normalized.reason === "klacScopeOverridden") {
+    normalized.reason = "koreaLegalAidScopeOverridden";
+  }
+  if (typeof normalized.messageKo === "string") {
+    normalized.messageKo = normalized.messageKo
+      .replaceAll("KLAC 적용", "대한법률구조공단 적용")
+      .replaceAll("KLAC variant", "대한법률구조공단 variant");
+  }
+  if (typeof normalized.formulaText === "string") {
+    normalized.formulaText = normalized.formulaText
+      .replaceAll("KLAC (대한법률구조공단, ×0.42 default)", "대한법률구조공단 (×0.42 default)")
+      .replaceAll("KLAC", "대한법률구조공단");
+  }
+
+  return normalized;
+}
+
+function normalizeV3LitigationCostFile(raw: LcalcFile): LcalcFile {
+  if (raw.kind !== "litigation-cost") {
+    return raw;
+  }
+  return normalizeLegacyLawyerFeeValue(raw) as LcalcFile;
+}
+
 function migrateV1ToV2(
   raw: Extract<LoadableLcalcFile, { schemaVersion: "1" }>,
 ): Extract<LoadableLcalcFile, { schemaVersion: "2" }> {
@@ -79,7 +129,7 @@ export function migrateLcalcFile(raw: unknown): LcalcFile {
 
     const schemaVersion = current.schemaVersion;
     if (schemaVersion === CURRENT_LCALC_SCHEMA_VERSION) {
-      return current as LcalcFile;
+      return normalizeV3LitigationCostFile(current as LcalcFile);
     }
 
     const migration = migrations[schemaVersion];

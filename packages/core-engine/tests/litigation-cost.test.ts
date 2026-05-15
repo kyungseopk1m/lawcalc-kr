@@ -8,13 +8,13 @@ import {
   caseNameKo,
   isCaseType,
   isCivilOrFamily,
-  KLAC_DEFAULT_RATE,
+  KOREA_LEGAL_AID_DEFAULT_RATE,
   LAWYER_FEE_MULTIPLIER_MAX,
   LAWYER_FEE_MULTIPLIER_MIN,
   lawyerFeeDiscountMultiplier,
   listCaseTypes,
   validateDeliveryFeeInput,
-  validateKlacDiscountScope,
+  validateKoreaLegalAidDiscountScope,
   validateLawyerFeeInput,
   validateStampDutyInput,
   type CaseType,
@@ -116,19 +116,21 @@ describe("litigation-cost / lawyerFeeDiscountMultiplier", () => {
     ).toBe(1.0);
   });
 
-  it("klac → 0.42 default (klacAgreedFeeWon 미지정 시)", () => {
-    expect(lawyerFeeDiscountMultiplier({ kind: "klac" }, 1_000_000)).toBe(KLAC_DEFAULT_RATE);
-    expect(KLAC_DEFAULT_RATE).toBe(0.42);
+  it("koreaLegalAid → 0.42 default (koreaLegalAidAgreedFeeWon 미지정 시)", () => {
+    expect(lawyerFeeDiscountMultiplier({ kind: "koreaLegalAid" }, 1_000_000)).toBe(
+      KOREA_LEGAL_AID_DEFAULT_RATE,
+    );
+    expect(KOREA_LEGAL_AID_DEFAULT_RATE).toBe(0.42);
   });
 
-  it("klac → klacAgreedFeeWon < baseFeeWon 시 비율 사용", () => {
-    expect(lawyerFeeDiscountMultiplier({ kind: "klac" }, 1_000_000, 500_000)).toBe(0.5);
-    expect(lawyerFeeDiscountMultiplier({ kind: "klac" }, 1_000_000, 200_000)).toBe(0.2);
+  it("koreaLegalAid → koreaLegalAidAgreedFeeWon < baseFeeWon 시 비율 사용", () => {
+    expect(lawyerFeeDiscountMultiplier({ kind: "koreaLegalAid" }, 1_000_000, 500_000)).toBe(0.5);
+    expect(lawyerFeeDiscountMultiplier({ kind: "koreaLegalAid" }, 1_000_000, 200_000)).toBe(0.2);
   });
 
-  it("klac → klacAgreedFeeWon >= baseFeeWon 시 1.0 (cap 미작용)", () => {
-    expect(lawyerFeeDiscountMultiplier({ kind: "klac" }, 1_000_000, 2_000_000)).toBe(1.0);
-    expect(lawyerFeeDiscountMultiplier({ kind: "klac" }, 1_000_000, 1_000_000)).toBe(1.0);
+  it("koreaLegalAid → koreaLegalAidAgreedFeeWon >= baseFeeWon 시 1.0 (cap 미작용)", () => {
+    expect(lawyerFeeDiscountMultiplier({ kind: "koreaLegalAid" }, 1_000_000, 2_000_000)).toBe(1.0);
+    expect(lawyerFeeDiscountMultiplier({ kind: "koreaLegalAid" }, 1_000_000, 1_000_000)).toBe(1.0);
   });
 
   it("courtDiscretion → multiplier 그대로", () => {
@@ -190,8 +192,8 @@ describe("litigation-cost / applyLawyerFeeDiscounts", () => {
     expect(r.clamped).toBe(false);
   });
 
-  it("KLAC variant → 0.42 적용 (klacAgreedFeeWon 미지정)", () => {
-    const r = applyLawyerFeeDiscounts(10_000_000, [{ kind: "klac" }]);
+  it("대한법률구조공단 variant → 0.42 적용 (koreaLegalAidAgreedFeeWon 미지정)", () => {
+    const r = applyLawyerFeeDiscounts(10_000_000, [{ kind: "koreaLegalAid" }]);
     expect(r.multiplier).toBeCloseTo(0.42, 10);
     expect(r.amountWon).toBeCloseTo(4_200_000, 5);
   });
@@ -331,9 +333,9 @@ describe("litigation-cost / validateLawyerFeeInput", () => {
     ).toThrow(/customPercent.rate 는/);
   });
 
-  it("음수 KLAC 약정보수액 → RangeError", () => {
-    expect(() => validateLawyerFeeInput({ ...validInput, klacAgreedFeeWon: -1 })).toThrow(
-      /KLAC 약정보수액이 유효하지 않습니다/,
+  it("음수 대한법률구조공단 약정보수액 → RangeError", () => {
+    expect(() => validateLawyerFeeInput({ ...validInput, koreaLegalAidAgreedFeeWon: -1 })).toThrow(
+      /대한법률구조공단 약정보수액이 유효하지 않습니다/,
     );
   });
 
@@ -361,53 +363,61 @@ describe("litigation-cost / validateLawyerFeeInput", () => {
   });
 });
 
-describe("litigation-cost / validateKlacDiscountScope", () => {
-  it("KLAC 미사용 → warnings 빈 배열 (비차단)", () => {
+describe("litigation-cost / validateKoreaLegalAidDiscountScope", () => {
+  it("대한법률구조공단 미사용 → warnings 빈 배열 (비차단)", () => {
     expect(
-      validateKlacDiscountScope("administrativeFirstInstance", [
+      validateKoreaLegalAidDiscountScope("administrativeFirstInstance", [
         { kind: "customPercent", rate: 0.5 },
       ]),
     ).toEqual([]);
   });
 
-  it("민·가사 + KLAC 단독 → warnings 빈 배열", () => {
-    expect(validateKlacDiscountScope("civilFirstInstanceCollegial", [{ kind: "klac" }])).toEqual(
-      [],
-    );
-    expect(validateKlacDiscountScope("familyFirstInstanceSingle", [{ kind: "klac" }])).toEqual([]);
+  it("민·가사 + 대한법률구조공단 단독 → warnings 빈 배열", () => {
+    expect(
+      validateKoreaLegalAidDiscountScope("civilFirstInstanceCollegial", [
+        { kind: "koreaLegalAid" },
+      ]),
+    ).toEqual([]);
+    expect(
+      validateKoreaLegalAidDiscountScope("familyFirstInstanceSingle", [{ kind: "koreaLegalAid" }]),
+    ).toEqual([]);
   });
 
-  it("행정 + KLAC → klacScopeNotCivilOrFamily warning", () => {
-    const warnings = validateKlacDiscountScope("administrativeFirstInstance", [{ kind: "klac" }]);
+  it("행정 + 대한법률구조공단 → koreaLegalAidScopeNotCivilOrFamily warning", () => {
+    const warnings = validateKoreaLegalAidDiscountScope("administrativeFirstInstance", [
+      { kind: "koreaLegalAid" },
+    ]);
     expect(warnings).toHaveLength(1);
     const first = warnings[0]!;
-    expect(first.reason).toBe("klacScopeNotCivilOrFamily");
+    expect(first.reason).toBe("koreaLegalAidScopeNotCivilOrFamily");
     expect(first.messageKo).toContain("민·가사");
   });
 
-  it("보전 + KLAC → klacScopeNotCivilOrFamily warning", () => {
-    const warnings = validateKlacDiscountScope("provisionalMeasureCollegial", [{ kind: "klac" }]);
+  it("보전 + 대한법률구조공단 → koreaLegalAidScopeNotCivilOrFamily warning", () => {
+    const warnings = validateKoreaLegalAidDiscountScope("provisionalMeasureCollegial", [
+      { kind: "koreaLegalAid" },
+    ]);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.reason).toBe("klacScopeNotCivilOrFamily");
+    expect(warnings[0]!.reason).toBe("koreaLegalAidScopeNotCivilOrFamily");
   });
 
-  it("KLAC + 다른 multiplier 누적 → klacScopeOverridden warning", () => {
-    const warnings = validateKlacDiscountScope("civilFirstInstanceCollegial", [
-      { kind: "klac" },
+  it("대한법률구조공단 + 다른 multiplier 누적 → koreaLegalAidScopeOverridden warning", () => {
+    const warnings = validateKoreaLegalAidDiscountScope("civilFirstInstanceCollegial", [
+      { kind: "koreaLegalAid" },
       { kind: "noOralHearingOrAdmission", reason: "admission" },
     ]);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.reason).toBe("klacScopeOverridden");
+    expect(warnings[0]!.reason).toBe("koreaLegalAidScopeOverridden");
   });
 
-  it("행정 + KLAC + 다른 multiplier → 2 warning 동시", () => {
-    const warnings = validateKlacDiscountScope("administrativeFirstInstance", [
-      { kind: "klac" },
+  it("행정 + 대한법률구조공단 + 다른 multiplier → 2 warning 동시", () => {
+    const warnings = validateKoreaLegalAidDiscountScope("administrativeFirstInstance", [
+      { kind: "koreaLegalAid" },
       { kind: "courtDiscretion", multiplier: 0.7 },
     ]);
     expect(warnings).toHaveLength(2);
     expect(warnings.map((w) => w.reason).sort()).toEqual(
-      ["klacScopeNotCivilOrFamily", "klacScopeOverridden"].sort(),
+      ["koreaLegalAidScopeNotCivilOrFamily", "koreaLegalAidScopeOverridden"].sort(),
     );
   });
 });

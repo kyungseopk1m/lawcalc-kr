@@ -36,9 +36,9 @@ export function appliedDomains(caseType: CaseType): readonly Domain[] {
 }
 
 /**
- * 사건구분이 민·가사 사건인지 (KLAC 적용 사건 범위 검증용).
+ * 사건구분이 민·가사 사건인지 (대한법률구조공단 적용 사건 범위 검증용).
  *
- * KLAC 정본 source ("민·가사 사건 등") 기준 — 행정/보전/지급명령 default 미적용.
+ * 대한법률구조공단 정본 source ("민·가사 사건 등") 기준 — 행정/보전/지급명령 default 미적용.
  */
 export function isCivilOrFamily(caseType: CaseType): boolean {
   return CASE_TYPE_META[caseType].isCivilOrFamily;
@@ -67,12 +67,13 @@ export function isCaseType(value: unknown): value is CaseType {
 // ===== Lawyer Fee Discount Multiplier =====
 
 /**
- * KLAC 약정보수액 default rate (별표 × 0.42). KLAC 정본 source:
+ * 대한법률구조공단 약정보수액 default rate (별표 × 0.42).
+ * Korea Legal Aid Corporation (KLAC) source:
  *   "기준 중위소득 125% 이하의 국민은 민·가사 사건 등에 대하여 대법원이 정한 변호사보수의
  *    약 42%에 해당하는 보수와 인지대 등 실비만 받고 소송구조를 실시"
  *   — https://www.klac.or.kr/legalstruct/cyberConsultation.do
  */
-export const KLAC_DEFAULT_RATE = 0.42;
+export const KOREA_LEGAL_AID_DEFAULT_RATE = 0.42;
 
 /**
  * 변호사보수 multiplier clamp range. 제6조 ②항 cap = 1/2 한도 증액 → ×1.5 상한.
@@ -84,7 +85,7 @@ export const LAWYER_FEE_MULTIPLIER_MAX = 1.5;
 /**
  * LawyerFeeDiscount 한 variant 의 multiplier 산출.
  *
- * KLAC variant 의 경우 klacAgreedFeeWon 이 제공되면 (agreed/base) 비율 사용,
+ * 대한법률구조공단 variant 의 경우 koreaLegalAidAgreedFeeWon 이 제공되면 (agreed/base) 비율 사용,
  * 미지정 시 0.42 default.
  *
  * 본 함수는 단일 variant 의 multiplier 만 반환 — 누적 적용은 `applyLawyerFeeDiscounts` 사용.
@@ -92,24 +93,24 @@ export const LAWYER_FEE_MULTIPLIER_MAX = 1.5;
 export function lawyerFeeDiscountMultiplier(
   discount: LawyerFeeDiscount,
   baseFeeWon: number,
-  klacAgreedFeeWon?: number,
+  koreaLegalAidAgreedFeeWon?: number,
 ): number {
   switch (discount.kind) {
     case "noOralHearingOrAdmission":
       return 0.5;
     case "provisionalCase":
       return discount.hasOralHearing ? 1.0 : 0.5;
-    case "klac":
+    case "koreaLegalAid":
       if (
-        klacAgreedFeeWon !== undefined &&
-        Number.isFinite(klacAgreedFeeWon) &&
-        klacAgreedFeeWon >= 0 &&
+        koreaLegalAidAgreedFeeWon !== undefined &&
+        Number.isFinite(koreaLegalAidAgreedFeeWon) &&
+        koreaLegalAidAgreedFeeWon >= 0 &&
         baseFeeWon > 0
       ) {
-        const ratio = klacAgreedFeeWon / baseFeeWon;
+        const ratio = koreaLegalAidAgreedFeeWon / baseFeeWon;
         return ratio < 1.0 ? ratio : 1.0;
       }
-      return KLAC_DEFAULT_RATE;
+      return KOREA_LEGAL_AID_DEFAULT_RATE;
     case "courtDiscretion":
       return discount.multiplier;
     case "customPercent":
@@ -145,11 +146,11 @@ export interface ApplyLawyerFeeDiscountsResult {
 export function applyLawyerFeeDiscounts(
   baseFeeWon: number,
   discounts: ReadonlyArray<LawyerFeeDiscount>,
-  klacAgreedFeeWon?: number,
+  koreaLegalAidAgreedFeeWon?: number,
 ): ApplyLawyerFeeDiscountsResult {
   let multiplier = 1.0;
   for (const d of discounts) {
-    multiplier *= lawyerFeeDiscountMultiplier(d, baseFeeWon, klacAgreedFeeWon);
+    multiplier *= lawyerFeeDiscountMultiplier(d, baseFeeWon, koreaLegalAidAgreedFeeWon);
   }
   const rawMultiplier = multiplier;
   let clamped = false;

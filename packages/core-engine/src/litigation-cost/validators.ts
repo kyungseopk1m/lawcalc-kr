@@ -6,7 +6,7 @@
  *   - `"송달료 입력 검증 실패: <inner>"` — validateDeliveryFeeInput
  *   - `"변호사보수 입력 검증 실패: <inner>"` — validateLawyerFeeInput
  *
- * KLAC 적용 사건 범위 검증은 RangeError 비차단 — `KlacScopeWarning[]` 반환 (G5 §3.3).
+ * 대한법률구조공단 적용 사건 범위 검증은 RangeError 비차단 — `KoreaLegalAidScopeWarning[]` 반환 (G5 §3.3).
  */
 
 import {
@@ -21,7 +21,7 @@ import type {
   AppealsLevel,
   CaseType,
   DeliveryFeeInput,
-  KlacScopeWarning,
+  KoreaLegalAidScopeWarning,
   LawyerFeeDiscount,
   LawyerFeeInput,
   StampDutyInput,
@@ -139,7 +139,7 @@ function validateLawyerFeeDiscount(discount: LawyerFeeDiscount, prefix: string):
         fail(prefix, "provisionalCase.hasOralHearing 은 boolean 이어야 합니다");
       }
       return;
-    case "klac":
+    case "koreaLegalAid":
       return;
     case "courtDiscretion":
       if (!Number.isFinite(discount.multiplier)) {
@@ -187,46 +187,52 @@ export function validateLawyerFeeInput(input: LawyerFeeInput): void {
   for (const d of input.discounts) {
     validateLawyerFeeDiscount(d, prefix);
   }
-  if (input.klacAgreedFeeWon !== undefined && !isFiniteNonNegative(input.klacAgreedFeeWon)) {
-    fail(prefix, `KLAC 약정보수액이 유효하지 않습니다 (입력: ${String(input.klacAgreedFeeWon)})`);
+  if (
+    input.koreaLegalAidAgreedFeeWon !== undefined &&
+    !isFiniteNonNegative(input.koreaLegalAidAgreedFeeWon)
+  ) {
+    fail(
+      prefix,
+      `대한법률구조공단 약정보수액이 유효하지 않습니다 (입력: ${String(input.koreaLegalAidAgreedFeeWon)})`,
+    );
   }
   if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
   }
 }
 
-// ===== KLAC scope (non-throwing) =====
+// ===== 대한법률구조공단 scope (non-throwing) =====
 
 /**
- * KLAC 적용 사건 범위 검증. G5 §3.3 권고 — RangeError 비차단, UI 측 경고 채널.
+ * 대한법률구조공단 적용 사건 범위 검증. G5 §3.3 권고 — RangeError 비차단, UI 측 경고 채널.
  *
- *   - `klacScopeNotCivilOrFamily`: 행정·보전·지급명령에 KLAC variant 적용 시
- *   - `klacScopeOverridden`: KLAC + 다른 multiplier 누적 시 이중 감액 risk
+ *   - `koreaLegalAidScopeNotCivilOrFamily`: 행정·보전·지급명령에 대한법률구조공단 variant 적용 시
+ *   - `koreaLegalAidScopeOverridden`: 대한법률구조공단 + 다른 multiplier 누적 시 이중 감액 risk
  *
  * 본 함수는 throw 하지 않음 — 호출자가 warnings 배열을 받아 UI 측 표시.
  */
-export function validateKlacDiscountScope(
+export function validateKoreaLegalAidDiscountScope(
   caseType: CaseType,
   discounts: ReadonlyArray<LawyerFeeDiscount>,
-): KlacScopeWarning[] {
-  const warnings: KlacScopeWarning[] = [];
-  const hasKlac = discounts.some((d) => d.kind === "klac");
-  if (!hasKlac) {
+): KoreaLegalAidScopeWarning[] {
+  const warnings: KoreaLegalAidScopeWarning[] = [];
+  const hasKoreaLegalAid = discounts.some((d) => d.kind === "koreaLegalAid");
+  if (!hasKoreaLegalAid) {
     return warnings;
   }
   if (!isCivilOrFamily(caseType)) {
     warnings.push({
       caseType,
-      reason: "klacScopeNotCivilOrFamily",
-      messageKo: `KLAC 적용은 민·가사 사건에 한합니다 (현재: ${caseNameKo(caseType)})`,
+      reason: "koreaLegalAidScopeNotCivilOrFamily",
+      messageKo: `대한법률구조공단 적용은 민·가사 사건에 한합니다 (현재: ${caseNameKo(caseType)})`,
     });
   }
-  const hasOtherMultiplier = discounts.some((d) => d.kind !== "klac");
+  const hasOtherMultiplier = discounts.some((d) => d.kind !== "koreaLegalAid");
   if (hasOtherMultiplier) {
     warnings.push({
       caseType,
-      reason: "klacScopeOverridden",
-      messageKo: "KLAC variant 와 다른 multiplier 의 누적은 이중 감액 위험이 있습니다",
+      reason: "koreaLegalAidScopeOverridden",
+      messageKo: "대한법률구조공단 variant 와 다른 multiplier 의 누적은 이중 감액 위험이 있습니다",
     });
   }
   return warnings;

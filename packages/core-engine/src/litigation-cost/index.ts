@@ -7,7 +7,7 @@ export type {
   DeliveryFeeResult,
   DeliveryFormula,
   Domain,
-  KlacScopeWarning,
+  KoreaLegalAidScopeWarning,
   LawyerFeeAppealsRule,
   LawyerFeeBracket,
   LawyerFeeDiscount,
@@ -36,7 +36,7 @@ export {
   caseNameKo,
   isCaseType,
   isCivilOrFamily,
-  KLAC_DEFAULT_RATE,
+  KOREA_LEGAL_AID_DEFAULT_RATE,
   LAWYER_FEE_MULTIPLIER_MAX,
   LAWYER_FEE_MULTIPLIER_MIN,
   lawyerFeeDiscountMultiplier,
@@ -45,7 +45,7 @@ export {
 
 export {
   validateDeliveryFeeInput,
-  validateKlacDiscountScope,
+  validateKoreaLegalAidDiscountScope,
   validateLawyerFeeInput,
   validateStampDutyInput,
 } from "./validators";
@@ -101,7 +101,7 @@ export type {
   LawyerFeeDataset,
   LawyerFeeHistoryNote,
   LawyerFeeInterpretiveCases,
-  LawyerFeeKlacModifier,
+  LawyerFeeKoreaLegalAidModifier,
   LawyerFeeModifierChange,
   LawyerFeeModifiers,
   LawyerFeeNoOralHearingModifier,
