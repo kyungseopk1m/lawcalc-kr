@@ -128,7 +128,9 @@ export function getLifeExpectancyAt(
   age: number,
 ): number | undefined {
   if (sex !== "male" && sex !== "female") {
-    throw new RangeError(`getLifeExpectancyAt: sex must be "male" | "female" (got "${sex}")`);
+    throw new RangeError(
+      `getLifeExpectancyAt: sex must be "male" | "female" (got "${String(sex)}")`,
+    );
   }
   if (!Number.isInteger(age) || age < 0 || age > 120) {
     throw new RangeError(`getLifeExpectancyAt: age must be an integer in [0, 120] (got ${age})`);

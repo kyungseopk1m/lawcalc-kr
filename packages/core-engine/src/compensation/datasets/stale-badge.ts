@@ -28,19 +28,25 @@ function parseIsoDate(label: string, value: IsoDate): Date {
   if (!ISO_DATE_PATTERN.test(value)) {
     throw new RangeError(`computeStaleBadge: invalid ${label} "${value}"`);
   }
-  const [year, month, day] = value.split("-").map((part) => Number.parseInt(part, 10));
+  const parts = value.split("-").map((part) => Number.parseInt(part, 10));
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
   if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
     !Number.isInteger(year) ||
     !Number.isInteger(month) ||
     !Number.isInteger(day) ||
-    month! < 1 ||
-    month! > 12 ||
-    day! < 1 ||
-    day! > 31
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
   ) {
     throw new RangeError(`computeStaleBadge: invalid ${label} "${value}"`);
   }
-  return new Date(Date.UTC(year!, month! - 1, day!));
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 function monthsBetween(from: Date, to: Date): number {
