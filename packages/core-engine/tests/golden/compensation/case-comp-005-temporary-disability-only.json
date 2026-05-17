@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-005-temporary-disability-only",
+  "title": "한시 5y×30% 단독 + 영구 0% → segment split (한시 종료 boundary cut)",
+  "source": "manual-derivation",
+  "notes": "compensation-golden-capture-result-2026-05-18.md § 5. permanentTotal = 0 + 한시 존재 → segment A [0, 60) lossRate 0.15 + segment B [60, 360) lossRate 0. segment B 합산 0.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [],
+      "temporary": [{ "department": "정형외과", "ratio": 0.3, "years": 5 }],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": { "ratio": [], "absolute": [] }
+  },
+  "expected": {
+    "segmentCount": 2,
+    "segmentEndMonths": [60, 360],
+    "lostIncomeSubtotalWon": 30352813,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 30352813,
+    "faultOffset": { "ratio": 0, "afterWon": 30352813 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 30352813
+    },
+    "finalWon": 30352800,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-05-18",
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 5"
+  }
+}

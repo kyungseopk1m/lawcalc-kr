@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-001-auto-injury-basic",
+  "title": "auto/injury basic — 영구장해 30% 단독, 가동 60세 30년",
+  "source": "manual-derivation",
+  "notes": "compensation-golden-capture-result-2026-05-18.md § 2. 단일 segment 360개월, H[360]=219.610067, 100원 절사.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [{ "department": "정형외과", "ratio": 0.3 }],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": { "ratio": [], "absolute": [] }
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [360],
+    "lostIncomeSubtotalWon": 249399909,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 249399909,
+    "faultOffset": { "ratio": 0, "afterWon": 249399909 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 249399909
+    },
+    "finalWon": 249399900,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-05-18",
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 2"
+  }
+}

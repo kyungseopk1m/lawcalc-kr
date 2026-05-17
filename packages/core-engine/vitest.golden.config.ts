@@ -6,6 +6,7 @@ export default defineConfig({
       "tests/golden.test.ts",
       "tests/inheritance-golden.test.ts",
       "tests/appropriation-golden.test.ts",
+      "tests/compensation-golden.test.ts",
     ],
     environment: "node",
   },

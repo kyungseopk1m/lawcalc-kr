@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-002-multi-disability",
+  "title": "한시 5y×20% 환산 + 영구 58% 중복 → 0.622 단일 segment 360개월",
+  "source": "manual-derivation",
+  "notes": "compensation-golden-capture-result-2026-05-18.md § 3. 환산 0.10 + 영구 0.58 = 1 - (1-0.58)(1-0.10) = 0.622. 영구장해 양수 → segment split 미발생.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [{ "department": "신장내과", "ratio": 0.58 }],
+      "temporary": [{ "department": "정형외과", "ratio": 0.2, "years": 5 }],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": { "ratio": [], "absolute": [] }
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [360],
+    "lostIncomeSubtotalWon": 517089145,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 517089145,
+    "faultOffset": { "ratio": 0, "afterWon": 517089145 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 517089145
+    },
+    "finalWon": 517089100,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-05-18",
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 3"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-003-hoffman-240-cap",
+  "title": "영구 30% 가동 65세 480개월 → H[480]=263.33 > 240 → cap 적용",
+  "source": "manual-derivation",
+  "notes": "compensation-golden-capture-result-2026-05-18.md § 4. applyHoffman240Cap 의 cumulative clip path. cappedAtIndex = 0.",
+  "input": {
+    "base": {
+      "birthDate": "2001-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 65,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [{ "department": "정형외과", "ratio": 0.3 }],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": { "ratio": [], "absolute": [] }
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [480],
+    "lostIncomeSubtotalWon": 272555712,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 272555712,
+    "faultOffset": { "ratio": 0, "afterWon": 272555712 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 272555712
+    },
+    "finalWon": 272555700,
+    "hoffman240CapCappedAtIndex": 0,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-05-18",
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 4"
+  }
+}

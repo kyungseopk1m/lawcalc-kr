@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-007-fault-offset",
+  "title": "case-comp-001 + 과실 30% + 전액공제 8M (치료비 5M + 선급금 3M)",
+  "source": "manual-derivation",
+  "notes": "compensation-golden-capture-result-2026-05-18.md § 6. compute.ts 단계 8 (과실상계) + 단계 9 (공제) + 단계 10 (100원 절사) 정원 검증.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [{ "department": "정형외과", "ratio": 0.3 }],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0.3,
+    "deductions": {
+      "ratio": [],
+      "absolute": [
+        { "label": "기지급 치료비", "amount": 5000000 },
+        { "label": "선급금", "amount": 3000000 }
+      ]
+    }
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [360],
+    "lostIncomeSubtotalWon": 249399909,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 249399909,
+    "faultOffset": { "ratio": 0.3, "afterWon": 174579936 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 8000000,
+      "afterWon": 166579936
+    },
+    "finalWon": 166579900,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-05-18",
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 6"
+  }
+}
