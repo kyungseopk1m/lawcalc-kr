@@ -1,0 +1,63 @@
+// AUTO-GENERATED. Do not edit by hand.
+// Source: data/life-expectancy/v1.json
+// Regenerate: pnpm --filter @lawcalc-kr/core-engine sync:life-expectancy
+
+import type { LifeExpectancyDataset } from "./life-expectancy";
+
+export const DEFAULT_LIFE_EXPECTANCY_DATASET: LifeExpectancyDataset = {
+  "version": "1.0.0",
+  "updatedAt": "2026-05-17",
+  "source": "통계청 KOSIS 생명표 (2023년 사망률 기준, 2024-12 발표)",
+  "sourceUrl": "https://www.korea.kr/briefing/policyBriefingView.do?newsId=156664008",
+  "license": "KOSIS 자유 사용·재사용·재배포·상업적 활용 허용 (출처표시 + 왜곡 금지). 출처: 통계청 KOSIS 생명표 (https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_1B42).",
+  "snapshotDate": "2024-12-04",
+  "publicationYear": 2024,
+  "mortalityBaseYear": 2023,
+  "snapshotMethod": "통계청 보도자료 (2023년 생명표 작성 결과) 본문 직접 노출 anchor 5개 (0 / 40 / 60 / 65 / 80) 만 박은 anchor-only snapshot. 0~120세 1세 단위 full table 은 KOSIS open data API 또는 SDMX dump 별 commit 갱신 정원. 본 commit 시점 lookup 은 anchor 일치 시만 정확, 보간 fallback 정원 0 (entries 외 age = undefined). 트랙 A engine wire-up 진입 전 raw 갱신 권장.",
+  "tables": {
+    "male": [
+      {
+        "age": 0,
+        "remainingYears": 80.6
+      },
+      {
+        "age": 40,
+        "remainingYears": 41.6
+      },
+      {
+        "age": 60,
+        "remainingYears": 23.4
+      },
+      {
+        "age": 65,
+        "remainingYears": 19.2
+      },
+      {
+        "age": 80,
+        "remainingYears": 8.3
+      }
+    ],
+    "female": [
+      {
+        "age": 0,
+        "remainingYears": 86.4
+      },
+      {
+        "age": 40,
+        "remainingYears": 47.2
+      },
+      {
+        "age": 60,
+        "remainingYears": 28.2
+      },
+      {
+        "age": 65,
+        "remainingYears": 23.6
+      },
+      {
+        "age": 80,
+        "remainingYears": 10.7
+      }
+    ]
+  }
+};
