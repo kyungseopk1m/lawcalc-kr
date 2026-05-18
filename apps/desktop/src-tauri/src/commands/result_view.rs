@@ -225,11 +225,11 @@ pub fn options_summary(options: &OptionsView) -> String {
     let rounding_ko = match options.rounding.as_deref().unwrap_or("floor") {
         "floor" => "절사",
         "ceil" => "절상",
-        "round" => "사사오입",
+        "round" => "반올림",
         other => other,
     };
     format!(
-        "{} · {} · {} · 끝수처리: {}",
+        "{} · {} · {} · 끝수 처리: {}",
         mode_ko, leap_ko, first_ko, rounding_ko
     )
 }
@@ -347,7 +347,7 @@ mod tests {
         };
         assert_eq!(
             options_summary(&opts),
-            "기간식 · 365일 고정 · 초일 미산입 · 끝수처리: 절사"
+            "기간식 · 365일 고정 · 초일 미산입 · 끝수 처리: 절사"
         );
     }
 
@@ -359,12 +359,12 @@ mod tests {
             include_first_day: true,
             rounding: Some("ceil".into()),
         };
-        assert!(options_summary(&base).ends_with("끝수처리: 절상"));
+        assert!(options_summary(&base).ends_with("끝수 처리: 절상"));
 
         let round = OptionsView {
             rounding: Some("round".into()),
             ..base
         };
-        assert!(options_summary(&round).ends_with("끝수처리: 사사오입"));
+        assert!(options_summary(&round).ends_with("끝수 처리: 반올림"));
     }
 }

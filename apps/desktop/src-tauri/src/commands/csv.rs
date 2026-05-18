@@ -346,7 +346,7 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
     ])?;
     for (i, segment) in view.segments.iter().enumerate() {
         let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
-            " (cap)"
+            " (한도)"
         } else {
             ""
         };
@@ -670,7 +670,7 @@ mod tests {
         view.segments[0].applied_hoffman = 240.0;
         let bytes = render_compensation_csv_bytes(&view).unwrap();
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
-        assert!(body.contains("(cap)"));
+        assert!(body.contains("(한도)"));
     }
 
     /// User-controlled name fields must not be evaluated as formulas in the

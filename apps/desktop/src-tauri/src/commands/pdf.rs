@@ -388,15 +388,15 @@ impl<'a> PageWriter<'a> {
         let lines: [(String, String); 5] = [
             (
                 "원금".into(),
-                format!("{} 원", format_currency(view.principal)),
+                format!("{}원", format_currency(view.principal)),
             ),
             (
                 "이자 합계".into(),
-                format!("{} 원", format_currency(view.total_interest)),
+                format!("{}원", format_currency(view.total_interest)),
             ),
             (
                 "최종 합계".into(),
-                format!("{} 원", format_currency(view.grand_total)),
+                format!("{}원", format_currency(view.grand_total)),
             ),
             ("데이터 버전".into(), view.data_version.clone()),
             ("옵션".into(), options_summary(&view.options)),
@@ -433,19 +433,19 @@ impl<'a> PageWriter<'a> {
         let lines: [(String, String); 5] = [
             (
                 "인지대".into(),
-                format!("{} 원", format_currency(view.stamp_duty.amount)),
+                format!("{}원", format_currency(view.stamp_duty.amount)),
             ),
             (
                 "송달료".into(),
-                format!("{} 원", format_currency(view.delivery_fee.amount)),
+                format!("{}원", format_currency(view.delivery_fee.amount)),
             ),
             (
                 "변호사보수".into(),
-                format!("{} 원", format_currency(view.lawyer_fee.amount)),
+                format!("{}원", format_currency(view.lawyer_fee.amount)),
             ),
             (
                 "합계".into(),
-                format!("{} 원", format_currency(view.total_amount)),
+                format!("{}원", format_currency(view.total_amount)),
             ),
             ("계산 시각".into(), view.computed_at.clone()),
         ];
@@ -686,34 +686,31 @@ impl<'a> PageWriter<'a> {
             ),
             (
                 "일실수입 소계".into(),
-                format!("{} 원", format_currency(view.lost_income_subtotal_won)),
+                format!("{}원", format_currency(view.lost_income_subtotal_won)),
             ),
             (
                 "위자료".into(),
-                format!("{} 원", format_currency(view.solatium_won)),
+                format!("{}원", format_currency(view.solatium_won)),
             ),
             (
                 "재산상 손해 소계".into(),
-                format!(
-                    "{} 원",
-                    format_currency(view.pecuniary_damages_subtotal_won)
-                ),
+                format!("{}원", format_currency(view.pecuniary_damages_subtotal_won)),
             ),
             (
                 format!("과실상계 ({:.0}%)", view.fault_offset.ratio * 100.0),
-                format!("{} 원", format_currency(view.fault_offset.after_won)),
+                format!("{}원", format_currency(view.fault_offset.after_won)),
             ),
             (
                 "공제 (비율 + 전액)".into(),
                 format!(
-                    "{} + {} 원",
+                    "{}원 + {}원",
                     format_currency(view.deductions.ratio_subtotal_won),
                     format_currency(view.deductions.absolute_subtotal_won)
                 ),
             ),
             (
                 "최종 합계".into(),
-                format!("{} 원", format_currency(view.final_won)),
+                format!("{}원", format_currency(view.final_won)),
             ),
             ("계산 시각".into(), view.computed_at.clone()),
         ];
@@ -751,7 +748,7 @@ impl<'a> PageWriter<'a> {
         for (i, segment) in view.segments.iter().enumerate() {
             self.advance(5.4);
             let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
-                " (cap)"
+                " (한도)"
             } else {
                 ""
             };
