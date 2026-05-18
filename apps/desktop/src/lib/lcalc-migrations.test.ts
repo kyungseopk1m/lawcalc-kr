@@ -59,6 +59,7 @@ const sampleV1: Extract<LoadableLcalcFile, { schemaVersion: "1" }> = {
     },
     dataVersion: "legal-rates/v1.0.0",
     computedAt: "2026-05-09T12:00:00.000Z",
+    disclaimer: STANDARD_DISCLAIMER,
   },
   disclaimer: STANDARD_DISCLAIMER,
 };
