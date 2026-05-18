@@ -2,19 +2,19 @@ import { DEFAULT_LABOR_RATES_DATASET } from "./labor-rates.dataset.generated";
 import type { IsoDate } from "../../types";
 
 /**
- * 대한건설협회 (CAK) 시중노임 단가 dataset.
+ * 대한건설협회 시중노임 단가 데이터셋.
  *
- * `slices` 는 CAK 적용일 (`effectiveFrom`) 오름차순 정원. 직종별 일당 (원/일) 은
+ * `slices` 는 대한건설협회 적용일 (`effectiveFrom`) 오름차순 정원. 직종별 일당 (원/일) 은
  * `rates` 객체에 `[직종명]: 단가` 로 박음. v1.0.0 = slice 메타 scaffold 정원이며
  * 본 commit 시점 직종별 raw 단가는 0건 (`rates: {}`). 본문은 별 commit 으로
  * 갱신, UI 측 사용자 raw 일당 override 가 stale/scaffold lag 의 우회 path.
  */
 export interface LaborRatesSlice {
-  /** CAK 적용일 (YYYY-MM-DD). slices 안 오름차순 정원. */
+  /** 대한건설협회 적용일 (YYYY-MM-DD). slices 안 오름차순 정원. */
   effectiveFrom: IsoDate;
-  /** CAK 발표/공표일 (YYYY-MM-DD). */
+  /** 대한건설협회 발표/공표일 (YYYY-MM-DD). */
   announcementDate: IsoDate;
-  /** CAK 발표 게시판 또는 PDF URL. */
+  /** 대한건설협회 발표 게시판 또는 PDF URL. */
   announcementUrl: string;
   /** 발표 보고서 제목 (예: "2026년 상반기 적용 건설업 임금실태조사 보고서"). */
   title?: string;

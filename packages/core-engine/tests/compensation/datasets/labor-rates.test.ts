@@ -21,7 +21,7 @@ const BASE_SLICE: LaborRatesSlice = {
 const BASE_DATASET: LaborRatesDataset = {
   version: "1.0.0",
   updatedAt: "2026-05-17",
-  source: "CAK 시중노임",
+  source: "대한건설협회 시중노임",
   sourceUrl: "https://www.cak.or.kr/",
   license: "테스트용 라이선스 표기",
   snapshotDate: "2025-12-31",
@@ -40,7 +40,7 @@ describe("labor-rates dataset (loader + version tag)", () => {
     expect(laborRatesDatasetVersionTag(loadLaborRatesTable())).toBe("labor-rates/v1.0.0");
   });
 
-  it("default dataset bundles the 2026-01-01 CAK slice with the canonical 보통인부 단가", () => {
+  it("default dataset bundles the 2026-01-01 대한건설협회 slice with the canonical 보통인부 단가", () => {
     const ds = loadLaborRatesTable();
     const earliest = ds.slices[0]!;
     expect(earliest.effectiveFrom).toBe("2026-01-01");

@@ -13,7 +13,7 @@ export const DEFAULT_LIFE_EXPECTANCY_DATASET: LifeExpectancyDataset = {
   "snapshotDate": "2024-12-04",
   "publicationYear": 2024,
   "mortalityBaseYear": 2023,
-  "snapshotMethod": "통계청 보도자료 (2023년 생명표 작성 결과) 본문 직접 노출 anchor 5개 (0 / 40 / 60 / 65 / 80) 만 박은 anchor-only snapshot. 0~120세 1세 단위 full table 은 KOSIS open data API 또는 SDMX dump 별 commit 갱신 정원. 본 commit 시점 lookup 은 anchor 일치 시만 정확, 보간 fallback 정원 0 (entries 외 age = undefined). 트랙 A engine wire-up 진입 전 raw 갱신 권장.",
+  "snapshotMethod": "통계청 보도자료(2023년 생명표 작성 결과) 본문에 직접 노출된 기준값 5개(0 / 40 / 60 / 65 / 80)만 담은 스냅샷입니다. 0~120세 1세 단위 전체 표는 KOSIS Open Data API 또는 SDMX 덤프로 별도 커밋에서 갱신할 예정입니다. 현재 조회는 기준값과 정확히 일치할 때만 값을 반환하며, 보간값은 사용하지 않습니다(entries 외 age = undefined). 트랙 A 엔진 연결 진입 전 원자료 갱신을 권장합니다.",
   "tables": {
     "male": [
       {

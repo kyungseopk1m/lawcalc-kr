@@ -117,7 +117,7 @@ describe("formatCompensationForClipboard + buildCompensationLcalcFile", () => {
   it("clipboard 본문은 STANDARD_DISCLAIMER 로 끝남 + 4 dataVersions 라벨 노출", () => {
     const result = computeCompensation(buildCompensationInput(defaultCompensationFormState()));
     const text = formatCompensationForClipboard(result);
-    expect(text).toContain("LawCalc Korea 자×부상 손해배상 계산 결과");
+    expect(text).toContain("LawCalc Korea 자동차 사고 부상 손해배상 계산 결과");
     expect(text).toContain("laborRates=labor-rates/v1.0.0");
     expect(text).toContain("lifeExpectancy=life-expectancy/v1.0.0");
     expect(text).toContain("hoffman=hoffman/v1.0.0");
@@ -154,14 +154,14 @@ describe("computeStaleBadge wire (트랙 D + U 5-1 정원)", () => {
     const stale = computeStaleBadge("2025-08-01", "2026-05-18");
     expect(stale.level).toBe("amber");
     expect(stale.overrideStrongly).toBe(true);
-    expect(stale.message).toContain("CAK");
+    expect(stale.message).toContain("대한건설협회");
   });
 
   it("snapshot > 12m → red, override 강조 true + 갱신 메시지", () => {
     const stale = computeStaleBadge("2024-01-01", "2026-05-18");
     expect(stale.level).toBe("red");
     expect(stale.overrideStrongly).toBe(true);
-    expect(stale.message).toContain("dataset 갱신 필요");
+    expect(stale.message).toContain("데이터셋 갱신");
   });
 });
 

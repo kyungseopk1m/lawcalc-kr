@@ -1,11 +1,11 @@
 {
   "version": "1.0.0",
   "updatedAt": "2026-05-17",
-  "source": "대한건설협회 (Construction Association of Korea, CAK) 건설업 임금실태조사 보고서 (시중노임 단가)",
+  "source": "대한건설협회 건설업 임금실태조사 보고서 (시중노임 단가)",
   "sourceUrl": "https://www.cak.or.kr/lay1/bbs/S1T41C42/A/14/list.do",
-  "license": "공공누리 KOGL 표기 미발견 + 명시 재배포 라이선스 미발견 (CAK 사이트 footer COPYRIGHT 표기). lawcalc-kr 측 사용자 라이선스 OK 의지 (2026-05-17) 신뢰 path 진입. v0.6+ cycle CAK 사무국 라이선스 cross-check 정원. 본 dataset 은 출처표시 + 왜곡 금지 + OSS 비영리 도구 재배포 + 사용자 override 상시 제공 정원.",
+  "license": "공공누리 KOGL 표기와 명시 재배포 라이선스를 발견하지 못했습니다(대한건설협회 사이트 footer COPYRIGHT 표기). lawcalc-kr 측 사용자 라이선스 OK 의지(2026-05-17)를 신뢰해 진입했습니다. v0.6+ 사이클에서는 대한건설협회 사무국 라이선스 확인을 예정합니다. 본 데이터셋은 출처표시, 왜곡 금지, OSS 비영리 도구 재배포, 사용자 직접 입력 상시 제공을 전제로 합니다.",
   "snapshotDate": "2025-12-31",
-  "snapshotMethod": "CAK 발표 PDF (`2026년 상반기 적용 건설업 임금실태조사 보고서`) §Ⅲ 개별직종 노임단가 표 (2026.1.1 적용일 열) raw 추출. 조사되지 않은 직종 (`-` 표기) 19건은 rates 객체 미포함.",
+  "snapshotMethod": "대한건설협회 발표 PDF(`2026년 상반기 적용 건설업 임금실태조사 보고서`) §Ⅲ 개별직종 노임단가 표의 2026.1.1 적용일 열에서 추출했습니다. 조사되지 않은 직종(`-` 표기) 19건은 rates 객체에 포함하지 않았습니다.",
   "slices": [
     {
       "effectiveFrom": "2026-01-01",

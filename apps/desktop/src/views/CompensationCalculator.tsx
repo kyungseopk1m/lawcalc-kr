@@ -330,7 +330,7 @@ export function formatCompensationForClipboard(result: CompensationResult): stri
     .join("\n");
 
   return [
-    "LawCalc Korea 자×부상 손해배상 계산 결과",
+    "LawCalc Korea 자동차 사고 부상 손해배상 계산 결과",
     `중복장해율: ${formatRatioPercent(result.combinedLossRate)}`,
     `일실수입 소계: ${formatWon(result.lostIncomeSubtotalWon)}`,
     `위자료: ${formatWon(result.solatiumWon)}`,
@@ -686,8 +686,8 @@ export function CompensationCalculator() {
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">일실수입</CardTitle>
             <p className="text-xs text-muted-foreground">
-              직종 자동입력 (CAK 시중노임) 또는 직접 입력. directWageWon &gt; 0 시 dataset 단가
-              무시.
+              대한건설협회 시중노임 기준 직종 단가를 사용합니다. 일당을 직접 입력하면 직종 단가보다
+              우선합니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -705,7 +705,7 @@ export function CompensationCalculator() {
               </Select>
             </label>
             <label className="grid gap-2 text-sm font-medium">
-              일당 직접 입력 (원/일, 선택 — dataset 자동입력 위에 덮어쓰기)
+              일당 직접 입력 (원/일, 선택)
               <Input
                 inputMode="numeric"
                 placeholder="예: 172,068"
@@ -933,8 +933,8 @@ export function CompensationCalculator() {
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                v0.5.0 범위 = 자동차 사고 부상 단일 슬라이스. 자×사망 / 산재 / 기타손해 (개호비 등)
-                는 후속 minor train.
+                v0.5.0은 자동차 사고 부상만 지원합니다. 자×사망, 산재, 기타손해(개호비 등)는 후속
+                버전에서 다룹니다.
               </p>
             </CardContent>
           </Card>
@@ -969,7 +969,7 @@ function StaleBadge({
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="flex-1">
-        기준 dataset {version} · 최근 적용일 {effectiveFrom} · 경과 {stale.monthsElapsed}개월
+        기준 데이터셋 {version} · 최근 적용일 {effectiveFrom} · 경과 {stale.monthsElapsed}개월
         {stale.message ? ` — ${stale.message}` : ""}
       </span>
     </div>
@@ -1011,7 +1011,7 @@ function ResultCards({ result }: { result: CompensationResult }) {
 
       <Card>
         <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm">일실수입 segments</CardTitle>
+          <CardTitle className="text-sm">일실수입 구간</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <table className="w-full text-sm">
@@ -1035,7 +1035,9 @@ function ResultCards({ result }: { result: CompensationResult }) {
                   <td className="py-2 text-right">
                     {segment.appliedHoffman.toFixed(6)}
                     {result.hoffman240Cap.cappedAtIndex === i ? (
-                      <span className="ml-1 text-xs text-amber-700 dark:text-amber-300">(cap)</span>
+                      <span className="ml-1 text-xs text-amber-700 dark:text-amber-300">
+                        (한도)
+                      </span>
                     ) : null}
                   </td>
                   <td className="py-2 text-right">{formatWon(segment.amountFloorWon)}</td>
@@ -1045,8 +1047,8 @@ function ResultCards({ result }: { result: CompensationResult }) {
           </table>
           {result.hoffman240Cap.cappedAtIndex !== null ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              호프만 240 cap 적용 — segment {result.hoffman240Cap.cappedAtIndex + 1} 부터 누적치가
-              240 을 초과해 한도가 적용됐습니다.
+              호프만 240 한도 적용 — {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
+              240을 초과해 한도를 적용했습니다.
             </p>
           ) : null}
         </CardContent>

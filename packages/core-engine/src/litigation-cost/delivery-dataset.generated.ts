@@ -20,7 +20,7 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
     "currentEffectiveFrom": "2026-03-01",
     "currentRuleNumber": "재판예규 제1950호",
     "sourceUrl": "https://portal.scourt.go.kr/pgp/main.on?w2xPath=PGP1051M04&jisCntntsSrno=2026000031884&c=900&srchwd=%EC%9E%AC%EC%9D%BC%2087-4%20%EB%B3%84%ED%91%9C%201",
-    "note": "사건구분별 송달 횟수 매트릭스는 본 재판예규 별표 1 에 위임. 본 dataset 의 countMatrix 는 재판예규 제1950호 (2026-02-26 개정 / 2026-03-01 시행) 별표 1 본문 직접 인용."
+    "note": "사건구분별 송달 횟수 매트릭스는 본 재판예규 별표 1에 위임합니다. 본 데이터셋의 countMatrix는 재판예규 제1950호(2026-02-26 개정 / 2026-03-01 시행) 별표 1 본문을 직접 기준으로 삼았습니다."
   },
   "unitPriceHistory": [
     {
@@ -213,7 +213,7 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
       {
         "effectiveFrom": "2026-03-01",
         "ruleNumber": "재판예규 제1950호",
-        "summary": "별표 1 (적용대상사건 및 당사자 1인당 송달료납부기준) 개정 — 본 dataset 의 countMatrix 정본 출처 슬라이스"
+        "summary": "별표 1(적용대상사건 및 당사자 1인당 송달료납부기준) 개정 — 본 데이터셋 countMatrix의 정본 출처 구간"
       },
       {
         "effectiveFrom": "2020-11-26",

@@ -162,7 +162,7 @@ export function computeCompensation(
     const rate = getLaborRateAt(laborRates, occupation, input.base.accidentDate);
     if (rate === undefined) {
       throw new RangeError(
-        `손해배상 계산 실패: 직종 "${occupation}" 의 단가를 사고일 ${input.base.accidentDate} 기준으로 찾을 수 없습니다. directWageWon override 가 필요합니다.`,
+        `손해배상 계산 실패: 직종 "${occupation}"의 단가를 사고일 ${input.base.accidentDate} 기준으로 찾을 수 없습니다. 일당을 직접 입력해 주세요.`,
       );
     }
     dailyWageWon = rate;

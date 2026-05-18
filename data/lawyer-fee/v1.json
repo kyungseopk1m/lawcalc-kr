@@ -145,7 +145,7 @@
       "multiplier": 0.42,
       "applicableCases": ["민사", "가사"],
       "nonApplicableCases": ["행정", "보전", "지급명령", "도산", "형사"],
-      "note": "기준 중위소득 125% 이하 의뢰인. 별표 × 0.42 cap (KLAC 약정보수액).",
+      "note": "기준 중위소득 125% 이하 의뢰인. 별표 × 0.42 상한(대한법률구조공단 약정보수액).",
       "source": "대한법률구조공단 사이버 상담",
       "sourceUrl": "https://www.klac.or.kr/legalstruct/cyberConsultation.do",
       "enumVariant": "klac"
@@ -159,7 +159,7 @@
     "default": "compound",
     "minMultiplierCap": 0.0,
     "maxMultiplierCap": 1.5,
-    "note": "제3조 ②항 (사건구분) × 제5조 (종결 사유) 의 직교 조합 — 누적 (compound) 적용이 본 규칙 구조와 정합. 제6조 ②항 cap = ×1.5.",
+    "note": "제3조 ②항(사건구분) × 제5조(종결 사유)의 직교 조합입니다. 누적 적용이 본 규칙 구조와 정합하며, 제6조 ②항 상한은 ×1.5입니다.",
     "sourceBasis": "본 규칙 본문 구조 + 대법원 2017마6274 종합 고려 7요소"
   },
   "interpretiveCases": {

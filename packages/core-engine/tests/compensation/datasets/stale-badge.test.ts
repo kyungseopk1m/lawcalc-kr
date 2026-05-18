@@ -21,7 +21,7 @@ describe("computeStaleBadge", () => {
     const result = computeStaleBadge("2026-01-01", "2026-08-01");
     expect(result.level).toBe("amber");
     expect(result.monthsElapsed).toBe(7);
-    expect(result.message).toContain("CAK");
+    expect(result.message).toContain("대한건설협회");
     expect(result.overrideStrongly).toBe(true);
   });
 
@@ -36,7 +36,7 @@ describe("computeStaleBadge", () => {
     const result = computeStaleBadge("2026-01-01", "2027-02-01");
     expect(result.level).toBe("red");
     expect(result.monthsElapsed).toBe(13);
-    expect(result.message).toContain("갱신 필요");
+    expect(result.message).toContain("데이터셋 갱신");
     expect(result.overrideStrongly).toBe(true);
   });
 

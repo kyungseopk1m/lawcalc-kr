@@ -7,7 +7,7 @@ import type { LeibnizDataset } from "./leibniz";
 export const DEFAULT_LEIBNIZ_DATASET: LeibnizDataset = {
   "version": "1.0.0",
   "updatedAt": "2026-05-16",
-  "source": "복리현가율 공식 (월 단위 단순 현가, 할인율 5%/년)",
+  "source": "복리현가율 공식(월 단위 단순 현가, 할인율 연 5%)",
   "formula": "L[n] = 1 / (1 + 0.05 / 12) ^ n",
   "license": "수학 공식·표는 저작권 보호 대상 외 (사실의 표시)",
   "monthsCovered": 480,
