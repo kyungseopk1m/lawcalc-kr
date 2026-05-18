@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - README 스크린샷을 v0.5.0 기준으로 재캡처하고 5개 탭과 정보 다이얼로그 화면을 최신 UI로 갱신했습니다.
 - README, project-design, source-materials, LEGAL_REFERENCES 문서를 손해배상 자×부상 first slice, 5개 도메인 범위, 외부 dataset 출처, v0.6+ minor train 로드맵 기준으로 갱신했습니다.
 
+### Fixed
+
+- 이자 탭 결과 카드에 면책 고지가 직접 표시되지 않던 정합 결함을 수정했습니다. 다른 4개 도메인(상속/소송비용/변제충당/손해배상)은 결과 카드에 `STANDARD_DISCLAIMER` 를 emerald 박스로 시각적으로 노출해 왔으나 이자 탭만 결과 표 카드와 내보내기 카드 사이에서 면책 노출이 누락되어 있었습니다. `InterestResult` 타입에 `disclaimer` 필드를 추가해 다른 4 도메인과 동일한 단일 source 정원을 따르도록 보강했고, 결과 카드 영역에도 동일 emerald 박스를 박아 5 surface 매트릭스 정합을 회복했습니다.
+
 ## [0.4.1] - 2026-05-15
 
 ### Changed

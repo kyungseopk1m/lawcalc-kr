@@ -608,6 +608,14 @@ export function App() {
               </CardContent>
             </Card>
 
+            <div
+              className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+              data-testid="interest-disclaimer"
+            >
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
+            </div>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

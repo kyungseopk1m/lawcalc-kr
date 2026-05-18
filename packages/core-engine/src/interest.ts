@@ -1,3 +1,4 @@
+import { STANDARD_DISCLAIMER } from "./disclaimers";
 import { datasetVersionTag, loadLegalRates, type LegalRateDataset } from "./legal-rates";
 import { resolveSegments } from "./segments";
 import { computeSegmentInterest } from "./shared/accrual";
@@ -72,5 +73,6 @@ export function calculateInterest(
     options: input.options,
     dataVersion: datasetVersionTag(dataset),
     computedAt: new Date().toISOString(),
+    disclaimer: STANDARD_DISCLAIMER,
   };
 }
