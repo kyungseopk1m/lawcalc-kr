@@ -78,6 +78,12 @@ async function clickCalculate(page, { assertDisclaimer }) {
 
 async function captureCurrentPage(page, filename) {
   await page.evaluate(() => window.scrollTo(0, 0));
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+  await page.waitForTimeout(2000);
   await page.screenshot({
     path: path.join(outputDir, filename),
     fullPage: false,
