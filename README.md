@@ -5,7 +5,7 @@
 <h1 align="center">LawCalc Korea</h1>
 
 <p align="center">
-  <b>판결금 이자·지연손해금, 상속분, 소송비용, 변제충당을 로컬에서 계산하는 데스크톱 워크벤치</b><br>
+  <b>판결금 이자·지연손해금, 상속분, 소송비용, 변제충당, 손해배상을 로컬에서 계산하는 데스크톱 워크벤치</b><br>
   <sub>본질에 집중한 법률 계산 워크벤치 · 사건 정보는 외부로 전송하지 않습니다</sub>
 </p>
 
@@ -26,7 +26,7 @@
 > 본 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인이 필요합니다.
 > 계산 근거와 독립성 명시: [docs/LEGAL_REFERENCES.md](docs/LEGAL_REFERENCES.md)
 
-LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리하는 로컬 데스크톱 앱입니다. 원금·기간·이율, 상속인, 소가·당사자수, 채권 잔액·변제액처럼 자주 바뀌는 입력값부터 결과표, 적용 근거, 저장·내보내기까지 한 흐름에서 다룹니다.
+LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리하는 로컬 데스크톱 앱입니다. 현재 데스크톱 앱은 이자 / 상속 / 소송비용 / 변제충당 / 손해배상 5개 도메인을 한 화면 흐름에서 다루며, 원금·기간·이율, 상속인, 소가·당사자수, 채권 잔액·변제액, 노동력상실률·일실수입처럼 자주 바뀌는 입력값부터 결과표, 적용 근거, 저장·내보내기까지 로컬에서 처리합니다.
 
 ## 주요 기능
 
@@ -72,6 +72,14 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
   <img src="docs/assets/readme-compensation.png" alt="손해배상 계산 화면" width="820">
 </p>
 
+자동차 사고 부상 단일 slice를 먼저 지원합니다. 생년월일·사고일자·치료종료일, 영구/한시 노동력상실률, 직종 자동입력 또는 일당 직접 입력, 위자료, 과실비율, 비율/전액 공제를 입력하면 10단계 계산 흐름으로 일실수입 segments, 호프만 240 cap 적용, 과실상계·공제 후 최종 합계를 표시합니다. 결과에는 `compensation@1` capability, `labor-rates` / `life-expectancy` / `hoffman` / `leibniz` dataset 식별자, CAK 시중노임 snapshot stale badge, 면책 고지를 함께 표시합니다.
+
+| dataset                             | 출처와 처리                                                                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `labor-rates/v1.0.0`                | 대한건설협회(CAK) 시중노임 단가. 프로젝트 라이선스 검토에서 허용된 하이브리드 경로로 번들하며, 앱은 직종 자동입력과 일당 직접 입력 override를 항상 함께 제공합니다. |
+| `life-expectancy/v1.0.0`            | 통계청 KOSIS 생명표. KOSIS 이용 안내상 자유 이용·재사용·재배포 가능 범위로 확인하고 출처표시·왜곡 금지 원칙을 따릅니다.                                             |
+| `hoffman/v1.0.0` / `leibniz/v1.0.0` | 할인율 5% 기준 정적 수학표입니다. 호프만 표는 월 단위 단리연금현가율과 240 cap 메타를 포함합니다.                                                                   |
+
 ### 공통 워크플로
 
 <p align="center">
@@ -106,7 +114,7 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 
 `.lcalc` 는 입력값·계산 옵션·적용 데이터 버전·결과·면책 고지를 한 데 묶어 저장하는 재현용 JSON 파일입니다. 사건 정보는 외부 서버로 전송하지 않고 로컬 파일로만 저장됩니다.
 
-현재 저장 형식은 `schemaVersion: "3"` envelope 입니다. `kind` 값으로 `interest`, `inheritance`, `litigation-cost`, `appropriation` 계산 유형을 구분하고, `envelopeFeatures` 와 `dataVersions` 로 파일 호환성과 데이터셋 버전을 빠르게 확인합니다. v0.1.x/v0.2.x 파일은 불러올 때 v3 로 자동 마이그레이션됩니다.
+현재 저장 형식은 `schemaVersion: "3"` envelope 입니다. `kind` 값으로 `interest`, `inheritance`, `litigation-cost`, `appropriation`, `compensation` 계산 유형을 구분하고, `envelopeFeatures` 와 `dataVersions` 로 파일 호환성과 데이터셋 버전을 빠르게 확인합니다. v0.1.x/v0.2.x 파일은 불러올 때 v3 로 자동 마이그레이션됩니다.
 
 ## 개발
 
@@ -119,15 +127,10 @@ pnpm tauri:build    # 릴리스 패키징 (.dmg / .msi)
 pnpm test           # 단위·통합 테스트
 pnpm test:golden    # 골든 케이스 회귀 테스트
 pnpm lint           # ESLint + Prettier
+node scripts/capture-screens.mjs  # README 스크린샷 자동 재캡처
 ```
 
 기여 절차·릴리스 워크플로·테스트 정책은 [`CONTRIBUTING.md`](CONTRIBUTING.md) 를 참고해 주세요. 버그 신고와 기능 제안은 [Issues](https://github.com/kyungseopk1m/lawcalc-kr/issues) 에서 받습니다.
-
-## 헌사
-
-이 프로젝트는 2007년 광주지방법원 정경현 부장판사님이 업무용 계산프로그램(VK.EXE)을 일반에 공개하면서 시작된 흐름 위에 있습니다. 법률 계산 도구를 모두에게 열어 주신 그 결정에 깊은 경의를 표합니다.
-
-This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju District Court), whose 2007 public release of the VK.EXE court calculation utility first made these calculations accessible to everyone.
 
 ## 라이선스
 
@@ -142,8 +145,8 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 ## English
 
-LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, simplified inheritance shares, litigation costs, and payment appropriation.
+LawCalc Korea is a Korean legal calculation desktop workbench for reviewing judgment interest, statutory delay damages, simplified inheritance shares, litigation costs, payment appropriation, and the first auto/injury compensation slice.
 
-The current release focuses on local-only interest, inheritance, litigation-cost, and appropriation calculations, transparent result traces, versioned data, and reproducible `.lcalc` files on macOS and Windows.
+The current release focuses on local-only interest, inheritance, litigation-cost, appropriation, and compensation calculations, transparent result traces, versioned data, and reproducible `.lcalc` files on macOS and Windows.
 
 Distributed under the GNU Affero General Public License v3.0 or later. Any modified version made available to users over a network — or redistributed as a derivative work — must be released under the same license with source code available. See [LICENSE](LICENSE) for the full text. For commercial licensing inquiries, please contact the Licensor (kyungseopk1m).

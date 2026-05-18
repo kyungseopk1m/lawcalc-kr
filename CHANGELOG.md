@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 손해배상 탭과 `.lcalc` v3 `compensation@1` capability 를 추가했습니다. 기초사항·노동력상실률(영구/한시)·일실수입(직종 자동입력 + 일당 직접 입력 override)·위자료·과실비율·공제(비율/전액) 를 입력하고 결과 카드에는 일실수입 segments, 호프만 240 cap 표기, 최종 합계와 `STANDARD_DISCLAIMER`, dataset 식별자 4종을 함께 표시합니다. CAK 시중노임 스냅샷 경과 개월에 따라 결과 카드 상단에 stale badge (neutral / amber / red) 와 일당 override 강조가 자동 적용됩니다.
 - 손해배상 결과를 PDF·CSV·클립보드로 내보낼 수 있습니다. PDF 와 CSV 는 일실수입 segments 표·호프만 240 cap 마커·최종 합계·dataset 식별자 4종을 같이 담고, 세 surface 모두 `STANDARD_DISCLAIMER` 면책 고지로 마무리됩니다.
 - README 스크린샷을 v0.5.0 기준으로 재캡처하고 5개 탭과 정보 다이얼로그 화면을 최신 UI로 갱신했습니다.
+- README, project-design, source-materials, LEGAL_REFERENCES 문서를 손해배상 자×부상 first slice, 5개 도메인 범위, 외부 dataset 출처, v0.6+ minor train 로드맵 기준으로 갱신했습니다.
 
 ## [0.4.1] - 2026-05-15
 
