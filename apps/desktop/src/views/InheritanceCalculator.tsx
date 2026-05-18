@@ -558,7 +558,7 @@ export function InheritanceCalculator() {
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">피상속인</CardTitle>
             <p className="text-xs text-muted-foreground">
-              1991-01-01 이후 사망 케이스만 지원합니다 (1990 개정민법 시행).
+              1991-01-01 이후 사망 사건만 지원합니다 (1990 개정민법 시행).
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">

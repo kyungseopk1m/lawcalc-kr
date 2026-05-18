@@ -6,7 +6,7 @@ import { useHasUnsavedLcalcChanges } from "../lib/lcalc-dirty-state";
 import { Button } from "./ui/button";
 
 /**
- * 인앱 업데이트 dialog. hop 패턴 5 단계 state machine 기반.
+ * 인앱 업데이트 dialog. hop 패턴 5단계 state machine 기반.
  *
  * - `idle`: 렌더링 안 함.
  * - `available`: "지금 업데이트" / "나중에" 선택.
@@ -94,7 +94,7 @@ function AvailableBody({
         </button>
       </div>
       <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-        LawCalc Korea v{state.version} 가 사용 가능합니다.
+        LawCalc Korea v{state.version}을 사용할 수 있습니다.
       </p>
       {state.notes ? (
         <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">

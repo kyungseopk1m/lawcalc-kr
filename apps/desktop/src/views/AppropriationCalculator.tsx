@@ -368,7 +368,7 @@ export function AppropriationCalculator() {
               <div key={claim.uid} className="grid gap-2 rounded-md border border-input p-3">
                 <div className="flex items-center gap-2">
                   <Input
-                    placeholder="채권 id (예: loan-1)"
+                    placeholder="채권 ID (예: loan-1)"
                     value={claim.id}
                     onChange={(e) => updateClaim(claim.uid, { id: e.target.value })}
                   />
@@ -423,7 +423,7 @@ export function AppropriationCalculator() {
                     />
                   </label>
                   <label className="grid gap-1 text-xs">
-                    변제이익 rank (낮을수록 우선)
+                    변제이익 순위 (낮을수록 우선)
                     <Input
                       inputMode="numeric"
                       placeholder="0"
@@ -460,7 +460,7 @@ export function AppropriationCalculator() {
               />
             </label>
             <label className="grid gap-2 text-sm font-medium">
-              충당 directive
+              충당 방식
               <Select
                 value={payment.allocationType}
                 onChange={(e) =>
@@ -478,7 +478,7 @@ export function AppropriationCalculator() {
             </label>
             {payment.allocationType !== "legal" ? (
               <div className="grid gap-2">
-                <div className="text-xs font-medium text-muted-foreground">충당 대상 (targets)</div>
+                <div className="text-xs font-medium text-muted-foreground">충당 대상</div>
                 {payment.targets.map((target) => (
                   <div
                     key={target.uid}
@@ -506,7 +506,7 @@ export function AppropriationCalculator() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label="target 삭제"
+                      aria-label="충당 대상 삭제"
                       onClick={() => removeTarget(target.uid)}
                       type="button"
                     >
@@ -522,7 +522,7 @@ export function AppropriationCalculator() {
                   className="w-fit"
                 >
                   <Plus className="mr-1 h-3 w-3" />
-                  target 추가
+                  대상 추가
                 </Button>
               </div>
             ) : null}
@@ -654,8 +654,8 @@ export function AppropriationCalculator() {
               </p>
               <p className="text-xs">
                 근거: 민법 제476조 (지정충당) / 477조 (법정충당) / 478조 (비용·이자·원본 순). 본
-                도메인은 v0.4 사이클에서 도입된 scaffold 로, 단일 변제 이벤트 + multi-claim 잔액
-                분배만 지원. 이자 누적 / 이자제한법 cap 은 v0.5+ 검토.
+                도메인은 v0.4 사이클에서 도입된 초기 범위입니다. 단일 변제 이벤트와 여러 채권의 잔액
+                분배만 지원하며, 이자 누적과 이자제한법 제한이율 검토는 후속 버전 범위입니다.
               </p>
               <p className="text-xs">데이터 버전: {APPROPRIATION_DATA_VERSION}</p>
             </CardContent>

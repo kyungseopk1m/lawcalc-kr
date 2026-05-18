@@ -112,8 +112,8 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
               소개
             </h3>
             <p className="text-muted-foreground">
-              본질에 집중한 법률 계산 워크벤치. 불필요한 장식을 덜어내고 계산의 본질을 상징하는
-              모노그램과 단 하나의 기준선으로 신뢰감과 전문성을 표현했습니다.
+              이자, 상속분, 소송비용, 변제충당, 손해배상 계산을 로컬에서 검토하는 데스크톱
+              워크벤치입니다. 입력값과 결과 파일은 사용자 기기 안에서 처리합니다.
             </p>
           </section>
 

@@ -118,7 +118,7 @@ export function OptionsPanel({ value, onChange }: OptionsPanelProps) {
           <RadioOption
             checked={value.rounding === "round"}
             id="rounding-round"
-            label="사사오입"
+            label="반올림"
             name="rounding"
             onChange={() => onChange({ ...value, rounding: "round" })}
           />

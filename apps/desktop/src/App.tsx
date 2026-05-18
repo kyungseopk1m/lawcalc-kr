@@ -161,7 +161,7 @@ function formatOptionLabels(options: CalcOptions) {
     leapYear: options.leapYear === "fixed365" ? "고정 365일" : "실제 일수(윤년 366)",
     includeFirstDay: options.includeFirstDay ? "초일 산입" : "초일 불산입",
     rounding:
-      options.rounding === "ceil" ? "절상" : options.rounding === "round" ? "사사오입" : "절사",
+      options.rounding === "ceil" ? "절상" : options.rounding === "round" ? "반올림" : "절사",
   };
 }
 
