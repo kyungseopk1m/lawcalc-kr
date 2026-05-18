@@ -25,8 +25,8 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    disclaimer_text, format_currency, format_rate_percent, options_summary, InheritanceResultView,
-    LitigationCostResultView, ResultView,
+    disclaimer_text, format_currency, format_rate_percent, options_summary, CompensationResultView,
+    InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
@@ -143,6 +143,38 @@ pub async fn export_litigation_cost_pdf(
     .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
 }
 
+#[tauri::command]
+pub async fn export_compensation_pdf(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: CompensationResultView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("PDF", &["pdf"])
+            .set_file_name("compensation-calculation.pdf")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_compensation_pdf_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
+}
+
 /// A4 portrait dimensions, top-down layout.
 const PAGE_W_MM: f32 = 210.0;
 const PAGE_H_MM: f32 = 297.0;
@@ -248,6 +280,34 @@ pub fn render_litigation_cost_pdf_bytes(view: &LitigationCostResultView) -> Resu
     writer.draw_litigation_cost_summary(view);
     writer.draw_litigation_cost_distribution(view);
     writer.draw_litigation_cost_footer(view);
+
+    let bytes = doc
+        .save_to_bytes()
+        .map_err(|e| Error::Other(format!("PDF 저장 실패: {e}")))?;
+    Ok(bytes)
+}
+
+pub fn render_compensation_pdf_bytes(view: &CompensationResultView) -> Result<Vec<u8>, Error> {
+    let (doc, page1, layer1) = PdfDocument::new(
+        "LawCalc Korea — 자×부상 손해배상 계산서",
+        Mm(PAGE_W_MM),
+        Mm(PAGE_H_MM),
+        "Layer 1",
+    );
+
+    let font = doc
+        .add_external_font_with_subsetting(PRETENDARD_REGULAR, true)
+        .map_err(|e| Error::Other(format!("PDF 한글 폰트 임베딩 실패: {e}")))?;
+    let _builtin_helvetica = doc
+        .add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
+
+    let mut writer = PageWriter::new(&doc, page1, layer1, font);
+    writer.draw_title("LawCalc Korea — 자×부상 손해배상 계산서");
+    writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
+    writer.draw_compensation_summary(view);
+    writer.draw_compensation_segments_table(view);
+    writer.draw_compensation_footer(view);
 
     let bytes = doc
         .save_to_bytes()
@@ -618,6 +678,140 @@ impl<'a> PageWriter<'a> {
         );
     }
 
+    fn draw_compensation_summary(&mut self, view: &CompensationResultView) {
+        let lines: [(String, String); 8] = [
+            (
+                "중복 노동력상실률".into(),
+                format!("{:.2}%", view.combined_loss_rate * 100.0),
+            ),
+            (
+                "일실수입 소계".into(),
+                format!("{} 원", format_currency(view.lost_income_subtotal_won)),
+            ),
+            (
+                "위자료".into(),
+                format!("{} 원", format_currency(view.solatium_won)),
+            ),
+            (
+                "재산상 손해 소계".into(),
+                format!(
+                    "{} 원",
+                    format_currency(view.pecuniary_damages_subtotal_won)
+                ),
+            ),
+            (
+                format!("과실상계 ({:.0}%)", view.fault_offset.ratio * 100.0),
+                format!("{} 원", format_currency(view.fault_offset.after_won)),
+            ),
+            (
+                "공제 (비율 + 전액)".into(),
+                format!(
+                    "{} + {} 원",
+                    format_currency(view.deductions.ratio_subtotal_won),
+                    format_currency(view.deductions.absolute_subtotal_won)
+                ),
+            ),
+            (
+                "최종 합계".into(),
+                format!("{} 원", format_currency(view.final_won)),
+            ),
+            ("계산 시각".into(), view.computed_at.clone()),
+        ];
+        let label_w = 38.0;
+        for (label, value) in &lines {
+            self.text(label, 10.0, self.left(), self.y - 4.0);
+            self.text(value, 10.0, self.left() + label_w, self.y - 4.0);
+            self.advance(5.6);
+        }
+        self.advance(2.0);
+    }
+
+    fn draw_compensation_segments_table(&mut self, view: &CompensationResultView) {
+        let widths: [f32; 5] = [30.0, 22.0, 30.0, 36.0, 36.0];
+        let inner_w: f32 = widths.iter().sum();
+        let right = self.left() + inner_w;
+
+        self.hline(self.left(), right, self.y);
+        self.advance(5.0);
+        let headers = [
+            "기간(개월)",
+            "상실률",
+            "단가(원/일)",
+            "호프만(적용)",
+            "금액(원)",
+        ];
+        let mut x = self.left();
+        for (header, width) in headers.iter().zip(widths.iter()) {
+            self.text(header, 9.0, x + 1.0, self.y - 3.5);
+            x += width;
+        }
+        self.advance(5.0);
+        self.hline(self.left(), right, self.y);
+
+        for (i, segment) in view.segments.iter().enumerate() {
+            self.advance(5.4);
+            let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
+                " (cap)"
+            } else {
+                ""
+            };
+            let cells = [
+                format!("{} ~ {}", segment.start_month, segment.end_month),
+                format!("{:.2}%", segment.loss_rate * 100.0),
+                format_currency(segment.daily_wage_won),
+                format!("{:.6}{}", segment.applied_hoffman, cap_marker),
+                format_currency(segment.amount_floor_won),
+            ];
+            let mut x = self.left();
+            for (cell, width) in cells.iter().zip(widths.iter()) {
+                self.text(cell, 8.5, x + 1.0, self.y - 1.0);
+                x += width;
+            }
+        }
+
+        self.advance(5.4);
+        self.hline(self.left(), right, self.y + 4.0);
+        self.text("일실수입 소계", 9.0, self.left() + 1.0, self.y - 1.0);
+        let total_x = self.left() + widths[..4].iter().sum::<f32>() + 1.0;
+        self.text(
+            &format_currency(view.lost_income_subtotal_won),
+            9.0,
+            total_x,
+            self.y - 1.0,
+        );
+        self.advance(2.0);
+        self.hline(self.left(), right, self.y);
+        self.advance(2.0);
+    }
+
+    fn draw_compensation_footer(&mut self, view: &CompensationResultView) {
+        let inner_right = PAGE_W_MM - MARGIN_MM;
+        let footer_y = MARGIN_MM + 14.0;
+        self.hline(self.left(), inner_right, footer_y);
+        self.text(
+            disclaimer_text(Some(&view.disclaimer)),
+            8.0,
+            self.left(),
+            footer_y - 4.0,
+        );
+        let versions = format!(
+            "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
+            view.data_versions.labor_rates,
+            view.data_versions.life_expectancy,
+            view.data_versions.hoffman,
+            view.data_versions.leibniz
+        );
+        self.text(
+            &format!(
+                "데이터 버전 {}  |  계산 시각 {}",
+                versions, view.computed_at
+            ),
+            7.0,
+            self.left(),
+            footer_y - 9.0,
+        );
+    }
+
     fn draw_litigation_cost_footer(&mut self, view: &LitigationCostResultView) {
         let inner_right = PAGE_W_MM - MARGIN_MM;
         let footer_y = MARGIN_MM + 14.0;
@@ -686,7 +880,9 @@ fn wrap_text(text: &str, max_chars: usize) -> Vec<String> {
 mod tests {
     use super::*;
     use crate::commands::result_view::{
-        InheritanceDecedentView, InheritanceShareView, OptionsView, SegmentView, DISCLAIMER_KO,
+        CompensationDataVersionsView, CompensationDeductionsView, CompensationFaultOffsetView,
+        CompensationHoffman240CapView, CompensationSegmentView, InheritanceDecedentView,
+        InheritanceShareView, OptionsView, SegmentView, DISCLAIMER_KO,
     };
 
     fn sample() -> ResultView {
@@ -794,6 +990,59 @@ mod tests {
     #[test]
     fn inheritance_result_renders_pdf() {
         let bytes = render_inheritance_pdf_bytes(&inheritance_sample()).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+        assert!(
+            bytes.len() > 1500,
+            "pdf suspiciously small: {}",
+            bytes.len()
+        );
+    }
+
+    fn compensation_sample() -> CompensationResultView {
+        CompensationResultView {
+            combined_loss_rate: 0.3,
+            segments: vec![CompensationSegmentView {
+                start_month: 0,
+                end_month: 360,
+                loss_rate: 0.3,
+                daily_wage_won: 172_068.0,
+                monthly_wage_won: 3_785_496.0,
+                raw_hoffman: 219.610067,
+                applied_hoffman: 219.610067,
+                amount_floor_won: 249_399_909.0,
+            }],
+            lost_income_subtotal_won: 249_399_909.0,
+            solatium_won: 0.0,
+            pecuniary_damages_subtotal_won: 249_399_909.0,
+            fault_offset: CompensationFaultOffsetView {
+                ratio: 0.0,
+                before_won: 249_399_909.0,
+                after_won: 249_399_909.0,
+            },
+            deductions: CompensationDeductionsView {
+                ratio_subtotal_won: 0.0,
+                absolute_subtotal_won: 0.0,
+                after_won: 249_399_909.0,
+            },
+            final_won: 249_399_900.0,
+            hoffman240_cap: CompensationHoffman240CapView {
+                applied_hoffman: vec![219.610067],
+                capped_at_index: None,
+            },
+            data_versions: CompensationDataVersionsView {
+                labor_rates: "labor-rates/v1.0.0".into(),
+                life_expectancy: "life-expectancy/v1.0.0".into(),
+                hoffman: "hoffman/v1.0.0".into(),
+                leibniz: "leibniz/v1.0.0".into(),
+            },
+            disclaimer: DISCLAIMER_KO.into(),
+            computed_at: "2026-05-18T12:00:00+09:00".into(),
+        }
+    }
+
+    #[test]
+    fn compensation_result_renders_pdf() {
+        let bytes = render_compensation_pdf_bytes(&compensation_sample()).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
         assert!(
             bytes.len() > 1500,

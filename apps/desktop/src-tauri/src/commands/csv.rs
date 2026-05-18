@@ -8,8 +8,8 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    disclaimer_text, format_currency, format_rate_percent, options_summary, InheritanceResultView,
-    LitigationCostResultView, ResultView,
+    disclaimer_text, format_currency, format_rate_percent, options_summary, CompensationResultView,
+    InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 /// CSV formula injection defense.
@@ -120,6 +120,38 @@ pub async fn export_litigation_cost_csv(
             .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
         let bytes = render_litigation_cost_csv_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
+}
+
+#[tauri::command]
+pub async fn export_compensation_csv(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: CompensationResultView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("CSV", &["csv"])
+            .set_file_name("compensation-calculation.csv")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_compensation_csv_bytes(&view)?;
         std::fs::write(&path, bytes)?;
         Ok(Some(path.to_string_lossy().into_owned()))
     })
@@ -299,6 +331,96 @@ fn format_inheritance_percent(numerator: i64, denominator: i64) -> String {
     format!("{:.2}%", (numerator as f64 / denominator as f64) * 100.0)
 }
 
+pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Vec<u8>, Error> {
+    let mut wtr = csv::WriterBuilder::new()
+        .delimiter(b',')
+        .flexible(true)
+        .from_writer(vec![]);
+
+    wtr.write_record([
+        "기간(개월)",
+        "상실률",
+        "단가(원/일)",
+        "호프만(적용)",
+        "금액(원)",
+    ])?;
+    for (i, segment) in view.segments.iter().enumerate() {
+        let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
+            " (cap)"
+        } else {
+            ""
+        };
+        let row: [String; 5] = [
+            escape_csv_cell(&format!("{} ~ {}", segment.start_month, segment.end_month))
+                .into_owned(),
+            escape_csv_cell(&format!("{:.2}%", segment.loss_rate * 100.0)).into_owned(),
+            escape_csv_cell(&format_currency(segment.daily_wage_won)).into_owned(),
+            escape_csv_cell(&format!("{:.6}{}", segment.applied_hoffman, cap_marker)).into_owned(),
+            escape_csv_cell(&format_currency(segment.amount_floor_won)).into_owned(),
+        ];
+        wtr.write_record(&row)?;
+    }
+    let lost_income_cell =
+        escape_csv_cell(&format_currency(view.lost_income_subtotal_won)).into_owned();
+    wtr.write_record(["일실수입 소계", "", "", "", lost_income_cell.as_str()])?;
+
+    let summary_rows: [(&str, String); 8] = [
+        (
+            "중복 노동력상실률",
+            format!("{:.2}%", view.combined_loss_rate * 100.0),
+        ),
+        ("위자료(원)", format_currency(view.solatium_won)),
+        (
+            "재산상 손해 소계(원)",
+            format_currency(view.pecuniary_damages_subtotal_won),
+        ),
+        (
+            "과실비율",
+            format!("{:.2}%", view.fault_offset.ratio * 100.0),
+        ),
+        (
+            "과실상계 후(원)",
+            format_currency(view.fault_offset.after_won),
+        ),
+        (
+            "비율공제 소계(원)",
+            format_currency(view.deductions.ratio_subtotal_won),
+        ),
+        (
+            "전액공제 소계(원)",
+            format_currency(view.deductions.absolute_subtotal_won),
+        ),
+        ("최종 합계(원)", format_currency(view.final_won)),
+    ];
+    for (key, value) in &summary_rows {
+        let escaped = escape_csv_cell(value).into_owned();
+        wtr.write_record([*key, escaped.as_str()])?;
+    }
+
+    let versions = format!(
+        "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
+        view.data_versions.labor_rates,
+        view.data_versions.life_expectancy,
+        view.data_versions.hoffman,
+        view.data_versions.leibniz
+    );
+    let versions_cell = escape_csv_cell(&versions).into_owned();
+    wtr.write_record(["데이터 버전", versions_cell.as_str()])?;
+    let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
+    wtr.write_record(["계산 시각", computed_cell.as_str()])?;
+    let disclaimer_cell = escape_csv_cell(disclaimer_text(Some(&view.disclaimer))).into_owned();
+    wtr.write_record(["면책 고지", disclaimer_cell.as_str()])?;
+
+    let inner = wtr
+        .into_inner()
+        .map_err(|e| Error::Other(format!("CSV 마무리 실패: {e}")))?;
+
+    let mut out = Vec::with_capacity(inner.len() + 3);
+    out.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+    out.extend_from_slice(&inner);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -475,6 +597,80 @@ mod tests {
             body.contains("'-1,234"),
             "body did not escape negative: {body}"
         );
+    }
+
+    fn compensation_sample() -> CompensationResultView {
+        use crate::commands::result_view::{
+            CompensationDataVersionsView, CompensationDeductionsView, CompensationFaultOffsetView,
+            CompensationHoffman240CapView, CompensationSegmentView, DISCLAIMER_KO,
+        };
+        CompensationResultView {
+            combined_loss_rate: 0.3,
+            segments: vec![CompensationSegmentView {
+                start_month: 0,
+                end_month: 360,
+                loss_rate: 0.3,
+                daily_wage_won: 172_068.0,
+                monthly_wage_won: 3_785_496.0,
+                raw_hoffman: 219.610067,
+                applied_hoffman: 219.610067,
+                amount_floor_won: 249_399_909.0,
+            }],
+            lost_income_subtotal_won: 249_399_909.0,
+            solatium_won: 0.0,
+            pecuniary_damages_subtotal_won: 249_399_909.0,
+            fault_offset: CompensationFaultOffsetView {
+                ratio: 0.0,
+                before_won: 249_399_909.0,
+                after_won: 249_399_909.0,
+            },
+            deductions: CompensationDeductionsView {
+                ratio_subtotal_won: 0.0,
+                absolute_subtotal_won: 0.0,
+                after_won: 249_399_909.0,
+            },
+            final_won: 249_399_900.0,
+            hoffman240_cap: CompensationHoffman240CapView {
+                applied_hoffman: vec![219.610067],
+                capped_at_index: None,
+            },
+            data_versions: CompensationDataVersionsView {
+                labor_rates: "labor-rates/v1.0.0".into(),
+                life_expectancy: "life-expectancy/v1.0.0".into(),
+                hoffman: "hoffman/v1.0.0".into(),
+                leibniz: "leibniz/v1.0.0".into(),
+            },
+            disclaimer: DISCLAIMER_KO.into(),
+            computed_at: "2026-05-18T12:00:00+09:00".into(),
+        }
+    }
+
+    #[test]
+    fn compensation_csv_includes_segments_summary_and_disclaimer() {
+        let bytes = render_compensation_csv_bytes(&compensation_sample()).unwrap();
+        assert_eq!(&bytes[..3], &[0xEF, 0xBB, 0xBF]);
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("기간(개월)"));
+        assert!(body.contains("0 ~ 360"));
+        assert!(body.contains("\"249,399,909\""));
+        assert!(body.contains("일실수입 소계"));
+        assert!(body.contains("\"249,399,900\""));
+        assert!(body.contains("labor-rates/v1.0.0"));
+        assert!(body.contains("life-expectancy/v1.0.0"));
+        assert!(body.contains("hoffman/v1.0.0"));
+        assert!(body.contains("leibniz/v1.0.0"));
+        assert!(body.contains("면책 고지"));
+        assert!(body.contains("검토용 계산"));
+    }
+
+    #[test]
+    fn compensation_csv_marks_240_cap_segment() {
+        let mut view = compensation_sample();
+        view.hoffman240_cap.capped_at_index = Some(0);
+        view.segments[0].applied_hoffman = 240.0;
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("(cap)"));
     }
 
     /// User-controlled name fields must not be evaluated as formulas in the

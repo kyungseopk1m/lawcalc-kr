@@ -103,6 +103,68 @@ pub struct LitigationCostDistributionView {
     pub basis: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationResultView {
+    pub combined_loss_rate: f64,
+    pub segments: Vec<CompensationSegmentView>,
+    pub lost_income_subtotal_won: f64,
+    pub solatium_won: f64,
+    pub pecuniary_damages_subtotal_won: f64,
+    pub fault_offset: CompensationFaultOffsetView,
+    pub deductions: CompensationDeductionsView,
+    pub final_won: f64,
+    pub hoffman240_cap: CompensationHoffman240CapView,
+    pub data_versions: CompensationDataVersionsView,
+    pub disclaimer: String,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationSegmentView {
+    pub start_month: i64,
+    pub end_month: i64,
+    pub loss_rate: f64,
+    pub daily_wage_won: f64,
+    pub monthly_wage_won: f64,
+    pub raw_hoffman: f64,
+    pub applied_hoffman: f64,
+    pub amount_floor_won: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationFaultOffsetView {
+    pub ratio: f64,
+    pub before_won: f64,
+    pub after_won: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationDeductionsView {
+    pub ratio_subtotal_won: f64,
+    pub absolute_subtotal_won: f64,
+    pub after_won: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationHoffman240CapView {
+    pub applied_hoffman: Vec<f64>,
+    pub capped_at_index: Option<i64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationDataVersionsView {
+    pub labor_rates: String,
+    pub life_expectancy: String,
+    pub hoffman: String,
+    pub leibniz: String,
+}
+
 /// Disclaimer copy that must accompany every exported artifact.
 /// Source of truth: `packages/core-engine/src/disclaimers.ts` `STANDARD_DISCLAIMER`.
 pub const DISCLAIMER_KO: &str =
