@@ -66,6 +66,12 @@ LawCalc Korea는 반복되는 법률 계산을 검산 가능한 형태로 정리
 
 여러 채권의 비용·이자·원본 잔액과 변제액을 입력해 지정충당 또는 법정충당 순서로 차감합니다. 결과에는 채권별 비용·이자·원본 차감액, 잔액, 데이터 버전, 계산 시각을 함께 표시합니다.
 
+### 손해배상 계산
+
+<p align="center">
+  <img src="docs/assets/readme-compensation.png" alt="손해배상 계산 화면" width="820">
+</p>
+
 ### 공통 워크플로
 
 <p align="center">
