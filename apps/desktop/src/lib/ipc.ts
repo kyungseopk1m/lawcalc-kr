@@ -4,6 +4,8 @@ import type {
   AppropriationInput,
   AppropriationResult,
   CalcOptions,
+  CompensationInput,
+  CompensationResult,
   InheritanceInput,
   InheritanceResult,
   InterestInput,
@@ -87,6 +89,15 @@ export interface LcalcAppropriationPayload {
   disclaimer: string;
 }
 
+export interface LcalcCompensationPayload {
+  appVersion: string;
+  createdAt: string;
+  input: CompensationInput;
+  result?: CompensationResult;
+  note?: string;
+  disclaimer: string;
+}
+
 /**
  * v3 envelope — capability 메타 (envelopeFeatures) 와 데이터 슬라이스
  * (dataVersions) 를 envelope-level 로 분리한 형식. v0.3.0 부터 신규 저장
@@ -129,6 +140,13 @@ export type LcalcFile =
       envelopeFeatures: string[];
       dataVersions: Record<string, string>;
       payload: LcalcAppropriationPayload;
+    }
+  | {
+      schemaVersion: "3";
+      kind: "compensation";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcCompensationPayload;
     };
 
 export type LoadableLcalcFile = LcalcFile | LcalcFileV2 | LcalcFileV1;
@@ -168,6 +186,12 @@ export const ipc = {
   },
   exportLitigationCostCsv(result: LitigationCostResult): Promise<string | null> {
     return invoke<string | null>("export_litigation_cost_csv", { result });
+  },
+  exportCompensationPdf(result: CompensationResult): Promise<string | null> {
+    return invoke<string | null>("export_compensation_pdf", { result });
+  },
+  exportCompensationCsv(result: CompensationResult): Promise<string | null> {
+    return invoke<string | null>("export_compensation_csv", { result });
   },
   /**
    * Opens a save dialog and writes the payload as pretty-printed JSON.

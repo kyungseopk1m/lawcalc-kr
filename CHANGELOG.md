@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 자×부상 손해배상 도메인 진입을 위한 정적 dataset 으로 호프만 단리연금현가율 표 (`hoffman/v1.0.0`, 월 단위 1~480개월, 240 cap 메타) 와 라이프니츠 복리현가율 표 (`leibniz/v1.0.0`, 월 단위 1~480개월, 할인율 5%/년) 를 번들 했습니다. dataset 만 도입하고 엔진 wire-up 은 후속 트랙에서 진행합니다.
 - 자×부상 일실수입 계산을 위한 외부 dataset 으로 대한건설협회 시중노임 단가 (`labor-rates/v1.0.0`, 2026.1.1 적용 슬라이스 113개 직종) 와 통계청 KOSIS 생명표 (`life-expectancy/v1.0.0`, 2023년 사망률 기준 anchor 5개 / 남녀) 를 번들 했습니다. dataset snapshot 의 stale 정도를 ≤6m / 6~12m / >12m 임계로 판단하는 `computeStaleBadge` helper 도 함께 추가됐으며, UI 콤보박스 자동입력과 사용자 raw 일당 override 의 하이브리드 경로는 후속 트랙에서 도입됩니다.
 - 자×부상 손해배상 엔진 코어 (`computeCompensation`) 를 도입했습니다. 노동력상실률 중복 자동 + 한시장해 환산, 한시 종료 boundary 의 segment 분해, 단가 lookup 또는 `directWageWon` override, 호프만 240 cap 누적 적용, 위자료·과실상계·공제(비율/전액) 단계와 100원 미만 절사까지 10 단계를 한 함수로 묶었으며 결과에는 `STANDARD_DISCLAIMER` 와 dataset 식별자 4종 (`labor-rates`/`life-expectancy`/`hoffman`/`leibniz`) 을 동봉합니다. 자×부상 5 케이스를 매뉴얼 derivation 을 oracle 로 한 골든 fixture 로 묶어 회귀 가드를 잡았으며 UI 탭과 `.lcalc` capability 등록은 후속 트랙에서 진행됩니다.
+- 손해배상 탭과 `.lcalc` v3 `compensation@1` capability 를 추가했습니다. 기초사항·노동력상실률(영구/한시)·일실수입(직종 자동입력 + 일당 직접 입력 override)·위자료·과실비율·공제(비율/전액) 를 입력하고 결과 카드에는 일실수입 segments, 호프만 240 cap 표기, 최종 합계와 `STANDARD_DISCLAIMER`, dataset 식별자 4종을 함께 표시합니다. CAK 시중노임 스냅샷 경과 개월에 따라 결과 카드 상단에 stale badge (neutral / amber / red) 와 일당 override 강조가 자동 적용됩니다.
 
 ## [0.4.1] - 2026-05-15
 

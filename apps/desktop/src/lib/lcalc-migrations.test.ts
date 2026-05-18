@@ -4,8 +4,10 @@ import {
   STANDARD_DISCLAIMER,
   calculateInterest,
   computeAppropriation,
+  computeCompensation,
   computeLitigationCost,
   type AppropriationInput,
+  type CompensationInput,
 } from "@lawcalc-kr/core-engine";
 
 import type { LcalcFile, LoadableLcalcFile } from "./ipc";
@@ -13,6 +15,7 @@ import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lcalc-migratio
 import {
   MAX_NOTE_LENGTH,
   parseLoadedAppropriationLcalcInput,
+  parseLoadedCompensationLcalcInput,
   parseLoadedInheritanceLcalcInput,
   parseLoadedLitigationCostLcalcInput,
   parseLoadedLcalcInput,
@@ -243,12 +246,12 @@ describe("validateLcalcEnvelope", () => {
     expect(() =>
       validateLcalcEnvelope({
         schemaVersion: "3",
-        kind: "compensation",
-        envelopeFeatures: ["compensation@1"],
-        dataVersions: { compensation: "compensation/v1.0.0" },
+        kind: "industrial-accident",
+        envelopeFeatures: ["industrial-accident@1"],
+        dataVersions: { "industrial-accident": "industrial-accident/v1.0.0" },
         payload: {},
       }),
-    ).toThrow("이 파일에는 compensation@1 기능이 필요합니다.");
+    ).toThrow("이 파일에는 industrial-accident@1 기능이 필요합니다.");
   });
 
   it("rejects malformed capability ids in envelopeFeatures", () => {
@@ -647,19 +650,97 @@ describe("v3 appropriation envelope", () => {
     expect(loaded.result?.payment.appliedAmount).toBe(5000);
   });
 
-  it("rejects an unknown capability id (compensation@1)", () => {
+  it("rejects an unknown capability id (industrial-accident@1)", () => {
     const file = {
       schemaVersion: "3" as const,
-      kind: "compensation",
-      envelopeFeatures: ["compensation@1"],
-      dataVersions: { compensation: "compensation/v1.0.0" },
+      kind: "industrial-accident",
+      envelopeFeatures: ["industrial-accident@1"],
+      dataVersions: { "industrial-accident": "industrial-accident/v1.0.0" },
       payload: {
-        appVersion: "0.5.0",
-        createdAt: "2026-06-01T00:00:00.000Z",
+        appVersion: "0.7.0",
+        createdAt: "2027-01-01T00:00:00.000Z",
         input: {},
         disclaimer: STANDARD_DISCLAIMER,
       },
     };
-    expect(() => validateLcalcEnvelope(file as never)).toThrow(/compensation@1 기능이 필요합니다/);
+    expect(() => validateLcalcEnvelope(file as never)).toThrow(
+      /industrial-accident@1 기능이 필요합니다/,
+    );
+  });
+});
+
+describe("v3 compensation envelope", () => {
+  function buildCompensationFile(): LcalcFile {
+    const input: CompensationInput = {
+      base: {
+        birthDate: "1996-01-01",
+        accidentDate: "2026-01-01",
+        treatmentEndDate: "2026-01-01",
+        sex: "male",
+        retirementAge: 60,
+        legalRatePreset: "civil",
+      },
+      lossRate: {
+        permanent: [{ department: "정형외과", ratio: 0.3 }],
+      },
+      lostIncome: {
+        occupation: "보통인부",
+        discountMethod: "hoffman",
+        workingDaysPerMonth: 22,
+      },
+    };
+    const result = computeCompensation(input);
+    return {
+      schemaVersion: "3",
+      kind: "compensation",
+      envelopeFeatures: ["compensation@1"],
+      dataVersions: {
+        laborRates: result.dataVersions.laborRates,
+        lifeExpectancy: result.dataVersions.lifeExpectancy,
+        hoffman: result.dataVersions.hoffman,
+        leibniz: result.dataVersions.leibniz,
+      },
+      payload: {
+        appVersion: "0.5.0",
+        createdAt: "2026-05-18T00:00:00.000Z",
+        input,
+        result,
+        note: "compensation note",
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+  }
+
+  it("envelope validation 통과 + parseLoadedCompensationLcalcInput round-trip", () => {
+    const file = buildCompensationFile();
+    expect(() => validateLcalcEnvelope(file)).not.toThrow();
+    const loaded = parseLoadedCompensationLcalcInput(file);
+    expect(loaded.input.base.birthDate).toBe("1996-01-01");
+    expect(loaded.input.lossRate.permanent?.[0]?.ratio).toBe(0.3);
+    expect(loaded.input.lostIncome.occupation).toBe("보통인부");
+    expect(loaded.note).toBe("compensation note");
+    expect(loaded.result?.finalWon).toBeGreaterThan(0);
+    expect(loaded.result?.dataVersions.laborRates).toBe("labor-rates/v1.0.0");
+  });
+
+  it("rejects a compensation envelope missing a required dataVersion", () => {
+    const file = buildCompensationFile();
+    const broken: LcalcFile = {
+      ...file,
+      dataVersions: { laborRates: file.dataVersions.laborRates! },
+    };
+    expect(() => validateLcalcEnvelope(broken)).toThrow(
+      '.lcalc 파일의 dataVersions["lifeExpectancy"] 필드는 비어 있지 않은 문자열이어야 합니다.',
+    );
+  });
+
+  it("round-trips through JSON without losing dataVersions or note", () => {
+    const file = buildCompensationFile();
+    const back = JSON.parse(JSON.stringify(file)) as LcalcFile;
+    expect(() => validateLcalcEnvelope(back)).not.toThrow();
+    const loaded = parseLoadedCompensationLcalcInput(back);
+    expect(loaded.result?.dataVersions).toEqual(
+      parseLoadedCompensationLcalcInput(file).result?.dataVersions,
+    );
   });
 });

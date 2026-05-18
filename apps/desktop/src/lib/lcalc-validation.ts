@@ -1,6 +1,7 @@
 import {
   appliedDomains,
   validateAppropriationInput,
+  validateCompensationInput,
   validateDeliveryFeeInput,
   validateLawyerFeeInput,
   validateStampDutyInput,
@@ -8,6 +9,8 @@ import {
   type AppropriationResult,
   type CalcOptions,
   type CaseType,
+  type CompensationInput,
+  type CompensationResult,
   type HeirNode,
   type InheritanceInput,
   type InheritanceResult,
@@ -20,6 +23,7 @@ import {
 
 import type {
   LcalcAppropriationPayload,
+  LcalcCompensationPayload,
   LcalcFile,
   LcalcInheritancePayload,
   LcalcInterestPayload,
@@ -47,6 +51,7 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "inheritance@1",
   "litigation-cost@1",
   "appropriation@1",
+  "compensation@1",
 ]);
 
 const CAPABILITY_ID_PATTERN = /^[a-z][a-z0-9-]*@[1-9][0-9]*$/;
@@ -74,6 +79,12 @@ interface ParsedLitigationCostLcalcInput {
 interface ParsedAppropriationLcalcInput {
   input: AppropriationInput;
   result?: AppropriationResult;
+  note?: string;
+}
+
+interface ParsedCompensationLcalcInput {
+  input: CompensationInput;
+  result?: CompensationResult;
   note?: string;
 }
 
@@ -628,6 +639,69 @@ function parseAppropriationPayload(
   };
 }
 
+function parseCompensationInput(value: unknown): CompensationInput {
+  const input = requireRecord(value, "payload.input");
+  // 도메인 validator (한국어 RangeError) 에 위임. envelope 측은 raw shape 만 받음.
+  validateCompensationInput(input as unknown as CompensationInput);
+  return input as unknown as CompensationInput;
+}
+
+function parseCompensationResult(value: unknown): CompensationResult {
+  const result = requireRecord(value, "payload.result");
+  return {
+    ...(result as unknown as CompensationResult),
+    disclaimer: requireString(
+      result.disclaimer,
+      "payload.result.disclaimer",
+    ) as CompensationResult["disclaimer"],
+    computedAt: requireString(result.computedAt, "payload.result.computedAt"),
+  };
+}
+
+function requireCompensationDataVersions(dataVersions: Record<string, string>): void {
+  for (const key of ["laborRates", "lifeExpectancy", "hoffman", "leibniz"] as const) {
+    if (typeof dataVersions[key] !== "string" || dataVersions[key].length === 0) {
+      throw new Error(
+        `.lcalc 파일의 dataVersions["${key}"] 필드는 비어 있지 않은 문자열이어야 합니다.`,
+      );
+    }
+  }
+}
+
+function parseCompensationPayload(
+  file: LcalcFile | UnknownLcalcEnvelope,
+): LcalcCompensationPayload {
+  if (file.kind !== "compensation") {
+    if (file.kind === "interest") {
+      throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "inheritance") {
+      throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "litigation-cost") {
+      throw new Error("소송비용 .lcalc 파일은 소송비용 탭에서 열어 주세요.");
+    }
+    if (file.kind === "appropriation") {
+      throw new Error("변제충당 .lcalc 파일은 변제충당 탭에서 열어 주세요.");
+    }
+
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
+  }
+
+  requireCompensationDataVersions(validateDataVersions(file.dataVersions));
+  const payload = requireRecord(file.payload, "payload");
+  const note = requireBoundedNote(payload.note, "payload.note");
+
+  return {
+    appVersion: requireString(payload.appVersion, "payload.appVersion"),
+    createdAt: requireString(payload.createdAt, "payload.createdAt"),
+    input: parseCompensationInput(payload.input),
+    ...(payload.result === undefined ? {} : { result: parseCompensationResult(payload.result) }),
+    ...(note === undefined ? {} : { note }),
+    disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
+  };
+}
+
 function validateEnvelopeFeatures(value: unknown): string[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(
@@ -694,6 +768,11 @@ export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): v
 
   if (file.kind === "appropriation") {
     void parseAppropriationPayload(file);
+    return;
+  }
+
+  if (file.kind === "compensation") {
+    void parseCompensationPayload(file);
     return;
   }
 
@@ -842,6 +921,15 @@ export function parseLoadedLitigationCostLcalcInput(
 
 export function parseLoadedAppropriationLcalcInput(file: LcalcFile): ParsedAppropriationLcalcInput {
   const payload = parseAppropriationPayload(file);
+  return {
+    input: payload.input,
+    ...(payload.result === undefined ? {} : { result: payload.result }),
+    ...(payload.note === undefined ? {} : { note: payload.note }),
+  };
+}
+
+export function parseLoadedCompensationLcalcInput(file: LcalcFile): ParsedCompensationLcalcInput {
+  const payload = parseCompensationPayload(file);
   return {
     input: payload.input,
     ...(payload.result === undefined ? {} : { result: payload.result }),
