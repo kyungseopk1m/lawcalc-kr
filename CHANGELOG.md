@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-18
+
 ### Added
 
 - 자×부상 손해배상 도메인 진입을 위한 정적 데이터셋으로 호프만 단리연금현가율 표(`hoffman/v1.0.0`, 월 단위 1~480개월, 240 한도 정보)와 라이프니츠 복리현가율 표(`leibniz/v1.0.0`, 월 단위 1~480개월, 할인율 연 5%)를 번들했습니다. 이 단계에서는 데이터셋만 도입하고 엔진 연결은 후속 트랙에서 진행했습니다.
@@ -235,7 +237,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.1...v0.3.2
