@@ -9,7 +9,31 @@ permissions:
   contents: write
 
 jobs:
+  create-draft-release:
+    name: Create tag-anchored draft release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create draft release if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; skipping create."
+          else
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --draft \
+              --target "$SHA" \
+              --title "lawcalc-kr $TAG" \
+              --notes "TBD — body populated by tauri-action and finalized via gh release edit before publish."
+          fi
+
   publish-tauri:
+    needs: create-draft-release
     name: Build Tauri app (${{ matrix.platform }})
     # W4 dry-run prep: create a temporary v* tag and verify draft artifacts on
     # macOS and Windows before publishing a user-facing release.
@@ -86,6 +110,27 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  patch-release-tag:
+    name: Patch release tag_name metadata
+    needs: publish-tauri
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Patch release record tag_name (safeguard against tauri-action draft URL stuck on untagged-*)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          RELEASE_ID=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json databaseId --jq .databaseId)
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Release $TAG not found; cannot patch tag_name."
+            exit 1
+          fi
+          gh api --method PATCH \
+            "/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" \
+            -f tag_name="$TAG"
 
   update-readme:
     name: Update README download URLs

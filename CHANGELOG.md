@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-05-22
+
+### Fixed
+
+- 릴리스 워크플로(`.github/workflows/release.yml`)의 태그 정합 결함을 두 단계 가드로 보강했습니다. v0.5.0 릴리스에서 tauri-action 이 드래프트 릴리스를 생성하는 시점에 GitHub 가 태그 앵커링을 마치기 전이라 릴리스 URL 이 `releases/tag/untagged-...` 형태로 잡히는 함정이 있어 수동으로 `gh api PATCH` 를 적용해야 했습니다. 이번 릴리스에서는 (1) tauri-action 빌드 이전에 `create-draft-release` 사전 작업이 `gh release create --draft --target <tag SHA>` 로 태그가 앵커링된 드래프트를 먼저 생성하고, (2) 빌드 완료 후 `patch-release-tag` 사후 작업이 `gh api PATCH /repos/.../releases/{id} -f tag_name=<tag>` 로 릴리스 레코드의 `tag_name` 필드 정합을 한 번 더 회복합니다. 두 가드는 서로 독립적이라 한쪽이 실패해도 나머지가 정합을 보장합니다.
+
 ## [0.5.0] - 2026-05-18
 
 ### Added
@@ -237,7 +243,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.2...v0.4.0
