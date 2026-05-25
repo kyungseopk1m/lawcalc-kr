@@ -1,7 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "noEmit": true,
+    "paths": {
+      "@lawcalc-kr/core-engine": ["../core-engine/src/index.ts"],
+      "@lawcalc-kr/datasets-compensation": ["../datasets-compensation/src/index.ts"]
+    },
     "types": []
   },
   "include": ["src/**/*", "tests/**/*", "vitest.config.ts", "vitest.golden.config.ts"]

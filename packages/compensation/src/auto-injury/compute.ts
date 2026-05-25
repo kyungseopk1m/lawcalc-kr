@@ -3,7 +3,6 @@ import {
   applyHoffman240Cap,
   getHoffmanAt,
   getLaborRateAt,
-  getLifeExpectancyAt,
   hoffmanDatasetVersionTag,
   laborRatesDatasetVersionTag,
   leibnizDatasetVersionTag,

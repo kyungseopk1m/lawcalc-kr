@@ -40,12 +40,16 @@ interface GoldenCase {
   metadata: { oracle: string; derivedAt: string; derivedBy: string };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
 const modules = import.meta.glob<GoldenCase>("../golden/auto-injury/*.json", {
   eager: true,
   import: "default",
 });
 
-const cases: GoldenCase[] = Object.entries(modules)
+const cases: GoldenCase[] = Object.entries(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  modules,
+)
   .sort(([a], [b]) => a.localeCompare(b))
   .map(([, value]) => value);
 
