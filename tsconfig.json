@@ -22,10 +22,5 @@
     "packages/compensation/tests",
     "packages/datasets-compensation/src",
     "packages/datasets-compensation/tests"
-  ],
-  "references": [
-    { "path": "packages/datasets-compensation/tsconfig.build.json" },
-    { "path": "packages/core-engine/tsconfig.build.json" },
-    { "path": "packages/compensation/tsconfig.build.json" }
   ]
 }
