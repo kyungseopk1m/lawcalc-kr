@@ -41,6 +41,7 @@ import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcCompensationPayload, type LcalcFile } from "../lib/ipc";
+import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 
@@ -319,6 +320,43 @@ function formatComputedAt(value: string): string {
   }).format(date);
 }
 
+function stateForDirtySnapshot(state: CompensationFormState) {
+  return {
+    birthDate: state.birthDate,
+    accidentDate: state.accidentDate,
+    treatmentEndDate: state.treatmentEndDate,
+    sex: state.sex,
+    retirementAgeText: state.retirementAgeText,
+    permanent: state.permanent.map((item) => ({
+      department: item.department,
+      ratioText: item.ratioText,
+    })),
+    temporary: state.temporary.map((item) => ({
+      department: item.department,
+      ratioText: item.ratioText,
+      yearsText: item.yearsText,
+    })),
+    priorImpairmentRatioText: state.priorImpairmentRatioText,
+    occupation: state.occupation,
+    directWageWonText: state.directWageWonText,
+    workingDaysPerMonthText: state.workingDaysPerMonthText,
+    solatiumWonText: state.solatiumWonText,
+    faultRatioText: state.faultRatioText,
+    ratioDeductions: state.ratioDeductions.map((item) => ({
+      label: item.label,
+      ratioText: item.ratioText,
+    })),
+    absoluteDeductions: state.absoluteDeductions.map((item) => ({
+      label: item.label,
+      amountText: item.amountText,
+    })),
+  };
+}
+
+function buildCompensationDirtySnapshot(state: CompensationFormState, note: string) {
+  return createLcalcDirtySnapshot({ state: stateForDirtySnapshot(state), note });
+}
+
 export function formatCompensationForClipboard(result: CompensationResult): string {
   const segmentRows = result.segments
     .map(
@@ -391,6 +429,9 @@ export function CompensationCalculator() {
     [],
   );
 
+  const dirtySnapshot = useMemo(() => buildCompensationDirtySnapshot(state, note), [state, note]);
+  const markCompensationClean = useLcalcDirtyTracker("compensation", dirtySnapshot);
+
   const update = (patch: Partial<CompensationFormState>) =>
     setState((prev) => ({ ...prev, ...patch }));
 
@@ -458,6 +499,9 @@ export function CompensationCalculator() {
       if (!result) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       const input = buildCompensationInput(state);
       const path = await ipc.saveLcalc(buildCompensationLcalcFile(input, result, note));
+      if (path) {
+        markCompensationClean();
+      }
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
@@ -468,10 +512,13 @@ export function CompensationCalculator() {
       const migratedFile = migrateLcalcFile(file);
       validateLcalcEnvelope(migratedFile);
       const loaded = parseLoadedCompensationLcalcInput(migratedFile);
-      setState(applyLoadedCompensationInput(loaded.input));
-      setNote(loaded.note ?? "");
+      const appliedState = applyLoadedCompensationInput(loaded.input);
+      const loadedNote = loaded.note ?? "";
+      setState(appliedState);
+      setNote(loadedNote);
       setResult(loaded.result ?? computeCompensation(loaded.input));
       setError(null);
+      markCompensationClean(buildCompensationDirtySnapshot(appliedState, loadedNote));
       return ".lcalc 파일을 불러왔습니다.";
     });
 

@@ -30,6 +30,7 @@ import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcAppropriationPayload, type LcalcFile } from "../lib/ipc";
+import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedAppropriationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 
@@ -220,6 +221,60 @@ function formatComputedAt(value: string): string {
   }).format(date);
 }
 
+function claimsForDirtySnapshot(claims: ClaimInputState[]) {
+  return claims.map((claim) => ({
+    id: claim.id,
+    name: claim.name,
+    costBalanceText: claim.costBalanceText,
+    interestBalanceText: claim.interestBalanceText,
+    principalBalanceText: claim.principalBalanceText,
+    dueAt: claim.dueAt,
+    debtorBenefitRankText: claim.debtorBenefitRankText,
+  }));
+}
+
+function targetsForDirtySnapshot(targets: TargetInputState[]) {
+  return targets.map((target) => ({
+    claimId: target.claimId,
+    amountText: target.amountText,
+  }));
+}
+
+function buildAppropriationDirtySnapshot({
+  claims,
+  payment,
+  note,
+}: {
+  claims: ClaimInputState[];
+  payment: PaymentInputState;
+  note: string;
+}) {
+  return createLcalcDirtySnapshot({
+    claims: claimsForDirtySnapshot(claims),
+    payment: {
+      amountText: payment.amountText,
+      allocationType: payment.allocationType,
+      targets: targetsForDirtySnapshot(payment.targets),
+    },
+    note,
+  });
+}
+
+function buildLoadedAppropriationDirtySnapshot(
+  applied: { claims: ClaimInputState[]; payment: PaymentInputState },
+  note: string,
+) {
+  return createLcalcDirtySnapshot({
+    claims: claimsForDirtySnapshot(applied.claims),
+    payment: {
+      amountText: applied.payment.amountText,
+      allocationType: applied.payment.allocationType,
+      targets: targetsForDirtySnapshot(applied.payment.targets),
+    },
+    note,
+  });
+}
+
 export function AppropriationCalculator() {
   const [claims, setClaims] = useState<ClaimInputState[]>(() => [
     { ...emptyClaim(), id: "loan-1", name: "대여금A", principalBalanceText: "1000000" },
@@ -236,6 +291,12 @@ export function AppropriationCalculator() {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const input = useMemo(() => buildAppropriationInput(claims, payment), [claims, payment]);
+
+  const dirtySnapshot = useMemo(
+    () => buildAppropriationDirtySnapshot({ claims, payment, note }),
+    [claims, payment, note],
+  );
+  const markAppropriationClean = useLcalcDirtyTracker("appropriation", dirtySnapshot);
 
   const handleCalculate = () => {
     try {
@@ -325,6 +386,9 @@ export function AppropriationCalculator() {
     runAction("save", async () => {
       if (!result) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       const path = await ipc.saveLcalc(buildAppropriationLcalcFile(input, result, note));
+      if (path) {
+        markAppropriationClean();
+      }
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
@@ -337,11 +401,13 @@ export function AppropriationCalculator() {
       validateLcalcEnvelope(migratedFile);
       const loaded = parseLoadedAppropriationLcalcInput(migratedFile);
       const applied = applyLoadedAppropriationInput(loaded.input);
+      const loadedNote = loaded.note ?? "";
       setClaims(applied.claims);
       setPayment(applied.payment);
-      setNote(loaded.note ?? "");
+      setNote(loadedNote);
       setResult(loaded.result ?? computeAppropriation(loaded.input));
       setError(null);
+      markAppropriationClean(buildLoadedAppropriationDirtySnapshot(applied, loadedNote));
       return ".lcalc 파일을 불러왔습니다.";
     });
 
