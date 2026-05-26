@@ -23,7 +23,9 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@lawcalc-kr/compensation": "workspace:*",
     "@lawcalc-kr/core-engine": "workspace:*",
+    "@lawcalc-kr/datasets-compensation": "workspace:*",
     "@radix-ui/react-slot": "^1.1.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",

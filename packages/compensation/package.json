@@ -1,0 +1,44 @@
+{
+  "name": "@lawcalc-kr/compensation",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Compensation domain (자×부상 single slice, capability id `compensation@1`). Pure TypeScript engine decoupled from any UI shell so it can be unit-tested and golden-tested in isolation.",
+  "license": "AGPL-3.0-or-later",
+  "author": "kyungseopk1m",
+  "homepage": "https://github.com/kyungseopk1m/lawcalc-kr#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kyungseopk1m/lawcalc-kr.git",
+    "directory": "packages/compensation"
+  },
+  "bugs": {
+    "url": "https://github.com/kyungseopk1m/lawcalc-kr/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src tests",
+    "test": "vitest run",
+    "test:golden": "vitest run --config vitest.golden.config.ts"
+  },
+  "dependencies": {
+    "@lawcalc-kr/core-engine": "workspace:*",
+    "@lawcalc-kr/datasets-compensation": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

@@ -1,7 +1,6 @@
 import {
   appliedDomains,
   validateAppropriationInput,
-  validateCompensationInput,
   validateDeliveryFeeInput,
   validateLawyerFeeInput,
   validateStampDutyInput,
@@ -9,8 +8,6 @@ import {
   type AppropriationResult,
   type CalcOptions,
   type CaseType,
-  type CompensationInput,
-  type CompensationResult,
   type HeirNode,
   type InheritanceInput,
   type InheritanceResult,
@@ -20,6 +17,11 @@ import {
   type LitigationCostResult,
   type RateSegment,
 } from "@lawcalc-kr/core-engine";
+import {
+  validateCompensationInput,
+  type CompensationInput,
+  type CompensationResult,
+} from "@lawcalc-kr/compensation";
 
 import type {
   LcalcAppropriationPayload,

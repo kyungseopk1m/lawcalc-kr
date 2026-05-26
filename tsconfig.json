@@ -7,7 +7,9 @@
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "noEmit": true,
     "paths": {
-      "@lawcalc-kr/core-engine": ["packages/core-engine/src/index.ts"]
+      "@lawcalc-kr/core-engine": ["packages/core-engine/src/index.ts"],
+      "@lawcalc-kr/compensation": ["packages/compensation/src/index.ts"],
+      "@lawcalc-kr/datasets-compensation": ["packages/datasets-compensation/src/index.ts"]
     }
   },
   "include": [
@@ -15,6 +17,15 @@
     "apps/desktop/vite.config.ts",
     "apps/desktop/tailwind.config.ts",
     "packages/core-engine/src",
-    "packages/core-engine/tests"
+    "packages/core-engine/tests",
+    "packages/compensation/src",
+    "packages/compensation/tests",
+    "packages/datasets-compensation/src",
+    "packages/datasets-compensation/tests"
+  ],
+  "references": [
+    { "path": "packages/datasets-compensation/tsconfig.build.json" },
+    { "path": "packages/core-engine/tsconfig.build.json" },
+    { "path": "packages/compensation/tsconfig.build.json" }
   ]
 }

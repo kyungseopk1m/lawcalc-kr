@@ -4,8 +4,6 @@ import type {
   AppropriationInput,
   AppropriationResult,
   CalcOptions,
-  CompensationInput,
-  CompensationResult,
   InheritanceInput,
   InheritanceResult,
   InterestInput,
@@ -14,6 +12,7 @@ import type {
   LitigationCostResult,
 } from "@lawcalc-kr/core-engine";
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
+import type { CompensationInput, CompensationResult } from "@lawcalc-kr/compensation";
 
 export interface PdfOptions {
   /**

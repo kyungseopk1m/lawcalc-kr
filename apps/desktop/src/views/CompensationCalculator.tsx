@@ -15,22 +15,24 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import {
-  STANDARD_DISCLAIMER,
   computeCompensation,
-  computeStaleBadge,
-  laborRatesDatasetVersionTag,
-  latestSliceEffectiveFrom,
-  loadLaborRatesTable,
   type CompensationAbsoluteDeduction,
   type CompensationInput,
   type CompensationRatioDeduction,
   type CompensationResult,
   type CompensationSegment,
   type PermanentDisabilityInput,
-  type StaleBadgeResult,
   type TemporaryDisabilityInput,
-} from "@lawcalc-kr/core-engine";
+} from "@lawcalc-kr/compensation";
+import {
+  computeStaleBadge,
+  laborRatesDatasetVersionTag,
+  latestSliceEffectiveFrom,
+  loadLaborRatesTable,
+  type StaleBadgeResult,
+} from "@lawcalc-kr/datasets-compensation";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";

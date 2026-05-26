@@ -20,6 +20,12 @@ export default defineConfig({
       "@lawcalc-kr/core-engine": decodeURIComponent(
         new URL("../../packages/core-engine/src/index.ts", import.meta.url).pathname,
       ),
+      "@lawcalc-kr/compensation": decodeURIComponent(
+        new URL("../../packages/compensation/src/index.ts", import.meta.url).pathname,
+      ),
+      "@lawcalc-kr/datasets-compensation": decodeURIComponent(
+        new URL("../../packages/datasets-compensation/src/index.ts", import.meta.url).pathname,
+      ),
     },
   },
   server: {

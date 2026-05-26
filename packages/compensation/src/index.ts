@@ -1,0 +1,21 @@
+export type {
+  CompensationAbsoluteDeduction,
+  CompensationBaseInput,
+  CompensationDataVersions,
+  CompensationDeductionsInput,
+  CompensationDeductionsResult,
+  CompensationFaultOffset,
+  CompensationInput,
+  CompensationLossRateInput,
+  CompensationLostIncomeInput,
+  CompensationRatioDeduction,
+  CompensationResult,
+  CompensationSegment,
+  ComputeCompensationDeps,
+  Hoffman240CapTable,
+  PermanentDisabilityInput,
+  TemporaryDisabilityInput,
+} from "./auto-injury";
+export { computeCompensation, validateCompensationInput } from "./auto-injury";
+
+export const COMPENSATION_CAPABILITY_ID = "compensation@1" as const;

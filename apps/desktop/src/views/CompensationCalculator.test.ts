@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  STANDARD_DISCLAIMER,
-  computeCompensation,
-  computeStaleBadge,
-  type CompensationInput,
-} from "@lawcalc-kr/core-engine";
+import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
+import { computeCompensation, type CompensationInput } from "@lawcalc-kr/compensation";
+import { computeStaleBadge } from "@lawcalc-kr/datasets-compensation";
 
 import {
   applyLoadedCompensationInput,

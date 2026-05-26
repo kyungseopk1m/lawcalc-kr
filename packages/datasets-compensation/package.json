@@ -1,0 +1,46 @@
+{
+  "name": "@lawcalc-kr/datasets-compensation",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Compensation domain dataset loaders (hoffman, leibniz, labor-rates, life-expectancy) + stale-badge utility. Pure TypeScript, decoupled from any UI shell.",
+  "license": "AGPL-3.0-or-later",
+  "author": "kyungseopk1m",
+  "homepage": "https://github.com/kyungseopk1m/lawcalc-kr#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kyungseopk1m/lawcalc-kr.git",
+    "directory": "packages/datasets-compensation"
+  },
+  "bugs": {
+    "url": "https://github.com/kyungseopk1m/lawcalc-kr/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "sync:hoffman": "node scripts/sync-hoffman.mjs",
+    "sync:leibniz": "node scripts/sync-leibniz.mjs",
+    "sync:labor-rates": "node scripts/sync-labor-rates.mjs",
+    "sync:life-expectancy": "node scripts/sync-life-expectancy.mjs",
+    "sync:datasets": "node scripts/sync-hoffman.mjs && node scripts/sync-leibniz.mjs && node scripts/sync-labor-rates.mjs && node scripts/sync-life-expectancy.mjs",
+    "prebuild": "pnpm sync:datasets",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src tests",
+    "pretest": "pnpm sync:datasets",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

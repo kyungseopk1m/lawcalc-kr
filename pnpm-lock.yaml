@@ -38,9 +38,15 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@lawcalc-kr/compensation':
+        specifier: workspace:*
+        version: link:../../packages/compensation
       '@lawcalc-kr/core-engine':
         specifier: workspace:*
         version: link:../../packages/core-engine
+      '@lawcalc-kr/datasets-compensation':
+        specifier: workspace:*
+        version: link:../../packages/datasets-compensation
       '@radix-ui/react-slot':
         specifier: ^1.1.0
         version: 1.2.4(@types/react@19.2.14)(react@19.2.6)
@@ -103,7 +109,26 @@ importers:
         specifier: ^4.1.5
         version: 4.1.5(@types/node@22.19.18)(vite@6.4.2(@types/node@22.19.18)(jiti@2.7.0)(lightningcss@1.32.0))
 
+  packages/compensation:
+    dependencies:
+      '@lawcalc-kr/core-engine':
+        specifier: workspace:*
+        version: link:../core-engine
+      '@lawcalc-kr/datasets-compensation':
+        specifier: workspace:*
+        version: link:../datasets-compensation
+    devDependencies:
+      vitest:
+        specifier: ^4.1.5
+        version: 4.1.5(@types/node@22.19.18)(vite@6.4.2(@types/node@22.19.18)(jiti@2.7.0)(lightningcss@1.32.0))
+
   packages/core-engine:
+    devDependencies:
+      vitest:
+        specifier: ^4.1.5
+        version: 4.1.5(@types/node@22.19.18)(vite@6.4.2(@types/node@22.19.18)(jiti@2.7.0)(lightningcss@1.32.0))
+
+  packages/datasets-compensation:
     devDependencies:
       vitest:
         specifier: ^4.1.5

@@ -4,11 +4,10 @@ import {
   STANDARD_DISCLAIMER,
   calculateInterest,
   computeAppropriation,
-  computeCompensation,
   computeLitigationCost,
   type AppropriationInput,
-  type CompensationInput,
 } from "@lawcalc-kr/core-engine";
+import { computeCompensation, type CompensationInput } from "@lawcalc-kr/compensation";
 
 import type { LcalcFile, LoadableLcalcFile } from "./ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lcalc-migrations";

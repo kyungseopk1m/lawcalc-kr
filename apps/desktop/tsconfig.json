@@ -7,7 +7,9 @@
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "noEmit": true,
     "paths": {
-      "@lawcalc-kr/core-engine": ["../../packages/core-engine/src/index.ts"]
+      "@lawcalc-kr/core-engine": ["../../packages/core-engine/src/index.ts"],
+      "@lawcalc-kr/compensation": ["../../packages/compensation/src/index.ts"],
+      "@lawcalc-kr/datasets-compensation": ["../../packages/datasets-compensation/src/index.ts"]
     },
     "types": ["vite/client"]
   },
