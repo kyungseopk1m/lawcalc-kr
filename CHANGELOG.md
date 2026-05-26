@@ -6,11 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [0.5.1] - 2026-05-22
+## [0.5.2] - 2026-05-26
+
+### Changed
+
+- 손해배상 도메인을 새 워크스페이스 패키지 두 개로 분리했습니다. 자×부상 엔진은 `@lawcalc-kr/compensation` (`packages/compensation/src/auto-injury/`) 으로, 데이터셋 로더 4종 (`hoffman` / `leibniz` / `labor-rates` / `life-expectancy`) 과 `stale-badge` 유틸은 `@lawcalc-kr/datasets-compensation` (`packages/datasets-compensation/src/`) 로 이전했고 골든 fixture 5건도 함께 옮겼습니다. `@lawcalc-kr/core-engine` 은 이자·상속·소송비용·변제충당 4 도메인과 공통 유틸 (`STANDARD_DISCLAIMER` / `addYears` / `IsoDate` 등) 만 보유합니다. capability id `compensation@1` 과 입력·결과 스펙은 그대로라 `.lcalc` v3 파일은 동일 envelope 으로 호환됩니다.
+- 워크스페이스 프로젝트가 5개 (`root` + `core-engine` + `compensation` + `datasets-compensation` + `desktop`) 로 늘면서 루트 `tsconfig.json` 의 `paths` 와 `include` 그래프, `apps/desktop/{tsconfig.json,vite.config.ts}` 의 alias 와 paths, 데이터셋 동기화 스크립트 위치, 패키지별 `vitest.config.ts` 와 `vitest.golden.config.ts` 를 새 구조에 맞게 재배열했습니다.
 
 ### Fixed
 
+- 손해배상 탭과 변제충당 탭에 `useLcalcDirtyTracker` 를 연결해 5개 탭 (`interest` / `inheritance` / `litigation-cost` / `appropriation` / `compensation`) 의 미저장 변경 추적 정합을 회복했습니다. 어느 탭이라도 입력이 dirty 상태이면 인앱 자동업데이트 다이얼로그가 재시작 전 경고를 띄우고, `.lcalc` 저장·불러오기 직후에는 dirty 상태가 해제됩니다.
 - 릴리스 워크플로(`.github/workflows/release.yml`)의 태그 정합 결함을 두 단계 가드로 보강했습니다. v0.5.0 릴리스에서 tauri-action 이 드래프트 릴리스를 생성하는 시점에 GitHub 가 태그 앵커링을 마치기 전이라 릴리스 URL 이 `releases/tag/untagged-...` 형태로 잡히는 함정이 있어 수동으로 `gh api PATCH` 를 적용해야 했습니다. 이번 릴리스에서는 (1) tauri-action 빌드 이전에 `create-draft-release` 사전 작업이 `gh release create --draft --target <tag SHA>` 로 태그가 앵커링된 드래프트를 먼저 생성하고, (2) 빌드 완료 후 `patch-release-tag` 사후 작업이 `gh api PATCH /repos/.../releases/{id} -f tag_name=<tag>` 로 릴리스 레코드의 `tag_name` 필드 정합을 한 번 더 회복합니다. 두 가드는 서로 독립적이라 한쪽이 실패해도 나머지가 정합을 보장합니다.
+
+### Notes
+
+- v0.5.1 은 릴리스 빌드 산출물의 파일명이 `LawCalc.Korea_0.5.0_*` 로 박히는 버전 surface 누락 결함 (`apps/desktop/src-tauri/Cargo.toml` 과 `tauri.conf.json` 의 version 필드가 0.5.1 격상에서 빠짐) 이 드래프트 단계에서 발견되어 publish 하지 않고 폐기했습니다. 본 v0.5.2 에서 4 surface (`apps/desktop/package.json` + `Cargo.toml` + `tauri.conf.json` + `CHANGELOG.md`) 를 일괄 0.5.2 로 격상하면서 v0.5.1 잔재를 정리합니다. v0.5.1 의 release.yml 태그 가드 본문은 본 릴리스의 첫 dogfood 대상으로 그대로 유지됩니다.
 
 ## [0.5.0] - 2026-05-18
 
@@ -243,8 +253,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.1...HEAD
-[0.5.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...v0.5.1
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...v0.5.2
 [0.5.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.3.2...v0.4.0
