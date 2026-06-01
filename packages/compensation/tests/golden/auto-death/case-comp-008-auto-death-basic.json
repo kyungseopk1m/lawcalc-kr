@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-008-auto-death-basic",
+  "title": "auto/death basic — 30세男 사망, 생계비 1/3 + 장례비 500만, 상속 없음",
+  "source": "manual-derivation",
+  "notes": "compensation-death-golden-derivation-2026-06-02.md § 2. 가동연한 65세(420개월), rawHoffman H[420]=242.46633829 > 240 → appliedHoffman 240 cap, 생계비 1/3 공제, 장례비 500만 가산, 100원 절사.",
+  "input": {
+    "mode": "death",
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 65
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "funeralExpenseWon": 5000000,
+    "solatiumWon": 0,
+    "faultRatio": 0
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [420],
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "lostIncomeSubtotalWon": 605679360,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 605679360,
+    "faultOffset": { "ratio": 0, "afterWon": 605679360 },
+    "funeralExpenseWon": 5000000,
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 610679360
+    },
+    "finalWon": 610679300,
+    "hoffman240CapCappedAtIndex": 0,
+    "inheritanceShares": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-06-02",
+    "derivedBy": "compensation-death-golden-derivation-2026-06-02.md § 2"
+  }
+}

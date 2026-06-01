@@ -12,7 +12,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["tests/auto-injury/golden.test.ts"],
+    include: ["tests/auto-injury/golden.test.ts", "tests/auto-death/golden.test.ts"],
     environment: "node",
   },
 });

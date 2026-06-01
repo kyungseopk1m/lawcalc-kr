@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-009-auto-death-inheritance",
+  "title": "auto/death inheritance — 40세男 사망, 배우자+자녀2 분배 (3:2:2), 잔여원 선순위",
+  "source": "manual-derivation",
+  "notes": "compensation-death-golden-derivation-2026-06-02.md § 3. 가동연한 65세(300개월), rawHoffman H[300]=194.34575275 < 240 → cap 미적용, 위자료 8천만 + 과실 20% + 장례비 500만 + 절대공제 12,345,678원, 상속 배우자 3/7 자녀 2/7 × 2, floor 후 잔여 1원 배우자 배정.",
+  "input": {
+    "mode": "death",
+    "base": {
+      "birthDate": "1986-01-01",
+      "accidentDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 65
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "funeralExpenseWon": 5000000,
+    "solatiumWon": 80000000,
+    "faultRatio": 0.2,
+    "deductions": {
+      "ratio": [],
+      "absolute": [{ "label": "보험금 선급", "amount": 12345678 }]
+    },
+    "heirs": {
+      "decedent": { "deceasedAt": "2026-01-01" },
+      "spouse": { "name": "배우자", "alive": true },
+      "linealDescendants": [
+        { "name": "자녀1", "deceasedBeforeOpening": false },
+        { "name": "자녀2", "deceasedBeforeOpening": false }
+      ]
+    }
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [300],
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "lostIncomeSubtotalWon": 490463379,
+    "solatiumWon": 80000000,
+    "pecuniaryDamagesSubtotalWon": 570463379,
+    "faultOffset": { "ratio": 0.2, "afterWon": 456370703 },
+    "funeralExpenseWon": 5000000,
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 12345678,
+      "afterWon": 449025025
+    },
+    "finalWon": 449025000,
+    "hoffman240CapCappedAtIndex": null,
+    "inheritanceShares": [
+      { "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 192439286 },
+      { "name": "자녀1", "numerator": 2, "denominator": 7, "amountWon": 128292857 },
+      { "name": "자녀2", "numerator": 2, "denominator": 7, "amountWon": 128292857 }
+    ],
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-06-02",
+    "derivedBy": "compensation-death-golden-derivation-2026-06-02.md § 3"
+  }
+}
