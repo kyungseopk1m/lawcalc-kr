@@ -8,8 +8,9 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    disclaimer_text, format_currency, format_rate_percent, options_summary, CompensationResultView,
-    InheritanceResultView, LitigationCostResultView, ResultView,
+    disclaimer_text, format_currency, format_rate_percent, options_summary,
+    CompensationDeathResultView, CompensationResultView, InheritanceResultView,
+    LitigationCostResultView, ResultView,
 };
 
 /// CSV formula injection defense.
@@ -152,6 +153,38 @@ pub async fn export_compensation_csv(
             .map_err(|e| Error::InvalidPath(e.to_string()))?;
 
         let bytes = render_compensation_csv_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
+}
+
+#[tauri::command]
+pub async fn export_compensation_death_csv(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: CompensationDeathResultView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("CSV", &["csv"])
+            .set_file_name("compensation-death-calculation.csv")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_compensation_death_csv_bytes(&view)?;
         std::fs::write(&path, bytes)?;
         Ok(Some(path.to_string_lossy().into_owned()))
     })
@@ -395,6 +428,109 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
     for (key, value) in &summary_rows {
         let escaped = escape_csv_cell(value).into_owned();
         wtr.write_record([*key, escaped.as_str()])?;
+    }
+
+    let versions = format!(
+        "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
+        view.data_versions.labor_rates,
+        view.data_versions.life_expectancy,
+        view.data_versions.hoffman,
+        view.data_versions.leibniz
+    );
+    let versions_cell = escape_csv_cell(&versions).into_owned();
+    wtr.write_record(["데이터 버전", versions_cell.as_str()])?;
+    let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
+    wtr.write_record(["계산 시각", computed_cell.as_str()])?;
+    let disclaimer_cell = escape_csv_cell(disclaimer_text(Some(&view.disclaimer))).into_owned();
+    wtr.write_record(["면책 고지", disclaimer_cell.as_str()])?;
+
+    let inner = wtr
+        .into_inner()
+        .map_err(|e| Error::Other(format!("CSV 마무리 실패: {e}")))?;
+
+    let mut out = Vec::with_capacity(inner.len() + 3);
+    out.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+    out.extend_from_slice(&inner);
+    Ok(out)
+}
+
+pub fn render_compensation_death_csv_bytes(
+    view: &CompensationDeathResultView,
+) -> Result<Vec<u8>, Error> {
+    let mut wtr = csv::WriterBuilder::new()
+        .delimiter(b',')
+        .flexible(true)
+        .from_writer(vec![]);
+
+    wtr.write_record(["기간(개월)", "단가(원/일)", "호프만(적용)", "금액(원)"])?;
+    for (i, segment) in view.segments.iter().enumerate() {
+        let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
+            " (한도)"
+        } else {
+            ""
+        };
+        let row: [String; 4] = [
+            escape_csv_cell(&format!("{} ~ {}", segment.start_month, segment.end_month))
+                .into_owned(),
+            escape_csv_cell(&format_currency(segment.daily_wage_won)).into_owned(),
+            escape_csv_cell(&format!("{:.6}{}", segment.applied_hoffman, cap_marker)).into_owned(),
+            escape_csv_cell(&format_currency(segment.amount_floor_won)).into_owned(),
+        ];
+        wtr.write_record(&row)?;
+    }
+    let lost_income_cell =
+        escape_csv_cell(&format_currency(view.lost_income_subtotal_won)).into_owned();
+    wtr.write_record([
+        "일실수입 소계 (생계비 공제 후)",
+        "",
+        "",
+        lost_income_cell.as_str(),
+    ])?;
+
+    let summary_rows: [(&str, String); 8] = [
+        (
+            "생계비 공제 비율",
+            format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
+        ),
+        ("위자료(원)", format_currency(view.solatium_won)),
+        (
+            "재산상 손해 소계(원)",
+            format_currency(view.pecuniary_damages_subtotal_won),
+        ),
+        (
+            "과실비율",
+            format!("{:.2}%", view.fault_offset.ratio * 100.0),
+        ),
+        (
+            "과실상계 후(원)",
+            format_currency(view.fault_offset.after_won),
+        ),
+        ("장례비(원)", format_currency(view.funeral_expense_won)),
+        ("최종 합계(원)", format_currency(view.final_won)),
+        ("", String::new()),
+    ];
+    for (key, value) in &summary_rows {
+        if key.is_empty() {
+            continue;
+        }
+        let escaped = escape_csv_cell(value).into_owned();
+        wtr.write_record([*key, escaped.as_str()])?;
+    }
+
+    if let Some(shares) = view.inheritance_shares.as_ref() {
+        if !shares.is_empty() {
+            wtr.write_record(["상속인", "지분(약분)", "", "배정 금액(원)"])?;
+            for share in shares {
+                let row: [String; 4] = [
+                    escape_csv_cell(&share.name).into_owned(),
+                    escape_csv_cell(&format!("{}/{}", share.numerator, share.denominator))
+                        .into_owned(),
+                    String::new(),
+                    escape_csv_cell(&format_currency(share.amount_won)).into_owned(),
+                ];
+                wtr.write_record(&row)?;
+            }
+        }
     }
 
     let versions = format!(
@@ -671,6 +807,107 @@ mod tests {
         let bytes = render_compensation_csv_bytes(&view).unwrap();
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
         assert!(body.contains("(한도)"));
+    }
+
+    fn compensation_death_sample() -> CompensationDeathResultView {
+        use crate::commands::result_view::{
+            CompensationDataVersionsView, CompensationDeductionsView, CompensationFaultOffsetView,
+            CompensationHoffman240CapView, CompensationInheritanceShareView,
+            CompensationSegmentView, DISCLAIMER_KO,
+        };
+        CompensationDeathResultView {
+            living_cost_deduction_ratio: 1.0 / 3.0,
+            segments: vec![CompensationSegmentView {
+                start_month: 0,
+                end_month: 360,
+                loss_rate: 1.0,
+                daily_wage_won: 172_068.0,
+                monthly_wage_won: 3_785_496.0,
+                raw_hoffman: 219.610067,
+                applied_hoffman: 219.610067,
+                amount_floor_won: 554_222_020.0,
+            }],
+            lost_income_subtotal_won: 554_222_020.0,
+            solatium_won: 80_000_000.0,
+            pecuniary_damages_subtotal_won: 634_222_020.0,
+            fault_offset: CompensationFaultOffsetView {
+                ratio: 0.0,
+                before_won: 634_222_020.0,
+                after_won: 634_222_020.0,
+            },
+            funeral_expense_won: 5_000_000.0,
+            deductions: CompensationDeductionsView {
+                ratio_subtotal_won: 0.0,
+                absolute_subtotal_won: 0.0,
+                after_won: 639_222_020.0,
+            },
+            final_won: 639_222_000.0,
+            inheritance_shares: Some(vec![
+                CompensationInheritanceShareView {
+                    name: "배우자".into(),
+                    numerator: 3,
+                    denominator: 7,
+                    amount_won: 273_952_286.0,
+                },
+                CompensationInheritanceShareView {
+                    name: "자녀1".into(),
+                    numerator: 2,
+                    denominator: 7,
+                    amount_won: 182_634_857.0,
+                },
+            ]),
+            hoffman240_cap: CompensationHoffman240CapView {
+                applied_hoffman: vec![219.610067],
+                capped_at_index: None,
+            },
+            data_versions: CompensationDataVersionsView {
+                labor_rates: "labor-rates/v1.0.0".into(),
+                life_expectancy: "life-expectancy/v1.0.0".into(),
+                hoffman: "hoffman/v1.0.0".into(),
+                leibniz: "leibniz/v1.0.0".into(),
+            },
+            disclaimer: DISCLAIMER_KO.into(),
+            computed_at: "2026-06-02T12:00:00+09:00".into(),
+        }
+    }
+
+    #[test]
+    fn compensation_death_csv_includes_funeral_living_cost_shares_and_disclaimer() {
+        let bytes = render_compensation_death_csv_bytes(&compensation_death_sample()).unwrap();
+        assert_eq!(&bytes[..3], &[0xEF, 0xBB, 0xBF]);
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("생계비 공제 비율"));
+        assert!(body.contains("일실수입 소계 (생계비 공제 후)"));
+        assert!(body.contains("장례비(원)"));
+        assert!(body.contains("상속인"));
+        assert!(body.contains("배우자"));
+        assert!(body.contains("3/7"));
+        assert!(body.contains("\"639,222,000\""));
+        assert!(body.contains("면책 고지"));
+        assert!(body.contains("검토용 계산"));
+    }
+
+    #[test]
+    fn compensation_death_csv_omits_inheritance_when_absent() {
+        let mut view = compensation_death_sample();
+        view.inheritance_shares = None;
+        let bytes = render_compensation_death_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(!body.contains("상속인"));
+        assert!(body.contains("장례비(원)"));
+    }
+
+    /// User-controlled heir name fields must not be evaluated as formulas in
+    /// the death-distribution CSV.
+    #[test]
+    fn malicious_share_name_is_escaped_in_death_csv() {
+        let mut view = compensation_death_sample();
+        if let Some(shares) = view.inheritance_shares.as_mut() {
+            shares[0].name = "=HYPERLINK(\"http://x\",\"x\")".to_string();
+        }
+        let bytes = render_compensation_death_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("'=HYPERLINK"));
     }
 
     /// User-controlled name fields must not be evaluated as formulas in the

@@ -165,6 +165,39 @@ pub struct CompensationDataVersionsView {
     pub leibniz: String,
 }
 
+/// Typed view of the `@lawcalc-kr/compensation` `CompensationAutoDeathResult`
+/// shape. The death slice (`compensation@2`) replaces the injury-only
+/// `combined_loss_rate` with `living_cost_deduction_ratio`, adds
+/// `funeral_expense_won`, and carries optional per-heir distribution rows.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationDeathResultView {
+    pub living_cost_deduction_ratio: f64,
+    pub segments: Vec<CompensationSegmentView>,
+    pub lost_income_subtotal_won: f64,
+    pub solatium_won: f64,
+    pub pecuniary_damages_subtotal_won: f64,
+    pub fault_offset: CompensationFaultOffsetView,
+    pub funeral_expense_won: f64,
+    pub deductions: CompensationDeductionsView,
+    pub final_won: f64,
+    #[serde(default)]
+    pub inheritance_shares: Option<Vec<CompensationInheritanceShareView>>,
+    pub hoffman240_cap: CompensationHoffman240CapView,
+    pub data_versions: CompensationDataVersionsView,
+    pub disclaimer: String,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationInheritanceShareView {
+    pub name: String,
+    pub numerator: i64,
+    pub denominator: i64,
+    pub amount_won: f64,
+}
+
 /// Disclaimer copy that must accompany every exported artifact.
 /// Source of truth: `packages/core-engine/src/disclaimers.ts` `STANDARD_DISCLAIMER`.
 pub const DISCLAIMER_KO: &str =
