@@ -715,6 +715,9 @@ describe("v3 compensation envelope", () => {
     const file = buildCompensationFile();
     expect(() => validateLcalcEnvelope(file)).not.toThrow();
     const loaded = parseLoadedCompensationLcalcInput(file);
+    if (loaded.input.mode === "death") {
+      throw new Error("expected injury input");
+    }
     expect(loaded.input.base.birthDate).toBe("1996-01-01");
     expect(loaded.input.lossRate.permanent?.[0]?.ratio).toBe(0.3);
     expect(loaded.input.lostIncome.occupation).toBe("보통인부");

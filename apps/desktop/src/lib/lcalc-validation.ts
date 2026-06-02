@@ -18,14 +18,19 @@ import {
   type RateSegment,
 } from "@lawcalc-kr/core-engine";
 import {
+  validateCompensationDeathInput,
   validateCompensationInput,
+  type CompensationAutoDeathInput,
+  type CompensationAutoDeathResult,
   type CompensationInput,
   type CompensationResult,
 } from "@lawcalc-kr/compensation";
 
 import type {
   LcalcAppropriationPayload,
+  LcalcCompensationInput,
   LcalcCompensationPayload,
+  LcalcCompensationResult,
   LcalcFile,
   LcalcInheritancePayload,
   LcalcInterestPayload,
@@ -54,6 +59,7 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "litigation-cost@1",
   "appropriation@1",
   "compensation@1",
+  "compensation@2",
 ]);
 
 const CAPABILITY_ID_PATTERN = /^[a-z][a-z0-9-]*@[1-9][0-9]*$/;
@@ -85,8 +91,8 @@ interface ParsedAppropriationLcalcInput {
 }
 
 interface ParsedCompensationLcalcInput {
-  input: CompensationInput;
-  result?: CompensationResult;
+  input: LcalcCompensationInput;
+  result?: LcalcCompensationResult;
   note?: string;
 }
 
@@ -641,15 +647,30 @@ function parseAppropriationPayload(
   };
 }
 
-function parseCompensationInput(value: unknown): CompensationInput {
+function parseCompensationInput(value: unknown): LcalcCompensationInput {
   const input = requireRecord(value, "payload.input");
   // 도메인 validator (한국어 RangeError) 에 위임. envelope 측은 raw shape 만 받음.
+  // `mode: "death"` discriminator 로 자×사망(`compensation@2`) / 자×부상(`compensation@1`) 분기.
+  if (input.mode === "death") {
+    validateCompensationDeathInput(input as unknown as CompensationAutoDeathInput);
+    return input as unknown as CompensationAutoDeathInput;
+  }
   validateCompensationInput(input as unknown as CompensationInput);
-  return input as unknown as CompensationInput;
+  return input as unknown as LcalcCompensationInput;
 }
 
-function parseCompensationResult(value: unknown): CompensationResult {
+function parseCompensationResult(value: unknown): LcalcCompensationResult {
   const result = requireRecord(value, "payload.result");
+  if (result.mode === "death") {
+    return {
+      ...(result as unknown as CompensationAutoDeathResult),
+      disclaimer: requireString(
+        result.disclaimer,
+        "payload.result.disclaimer",
+      ) as CompensationAutoDeathResult["disclaimer"],
+      computedAt: requireString(result.computedAt, "payload.result.computedAt"),
+    };
+  }
   return {
     ...(result as unknown as CompensationResult),
     disclaimer: requireString(

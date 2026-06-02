@@ -12,7 +12,12 @@ import type {
   LitigationCostResult,
 } from "@lawcalc-kr/core-engine";
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
-import type { CompensationInput, CompensationResult } from "@lawcalc-kr/compensation";
+import type {
+  CompensationAutoDeathInput,
+  CompensationAutoDeathResult,
+  CompensationInput,
+  CompensationResult,
+} from "@lawcalc-kr/compensation";
 
 export interface PdfOptions {
   /**
@@ -88,11 +93,32 @@ export interface LcalcAppropriationPayload {
   disclaimer: string;
 }
 
+/**
+ * 자×부상 입력/결과에 `mode: "injury"` discriminator 를 더한 reader-side 타입.
+ *
+ * 엔진 측 `CompensationInput`/`CompensationResult` 는 `mode` 필드가 없다 (자×부상 전용
+ * 슬라이스였던 v0.5.x 호환). `compensation@2` 부터 같은 envelope 에 자×사망이 합류하므로,
+ * reader 는 `mode` 로 분기한다. `@1→@2` migration 이 기존 파일에 `mode: "injury"` 를 주입하고,
+ * 신규 자×부상 저장도 `mode` 없이 저장될 수 있으므로 optional 로 둔다.
+ */
+export type LcalcCompensationInjuryInput = CompensationInput & { mode?: "injury" };
+export type LcalcCompensationInjuryResult = CompensationResult & { mode?: "injury" };
+
+export type LcalcCompensationInput = LcalcCompensationInjuryInput | CompensationAutoDeathInput;
+export type LcalcCompensationResult = LcalcCompensationInjuryResult | CompensationAutoDeathResult;
+
+/**
+ * compensation `.lcalc` payload.
+ *
+ * `compensation@1` = 자×부상, `compensation@2` = 자×사망 (`input.mode === "death"`).
+ * 두 capability 가 같은 `kind: "compensation"` envelope 를 공유하므로 payload 도 input/result
+ * discriminated union 으로 표현한다.
+ */
 export interface LcalcCompensationPayload {
   appVersion: string;
   createdAt: string;
-  input: CompensationInput;
-  result?: CompensationResult;
+  input: LcalcCompensationInput;
+  result?: LcalcCompensationResult;
   note?: string;
   disclaimer: string;
 }
@@ -191,6 +217,12 @@ export const ipc = {
   },
   exportCompensationCsv(result: CompensationResult): Promise<string | null> {
     return invoke<string | null>("export_compensation_csv", { result });
+  },
+  exportCompensationDeathPdf(result: CompensationAutoDeathResult): Promise<string | null> {
+    return invoke<string | null>("export_compensation_death_pdf", { result });
+  },
+  exportCompensationDeathCsv(result: CompensationAutoDeathResult): Promise<string | null> {
+    return invoke<string | null>("export_compensation_death_csv", { result });
   },
   /**
    * Opens a save dialog and writes the payload as pretty-printed JSON.

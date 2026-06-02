@@ -63,6 +63,31 @@ function normalizeV3LitigationCostFile(raw: LcalcFile): LcalcFile {
   return normalizeLegacyLawyerFeeValue(raw) as LcalcFile;
 }
 
+/**
+ * `compensation@1` (자×부상) → `compensation@2` (자×부상 + 자×사망) intra-v3 migration.
+ *
+ * v0.5.x 가 저장한 자×부상 `.lcalc` 파일은 `input.mode` discriminator 가 없다. v0.6.0 부터
+ * 같은 `kind: "compensation"` envelope 가 자×사망(`mode: "death"`) 도 담으므로, 기존 파일에
+ * `mode: "injury"` 를 명시 주입해 reader 분기를 견고하게 한다 (나머지 필드는 그대로 보존).
+ * 이미 `mode` 가 있는 파일(=`compensation@2` 자×사망/자×부상)은 변경하지 않는다.
+ */
+function normalizeV3CompensationFile(raw: LcalcFile): LcalcFile {
+  if (raw.kind !== "compensation") {
+    return raw;
+  }
+  const input: unknown = raw.payload.input;
+  if (!isRecord(input) || input.mode !== undefined) {
+    return raw;
+  }
+  return {
+    ...raw,
+    payload: {
+      ...raw.payload,
+      input: { mode: "injury", ...input },
+    },
+  } as LcalcFile;
+}
+
 function migrateV1ToV2(
   raw: Extract<LoadableLcalcFile, { schemaVersion: "1" }>,
 ): Extract<LoadableLcalcFile, { schemaVersion: "2" }> {
@@ -129,7 +154,7 @@ export function migrateLcalcFile(raw: unknown): LcalcFile {
 
     const schemaVersion = current.schemaVersion;
     if (schemaVersion === CURRENT_LCALC_SCHEMA_VERSION) {
-      return normalizeV3LitigationCostFile(current as LcalcFile);
+      return normalizeV3CompensationFile(normalizeV3LitigationCostFile(current as LcalcFile));
     }
 
     const migration = migrations[schemaVersion];
