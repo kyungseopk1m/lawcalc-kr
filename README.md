@@ -28,7 +28,7 @@
 
 법원이 공개한 계산 프로그램은 아직도 윈도우 설치형이라, 맥이나 리눅스에서는 쓸 수 없습니다. 같은 계산을 맥에서도 돌리고 싶어서 만든 앱입니다.
 
-이자, 상속분, 소송비용, 변제충당, 손해배상(자동차·부상) 다섯 가지를 다룹니다. 입력값을 넣으면 구간별 일수·이율·계산식·합계가 표로 펼쳐지고, 어떤 법령과 데이터 버전을 썼는지도 같이 보여줍니다. 결과는 `.lcalc` 파일로 저장하거나 PDF·CSV로 내보낼 수 있고, 전부 로컬에서 처리합니다.
+이자, 상속분, 소송비용, 변제충당, 손해배상(자동차 부상·사망) 다섯 가지를 다룹니다. 입력값을 넣으면 구간별 일수·이율·계산식·합계가 표로 펼쳐지고, 어떤 법령과 데이터 버전을 썼는지도 같이 보여줍니다. 결과는 `.lcalc` 파일로 저장하거나 PDF·CSV로 내보낼 수 있고, 전부 로컬에서 처리합니다.
 
 ## 주요 기능
 
@@ -156,7 +156,7 @@ GNU Affero General Public License v3.0 (이상)으로 배포합니다. 누구나
 
 ## English
 
-LawCalc Korea is a Korean legal calculation desktop app for judgment interest, statutory delay damages, simplified inheritance shares, litigation costs, payment appropriation, and the first auto/injury compensation slice.
+LawCalc Korea is a Korean legal calculation desktop app for judgment interest, statutory delay damages, simplified inheritance shares, litigation costs, payment appropriation, and auto accident compensation (injury and death).
 
 The current release runs locally on macOS and Windows — interest, inheritance, litigation-cost, appropriation, and compensation calculations, transparent result traces, versioned data, and reproducible `.lcalc` files.
 
