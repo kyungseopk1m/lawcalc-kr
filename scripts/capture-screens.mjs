@@ -35,7 +35,14 @@ const captures = [
   },
   {
     tab: "손해배상",
+    subTab: "자동차 사고 · 부상",
     file: "readme-compensation.png",
+    assertDisclaimer: true,
+  },
+  {
+    tab: "손해배상",
+    subTab: "자동차 사고 · 사망",
+    file: "readme-compensation-death.png",
     assertDisclaimer: true,
   },
 ];
@@ -114,8 +121,13 @@ async function main() {
     await page.goto(baseUrl, { waitUntil: "networkidle" });
 
     for (const capture of captures) {
-      console.log(`Capturing ${capture.tab} -> ${capture.file}`);
+      console.log(
+        `Capturing ${capture.tab}${capture.subTab ? ` / ${capture.subTab}` : ""} -> ${capture.file}`,
+      );
       await page.getByRole("button", { name: capture.tab }).click();
+      if (capture.subTab) {
+        await page.getByRole("button", { name: capture.subTab }).click();
+      }
       await clickCalculate(page, capture);
       if (capture.assertText) {
         await page.getByText(capture.assertText).first().waitFor({ timeout: 10_000 });
