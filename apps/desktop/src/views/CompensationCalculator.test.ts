@@ -1,20 +1,36 @@
 import { describe, expect, it } from "vitest";
 
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
-import { computeCompensation, type CompensationInput } from "@lawcalc-kr/compensation";
+import {
+  computeCompensation,
+  computeCompensationDeath,
+  type CompensationInput,
+} from "@lawcalc-kr/compensation";
 import { computeStaleBadge } from "@lawcalc-kr/datasets-compensation";
 
+import { migrateLcalcFile } from "../lib/lcalc-migrations";
+import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 import {
+  applyLoadedCompensationDeathInput,
   applyLoadedCompensationInput,
+  buildCompensationDeathInput,
+  buildCompensationDeathLcalcFile,
   buildCompensationInput,
   buildCompensationLcalcFile,
+  defaultCompensationDeathFormState,
   defaultCompensationFormState,
+  formatCompensationDeathForClipboard,
   formatCompensationForClipboard,
+  type CompensationDeathFormState,
   type CompensationFormState,
 } from "./CompensationCalculator";
 
 function override(patch: Partial<CompensationFormState>): CompensationFormState {
   return { ...defaultCompensationFormState(), ...patch };
+}
+
+function overrideDeath(patch: Partial<CompensationDeathFormState>): CompensationDeathFormState {
+  return { ...defaultCompensationDeathFormState(), ...patch };
 }
 
 describe("buildCompensationInput", () => {
@@ -172,5 +188,158 @@ describe("validator 거부 path (UI 측 오류 노출 사슬)", () => {
     });
     const input: CompensationInput = buildCompensationInput(state);
     expect(() => computeCompensation(input)).toThrow(/가동연한 종료일/);
+  });
+});
+
+describe("buildCompensationDeathInput (자×사망)", () => {
+  it("default 상태는 mode:death + 장례비 500만 + 생계비 1/3 기본 입력을 만든다", () => {
+    const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
+    expect(input.mode).toBe("death");
+    expect(input.base.birthDate).toBe("1996-01-01");
+    expect(input.base.accidentDate).toBe("2026-01-01");
+    expect(input.lostIncome.occupation).toBe("보통인부");
+    expect(input.lostIncome.workingDaysPerMonth).toBe(22);
+    expect(input.funeralExpenseWon).toBe(5_000_000);
+    expect(input.livingCostDeductionRatio).toBeCloseTo(0.3333, 4);
+    expect(input.heirs).toBeUndefined();
+  });
+
+  it("상속인 체크 시 heirs 입력이 inheritance 컴포넌트 변환으로 만들어진다", () => {
+    const state = overrideDeath({
+      includeHeirs: true,
+      spouse: { alive: true, name: "배우자" },
+      linealDescendants: [
+        { id: "c1", name: "자녀1", deceasedBeforeOpening: false, representatives: [] },
+      ],
+    });
+    const input = buildCompensationDeathInput(state);
+    expect(input.heirs?.spouse?.alive).toBe(true);
+    expect(input.heirs?.linealDescendants?.[0]?.name).toBe("자녀1");
+  });
+
+  it("위자료·과실·공제 빈 값은 생략하고 기본값을 쓴다", () => {
+    const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
+    expect(input.solatiumWon).toBeUndefined();
+    expect(input.faultRatio).toBeUndefined();
+    expect(input.deductions).toBeUndefined();
+  });
+});
+
+describe("computeCompensationDeath integration via death builder", () => {
+  it("사망 결과는 생계비 공제 후 일실수입 + 장례비 가산 + finalWon>0 + STANDARD_DISCLAIMER", () => {
+    const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
+    const result = computeCompensationDeath(input);
+    expect(result.mode).toBe("death");
+    expect(result.finalWon).toBeGreaterThan(0);
+    expect(result.funeralExpenseWon).toBe(5_000_000);
+    expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
+    expect(result.dataVersions.laborRates).toBe("labor-rates/v1.0.0");
+  });
+
+  it("상속인 입력 시 분배 합계 = finalWon (round-trip 보장)", () => {
+    const state = overrideDeath({
+      includeHeirs: true,
+      spouse: { alive: true, name: "배우자" },
+      linealDescendants: [
+        { id: "c1", name: "자녀1", deceasedBeforeOpening: false, representatives: [] },
+        { id: "c2", name: "자녀2", deceasedBeforeOpening: false, representatives: [] },
+      ],
+    });
+    const result = computeCompensationDeath(buildCompensationDeathInput(state));
+    expect(result.inheritanceShares).toBeDefined();
+    const sum = result.inheritanceShares!.reduce((acc, s) => acc + s.amountWon, 0);
+    expect(sum).toBe(result.finalWon);
+  });
+
+  it("1990 이전 사망 상속인 입력은 inheritance 엔진 RangeError 를 전파한다 (Option B toast 사슬)", () => {
+    const state = overrideDeath({
+      birthDate: "1960-01-01",
+      accidentDate: "1989-01-01",
+      includeHeirs: true,
+      decedent: { name: "망인", deceasedAt: "1989-01-01" },
+      spouse: { alive: true, name: "배우자" },
+    });
+    const input = buildCompensationDeathInput(state);
+    expect(() => computeCompensationDeath(input)).toThrow();
+  });
+});
+
+describe("자×사망 clipboard + .lcalc (compensation@2)", () => {
+  it("clipboard 본문은 STANDARD_DISCLAIMER 로 끝나고 장례비·생계비 라벨을 노출한다", () => {
+    const result = computeCompensationDeath(
+      buildCompensationDeathInput(defaultCompensationDeathFormState()),
+    );
+    const text = formatCompensationDeathForClipboard(result);
+    expect(text).toContain("LawCalc Korea 자동차 사고 사망 손해배상 계산 결과");
+    expect(text).toContain("생계비 공제 비율");
+    expect(text).toContain("장례비");
+    expect(text.trim().endsWith(STANDARD_DISCLAIMER)).toBe(true);
+  });
+
+  it("death lcalc envelope = v3 + compensation kind + compensation@2 capability + 4 dataVersions", () => {
+    const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
+    const result = computeCompensationDeath(input);
+    const file = buildCompensationDeathLcalcFile(input, result, "사망 메모");
+    expect(file.schemaVersion).toBe("3");
+    expect(file.kind).toBe("compensation");
+    expect(file.envelopeFeatures).toEqual(["compensation@2"]);
+    expect(file.payload.disclaimer).toBe(STANDARD_DISCLAIMER);
+    expect(file.payload.note).toBe("사망 메모");
+  });
+
+  it("death .lcalc round-trip: 저장 → validate → load 가 동일 입력 형태를 복원한다", () => {
+    const state = overrideDeath({
+      includeHeirs: true,
+      spouse: { alive: true, name: "배우자" },
+      linealDescendants: [
+        { id: "c1", name: "자녀1", deceasedBeforeOpening: false, representatives: [] },
+      ],
+    });
+    const input = buildCompensationDeathInput(state);
+    const result = computeCompensationDeath(input);
+    const file = buildCompensationDeathLcalcFile(input, result, "");
+    expect(() => validateLcalcEnvelope(file)).not.toThrow();
+    const loaded = parseLoadedCompensationLcalcInput(file);
+    expect(loaded.input.mode).toBe("death");
+    if (loaded.input.mode !== "death") throw new Error("expected death");
+    expect(loaded.input.funeralExpenseWon).toBe(5_000_000);
+    expect(loaded.input.heirs?.linealDescendants?.[0]?.name).toBe("자녀1");
+    const reapplied = applyLoadedCompensationDeathInput(loaded.input);
+    expect(reapplied.includeHeirs).toBe(true);
+    expect(reapplied.linealDescendants[0]?.name).toBe("자녀1");
+    expect(reapplied.funeralExpenseWonText).toBe("5000000");
+  });
+});
+
+describe("compensation @1 → @2 migration + 부상 회귀", () => {
+  it("@1 자×부상 파일(mode 없음)을 로드하면 mode:injury 가 주입되고 부상 입력이 그대로 복원된다", () => {
+    const injuryInput = buildCompensationInput(defaultCompensationFormState());
+    const injuryResult = computeCompensation(injuryInput);
+    const legacyFile = buildCompensationLcalcFile(injuryInput, injuryResult, "부상");
+    expect(legacyFile.envelopeFeatures).toEqual(["compensation@1"]);
+    // payload.input 에 mode 가 없는 v0.5.x 형태
+    expect("mode" in (legacyFile.payload.input as unknown as Record<string, unknown>)).toBe(false);
+
+    const migrated = migrateLcalcFile(legacyFile);
+    if (migrated.kind !== "compensation") throw new Error("expected compensation");
+    expect((migrated.payload.input as { mode?: string }).mode).toBe("injury");
+
+    validateLcalcEnvelope(migrated);
+    const loaded = parseLoadedCompensationLcalcInput(migrated);
+    expect(loaded.input.mode).not.toBe("death");
+    if (loaded.input.mode === "death") throw new Error("expected injury");
+    const reapplied = applyLoadedCompensationInput(loaded.input);
+    expect(reapplied.occupation).toBe("보통인부");
+    expect(reapplied.permanent[0]?.ratioText).toBe("0.3");
+    expect(loaded.note).toBe("부상");
+  });
+
+  it("@2 사망 파일은 migration 을 거쳐도 mode:death 가 유지된다 (오인 주입 없음)", () => {
+    const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
+    const result = computeCompensationDeath(input);
+    const file = buildCompensationDeathLcalcFile(input, result, "");
+    const migrated = migrateLcalcFile(file);
+    if (migrated.kind !== "compensation") throw new Error("expected compensation");
+    expect((migrated.payload.input as { mode?: string }).mode).toBe("death");
   });
 });

@@ -18,7 +18,10 @@ import { useMemo, useState } from "react";
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import {
   computeCompensation,
+  computeCompensationDeath,
   type CompensationAbsoluteDeduction,
+  type CompensationAutoDeathInput,
+  type CompensationAutoDeathResult,
   type CompensationInput,
   type CompensationRatioDeduction,
   type CompensationResult,
@@ -34,6 +37,15 @@ import {
   type StaleBadgeResult,
 } from "@lawcalc-kr/datasets-compensation";
 
+import {
+  HeirGroupCard,
+  applyInheritanceInput,
+  buildInheritanceInput,
+  heirsForDirtySnapshot,
+  type DecedentInput,
+  type HeirInput,
+  type SpouseInput,
+} from "../components/inheritance-heirs";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -46,6 +58,8 @@ import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-mig
 import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 
 const APP_VERSION = __APP_VERSION__;
+
+const DEFAULT_FUNERAL_EXPENSE = 5_000_000;
 
 type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
 
@@ -416,7 +430,320 @@ export function buildCompensationLcalcFile(
   };
 }
 
+export interface CompensationDeathFormState {
+  birthDate: string;
+  accidentDate: string;
+  sex: "male" | "female";
+  retirementAgeText: string;
+  occupation: string;
+  directWageWonText: string;
+  workingDaysPerMonthText: string;
+  livingCostDeductionRatioText: string;
+  funeralExpenseWonText: string;
+  solatiumWonText: string;
+  faultRatioText: string;
+  ratioDeductions: RatioDeductionInputState[];
+  absoluteDeductions: AbsoluteDeductionInputState[];
+  includeHeirs: boolean;
+  decedent: DecedentInput;
+  spouse: SpouseInput;
+  linealDescendants: HeirInput[];
+  linealAscendants: HeirInput[];
+  siblings: HeirInput[];
+  collateralFourth: HeirInput[];
+}
+
+const DEFAULT_LIVING_COST_DEDUCTION_RATIO = "0.3333";
+
+export function defaultCompensationDeathFormState(): CompensationDeathFormState {
+  return {
+    birthDate: "1996-01-01",
+    accidentDate: "2026-01-01",
+    sex: "male",
+    retirementAgeText: String(DEFAULT_RETIREMENT_AGE),
+    occupation: DEFAULT_OCCUPATION,
+    directWageWonText: "",
+    workingDaysPerMonthText: String(DEFAULT_WORKING_DAYS),
+    livingCostDeductionRatioText: DEFAULT_LIVING_COST_DEDUCTION_RATIO,
+    funeralExpenseWonText: String(DEFAULT_FUNERAL_EXPENSE),
+    solatiumWonText: "",
+    faultRatioText: "",
+    ratioDeductions: [],
+    absoluteDeductions: [],
+    includeHeirs: false,
+    decedent: { name: "", deceasedAt: "2026-01-01" },
+    spouse: { alive: true, name: "" },
+    linealDescendants: [],
+    linealAscendants: [],
+    siblings: [],
+    collateralFourth: [],
+  };
+}
+
+export function buildCompensationDeathInput(
+  state: CompensationDeathFormState,
+): CompensationAutoDeathInput {
+  const retirementAge = parsePositiveIntText(state.retirementAgeText, DEFAULT_RETIREMENT_AGE);
+  const workingDaysPerMonth = parsePositiveIntText(
+    state.workingDaysPerMonthText,
+    DEFAULT_WORKING_DAYS,
+  );
+
+  const occupation = state.occupation.trim();
+  const directWageWon = parseWonAmount(state.directWageWonText, 0);
+  const lostIncome: CompensationAutoDeathInput["lostIncome"] = {
+    discountMethod: "hoffman",
+    workingDaysPerMonth,
+  };
+  if (occupation.length > 0) lostIncome.occupation = occupation;
+  if (directWageWon > 0) lostIncome.directWageWon = directWageWon;
+
+  const ratioDeductions: CompensationRatioDeduction[] = state.ratioDeductions
+    .map((item) => {
+      const ratio = parseRatio(item.ratioText, 0);
+      const node: CompensationRatioDeduction = { ratio };
+      const label = item.label.trim();
+      if (label.length > 0) node.label = label;
+      return node;
+    })
+    .filter((item) => item.ratio > 0);
+
+  const absoluteDeductions: CompensationAbsoluteDeduction[] = state.absoluteDeductions
+    .map((item) => {
+      const amount = parseWonAmount(item.amountText, 0);
+      const node: CompensationAbsoluteDeduction = { amount };
+      const label = item.label.trim();
+      if (label.length > 0) node.label = label;
+      return node;
+    })
+    .filter((item) => item.amount > 0);
+
+  const input: CompensationAutoDeathInput = {
+    mode: "death",
+    base: {
+      birthDate: state.birthDate,
+      accidentDate: state.accidentDate,
+      sex: state.sex,
+      retirementAge,
+    },
+    lostIncome,
+  };
+
+  const livingCost = parseRatio(state.livingCostDeductionRatioText, -1);
+  if (livingCost >= 0 && livingCost <= 1) input.livingCostDeductionRatio = livingCost;
+  const funeral = parseWonAmount(state.funeralExpenseWonText, DEFAULT_FUNERAL_EXPENSE);
+  input.funeralExpenseWon = funeral;
+  const solatium = parseWonAmount(state.solatiumWonText, 0);
+  if (solatium > 0) input.solatiumWon = solatium;
+  const fault = parseRatio(state.faultRatioText, 0);
+  if (fault > 0) input.faultRatio = fault;
+  if (ratioDeductions.length > 0 || absoluteDeductions.length > 0) {
+    input.deductions = {};
+    if (ratioDeductions.length > 0) input.deductions.ratio = ratioDeductions;
+    if (absoluteDeductions.length > 0) input.deductions.absolute = absoluteDeductions;
+  }
+  if (state.includeHeirs) {
+    input.heirs = buildInheritanceInput({
+      decedent: state.decedent,
+      spouse: state.spouse,
+      linealDescendants: state.linealDescendants,
+      linealAscendants: state.linealAscendants,
+      siblings: state.siblings,
+      collateralFourth: state.collateralFourth,
+    });
+  }
+
+  return input;
+}
+
+export function applyLoadedCompensationDeathInput(
+  input: CompensationAutoDeathInput,
+): CompensationDeathFormState {
+  const base = defaultCompensationDeathFormState();
+  const next: CompensationDeathFormState = {
+    ...base,
+    birthDate: input.base.birthDate,
+    accidentDate: input.base.accidentDate,
+    sex: input.base.sex,
+    retirementAgeText: String(input.base.retirementAge ?? DEFAULT_RETIREMENT_AGE),
+    occupation: input.lostIncome.occupation ?? "",
+    directWageWonText:
+      input.lostIncome.directWageWon === undefined ? "" : String(input.lostIncome.directWageWon),
+    workingDaysPerMonthText: String(input.lostIncome.workingDaysPerMonth ?? DEFAULT_WORKING_DAYS),
+    livingCostDeductionRatioText:
+      input.livingCostDeductionRatio === undefined
+        ? DEFAULT_LIVING_COST_DEDUCTION_RATIO
+        : String(input.livingCostDeductionRatio),
+    funeralExpenseWonText: String(input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE),
+    solatiumWonText: input.solatiumWon === undefined ? "" : String(input.solatiumWon),
+    faultRatioText: input.faultRatio === undefined ? "" : String(input.faultRatio),
+    ratioDeductions: (input.deductions?.ratio ?? []).map((item) => ({
+      uid: newUid(),
+      label: item.label ?? "",
+      ratioText: String(item.ratio),
+    })),
+    absoluteDeductions: (input.deductions?.absolute ?? []).map((item) => ({
+      uid: newUid(),
+      label: item.label ?? "",
+      amountText: String(item.amount),
+    })),
+    includeHeirs: input.heirs !== undefined,
+  };
+  if (input.heirs !== undefined) {
+    const groups = applyInheritanceInput(input.heirs);
+    next.decedent = groups.decedent;
+    next.spouse = groups.spouse;
+    next.linealDescendants = groups.linealDescendants;
+    next.linealAscendants = groups.linealAscendants;
+    next.siblings = groups.siblings;
+    next.collateralFourth = groups.collateralFourth;
+  }
+  return next;
+}
+
+export function formatCompensationDeathForClipboard(result: CompensationAutoDeathResult): string {
+  const segmentRows = result.segments
+    .map(
+      (segment, i) =>
+        `${i + 1}\t${segment.startMonth}~${segment.endMonth}개월\t${formatWon(
+          segment.dailyWageWon,
+        )}/일\t호프만 ${segment.appliedHoffman.toFixed(6)}\t${formatWon(segment.amountFloorWon)}`,
+    )
+    .join("\n");
+
+  const lines = [
+    "LawCalc Korea 자동차 사고 사망 손해배상 계산 결과",
+    `생계비 공제 비율: ${formatRatioPercent(result.livingCostDeductionRatio)}`,
+    `일실수입 소계 (생계비 공제 후): ${formatWon(result.lostIncomeSubtotalWon)}`,
+    `위자료: ${formatWon(result.solatiumWon)}`,
+    `재산상 손해 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
+    `과실상계 (${formatRatioPercent(result.faultOffset.ratio)} 후): ${formatWon(result.faultOffset.afterWon)}`,
+    `장례비: ${formatWon(result.funeralExpenseWon)}`,
+    `비율공제 소계: ${formatWon(result.deductions.ratioSubtotalWon)}`,
+    `전액공제 소계: ${formatWon(result.deductions.absoluteSubtotalWon)}`,
+    `최종 합계: ${formatWon(result.finalWon)}`,
+    `데이터 버전: laborRates=${result.dataVersions.laborRates} / lifeExpectancy=${result.dataVersions.lifeExpectancy} / hoffman=${result.dataVersions.hoffman} / leibniz=${result.dataVersions.leibniz}`,
+    `계산 시각: ${result.computedAt}`,
+    "",
+    "구간\t기간\t단가\t호프만(적용)\t금액 (생계비 공제 후)",
+    segmentRows,
+  ];
+
+  if (result.inheritanceShares !== undefined && result.inheritanceShares.length > 0) {
+    lines.push("", "상속인\t지분(약분)\t배정 금액");
+    lines.push(
+      result.inheritanceShares
+        .map(
+          (share) =>
+            `${share.name}\t${share.numerator}/${share.denominator}\t${formatWon(share.amountWon)}`,
+        )
+        .join("\n"),
+    );
+  }
+
+  lines.push("", STANDARD_DISCLAIMER);
+  return lines.join("\n");
+}
+
+export function buildCompensationDeathLcalcFile(
+  input: CompensationAutoDeathInput,
+  result: CompensationAutoDeathResult,
+  note: string,
+): LcalcFile {
+  const payload: LcalcCompensationPayload = {
+    appVersion: APP_VERSION,
+    createdAt: new Date().toISOString(),
+    input,
+    result: { ...result, disclaimer: STANDARD_DISCLAIMER },
+    disclaimer: STANDARD_DISCLAIMER,
+  };
+  if (note.trim()) payload.note = note.trim();
+  return {
+    schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
+    kind: "compensation",
+    envelopeFeatures: ["compensation@2"],
+    dataVersions: {
+      laborRates: result.dataVersions.laborRates,
+      lifeExpectancy: result.dataVersions.lifeExpectancy,
+      hoffman: result.dataVersions.hoffman,
+      leibniz: result.dataVersions.leibniz,
+    },
+    payload,
+  };
+}
+
+function deathStateForDirtySnapshot(state: CompensationDeathFormState) {
+  return {
+    birthDate: state.birthDate,
+    accidentDate: state.accidentDate,
+    sex: state.sex,
+    retirementAgeText: state.retirementAgeText,
+    occupation: state.occupation,
+    directWageWonText: state.directWageWonText,
+    workingDaysPerMonthText: state.workingDaysPerMonthText,
+    livingCostDeductionRatioText: state.livingCostDeductionRatioText,
+    funeralExpenseWonText: state.funeralExpenseWonText,
+    solatiumWonText: state.solatiumWonText,
+    faultRatioText: state.faultRatioText,
+    ratioDeductions: state.ratioDeductions.map((item) => ({
+      label: item.label,
+      ratioText: item.ratioText,
+    })),
+    absoluteDeductions: state.absoluteDeductions.map((item) => ({
+      label: item.label,
+      amountText: item.amountText,
+    })),
+    includeHeirs: state.includeHeirs,
+    decedent: state.decedent,
+    spouse: state.spouse,
+    linealDescendants: heirsForDirtySnapshot(state.linealDescendants),
+    linealAscendants: heirsForDirtySnapshot(state.linealAscendants),
+    siblings: heirsForDirtySnapshot(state.siblings),
+    collateralFourth: heirsForDirtySnapshot(state.collateralFourth),
+  };
+}
+
+function buildCompensationDeathDirtySnapshot(state: CompensationDeathFormState, note: string) {
+  return createLcalcDirtySnapshot({ state: deathStateForDirtySnapshot(state), note });
+}
+
+type CompensationMode = "injury" | "death";
+
+/**
+ * 손해배상 탭. 자×부상(`compensation@1`) / 자×사망(`compensation@2`) 하위 탭으로 분기한다.
+ * 전체 5탭 구조는 유지하며, 6번째 탭을 만들지 않는다 (plan §4 결정 3).
+ */
 export function CompensationCalculator() {
+  const [mode, setMode] = useState<CompensationMode>("injury");
+
+  return (
+    <div className="flex w-full flex-1 flex-col">
+      <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 pt-4 sm:px-6">
+        <Button
+          variant={mode === "injury" ? "default" : "ghost"}
+          size="sm"
+          type="button"
+          onClick={() => setMode("injury")}
+          aria-pressed={mode === "injury"}
+        >
+          자동차 사고 · 부상
+        </Button>
+        <Button
+          variant={mode === "death" ? "default" : "ghost"}
+          size="sm"
+          type="button"
+          onClick={() => setMode("death")}
+          aria-pressed={mode === "death"}
+        >
+          자동차 사고 · 사망
+        </Button>
+      </div>
+      {mode === "injury" ? <InjuryCompensationView /> : <DeathCompensationView />}
+    </div>
+  );
+}
+
+function InjuryCompensationView() {
   const [state, setState] = useState<CompensationFormState>(defaultCompensationFormState);
   const [note, setNote] = useState("");
   const [result, setResult] = useState<CompensationResult | null>(null);
@@ -512,11 +839,19 @@ export function CompensationCalculator() {
       const migratedFile = migrateLcalcFile(file);
       validateLcalcEnvelope(migratedFile);
       const loaded = parseLoadedCompensationLcalcInput(migratedFile);
-      const appliedState = applyLoadedCompensationInput(loaded.input);
+      if (loaded.input.mode === "death") {
+        throw new Error('자동차 사고 사망 .lcalc 파일은 "자동차 사고 · 사망" 탭에서 열어 주세요.');
+      }
+      const injuryInput = loaded.input;
+      const appliedState = applyLoadedCompensationInput(injuryInput);
       const loadedNote = loaded.note ?? "";
       setState(appliedState);
       setNote(loadedNote);
-      setResult(loaded.result ?? computeCompensation(loaded.input));
+      const loadedResult =
+        loaded.result !== undefined && loaded.result.mode !== "death"
+          ? loaded.result
+          : computeCompensation(injuryInput);
+      setResult(loadedResult);
       setError(null);
       markCompensationClean(buildCompensationDirtySnapshot(appliedState, loadedNote));
       return ".lcalc 파일을 불러왔습니다.";
@@ -982,14 +1317,725 @@ export function CompensationCalculator() {
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                v0.5.0은 자동차 사고 부상만 지원합니다. 자×사망, 산재, 기타손해(개호비 등)는 후속
-                버전에서 다룹니다.
+                자동차 사고 사망은 상단 "자동차 사고 · 사망" 탭에서 계산합니다. 산재,
+                기타손해(개호비 등)는 후속 버전에서 다룹니다.
               </p>
             </CardContent>
           </Card>
         ) : null}
       </div>
     </main>
+  );
+}
+
+function DeathCompensationView() {
+  const [state, setState] = useState<CompensationDeathFormState>(defaultCompensationDeathFormState);
+  const [note, setNote] = useState("");
+  const [result, setResult] = useState<CompensationAutoDeathResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
+
+  const stale = useMemo<StaleBadgeResult>(
+    () => computeStaleBadge(LABOR_RATES_SNAPSHOT_DATE, todayIso()),
+    [],
+  );
+
+  const dirtySnapshot = useMemo(
+    () => buildCompensationDeathDirtySnapshot(state, note),
+    [state, note],
+  );
+  const markCompensationClean = useLcalcDirtyTracker("compensation", dirtySnapshot);
+
+  const update = (patch: Partial<CompensationDeathFormState>) =>
+    setState((prev) => ({ ...prev, ...patch }));
+
+  const handleCalculate = () => {
+    try {
+      const input = buildCompensationDeathInput(state);
+      const calculated = computeCompensationDeath(input);
+      setResult(calculated);
+      setError(null);
+      setToast(null);
+    } catch (e) {
+      setResult(null);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleReset = () => {
+    setState(defaultCompensationDeathFormState());
+    setNote("");
+    setResult(null);
+    setError(null);
+    setToast(null);
+  };
+
+  const runAction = async (action: ActionName, task: () => Promise<string | null | void>) => {
+    if (loadingAction !== null) return;
+    setLoadingAction(action);
+    setToast(null);
+    try {
+      const message = await task();
+      if (message) setToast({ type: "success", message });
+    } catch (e) {
+      setToast({
+        type: "error",
+        message: e instanceof Error ? e.message : "작업 중 알 수 없는 오류가 발생했습니다.",
+      });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleCopy = () =>
+    runAction("copy", async () => {
+      if (!result) throw new Error("계산 후 복사해 주세요.");
+      await ipc.copyToClipboard(formatCompensationDeathForClipboard(result));
+      return "사망 손해배상 계산 결과를 클립보드에 복사했습니다.";
+    });
+
+  const handleExportPdf = () =>
+    runAction("pdf", async () => {
+      if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
+      const path = await ipc.exportCompensationDeathPdf(result);
+      return path ? `PDF 파일을 저장했습니다: ${path}` : null;
+    });
+
+  const handleExportCsv = () =>
+    runAction("csv", async () => {
+      if (!result) throw new Error("계산 후 CSV를 저장해 주세요.");
+      const path = await ipc.exportCompensationDeathCsv(result);
+      return path ? `CSV 파일을 저장했습니다: ${path}` : null;
+    });
+
+  const handleSaveLcalc = () =>
+    runAction("save", async () => {
+      if (!result) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
+      const input = buildCompensationDeathInput(state);
+      const path = await ipc.saveLcalc(buildCompensationDeathLcalcFile(input, result, note));
+      if (path) {
+        markCompensationClean();
+      }
+      return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
+    });
+
+  const handleLoadLcalc = () =>
+    runAction("load", async () => {
+      const file = await ipc.loadLcalc();
+      if (!file) return "불러오기를 취소했습니다.";
+      const migratedFile = migrateLcalcFile(file);
+      validateLcalcEnvelope(migratedFile);
+      const loaded = parseLoadedCompensationLcalcInput(migratedFile);
+      if (loaded.input.mode !== "death") {
+        throw new Error('자동차 사고 부상 .lcalc 파일은 "자동차 사고 · 부상" 탭에서 열어 주세요.');
+      }
+      const appliedState = applyLoadedCompensationDeathInput(loaded.input);
+      const loadedNote = loaded.note ?? "";
+      setState(appliedState);
+      setNote(loadedNote);
+      const loadedResult =
+        loaded.result?.mode === "death" ? loaded.result : computeCompensationDeath(loaded.input);
+      setResult(loadedResult);
+      setError(null);
+      markCompensationClean(buildCompensationDeathDirtySnapshot(appliedState, loadedNote));
+      return ".lcalc 파일을 불러왔습니다.";
+    });
+
+  useFormShortcuts({
+    onSave: () => {
+      void handleSaveLcalc();
+    },
+    onCalculate: handleCalculate,
+    onReset: handleReset,
+  });
+
+  const addRatioDeduction = () =>
+    update({ ratioDeductions: [...state.ratioDeductions, emptyRatioDeduction()] });
+  const removeRatioDeduction = (uid: string) =>
+    update({ ratioDeductions: state.ratioDeductions.filter((item) => item.uid !== uid) });
+  const updateRatioDeduction = (uid: string, patch: Partial<RatioDeductionInputState>) =>
+    update({
+      ratioDeductions: state.ratioDeductions.map((item) =>
+        item.uid === uid ? { ...item, ...patch } : item,
+      ),
+    });
+
+  const addAbsoluteDeduction = () =>
+    update({ absoluteDeductions: [...state.absoluteDeductions, emptyAbsoluteDeduction()] });
+  const removeAbsoluteDeduction = (uid: string) =>
+    update({
+      absoluteDeductions: state.absoluteDeductions.filter((item) => item.uid !== uid),
+    });
+  const updateAbsoluteDeduction = (uid: string, patch: Partial<AbsoluteDeductionInputState>) =>
+    update({
+      absoluteDeductions: state.absoluteDeductions.map((item) =>
+        item.uid === uid ? { ...item, ...patch } : item,
+      ),
+    });
+
+  const overrideEmphasis = stale.overrideStrongly
+    ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
+    : "";
+
+  return (
+    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Scale className="h-4 w-4" aria-hidden="true" />
+              기초사항 (사망)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              민법 제393조·396조·763조·1000조·1003조·1009조 / 대법원 2018다248909 (가동연한 65세).
+              사망은 노동력 100% 상실 전제로 일실수입을 산정한 뒤 생계비를 공제합니다.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-3 p-4 pt-0">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium">
+                생년월일
+                <Input
+                  type="date"
+                  value={state.birthDate}
+                  onChange={(e) => update({ birthDate: e.target.value })}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                성별
+                <Select
+                  value={state.sex}
+                  onChange={(e) => update({ sex: e.target.value as "male" | "female" })}
+                >
+                  <option value="male">남</option>
+                  <option value="female">여</option>
+                </Select>
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                사고(사망)일자
+                <Input
+                  type="date"
+                  value={state.accidentDate}
+                  onChange={(e) => update({ accidentDate: e.target.value })}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                가동연한 (만 나이)
+                <Input
+                  inputMode="numeric"
+                  value={state.retirementAgeText}
+                  onChange={(e) => update({ retirementAgeText: e.target.value })}
+                />
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={overrideEmphasis ? `border-2 ${overrideEmphasis}` : ""}>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">일실수입</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              대한건설협회 시중노임 기준 직종 단가를 사용합니다. 일당을 직접 입력하면 직종 단가보다
+              우선합니다.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-3 p-4 pt-0">
+            <label className="grid gap-2 text-sm font-medium">
+              직종
+              <Select
+                value={state.occupation}
+                onChange={(e) => update({ occupation: e.target.value })}
+              >
+                {OCCUPATION_OPTIONS.map((occupation) => (
+                  <option key={occupation} value={occupation}>
+                    {occupation}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <label className="grid gap-2 text-sm font-medium">
+              일당 직접 입력 (원/일, 선택)
+              <Input
+                inputMode="numeric"
+                placeholder="예: 172,068"
+                aria-label="일당 직접 입력"
+                value={formatWonInput(state.directWageWonText)}
+                onChange={(e) => update({ directWageWonText: parseWonText(e.target.value) })}
+                className={
+                  stale.overrideStrongly ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : ""
+                }
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium">
+                월 가동일수
+                <Input
+                  inputMode="numeric"
+                  value={state.workingDaysPerMonthText}
+                  onChange={(e) => update({ workingDaysPerMonthText: e.target.value })}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                생계비 공제 비율 (0~1)
+                <Input
+                  inputMode="decimal"
+                  placeholder="예: 0.3333"
+                  value={state.livingCostDeductionRatioText}
+                  onChange={(e) => update({ livingCostDeductionRatioText: e.target.value })}
+                />
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">장례비 · 위자료 · 과실 · 공제</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 p-4 pt-0">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium">
+                장례비 (원)
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 5,000,000"
+                  value={formatWonInput(state.funeralExpenseWonText)}
+                  onChange={(e) => update({ funeralExpenseWonText: parseWonText(e.target.value) })}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                위자료 (원)
+                <Input
+                  inputMode="numeric"
+                  placeholder="예: 80,000,000"
+                  value={formatWonInput(state.solatiumWonText)}
+                  onChange={(e) => update({ solatiumWonText: parseWonText(e.target.value) })}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                과실비율 (0~1)
+                <Input
+                  inputMode="decimal"
+                  placeholder="예: 0.30"
+                  value={state.faultRatioText}
+                  onChange={(e) => update({ faultRatioText: e.target.value })}
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-2 border-t border-border pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">비율공제</span>
+                <Button variant="outline" size="sm" type="button" onClick={addRatioDeduction}>
+                  <Plus className="mr-1 h-3 w-3" />
+                  추가
+                </Button>
+              </div>
+              {state.ratioDeductions.map((item) => (
+                <div key={item.uid} className="grid grid-cols-[1fr_120px_auto] items-center gap-2">
+                  <Input
+                    placeholder="비고"
+                    value={item.label}
+                    onChange={(e) => updateRatioDeduction(item.uid, { label: e.target.value })}
+                  />
+                  <Input
+                    inputMode="decimal"
+                    placeholder="비율 (0~1)"
+                    value={item.ratioText}
+                    onChange={(e) => updateRatioDeduction(item.uid, { ratioText: e.target.value })}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="비율공제 삭제"
+                    onClick={() => removeRatioDeduction(item.uid)}
+                    type="button"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-2 border-t border-border pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">
+                  전액공제 (선급금 · 보험금 등)
+                </span>
+                <Button variant="outline" size="sm" type="button" onClick={addAbsoluteDeduction}>
+                  <Plus className="mr-1 h-3 w-3" />
+                  추가
+                </Button>
+              </div>
+              {state.absoluteDeductions.map((item) => (
+                <div key={item.uid} className="grid grid-cols-[1fr_140px_auto] items-center gap-2">
+                  <Input
+                    placeholder="비고"
+                    value={item.label}
+                    onChange={(e) => updateAbsoluteDeduction(item.uid, { label: e.target.value })}
+                  />
+                  <Input
+                    inputMode="numeric"
+                    placeholder="금액 (원)"
+                    value={formatWonInput(item.amountText)}
+                    onChange={(e) =>
+                      updateAbsoluteDeduction(item.uid, {
+                        amountText: parseWonText(e.target.value),
+                      })
+                    }
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="전액공제 삭제"
+                    onClick={() => removeAbsoluteDeduction(item.uid)}
+                    type="button"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <label className="grid gap-2 border-t border-border pt-3 text-sm font-medium">
+              비고
+              <textarea
+                aria-label="사망 손해배상 계산 비고"
+                className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">상속인 (선택)</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              상속인을 입력하면 최종 손해배상액을 상속분(민법 제1000·1003·1009조)으로 분배합니다.
+              상속분 계산은 1991-01-01 이후 사망 사건만 지원합니다.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-3 p-4 pt-0">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={state.includeHeirs}
+                onChange={(e) => update({ includeHeirs: e.target.checked })}
+              />
+              상속분 분배 사용
+            </label>
+            {state.includeHeirs ? (
+              <div className="grid gap-2 border-t border-border pt-3">
+                <label className="grid gap-2 text-sm font-medium">
+                  피상속인 이름 (선택)
+                  <Input
+                    placeholder="예: 망인"
+                    value={state.decedent.name}
+                    onChange={(e) =>
+                      update({ decedent: { ...state.decedent, name: e.target.value } })
+                    }
+                  />
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={state.spouse.alive}
+                    onChange={(e) =>
+                      update({ spouse: { ...state.spouse, alive: e.target.checked } })
+                    }
+                  />
+                  배우자 생존
+                </label>
+                {state.spouse.alive ? (
+                  <label className="grid gap-2 text-sm font-medium">
+                    배우자 이름 (선택)
+                    <Input
+                      placeholder="예: 배우자"
+                      value={state.spouse.name}
+                      onChange={(e) =>
+                        update({ spouse: { ...state.spouse, name: e.target.value } })
+                      }
+                    />
+                  </label>
+                ) : null}
+                <HeirGroupCard
+                  title="1순위 — 직계비속"
+                  hint="자녀·손자녀 등. 사망 시 그 직계비속 (망인의 손자녀) 이 1차 대습."
+                  heirs={state.linealDescendants}
+                  onChange={(heirs) => update({ linealDescendants: heirs })}
+                  allowRepresentation={true}
+                  defaultLabel="자녀"
+                />
+                <HeirGroupCard
+                  title="2순위 — 직계존속"
+                  hint="부·모·조부모. 1순위 부재 시에만 분배 참여."
+                  heirs={state.linealAscendants}
+                  onChange={(heirs) => update({ linealAscendants: heirs })}
+                  allowRepresentation={false}
+                  defaultLabel="직계존속"
+                />
+                <HeirGroupCard
+                  title="3순위 — 형제자매"
+                  hint="1·2순위·배우자 모두 부재 시에만. 사망 시 조카가 1차 대습 가능."
+                  heirs={state.siblings}
+                  onChange={(heirs) => update({ siblings: heirs })}
+                  allowRepresentation={true}
+                  defaultLabel="형제자매"
+                />
+                <HeirGroupCard
+                  title="4순위 — 4촌이내 방계혈족"
+                  hint="1·2·3순위·배우자 모두 부재 시에만. 대습상속 대상 아님."
+                  heirs={state.collateralFourth}
+                  onChange={(heirs) => update({ collateralFourth: heirs })}
+                  allowRepresentation={false}
+                  defaultLabel="방계혈족"
+                />
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <div className="flex gap-2">
+          <Button onClick={handleCalculate} type="button">
+            계산
+          </Button>
+          <Button onClick={handleReset} variant="outline" type="button">
+            초기화
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        <StaleBadge
+          stale={stale}
+          effectiveFrom={LATEST_LABOR_RATES_SLICE}
+          version={LABOR_RATES_VERSION_TAG}
+        />
+
+        {error ? (
+          <div
+            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
+            role="alert"
+          >
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{error}</span>
+          </div>
+        ) : null}
+
+        {result ? <DeathResultCards result={result} /> : null}
+
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">내보내기</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 p-4 pt-0">
+            <div className="flex flex-wrap gap-2">
+              <ActionButton
+                action="pdf"
+                icon={FileDown}
+                label="PDF"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={result !== null}
+                onClick={handleExportPdf}
+              />
+              <ActionButton
+                action="csv"
+                icon={FileSpreadsheet}
+                label="CSV"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={result !== null}
+                onClick={handleExportCsv}
+              />
+              <ActionButton
+                action="copy"
+                icon={Clipboard}
+                label="복사"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={result !== null}
+                onClick={handleCopy}
+              />
+              <ActionButton
+                action="save"
+                icon={FileJson}
+                label=".lcalc 저장"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={result !== null}
+                onClick={handleSaveLcalc}
+              />
+              <ActionButton
+                action="load"
+                icon={FileJson}
+                label=".lcalc 열기"
+                loadingAction={loadingAction}
+                requiresResult={false}
+                resultReady={result !== null}
+                onClick={handleLoadLcalc}
+              />
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
+        {!result && !error ? (
+          <Card>
+            <CardContent className="grid gap-2 p-6 text-sm text-muted-foreground">
+              <p>
+                좌측에서 기초사항, 일실수입(생계비 공제), 장례비를 입력한 후{" "}
+                <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
+              </p>
+              <p className="text-xs">
+                상속인을 입력하면 최종액을 상속분으로 분배합니다. 상속분 계산은 1991-01-01 이후 사망
+                사건만 지원합니다.
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
+    </main>
+  );
+}
+
+function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
+  return (
+    <>
+      <Card>
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-sm">계산 결과</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 p-4 pt-0">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <span className="text-muted-foreground">생계비 공제 비율</span>
+            <span className="text-right">
+              {formatRatioPercent(result.livingCostDeductionRatio)}
+            </span>
+            <span className="text-muted-foreground">일실수입 소계 (생계비 공제 후)</span>
+            <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>
+            <span className="text-muted-foreground">위자료</span>
+            <span className="text-right">{formatWon(result.solatiumWon)}</span>
+            <span className="text-muted-foreground">재산상 손해 소계</span>
+            <span className="text-right">{formatWon(result.pecuniaryDamagesSubtotalWon)}</span>
+            <span className="text-muted-foreground">
+              과실상계 ({formatRatioPercent(result.faultOffset.ratio)})
+            </span>
+            <span className="text-right">{formatWon(result.faultOffset.afterWon)}</span>
+            <span className="text-muted-foreground">장례비</span>
+            <span className="text-right">{formatWon(result.funeralExpenseWon)}</span>
+            <span className="text-muted-foreground">비율공제 소계</span>
+            <span className="text-right">{formatWon(result.deductions.ratioSubtotalWon)}</span>
+            <span className="text-muted-foreground">전액공제 소계</span>
+            <span className="text-right">{formatWon(result.deductions.absoluteSubtotalWon)}</span>
+            <span className="border-t border-border pt-2 text-base font-semibold">최종 합계</span>
+            <span className="border-t border-border pt-2 text-right text-base font-semibold">
+              {formatWon(result.finalWon)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-sm">일실수입 구간 (생계비 공제 후)</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                <th className="py-2 font-medium">기간 (개월)</th>
+                <th className="py-2 text-right font-medium">단가 (원/일)</th>
+                <th className="py-2 text-right font-medium">호프만 (적용)</th>
+                <th className="py-2 text-right font-medium">금액</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.segments.map((segment: CompensationSegment, i) => (
+                <tr key={i} className="border-b border-border last:border-b-0">
+                  <td className="py-2">
+                    {segment.startMonth} ~ {segment.endMonth}
+                  </td>
+                  <td className="py-2 text-right">{formatWon(segment.dailyWageWon)}</td>
+                  <td className="py-2 text-right">
+                    {segment.appliedHoffman.toFixed(6)}
+                    {result.hoffman240Cap.cappedAtIndex === i ? (
+                      <span className="ml-1 text-xs text-amber-700 dark:text-amber-300">
+                        (한도)
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="py-2 text-right">{formatWon(segment.amountFloorWon)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {result.hoffman240Cap.cappedAtIndex !== null ? (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+              호프만 240 한도 적용 — {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
+              240을 초과해 한도를 적용했습니다.
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {result.inheritanceShares !== undefined && result.inheritanceShares.length > 0 ? (
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">상속인별 분배</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="py-2 font-medium">상속인</th>
+                  <th className="py-2 font-medium">지분 (약분)</th>
+                  <th className="py-2 text-right font-medium">배정 금액</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.inheritanceShares.map((share, i) => (
+                  <tr key={`${share.name}-${i}`} className="border-b border-border last:border-b-0">
+                    <td className="py-2">{share.name}</td>
+                    <td className="py-2 font-mono">
+                      {share.numerator}/{share.denominator}
+                    </td>
+                    <td className="py-2 text-right">{formatWon(share.amountWon)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardContent className="grid gap-2 p-4 text-xs text-muted-foreground sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-foreground">데이터 버전</dt>
+            <dd>
+              {result.dataVersions.laborRates} · {result.dataVersions.lifeExpectancy} ·{" "}
+              {result.dataVersions.hoffman} · {result.dataVersions.leibniz}
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">계산 시각</dt>
+            <dd>{formatComputedAt(result.computedAt)}</dd>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div
+        className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+        data-testid="compensation-death-disclaimer"
+      >
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
+      </div>
+    </>
   );
 }
 
