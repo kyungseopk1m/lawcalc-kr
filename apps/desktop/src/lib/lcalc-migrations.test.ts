@@ -746,4 +746,40 @@ describe("v3 compensation envelope", () => {
       parseLoadedCompensationLcalcInput(file).result?.dataVersions,
     );
   });
+
+  it('migrateLcalcFile injects mode:"injury" into a legacy compensation@1 file lacking mode', () => {
+    const file = buildCompensationFile();
+    expect((file.payload.input as { mode?: string }).mode).toBeUndefined();
+
+    const migrated = migrateLcalcFile(file);
+
+    expect((migrated.payload.input as { mode?: string }).mode).toBe("injury");
+    // 나머지 필드는 그대로 보존되고, injury parser 로 라우팅되어야 한다.
+    expect(migrated.payload.note).toBe("compensation note");
+    expect((migrated.payload.input as CompensationInput).base.birthDate).toBe("1996-01-01");
+    expect(() => validateLcalcEnvelope(migrated)).not.toThrow();
+    const loaded = parseLoadedCompensationLcalcInput(migrated);
+    if (loaded.input.mode === "death") {
+      throw new Error("expected injury input after migration");
+    }
+    expect(loaded.input.lostIncome.occupation).toBe("보통인부");
+  });
+
+  it("migrateLcalcFile leaves a compensation file with an explicit mode untouched", () => {
+    const file = buildCompensationFile();
+    const deathFile = {
+      ...file,
+      envelopeFeatures: ["compensation@2"],
+      payload: {
+        ...file.payload,
+        input: { ...file.payload.input, mode: "death" },
+      },
+    } as LcalcFile;
+
+    const migrated = migrateLcalcFile(deathFile);
+
+    // mode 가 이미 있으면 주입하지 않는다 — death 파일이 injury 로 오인되지 않아야 한다.
+    expect((migrated.payload.input as { mode?: string }).mode).toBe("death");
+    expect(migrated).toEqual(deathFile);
+  });
 });
