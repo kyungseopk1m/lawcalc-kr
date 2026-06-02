@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-02
+
 ### Added
 
 - 손해배상에 자동차 사고 **사망** 모드를 추가했습니다(`compensation@2`). 손해배상 탭 안에서 부상/사망 모드를 전환합니다. 사망 모드는 일실수입에서 생계비를 공제(기본 1/3, 조정 가능)하고, 과실상계 뒤에 장례비(기본 5,000,000원, 조정 가능)를 더합니다. 상속인을 입력하면 최종액을 법정상속분대로 상속인별로 분배합니다(원 단위 floor + 잔여원 선순위 배정으로 합계를 보존). 위자료·과실비율·비율/전액 공제는 부상 모드와 동일하게 입력합니다.
@@ -268,7 +270,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...v0.5.2
 [0.5.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.0...v0.4.1
