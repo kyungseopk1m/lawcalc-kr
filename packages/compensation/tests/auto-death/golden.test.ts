@@ -32,6 +32,12 @@ interface ExpectedShape {
   };
   finalWon: number;
   hoffman240CapCappedAtIndex: number | null;
+  otherDamagesSubtotalWon?: number;
+  otherDamages?: {
+    attendantCareWon: number;
+    treatmentWon: number;
+    applianceWon: number;
+  };
   inheritanceShares: ExpectedInheritanceShare[] | null;
   dataVersions: {
     laborRates: string;
@@ -71,8 +77,8 @@ const cases: GoldenCase[] = Object.entries(
  * `compensation-industrial-golden-derivation-2026-06-02.md`).
  */
 describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사망 — derivation)", () => {
-  it("loads exactly 3 cases", () => {
-    expect(cases).toHaveLength(3);
+  it("loads exactly 4 cases", () => {
+    expect(cases).toHaveLength(4);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -122,6 +128,20 @@ describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사�
       expect(result.hoffman240Cap.cappedAtIndex, `${c.id} cappedAtIndex`).toBe(
         c.expected.hoffman240CapCappedAtIndex,
       );
+      expect(result.otherDamagesSubtotalWon, `${c.id} otherDamagesSubtotal`).toBe(
+        c.expected.otherDamagesSubtotalWon,
+      );
+      if (c.expected.otherDamages) {
+        expect(result.otherDamages?.attendantCareWon, `${c.id} attendantCareWon`).toBe(
+          c.expected.otherDamages.attendantCareWon,
+        );
+        expect(result.otherDamages?.treatmentWon, `${c.id} treatmentWon`).toBe(
+          c.expected.otherDamages.treatmentWon,
+        );
+        expect(result.otherDamages?.applianceWon, `${c.id} applianceWon`).toBe(
+          c.expected.otherDamages.applianceWon,
+        );
+      }
       if (c.expected.inheritanceShares === null) {
         expect(result.inheritanceShares, `${c.id} inheritanceShares`).toBeUndefined();
       } else {

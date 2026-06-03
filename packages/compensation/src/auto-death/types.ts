@@ -26,6 +26,7 @@ import type {
   CompensationSegment,
   Hoffman240CapTable,
 } from "../auto-injury/types";
+import type { OtherDamagesInput, OtherDamagesResult } from "../other-damages/types";
 
 /** 사망 손해배상 기초사항. 부상 모드와 달리 입원치료 종료일이 없다. */
 export interface CompensationDeathBaseInput {
@@ -75,6 +76,11 @@ export interface CompensationAutoDeathInput {
   deductions?: CompensationDeductionsInput;
   /** 산재보험급여(유족급여). `accidentType === "industrial"` 일 때만 적용. */
   industrialInsurance?: CompensationIndustrialInsuranceDeath;
+  /**
+   * 기타손해(개호비·치료비·보조구). v0.8.0 `compensation@4`.
+   * 미지정 시 기존 경로 byte-identical (회귀 0). 생계비공제 후 일실수입 + 위자료와 같이 과실상계 전 합산.
+   */
+  otherDamages?: OtherDamagesInput;
   /** 상속인 입력 (선택). 지정 시 최종액을 상속분으로 분배한다. */
   heirs?: CompensationHeirsInput;
 }
@@ -105,9 +111,16 @@ export interface CompensationAutoDeathResult {
   segments: CompensationSegment[];
   /** 일실수입 소계 (생계비 공제 후, 원). */
   lostIncomeSubtotalWon: number;
+  /**
+   * 기타손해 소계 (개호비+치료비+보조구, 원). `otherDamages` 입력 시에만 포함된다.
+   * 미지정 시 키 생략 → 기존 골든/`.lcalc` byte-identical (회귀 0).
+   */
+  otherDamagesSubtotalWon?: number;
+  /** 기타손해 상세 (입력 시에만, transparency). */
+  otherDamages?: OtherDamagesResult;
   /** 위자료 (원). */
   solatiumWon: number;
-  /** 재산상 손해 소계 = `lostIncomeSubtotalWon + solatiumWon`. */
+  /** 재산상 손해 소계 = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon`. */
   pecuniaryDamagesSubtotalWon: number;
   /** 과실상계 결과. */
   faultOffset: CompensationFaultOffset;

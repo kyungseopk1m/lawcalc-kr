@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-013-treatment-appliance",
+  "title": "auto/injury 기타손해 — 치료비(기왕+1회성+반복) + 보조구, 수치합계 20 cap",
+  "source": "manual-derivation",
+  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md § 3. 일실수입 baseline = case-001(249,399,909). 치료비 기왕 3,000,000×(1-0.1)=2,700,000. 1회성(6개월, 단리계수 0.975610)=4,878,048. 반복 4,200,000(0/120/240/360개월 합 2.566667)×0.75=8,084,999. 반복 1,000,000(0~240 매월 합 167.1>20→20 cap)=20,000,000. 보조구 기저귀 500,000(0~60 매월 54.45>20→20 cap)=10,000,000, 휠체어 800,000(0~360 60개월주기 합 4.382540)=3,506,031.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [{ "department": "정형외과", "ratio": 0.3 }],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": { "ratio": [], "absolute": [] },
+    "otherDamages": {
+      "treatment": {
+        "past": [{ "label": "약제비+진료비", "costWon": 3000000, "priorRatio": 0.1 }],
+        "future": [
+          {
+            "label": "반흔교정술",
+            "costWon": 5000000,
+            "kind": "oneTime",
+            "firstDate": "2026-07-01",
+            "lastDate": "2026-07-01",
+            "priorRatio": 0
+          },
+          {
+            "label": "치아치료",
+            "costWon": 4200000,
+            "kind": "recurring",
+            "firstDate": "2026-01-01",
+            "lastDate": "2056-01-01",
+            "lifespanMonths": 120,
+            "priorRatio": 0.25
+          },
+          {
+            "label": "장기물리치료",
+            "costWon": 1000000,
+            "kind": "recurring",
+            "firstDate": "2026-01-01",
+            "lastDate": "2046-01-01",
+            "lifespanMonths": 1,
+            "priorRatio": 0
+          }
+        ]
+      },
+      "appliance": [
+        {
+          "label": "기저귀",
+          "costWon": 500000,
+          "kind": "recurring",
+          "firstDate": "2026-01-01",
+          "lastDate": "2031-01-01",
+          "lifespanMonths": 1,
+          "priorRatio": 0
+        },
+        {
+          "label": "전신휠체어",
+          "costWon": 800000,
+          "kind": "recurring",
+          "firstDate": "2026-01-01",
+          "lastDate": "2056-01-01",
+          "lifespanMonths": 60,
+          "priorRatio": 0
+        }
+      ]
+    }
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [360],
+    "lostIncomeSubtotalWon": 249399909,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 298568987,
+    "faultOffset": { "ratio": 0, "afterWon": 298568987 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 298568987
+    },
+    "finalWon": 298568900,
+    "hoffman240CapCappedAtIndex": null,
+    "otherDamagesSubtotalWon": 49169078,
+    "otherDamages": {
+      "attendantCareWon": 0,
+      "treatmentWon": 35663047,
+      "applianceWon": 13506031,
+      "treatmentValueSum20Capped": true,
+      "applianceValueSum20Capped": true
+    },
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-06-03",
+    "derivedBy": "compensation-other-damages-golden-derivation-2026-06-03.md § 3"
+  }
+}

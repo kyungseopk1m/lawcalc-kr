@@ -8,6 +8,7 @@ import type {
   CompensationDeductionsInput,
   CompensationLostIncomeInput,
 } from "../auto-injury/types";
+import { validateOtherDamagesInput } from "../other-damages/validators";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DEDUCTION_ITEMS = 50;
@@ -191,6 +192,9 @@ export function validateCompensationDeathInput(input: CompensationAutoDeathInput
         input.industrialInsurance.survivorBenefitWon,
       );
     }
+  }
+  if (input.otherDamages !== undefined) {
+    validateOtherDamagesInput(input.otherDamages, input.base.accidentDate);
   }
   if (input.heirs !== undefined) {
     validateHeirs(input.heirs);

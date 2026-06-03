@@ -26,6 +26,7 @@ import type {
   CompensationAutoDeathResult,
   CompensationInheritanceShare,
 } from "./types";
+import { computeOtherDamages } from "../other-damages/compute";
 import { validateCompensationDeathInput } from "./validators";
 
 const DEFAULT_WORKING_DAYS_PER_MONTH = 22;
@@ -150,9 +151,20 @@ export function computeCompensationDeath(
   ];
   const lostIncomeSubtotalWon = amountFloorWon;
 
+  // 4.5. 기타손해 (개호비/치료비/보조구). 미지정·빈 입력 시 null → undefined → skip (회귀 0).
+  const otherDamagesResult =
+    (input.otherDamages
+      ? computeOtherDamages(input.otherDamages, {
+          accidentDate: input.base.accidentDate,
+          laborRates,
+          hoffman,
+        })
+      : null) ?? undefined;
+  const otherDamagesSubtotalWon = otherDamagesResult?.subtotalWon ?? 0;
+
   // 5. 위자료
   const solatiumWon = input.solatiumWon ?? 0;
-  const pecuniaryDamagesSubtotalWon = lostIncomeSubtotalWon + solatiumWon;
+  const pecuniaryDamagesSubtotalWon = lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon;
 
   // 6. 과실상계
   const faultRatio = input.faultRatio ?? 0;
@@ -199,6 +211,10 @@ export function computeCompensationDeath(
     livingCostDeductionRatio,
     segments,
     lostIncomeSubtotalWon,
+    // 기타손해 미지정 시 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(otherDamagesResult !== undefined
+      ? { otherDamagesSubtotalWon, otherDamages: otherDamagesResult }
+      : {}),
     solatiumWon,
     pecuniaryDamagesSubtotalWon,
     faultOffset: {

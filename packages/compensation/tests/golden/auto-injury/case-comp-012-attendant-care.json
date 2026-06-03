@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-012-attendant-care",
+  "title": "auto/injury 기타손해 — 개호비(기왕 실지출 + 향후 인원 1→0.5, 호프만 240 cap)",
+  "source": "manual-derivation",
+  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md § 2. 일실수입 baseline = case-001(보통인부 일당 172,068, 가동 60세 360개월, 영구 30%, H[360]=219.610067 → 249,399,909). 개호비 기왕 = min(172068×21, 800000)=800,000. 향후 seg1[0,48] 인원1 + seg2[48,420] 인원0.5, 월개호 일당×30×인원, 누적 호프만 H[420]=242.466>240 → seg2 cap(240-H[48]=196.326054, cappedAtIndex 1).",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [{ "department": "정형외과", "ratio": 0.3 }],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": { "ratio": [], "absolute": [] },
+    "otherDamages": {
+      "attendantCare": {
+        "past": [
+          { "occupation": "보통인부", "totalDays": 21, "actualSpentWon": 800000, "priorRatio": 0 }
+        ],
+        "future": [
+          {
+            "occupation": "보통인부",
+            "startDate": "2026-01-01",
+            "endDate": "2030-01-01",
+            "personCount": 1,
+            "daysPerMonth": 30,
+            "priorRatio": 0
+          },
+          {
+            "occupation": "보통인부",
+            "startDate": "2030-01-01",
+            "endDate": "2061-01-01",
+            "personCount": 0.5,
+            "daysPerMonth": 30,
+            "priorRatio": 0
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "segmentCount": 1,
+    "segmentEndMonths": [360],
+    "lostIncomeSubtotalWon": 249399909,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 982368037,
+    "faultOffset": { "ratio": 0, "afterWon": 982368037 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 982368037
+    },
+    "finalWon": 982368000,
+    "hoffman240CapCappedAtIndex": null,
+    "otherDamagesSubtotalWon": 732968128,
+    "otherDamages": {
+      "attendantCareWon": 732968128,
+      "treatmentWon": 0,
+      "applianceWon": 0,
+      "attendantHoffman240CappedAtIndex": 1
+    },
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-06-03",
+    "derivedBy": "compensation-other-damages-golden-derivation-2026-06-03.md § 2"
+  }
+}

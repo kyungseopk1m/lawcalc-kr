@@ -23,6 +23,15 @@ interface ExpectedShape {
   };
   finalWon: number;
   hoffman240CapCappedAtIndex: number | null;
+  otherDamagesSubtotalWon?: number;
+  otherDamages?: {
+    attendantCareWon: number;
+    treatmentWon: number;
+    applianceWon: number;
+    attendantHoffman240CappedAtIndex?: number | null;
+    treatmentValueSum20Capped?: boolean;
+    applianceValueSum20Capped?: boolean;
+  };
   dataVersions: {
     laborRates: string;
     lifeExpectancy: string;
@@ -61,8 +70,8 @@ const cases: GoldenCase[] = Object.entries(
  * `compensation-industrial-golden-derivation-2026-06-02.md`).
  */
 describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴얼 derivation)", () => {
-  it("loads exactly 6 cases", () => {
-    expect(cases).toHaveLength(6);
+  it("loads exactly 8 cases", () => {
+    expect(cases).toHaveLength(8);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -108,6 +117,36 @@ describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴�
       expect(result.hoffman240Cap.cappedAtIndex, `${c.id} cappedAtIndex`).toBe(
         c.expected.hoffman240CapCappedAtIndex,
       );
+      expect(result.otherDamagesSubtotalWon, `${c.id} otherDamagesSubtotal`).toBe(
+        c.expected.otherDamagesSubtotalWon,
+      );
+      if (c.expected.otherDamages) {
+        expect(result.otherDamages?.attendantCareWon, `${c.id} attendantCareWon`).toBe(
+          c.expected.otherDamages.attendantCareWon,
+        );
+        expect(result.otherDamages?.treatmentWon, `${c.id} treatmentWon`).toBe(
+          c.expected.otherDamages.treatmentWon,
+        );
+        expect(result.otherDamages?.applianceWon, `${c.id} applianceWon`).toBe(
+          c.expected.otherDamages.applianceWon,
+        );
+        if (c.expected.otherDamages.attendantHoffman240CappedAtIndex !== undefined) {
+          expect(
+            result.otherDamages?.attendantCare?.hoffman240CappedAtIndex,
+            `${c.id} attendant 240 cap`,
+          ).toBe(c.expected.otherDamages.attendantHoffman240CappedAtIndex);
+        }
+        if (c.expected.otherDamages.treatmentValueSum20Capped !== undefined) {
+          expect(result.otherDamages?.treatment?.valueSum20Capped, `${c.id} treatment 20 cap`).toBe(
+            c.expected.otherDamages.treatmentValueSum20Capped,
+          );
+        }
+        if (c.expected.otherDamages.applianceValueSum20Capped !== undefined) {
+          expect(result.otherDamages?.appliance?.valueSum20Capped, `${c.id} appliance 20 cap`).toBe(
+            c.expected.otherDamages.applianceValueSum20Capped,
+          );
+        }
+      }
       expect(result.dataVersions, `${c.id} dataVersions`).toEqual(c.expected.dataVersions);
       expect(result.disclaimer, `${c.id} disclaimer`).toBe(STANDARD_DISCLAIMER);
     });

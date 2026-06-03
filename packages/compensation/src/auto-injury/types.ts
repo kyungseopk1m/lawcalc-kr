@@ -9,6 +9,7 @@
  */
 
 import type { STANDARD_DISCLAIMER, IsoDate, LegalRatePreset } from "@lawcalc-kr/core-engine";
+import type { OtherDamagesInput, OtherDamagesResult } from "../other-damages/types";
 
 /** 노동력상실률 영구장해 항목. `ratio` 는 0~1. `department` 는 표시용. */
 export interface PermanentDisabilityInput {
@@ -120,6 +121,11 @@ export interface CompensationInput {
   deductions?: CompensationDeductionsInput;
   /** 산재보험급여(장해급여). `accidentType === "industrial"` 일 때만 적용. */
   industrialInsurance?: CompensationIndustrialInsuranceInjury;
+  /**
+   * 기타손해(개호비·치료비·보조구). v0.8.0 `compensation@4`.
+   * 미지정 시 기존 경로 byte-identical (회귀 0). 재산상 손해 pool 에 과실상계 전 합산.
+   */
+  otherDamages?: OtherDamagesInput;
 }
 
 /** 일실수입 segment 1건. */
@@ -186,9 +192,16 @@ export interface CompensationResult {
   segments: CompensationSegment[];
   /** 일실수입 소계 (segment amountFloorWon 합, 원). */
   lostIncomeSubtotalWon: number;
+  /**
+   * 기타손해 소계 (개호비+치료비+보조구, 원). `otherDamages` 입력 시에만 포함된다.
+   * 미지정 시 키 생략 → 기존 골든/`.lcalc` byte-identical (회귀 0).
+   */
+  otherDamagesSubtotalWon?: number;
+  /** 기타손해 상세 (입력 시에만, transparency). */
+  otherDamages?: OtherDamagesResult;
   /** 위자료 (원). */
   solatiumWon: number;
-  /** 재산상 손해 소계 = `lostIncomeSubtotalWon + solatiumWon`. */
+  /** 재산상 손해 소계 = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon`. */
   pecuniaryDamagesSubtotalWon: number;
   /** 과실상계 결과. */
   faultOffset: CompensationFaultOffset;

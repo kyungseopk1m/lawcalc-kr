@@ -7,6 +7,7 @@ import type {
   PermanentDisabilityInput,
   TemporaryDisabilityInput,
 } from "./types";
+import { validateOtherDamagesInput } from "../other-damages/validators";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DEDUCTION_ITEMS = 50;
@@ -244,5 +245,8 @@ export function validateCompensationInput(input: CompensationInput): void {
         input.industrialInsurance.disabilityBenefitWon,
       );
     }
+  }
+  if (input.otherDamages !== undefined) {
+    validateOtherDamagesInput(input.otherDamages, input.base.accidentDate);
   }
 }

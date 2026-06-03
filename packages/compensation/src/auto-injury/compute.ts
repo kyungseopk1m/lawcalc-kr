@@ -17,6 +17,7 @@ import {
   type LifeExpectancyDataset,
 } from "@lawcalc-kr/datasets-compensation";
 import type { CompensationInput, CompensationResult, CompensationSegment } from "./types";
+import { computeOtherDamages } from "../other-damages/compute";
 import { validateCompensationInput } from "./validators";
 
 /** compute(input) 의 dataset 주입 / 시간 주입 deps. 미지정 시 default dataset + 실시간 now. */
@@ -191,9 +192,20 @@ export function computeCompensation(
   });
   const lostIncomeSubtotalWon = segments.reduce((acc, segment) => acc + segment.amountFloorWon, 0);
 
+  // 6.5. 기타손해 (개호비/치료비/보조구). 미지정 시 skip → byte-identical (회귀 0).
+  const otherDamagesResult =
+    (input.otherDamages
+      ? computeOtherDamages(input.otherDamages, {
+          accidentDate: input.base.accidentDate,
+          laborRates,
+          hoffman,
+        })
+      : null) ?? undefined;
+  const otherDamagesSubtotalWon = otherDamagesResult?.subtotalWon ?? 0;
+
   // 7. 위자료
   const solatiumWon = input.solatiumWon ?? 0;
-  const pecuniaryDamagesSubtotalWon = lostIncomeSubtotalWon + solatiumWon;
+  const pecuniaryDamagesSubtotalWon = lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon;
 
   // 8. 과실상계
   const faultRatio = input.faultRatio ?? 0;
@@ -226,6 +238,10 @@ export function computeCompensation(
     combinedLossRate,
     segments,
     lostIncomeSubtotalWon,
+    // 기타손해 미지정 시 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(otherDamagesResult !== undefined
+      ? { otherDamagesSubtotalWon, otherDamages: otherDamagesResult }
+      : {}),
     solatiumWon,
     pecuniaryDamagesSubtotalWon,
     faultOffset: {
