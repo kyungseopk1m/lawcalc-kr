@@ -814,4 +814,29 @@ describe("v3 compensation envelope", () => {
     expect((migrated.payload.input as { accidentType?: string }).accidentType).toBe("industrial");
     expect(migrated).toEqual(industrialFile);
   });
+
+  it("migrateLcalcFile leaves a compensation@4 file with otherDamages untouched (주입 없음)", () => {
+    const file = buildCompensationFile();
+    const otherDamagesFile = {
+      ...file,
+      envelopeFeatures: ["compensation@4"],
+      payload: {
+        ...file.payload,
+        input: {
+          ...file.payload.input,
+          mode: "injury",
+          accidentType: "auto",
+          otherDamages: {
+            treatment: { past: [{ label: "수술", costWon: 3_000_000 }] },
+          },
+        },
+      },
+    } as LcalcFile;
+
+    const migrated = migrateLcalcFile(otherDamagesFile);
+
+    // mode·accidentType 이 이미 있으므로 @3→@4 는 어떤 필드도 주입하지 않는다 (byte-identity).
+    expect(migrated).toEqual(otherDamagesFile);
+    expect((migrated.payload.input as { otherDamages?: unknown }).otherDamages).toBeDefined();
+  });
 });

@@ -26,8 +26,8 @@ use crate::error::Error;
 
 use super::result_view::{
     disclaimer_text, format_currency, format_rate_percent, options_summary,
-    CompensationDeathResultView, CompensationResultView, InheritanceResultView,
-    LitigationCostResultView, ResultView,
+    CompensationDeathResultView, CompensationOtherDamagesView, CompensationResultView,
+    InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
@@ -339,6 +339,7 @@ pub fn render_compensation_pdf_bytes(view: &CompensationResultView) -> Result<Ve
     writer.draw_title("LawCalc Korea — 자×부상 손해배상 계산서");
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_compensation_summary(view);
+    writer.draw_compensation_other_damages(view.other_damages.as_ref());
     writer.draw_compensation_segments_table(view);
     writer.draw_compensation_footer(view);
 
@@ -369,6 +370,7 @@ pub fn render_compensation_death_pdf_bytes(
     writer.draw_title("LawCalc Korea — 자×사망 손해배상 계산서");
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_compensation_death_summary(view);
+    writer.draw_compensation_other_damages(view.other_damages.as_ref());
     writer.draw_compensation_death_segments_table(view);
     writer.draw_compensation_death_inheritance_table(view);
     writer.draw_compensation_death_footer(view);
@@ -789,6 +791,42 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(view.final_won)),
             ),
             ("계산 시각".into(), view.computed_at.clone()),
+        ];
+        let label_w = 38.0;
+        for (label, value) in &lines {
+            self.text(label, 10.0, self.left(), self.y - 4.0);
+            self.text(value, 10.0, self.left() + label_w, self.y - 4.0);
+            self.advance(5.6);
+        }
+        self.advance(2.0);
+    }
+
+    /// 기타손해(개호비·치료비·보조구 + 소계) PDF 블록. `None` (미입력) 이면 한 줄도
+    /// 그리지 않아 자동차/미입력 PDF 와 동일 (회귀 0). injury·death 공용.
+    fn draw_compensation_other_damages(
+        &mut self,
+        other_damages: Option<&CompensationOtherDamagesView>,
+    ) {
+        let Some(other) = other_damages else {
+            return;
+        };
+        let lines: [(String, String); 4] = [
+            (
+                "개호비".into(),
+                format!("{}원", format_currency(other.attendant_care_won)),
+            ),
+            (
+                "치료비".into(),
+                format!("{}원", format_currency(other.treatment_won)),
+            ),
+            (
+                "보조구".into(),
+                format!("{}원", format_currency(other.appliance_won)),
+            ),
+            (
+                "기타손해 소계".into(),
+                format!("{}원", format_currency(other.subtotal_won)),
+            ),
         ];
         let label_w = 38.0;
         for (label, value) in &lines {
@@ -1287,6 +1325,7 @@ mod tests {
                 after_won: 249_399_909.0,
             },
             final_won: 249_399_900.0,
+            other_damages: None,
             hoffman240_cap: CompensationHoffman240CapView {
                 applied_hoffman: vec![219.610067],
                 capped_at_index: None,
@@ -1311,6 +1350,19 @@ mod tests {
             "pdf suspiciously small: {}",
             bytes.len()
         );
+    }
+
+    #[test]
+    fn compensation_result_renders_pdf_with_other_damages() {
+        let mut view = compensation_sample();
+        view.other_damages = Some(CompensationOtherDamagesView {
+            attendant_care_won: 120_000_000.0,
+            treatment_won: 30_000_000.0,
+            appliance_won: 5_000_000.0,
+            subtotal_won: 155_000_000.0,
+        });
+        let bytes = render_compensation_pdf_bytes(&view).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
     }
 
     fn compensation_death_sample() -> CompensationDeathResultView {
@@ -1342,6 +1394,7 @@ mod tests {
                 after_won: 639_222_020.0,
             },
             final_won: 639_222_000.0,
+            other_damages: None,
             inheritance_shares: Some(vec![
                 CompensationInheritanceShareView {
                     name: "배우자".into(),
@@ -1387,6 +1440,19 @@ mod tests {
     fn compensation_death_result_renders_pdf_without_heirs() {
         let mut view = compensation_death_sample();
         view.inheritance_shares = None;
+        let bytes = render_compensation_death_pdf_bytes(&view).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+    }
+
+    #[test]
+    fn compensation_death_result_renders_pdf_with_other_damages() {
+        let mut view = compensation_death_sample();
+        view.other_damages = Some(CompensationOtherDamagesView {
+            attendant_care_won: 120_000_000.0,
+            treatment_won: 30_000_000.0,
+            appliance_won: 5_000_000.0,
+            subtotal_won: 155_000_000.0,
+        });
         let bytes = render_compensation_death_pdf_bytes(&view).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
     }

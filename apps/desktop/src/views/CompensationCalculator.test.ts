@@ -8,6 +8,14 @@ import {
 } from "@lawcalc-kr/compensation";
 import { computeStaleBadge } from "@lawcalc-kr/datasets-compensation";
 
+import {
+  defaultOtherDamagesFormState,
+  emptyAttendantFuture,
+  emptyAttendantPast,
+  emptyTreatmentFuture,
+  emptyTreatmentPast,
+  type OtherDamagesFormState,
+} from "../components/other-damages-form";
 import { migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 import {
@@ -446,6 +454,162 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
     expect(input.accidentType).toBeUndefined();
     const result = computeCompensationDeath(input);
+    const file = buildCompensationDeathLcalcFile(input, result, "");
+    expect(file.envelopeFeatures).toEqual(["compensation@2"]);
+  });
+});
+
+/** 개호비(기왕·향후) + 치료비(기왕·향후) + 보조구를 모두 채운 기타손해 폼 state. */
+function filledOtherDamages(): OtherDamagesFormState {
+  const attendantPast = {
+    ...emptyAttendantPast(),
+    occupation: "보통인부",
+    totalDaysText: "100",
+  };
+  const attendantFuture = {
+    ...emptyAttendantFuture(),
+    occupation: "보통인부",
+    startDate: "2026-01-01",
+    endDate: "2030-01-01",
+    personCountText: "1",
+  };
+  const treatmentPast = { ...emptyTreatmentPast(), label: "수술", costWonText: "3000000" };
+  const treatmentFuture = {
+    ...emptyTreatmentFuture(),
+    label: "재활",
+    costWonText: "1000000",
+    kind: "recurring" as const,
+    firstDate: "2026-06-01",
+    lastDate: "2030-06-01",
+    lifespanMonthsText: "12",
+  };
+  const appliance = {
+    ...emptyTreatmentFuture(),
+    label: "휠체어",
+    costWonText: "2000000",
+    kind: "oneTime" as const,
+    firstDate: "2026-06-01",
+  };
+  return {
+    attendantPast: [attendantPast],
+    attendantFuture: [attendantFuture],
+    treatmentPast: [treatmentPast],
+    treatmentFuture: [treatmentFuture],
+    appliance: [appliance],
+  };
+}
+
+describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
+  it("자×부상 builder: otherDamages 주입 + compute 결과 기타손해 라인", () => {
+    const input = buildCompensationInput(override({ otherDamages: filledOtherDamages() }));
+    expect(input.otherDamages).toBeDefined();
+    expect(input.otherDamages?.attendantCare?.past).toHaveLength(1);
+    expect(input.otherDamages?.attendantCare?.future).toHaveLength(1);
+    expect(input.otherDamages?.treatment?.past).toHaveLength(1);
+    expect(input.otherDamages?.treatment?.future).toHaveLength(1);
+    expect(input.otherDamages?.appliance).toHaveLength(1);
+    const result = computeCompensation(input);
+    expect(result.otherDamages).toBeDefined();
+    expect(result.otherDamages?.subtotalWon).toBeGreaterThan(0);
+    expect(result.otherDamagesSubtotalWon).toBe(result.otherDamages?.subtotalWon);
+  });
+
+  it("자×부상 빈 기타손해 폼은 otherDamages 미주입 (회귀 0)", () => {
+    const input = buildCompensationInput(
+      override({ otherDamages: defaultOtherDamagesFormState() }),
+    );
+    expect(input.otherDamages).toBeUndefined();
+    const result = computeCompensation(input);
+    expect(result).not.toHaveProperty("otherDamages");
+    expect(result).not.toHaveProperty("otherDamagesSubtotalWon");
+  });
+
+  it("자×부상 .lcalc 는 compensation@4 envelope + round-trip 복원", () => {
+    const state = override({ otherDamages: filledOtherDamages() });
+    const input = buildCompensationInput(state);
+    const result = computeCompensation(input);
+    const file = buildCompensationLcalcFile(input, result, "기타손해 부상");
+    expect(file.envelopeFeatures).toEqual(["compensation@4"]);
+    validateLcalcEnvelope(file);
+    const loaded = parseLoadedCompensationLcalcInput(file);
+    if (loaded.input.mode === "death") throw new Error("expected injury");
+    const reapplied = applyLoadedCompensationInput(loaded.input);
+    expect(reapplied.otherDamages.attendantPast).toHaveLength(1);
+    expect(reapplied.otherDamages.attendantFuture).toHaveLength(1);
+    expect(reapplied.otherDamages.appliance).toHaveLength(1);
+    // build → apply → build 가 동일 도메인 입력을 만든다.
+    expect(
+      buildCompensationInput(override({ otherDamages: reapplied.otherDamages })).otherDamages,
+    ).toEqual(input.otherDamages);
+  });
+
+  it("자×부상 기타손해 > 산재: otherDamages 있으면 산재여도 @4 envelope", () => {
+    const state = override({
+      accidentType: "industrial",
+      disabilityBenefitWonText: "50000000",
+      otherDamages: filledOtherDamages(),
+    });
+    const input = buildCompensationInput(state);
+    const result = computeCompensation(input);
+    const file = buildCompensationLcalcFile(input, result, "");
+    expect(file.envelopeFeatures).toEqual(["compensation@4"]);
+  });
+
+  it("자×부상 clipboard 에 개호비/치료비/보조구 라인 포함", () => {
+    const result = computeCompensation(
+      buildCompensationInput(override({ otherDamages: filledOtherDamages() })),
+    );
+    const text = formatCompensationForClipboard(result);
+    expect(text).toContain("개호비:");
+    expect(text).toContain("치료비:");
+    expect(text).toContain("보조구:");
+    expect(text).toContain("기타손해 소계:");
+    expect(text.endsWith(STANDARD_DISCLAIMER)).toBe(true);
+  });
+
+  it("자×부상 자동차 회귀: 기타손해 미입력 시 @1 envelope 유지", () => {
+    const input = buildCompensationInput(defaultCompensationFormState());
+    expect(input.otherDamages).toBeUndefined();
+    const result = computeCompensation(input);
+    const file = buildCompensationLcalcFile(input, result, "");
+    expect(file.envelopeFeatures).toEqual(["compensation@1"]);
+  });
+
+  it("자×사망 builder + compute + @4 envelope + round-trip", () => {
+    const state = overrideDeath({ otherDamages: filledOtherDamages() });
+    const input = buildCompensationDeathInput(state);
+    expect(input.otherDamages).toBeDefined();
+    const result = computeCompensationDeath(input);
+    expect(result.otherDamages).toBeDefined();
+    expect(result.otherDamagesSubtotalWon).toBe(result.otherDamages?.subtotalWon);
+    const file = buildCompensationDeathLcalcFile(input, result, "기타손해 사망");
+    expect(file.envelopeFeatures).toEqual(["compensation@4"]);
+    validateLcalcEnvelope(file);
+    const loaded = parseLoadedCompensationLcalcInput(file);
+    if (loaded.input.mode !== "death") throw new Error("expected death");
+    const reapplied = applyLoadedCompensationDeathInput(loaded.input);
+    expect(
+      buildCompensationDeathInput(overrideDeath({ otherDamages: reapplied.otherDamages }))
+        .otherDamages,
+    ).toEqual(input.otherDamages);
+  });
+
+  it("자×사망 clipboard 에 기타손해 라인 포함", () => {
+    const result = computeCompensationDeath(
+      buildCompensationDeathInput(overrideDeath({ otherDamages: filledOtherDamages() })),
+    );
+    const text = formatCompensationDeathForClipboard(result);
+    expect(text).toContain("개호비:");
+    expect(text).toContain("치료비:");
+    expect(text).toContain("보조구:");
+    expect(text).toContain("기타손해 소계:");
+  });
+
+  it("자×사망 회귀: 기타손해 미입력 시 @2 envelope + 결과 키 생략", () => {
+    const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
+    expect(input.otherDamages).toBeUndefined();
+    const result = computeCompensationDeath(input);
+    expect(result).not.toHaveProperty("otherDamages");
     const file = buildCompensationDeathLcalcFile(input, result, "");
     expect(file.envelopeFeatures).toEqual(["compensation@2"]);
   });

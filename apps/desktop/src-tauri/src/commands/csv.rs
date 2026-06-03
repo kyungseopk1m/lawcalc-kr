@@ -9,8 +9,8 @@ use crate::error::Error;
 
 use super::result_view::{
     disclaimer_text, format_currency, format_rate_percent, options_summary,
-    CompensationDeathResultView, CompensationResultView, InheritanceResultView,
-    LitigationCostResultView, ResultView,
+    CompensationDeathResultView, CompensationOtherDamagesView, CompensationResultView,
+    InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 /// CSV formula injection defense.
@@ -438,6 +438,8 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         wtr.write_record([*key, escaped.as_str()])?;
     }
 
+    write_other_damages_rows(&mut wtr, view.other_damages.as_ref())?;
+
     let versions = format!(
         "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
         view.data_versions.labor_rates,
@@ -460,6 +462,28 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
     out.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
     out.extend_from_slice(&inner);
     Ok(out)
+}
+
+/// 기타손해(개호비·치료비·보조구 + 소계) CSV 행. `None` (미입력) 이면 한 줄도 쓰지 않아
+/// 자동차/미입력 결과와 byte-identical (회귀 0). injury·death 공용.
+fn write_other_damages_rows<W: std::io::Write>(
+    wtr: &mut csv::Writer<W>,
+    other_damages: Option<&CompensationOtherDamagesView>,
+) -> Result<(), Error> {
+    let Some(other) = other_damages else {
+        return Ok(());
+    };
+    let rows: [(&str, String); 4] = [
+        ("개호비(원)", format_currency(other.attendant_care_won)),
+        ("치료비(원)", format_currency(other.treatment_won)),
+        ("보조구(원)", format_currency(other.appliance_won)),
+        ("기타손해 소계(원)", format_currency(other.subtotal_won)),
+    ];
+    for (key, value) in &rows {
+        let escaped = escape_csv_cell(value).into_owned();
+        wtr.write_record([*key, escaped.as_str()])?;
+    }
+    Ok(())
 }
 
 pub fn render_compensation_death_csv_bytes(
@@ -529,6 +553,8 @@ pub fn render_compensation_death_csv_bytes(
         let escaped = escape_csv_cell(value).into_owned();
         wtr.write_record([*key, escaped.as_str()])?;
     }
+
+    write_other_damages_rows(&mut wtr, view.other_damages.as_ref())?;
 
     if let Some(shares) = view.inheritance_shares.as_ref() {
         if !shares.is_empty() {
@@ -780,6 +806,7 @@ mod tests {
                 after_won: 249_399_909.0,
             },
             final_won: 249_399_900.0,
+            other_damages: None,
             hoffman240_cap: CompensationHoffman240CapView {
                 applied_hoffman: vec![219.610067],
                 capped_at_index: None,
@@ -840,6 +867,37 @@ mod tests {
         assert!(!body.contains("산재보험급여"));
     }
 
+    fn other_damages_sample() -> CompensationOtherDamagesView {
+        CompensationOtherDamagesView {
+            attendant_care_won: 120_000_000.0,
+            treatment_won: 30_000_000.0,
+            appliance_won: 5_000_000.0,
+            subtotal_won: 155_000_000.0,
+        }
+    }
+
+    #[test]
+    fn compensation_csv_includes_other_damages_lines_when_present() {
+        let mut view = compensation_sample();
+        view.other_damages = Some(other_damages_sample());
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("개호비(원)"));
+        assert!(body.contains("\"120,000,000\""));
+        assert!(body.contains("치료비(원)"));
+        assert!(body.contains("보조구(원)"));
+        assert!(body.contains("기타손해 소계(원)"));
+        assert!(body.contains("\"155,000,000\""));
+    }
+
+    #[test]
+    fn compensation_csv_omits_other_damages_lines_for_auto() {
+        let bytes = render_compensation_csv_bytes(&compensation_sample()).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(!body.contains("기타손해 소계"));
+        assert!(!body.contains("개호비"));
+    }
+
     fn compensation_death_sample() -> CompensationDeathResultView {
         use crate::commands::result_view::{
             CompensationDataVersionsView, CompensationDeductionsView, CompensationFaultOffsetView,
@@ -874,6 +932,7 @@ mod tests {
                 after_won: 639_222_020.0,
             },
             final_won: 639_222_000.0,
+            other_damages: None,
             inheritance_shares: Some(vec![
                 CompensationInheritanceShareView {
                     name: "배우자".into(),
@@ -937,6 +996,26 @@ mod tests {
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
         assert!(body.contains("산재보험급여 공제(유족급여)(원)"));
         assert!(body.contains("\"100,000,000\""));
+    }
+
+    #[test]
+    fn compensation_death_csv_includes_other_damages_lines_when_present() {
+        let mut view = compensation_death_sample();
+        view.other_damages = Some(other_damages_sample());
+        let bytes = render_compensation_death_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("개호비(원)"));
+        assert!(body.contains("치료비(원)"));
+        assert!(body.contains("보조구(원)"));
+        assert!(body.contains("기타손해 소계(원)"));
+        assert!(body.contains("\"155,000,000\""));
+    }
+
+    #[test]
+    fn compensation_death_csv_omits_other_damages_lines_for_auto() {
+        let bytes = render_compensation_death_csv_bytes(&compensation_death_sample()).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(!body.contains("기타손해 소계"));
     }
 
     /// User-controlled heir name fields must not be evaluated as formulas in

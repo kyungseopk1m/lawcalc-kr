@@ -114,6 +114,10 @@ pub struct CompensationResultView {
     pub fault_offset: CompensationFaultOffsetView,
     pub deductions: CompensationDeductionsView,
     pub final_won: f64,
+    /// 기타손해 (개호비·치료비·보조구). `otherDamages` 입력 결과에만 존재하며, 미입력
+    /// 결과에는 키가 없다 (회귀 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub other_damages: Option<CompensationOtherDamagesView>,
     pub hoffman240_cap: CompensationHoffman240CapView,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
@@ -153,6 +157,20 @@ pub struct CompensationDeductionsView {
     pub after_won: f64,
 }
 
+/// Typed view of the `@lawcalc-kr/compensation` `OtherDamagesResult` summary
+/// (개호비·치료비·보조구 소계 + 기타손해 총계). Present only when the
+/// frontend result carries `otherDamages` (회귀 0). The per-section cap detail
+/// (호프만 240 / 수치합계 20) is surfaced in the UI but omitted from the
+/// export summary, matching the existing export altitude.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationOtherDamagesView {
+    pub attendant_care_won: f64,
+    pub treatment_won: f64,
+    pub appliance_won: f64,
+    pub subtotal_won: f64,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompensationHoffman240CapView {
@@ -187,6 +205,9 @@ pub struct CompensationDeathResultView {
     pub final_won: f64,
     #[serde(default)]
     pub inheritance_shares: Option<Vec<CompensationInheritanceShareView>>,
+    /// 기타손해 (개호비·치료비·보조구). `otherDamages` 입력 결과에만 존재 (회귀 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub other_damages: Option<CompensationOtherDamagesView>,
     pub hoffman240_cap: CompensationHoffman240CapView,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,

@@ -26,6 +26,7 @@ import {
   type CompensationRatioDeduction,
   type CompensationResult,
   type CompensationSegment,
+  type OtherDamagesResult,
   type PermanentDisabilityInput,
   type TemporaryDisabilityInput,
 } from "@lawcalc-kr/compensation";
@@ -46,6 +47,14 @@ import {
   type HeirInput,
   type SpouseInput,
 } from "../components/inheritance-heirs";
+import {
+  OtherDamagesFormCard,
+  applyOtherDamagesInput,
+  buildOtherDamagesInput,
+  defaultOtherDamagesFormState,
+  otherDamagesForDirtySnapshot,
+  type OtherDamagesFormState,
+} from "../components/other-damages-form";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -112,6 +121,8 @@ export interface CompensationFormState {
   absoluteDeductions: AbsoluteDeductionInputState[];
   /** 산재(산×부상) 장해급여 (원). accidentType === "industrial" 일 때만 적용. */
   disabilityBenefitWonText: string;
+  /** 기타손해 (개호비·치료비·보조구). 미입력 시 결과 회귀 0. */
+  otherDamages: OtherDamagesFormState;
 }
 
 const DEFAULT_OCCUPATION = "보통인부";
@@ -189,6 +200,7 @@ export function defaultCompensationFormState(): CompensationFormState {
     ratioDeductions: [],
     absoluteDeductions: [],
     disabilityBenefitWonText: "",
+    otherDamages: defaultOtherDamagesFormState(),
   };
 }
 
@@ -282,6 +294,8 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
     const disability = parseWonAmount(state.disabilityBenefitWonText, 0);
     if (disability > 0) input.industrialInsurance = { disabilityBenefitWon: disability };
   }
+  const otherDamages = buildOtherDamagesInput(state.otherDamages);
+  if (otherDamages) input.otherDamages = otherDamages;
 
   return input;
 }
@@ -329,6 +343,7 @@ export function applyLoadedCompensationInput(input: CompensationInput): Compensa
       input.industrialInsurance?.disabilityBenefitWon === undefined
         ? ""
         : String(input.industrialInsurance.disabilityBenefitWon),
+    otherDamages: applyOtherDamagesInput(input.otherDamages),
   };
 }
 
@@ -381,6 +396,7 @@ function stateForDirtySnapshot(state: CompensationFormState) {
       label: item.label,
       amountText: item.amountText,
     })),
+    otherDamages: otherDamagesForDirtySnapshot(state.otherDamages),
   };
 }
 
@@ -417,6 +433,14 @@ export function formatCompensationForClipboard(result: CompensationResult): stri
       `산재보험급여 공제 (장해급여): ${formatWon(result.deductions.industrialBenefitWon)}`,
     );
   }
+  if (result.otherDamages !== undefined) {
+    lines.push(
+      `개호비: ${formatWon(result.otherDamages.attendantCareWon)}`,
+      `치료비: ${formatWon(result.otherDamages.treatmentWon)}`,
+      `보조구: ${formatWon(result.otherDamages.applianceWon)}`,
+      `기타손해 소계: ${formatWon(result.otherDamages.subtotalWon)}`,
+    );
+  }
   lines.push(
     `최종 합계: ${formatWon(result.finalWon)}`,
     `데이터 버전: laborRates=${result.dataVersions.laborRates} / lifeExpectancy=${result.dataVersions.lifeExpectancy} / hoffman=${result.dataVersions.hoffman} / leibniz=${result.dataVersions.leibniz}`,
@@ -446,8 +470,15 @@ export function buildCompensationLcalcFile(
   return {
     schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     kind: "compensation",
-    // 산재(산×부상)는 compensation@3 envelope, 자동차(자×부상)는 기존 @1 유지 (회귀 0).
-    envelopeFeatures: [input.accidentType === "industrial" ? "compensation@3" : "compensation@1"],
+    // 기타손해(otherDamages) 있으면 @4, 없으면 산재(산×부상)=@3 / 자동차(자×부상)=@1 (회귀 0).
+    // max-feature: otherDamages > industrial.
+    envelopeFeatures: [
+      input.otherDamages !== undefined
+        ? "compensation@4"
+        : input.accidentType === "industrial"
+          ? "compensation@3"
+          : "compensation@1",
+    ],
     dataVersions: {
       laborRates: result.dataVersions.laborRates,
       lifeExpectancy: result.dataVersions.lifeExpectancy,
@@ -475,6 +506,8 @@ export interface CompensationDeathFormState {
   absoluteDeductions: AbsoluteDeductionInputState[];
   /** 산재(산×사망) 유족급여 (원). accidentType === "industrial" 일 때만 적용. */
   survivorBenefitWonText: string;
+  /** 기타손해 (개호비·치료비·보조구). 미입력 시 결과 회귀 0. */
+  otherDamages: OtherDamagesFormState;
   includeHeirs: boolean;
   decedent: DecedentInput;
   spouse: SpouseInput;
@@ -503,6 +536,7 @@ export function defaultCompensationDeathFormState(): CompensationDeathFormState 
     ratioDeductions: [],
     absoluteDeductions: [],
     survivorBenefitWonText: "",
+    otherDamages: defaultOtherDamagesFormState(),
     includeHeirs: false,
     decedent: { name: "", deceasedAt: "2026-01-01" },
     spouse: { alive: true, name: "" },
@@ -580,6 +614,8 @@ export function buildCompensationDeathInput(
     const survivor = parseWonAmount(state.survivorBenefitWonText, 0);
     if (survivor > 0) input.industrialInsurance = { survivorBenefitWon: survivor };
   }
+  const otherDamages = buildOtherDamagesInput(state.otherDamages);
+  if (otherDamages) input.otherDamages = otherDamages;
   if (state.includeHeirs) {
     input.heirs = buildInheritanceInput({
       decedent: state.decedent,
@@ -630,6 +666,7 @@ export function applyLoadedCompensationDeathInput(
       label: item.label ?? "",
       amountText: String(item.amount),
     })),
+    otherDamages: applyOtherDamagesInput(input.otherDamages),
     includeHeirs: input.heirs !== undefined,
   };
   if (input.heirs !== undefined) {
@@ -670,6 +707,14 @@ export function formatCompensationDeathForClipboard(result: CompensationAutoDeat
   if (result.deductions.industrialBenefitWon !== undefined) {
     lines.push(
       `산재보험급여 공제 (유족급여): ${formatWon(result.deductions.industrialBenefitWon)}`,
+    );
+  }
+  if (result.otherDamages !== undefined) {
+    lines.push(
+      `개호비: ${formatWon(result.otherDamages.attendantCareWon)}`,
+      `치료비: ${formatWon(result.otherDamages.treatmentWon)}`,
+      `보조구: ${formatWon(result.otherDamages.applianceWon)}`,
+      `기타손해 소계: ${formatWon(result.otherDamages.subtotalWon)}`,
     );
   }
   lines.push(
@@ -713,8 +758,15 @@ export function buildCompensationDeathLcalcFile(
   return {
     schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     kind: "compensation",
-    // 산재(산×사망)는 compensation@3 envelope, 자동차(자×사망)는 기존 @2 유지 (회귀 0).
-    envelopeFeatures: [input.accidentType === "industrial" ? "compensation@3" : "compensation@2"],
+    // 기타손해(otherDamages) 있으면 @4, 없으면 산재(산×사망)=@3 / 자동차(자×사망)=@2 (회귀 0).
+    // max-feature: otherDamages > industrial.
+    envelopeFeatures: [
+      input.otherDamages !== undefined
+        ? "compensation@4"
+        : input.accidentType === "industrial"
+          ? "compensation@3"
+          : "compensation@2",
+    ],
     dataVersions: {
       laborRates: result.dataVersions.laborRates,
       lifeExpectancy: result.dataVersions.lifeExpectancy,
@@ -748,6 +800,7 @@ function deathStateForDirtySnapshot(state: CompensationDeathFormState) {
       label: item.label,
       amountText: item.amountText,
     })),
+    otherDamages: otherDamagesForDirtySnapshot(state.otherDamages),
     includeHeirs: state.includeHeirs,
     decedent: state.decedent,
     spouse: state.spouse,
@@ -1166,6 +1219,11 @@ function InjuryCompensationView() {
             </label>
           </CardContent>
         </Card>
+
+        <OtherDamagesFormCard
+          value={state.otherDamages}
+          onChange={(otherDamages) => update({ otherDamages })}
+        />
 
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -1682,6 +1740,11 @@ function DeathCompensationView() {
           </CardContent>
         </Card>
 
+        <OtherDamagesFormCard
+          value={state.otherDamages}
+          onChange={(otherDamages) => update({ otherDamages })}
+        />
+
         <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">사건종류 · 장례비 · 위자료 · 과실 · 공제</CardTitle>
@@ -2070,6 +2133,9 @@ function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
                 </span>
               </>
             ) : null}
+            {result.otherDamages !== undefined ? (
+              <OtherDamagesResultRows otherDamages={result.otherDamages} />
+            ) : null}
             <span className="border-t border-border pt-2 text-base font-semibold">최종 합계</span>
             <span className="border-t border-border pt-2 text-right text-base font-semibold">
               {formatWon(result.finalWon)}
@@ -2210,6 +2276,48 @@ function StaleBadge({
   );
 }
 
+/**
+ * 결과 카드 기타손해 라인 (개호비 · 치료비 · 보조구 + 소계). 부상·사망 결과 카드 공용.
+ * 부모 grid(`grid-cols-2`)에 직접 span 쌍을 흘려보낸다 (Fragment). 개호비 240 cap·치료비/보조구
+ * 수치합계 20 cap 적용 시 빨간 배지를 노출한다.
+ */
+function OtherDamagesResultRows({ otherDamages }: { otherDamages: OtherDamagesResult }) {
+  const attendant240Capped =
+    otherDamages.attendantCare?.hoffman240CappedAtIndex !== null &&
+    otherDamages.attendantCare?.hoffman240CappedAtIndex !== undefined;
+  const treatment20Capped = otherDamages.treatment?.valueSum20Capped === true;
+  const appliance20Capped = otherDamages.appliance?.valueSum20Capped === true;
+  return (
+    <>
+      <span className="text-muted-foreground">개호비</span>
+      <span className="text-right" data-testid="compensation-other-attendant">
+        {formatWon(otherDamages.attendantCareWon)}
+        {attendant240Capped ? (
+          <span className="ml-1 text-xs text-red-600 dark:text-red-400">호프만 240 제한</span>
+        ) : null}
+      </span>
+      <span className="text-muted-foreground">치료비</span>
+      <span className="text-right" data-testid="compensation-other-treatment">
+        {formatWon(otherDamages.treatmentWon)}
+        {treatment20Capped ? (
+          <span className="ml-1 text-xs text-red-600 dark:text-red-400">수치합계 20 제한</span>
+        ) : null}
+      </span>
+      <span className="text-muted-foreground">보조구</span>
+      <span className="text-right" data-testid="compensation-other-appliance">
+        {formatWon(otherDamages.applianceWon)}
+        {appliance20Capped ? (
+          <span className="ml-1 text-xs text-red-600 dark:text-red-400">수치합계 20 제한</span>
+        ) : null}
+      </span>
+      <span className="text-muted-foreground">기타손해 소계</span>
+      <span className="text-right" data-testid="compensation-other-subtotal">
+        {formatWon(otherDamages.subtotalWon)}
+      </span>
+    </>
+  );
+}
+
 function ResultCards({ result }: { result: CompensationResult }) {
   return (
     <>
@@ -2242,6 +2350,9 @@ function ResultCards({ result }: { result: CompensationResult }) {
                   {formatWon(result.deductions.industrialBenefitWon)}
                 </span>
               </>
+            ) : null}
+            {result.otherDamages !== undefined ? (
+              <OtherDamagesResultRows otherDamages={result.otherDamages} />
             ) : null}
             <span className="border-t border-border pt-2 text-base font-semibold">최종 합계</span>
             <span className="border-t border-border pt-2 text-right text-base font-semibold">
