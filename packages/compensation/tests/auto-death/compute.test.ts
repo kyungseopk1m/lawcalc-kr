@@ -216,3 +216,46 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
     expect(() => computeCompensationDeath(input, { now: FIXED_NOW })).toThrow(RangeError);
   });
 });
+
+describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (v0.7.0)", () => {
+  it("case-comp-011 path: 과실 10% + 장례비 + 유족급여 1억 공제 → 450,111,400원, 배우자/자녀 분배", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    input.faultRatio = 0.1;
+    input.industrialInsurance = { survivorBenefitWon: 100_000_000 };
+    input.heirs = {
+      decedent: { deceasedAt: "2026-01-01" },
+      spouse: { name: "배우자", alive: true },
+      linealDescendants: [{ name: "자녀1", deceasedBeforeOpening: false }],
+    };
+    const result = computeCompensationDeath(input, { now: FIXED_NOW });
+    expect(result.accidentType).toBe("industrial");
+    expect(result.faultOffset.afterWon).toBe(545111424);
+    expect(result.funeralExpenseWon).toBe(5_000_000);
+    expect(result.deductions.industrialBenefitWon).toBe(100_000_000);
+    expect(result.deductions.afterWon).toBe(450111424);
+    expect(result.finalWon).toBe(450111400);
+    expect(result.inheritanceShares).toEqual([
+      { name: "배우자", numerator: 3, denominator: 5, amountWon: 270066840 },
+      { name: "자녀1", numerator: 2, denominator: 5, amountWon: 180044560 },
+    ]);
+    const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
+    expect(sum).toBe(result.finalWon);
+  });
+
+  it("산재인데 유족급여 미지정 → 0원 공제 (default)", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    const result = computeCompensationDeath(input, { now: FIXED_NOW });
+    expect(result.accidentType).toBe("industrial");
+    expect(result.deductions.industrialBenefitWon).toBe(0);
+    expect(result.finalWon).toBe(610679300);
+  });
+
+  it("accidentType 미지정(자동차) → accidentType·industrialBenefitWon 키 생략 (회귀 0)", () => {
+    const result = computeCompensationDeath(baseInput(), { now: FIXED_NOW });
+    expect(result.accidentType).toBeUndefined();
+    expect(result.deductions.industrialBenefitWon).toBeUndefined();
+    expect(result.finalWon).toBe(610679300);
+  });
+});

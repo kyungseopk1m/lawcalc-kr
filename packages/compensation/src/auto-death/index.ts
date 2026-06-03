@@ -3,6 +3,7 @@ export type {
   CompensationAutoDeathResult,
   CompensationDeathBaseInput,
   CompensationHeirsInput,
+  CompensationIndustrialInsuranceDeath,
   CompensationInheritanceShare,
 } from "./types";
 export { computeCompensationDeath } from "./compute";

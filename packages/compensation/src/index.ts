@@ -1,10 +1,12 @@
 export type {
   CompensationAbsoluteDeduction,
+  CompensationAccidentType,
   CompensationBaseInput,
   CompensationDataVersions,
   CompensationDeductionsInput,
   CompensationDeductionsResult,
   CompensationFaultOffset,
+  CompensationIndustrialInsuranceInjury,
   CompensationInput,
   CompensationLossRateInput,
   CompensationLostIncomeInput,
@@ -23,6 +25,7 @@ export type {
   CompensationAutoDeathResult,
   CompensationDeathBaseInput,
   CompensationHeirsInput,
+  CompensationIndustrialInsuranceDeath,
   CompensationInheritanceShare,
 } from "./auto-death";
 export { computeCompensationDeath, validateCompensationDeathInput } from "./auto-death";

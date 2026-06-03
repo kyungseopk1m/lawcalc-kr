@@ -134,4 +134,29 @@ describe("validateCompensationInput — boundary 거부", () => {
     input.lostIncome.workingDaysPerMonth = 32;
     expect(() => validateCompensationInput(input)).toThrow(/workingDaysPerMonth/);
   });
+
+  it("accepts 산재 입력 (industrial + 장해급여)", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    input.industrialInsurance = { disabilityBenefitWon: 50_000_000 };
+    expect(() => validateCompensationInput(input)).not.toThrow();
+  });
+
+  it("rejects 알 수 없는 accidentType", () => {
+    const input = { ...baseInput(), accidentType: "boat" } as unknown as CompensationInput;
+    expect(() => validateCompensationInput(input)).toThrow(/accidentType/);
+  });
+
+  it("rejects industrialInsurance 가 자동차 모드에 지정된 경우", () => {
+    const input = baseInput();
+    input.industrialInsurance = { disabilityBenefitWon: 10_000_000 };
+    expect(() => validateCompensationInput(input)).toThrow(/industrialInsurance/);
+  });
+
+  it("rejects 음수 장해급여", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    input.industrialInsurance = { disabilityBenefitWon: -1 };
+    expect(() => validateCompensationInput(input)).toThrow(/disabilityBenefitWon/);
+  });
 });

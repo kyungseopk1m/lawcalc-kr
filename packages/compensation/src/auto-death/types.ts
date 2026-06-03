@@ -17,6 +17,7 @@ import type {
   STANDARD_DISCLAIMER,
 } from "@lawcalc-kr/core-engine";
 import type {
+  CompensationAccidentType,
   CompensationDataVersions,
   CompensationDeductionsInput,
   CompensationDeductionsResult,
@@ -44,13 +45,23 @@ export interface CompensationDeathBaseInput {
 /** 상속인 입력. inheritance 도메인 입력을 그대로 재사용한다 (1991-01-01 이후 사망 대상). */
 export type CompensationHeirsInput = InheritanceInput;
 
+/** 산재(사망) 보험급여 공제 입력. `accidentType === "industrial"` 일 때만 의미. */
+export interface CompensationIndustrialInsuranceDeath {
+  /** 유족급여 (원, ≥ 0 정수). 과실상계·장례비 가산 후 전액 공제. default 0. */
+  survivorBenefitWon?: number;
+}
+
 /**
  * 자×사망 손해배상 입력.
  *
  * `mode: "death"` discriminator 로 부상 입력(`CompensationInput`)과 구분한다.
+ * `accidentType === "industrial"` 이면 산×사망: 산식은 자×사망과 동일하되 공제 단계에
+ * 유족급여 1줄이 추가 차감된다 (매뉴얼 §11).
  */
 export interface CompensationAutoDeathInput {
   mode: "death";
+  /** 사건종류. default "auto" (자동차). */
+  accidentType?: CompensationAccidentType;
   base: CompensationDeathBaseInput;
   lostIncome: CompensationLostIncomeInput;
   /** 생계비 공제 비율 (0~1). default 1/3. 일실수입에 `(1 - ratio)` 가 곱해진다. */
@@ -62,6 +73,8 @@ export interface CompensationAutoDeathInput {
   /** 과실비율 (0~1). default 0. */
   faultRatio?: number;
   deductions?: CompensationDeductionsInput;
+  /** 산재보험급여(유족급여). `accidentType === "industrial"` 일 때만 적용. */
+  industrialInsurance?: CompensationIndustrialInsuranceDeath;
   /** 상속인 입력 (선택). 지정 시 최종액을 상속분으로 분배한다. */
   heirs?: CompensationHeirsInput;
 }
@@ -81,6 +94,11 @@ export interface CompensationInheritanceShare {
 /** 자×사망 손해배상 계산 결과. */
 export interface CompensationAutoDeathResult {
   mode: "death";
+  /**
+   * 사건종류. `accidentType === "industrial"` 일 때만 포함된다.
+   * 자동차 모드는 키 생략 → 기존 골든/`.lcalc` 결과 byte-identical (회귀 0).
+   */
+  accidentType?: CompensationAccidentType;
   /** 적용된 생계비 공제 비율. transparency. */
   livingCostDeductionRatio: number;
   /** 일실수입 segment 목록 (단일 segment, 노동력 100% 상실 전제 + 생계비 공제 반영). */

@@ -92,8 +92,24 @@ export interface CompensationDeductionsInput {
   absolute?: CompensationAbsoluteDeduction[];
 }
 
+/**
+ * 사건종류. `"auto"` = 손해배상(자, 자동차) / `"industrial"` = 손해배상(산, 산업재해).
+ *
+ * 사건유형(부상/사망)과 직교한다. 산재는 자동차 산식과 동일하되 공제 단계에
+ * 산재보험급여(부상=장해급여 / 사망=유족급여) 1줄이 과실상계 후 추가 차감된다 (매뉴얼 §11).
+ */
+export type CompensationAccidentType = "auto" | "industrial";
+
+/** 산재(부상) 보험급여 공제 입력. `accidentType === "industrial"` 일 때만 의미. */
+export interface CompensationIndustrialInsuranceInjury {
+  /** 장해급여 (원, ≥ 0 정수). 과실상계 후 전액 공제. default 0. */
+  disabilityBenefitWon?: number;
+}
+
 /** 손해배상 입력. */
 export interface CompensationInput {
+  /** 사건종류. default "auto" (자동차). */
+  accidentType?: CompensationAccidentType;
   base: CompensationBaseInput;
   lossRate: CompensationLossRateInput;
   lostIncome: CompensationLostIncomeInput;
@@ -102,6 +118,8 @@ export interface CompensationInput {
   /** 과실비율 (0~1). default 0. */
   faultRatio?: number;
   deductions?: CompensationDeductionsInput;
+  /** 산재보험급여(장해급여). `accidentType === "industrial"` 일 때만 적용. */
+  industrialInsurance?: CompensationIndustrialInsuranceInjury;
 }
 
 /** 일실수입 segment 1건. */
@@ -133,6 +151,11 @@ export interface CompensationFaultOffset {
 export interface CompensationDeductionsResult {
   ratioSubtotalWon: number;
   absoluteSubtotalWon: number;
+  /**
+   * 공제된 산재보험급여 (부상=장해급여 / 사망=유족급여, 원).
+   * `accidentType === "industrial"` 일 때만 포함된다 (자동차 모드는 키 생략 → 회귀 0).
+   */
+  industrialBenefitWon?: number;
   afterWon: number;
 }
 
@@ -152,6 +175,11 @@ export interface Hoffman240CapTable {
 
 /** 손해배상 계산 결과. */
 export interface CompensationResult {
+  /**
+   * 사건종류. `accidentType === "industrial"` 일 때만 포함된다.
+   * 자동차 모드는 키 생략 → 기존 골든/`.lcalc` 결과 byte-identical (회귀 0).
+   */
+  accidentType?: CompensationAccidentType;
   /** 중복장해율 자동 합산 = `1 - Π(1 - r_i)`. transparency. */
   combinedLossRate: number;
   /** 일실수입 segment 목록. */

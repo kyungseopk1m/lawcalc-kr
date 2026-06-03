@@ -63,4 +63,29 @@ describe("validateCompensationDeathInput", () => {
     input.heirs = { decedent: { deceasedAt: "2026-01-01" } };
     expect(() => validateCompensationDeathInput(input)).toThrow(/상속인/);
   });
+
+  it("산재(industrial + 유족급여) 정상 통과", () => {
+    const input = valid();
+    input.accidentType = "industrial";
+    input.industrialInsurance = { survivorBenefitWon: 100_000_000 };
+    expect(() => validateCompensationDeathInput(input)).not.toThrow();
+  });
+
+  it("알 수 없는 accidentType 거부", () => {
+    const input = { ...valid(), accidentType: "ship" } as unknown as CompensationAutoDeathInput;
+    expect(() => validateCompensationDeathInput(input)).toThrow(/accidentType/);
+  });
+
+  it("industrialInsurance 가 자동차 모드에 지정되면 거부", () => {
+    const input = valid();
+    input.industrialInsurance = { survivorBenefitWon: 50_000_000 };
+    expect(() => validateCompensationDeathInput(input)).toThrow(/industrialInsurance/);
+  });
+
+  it("음수 유족급여 거부", () => {
+    const input = valid();
+    input.accidentType = "industrial";
+    input.industrialInsurance = { survivorBenefitWon: -1 };
+    expect(() => validateCompensationDeathInput(input)).toThrow(/survivorBenefitWon/);
+  });
 });

@@ -1,10 +1,12 @@
 export type {
   CompensationAbsoluteDeduction,
+  CompensationAccidentType,
   CompensationBaseInput,
   CompensationDataVersions,
   CompensationDeductionsInput,
   CompensationDeductionsResult,
   CompensationFaultOffset,
+  CompensationIndustrialInsuranceInjury,
   CompensationInput,
   CompensationLossRateInput,
   CompensationLostIncomeInput,

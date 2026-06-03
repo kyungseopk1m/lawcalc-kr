@@ -200,7 +200,8 @@ export function computeCompensation(
   const faultBeforeWon = pecuniaryDamagesSubtotalWon;
   const faultAfterWon = Math.floor(faultBeforeWon * (1 - faultRatio));
 
-  // 9. 공제
+  // 9. 공제 (과실상계 후). 산재(산×부상) 는 장해급여를 absolute 와 동일 위치에서 추가 차감 (매뉴얼 §11).
+  const accidentType = input.accidentType ?? "auto";
   const ratioItems = input.deductions?.ratio ?? [];
   const absoluteItems = input.deductions?.absolute ?? [];
   let ratioSum = 0;
@@ -208,7 +209,10 @@ export function computeCompensation(
   const ratioSubtotalWon = Math.floor(faultAfterWon * ratioSum);
   let absoluteSubtotalWon = 0;
   for (const item of absoluteItems) absoluteSubtotalWon += item.amount;
-  const deductionsAfterWon = faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon;
+  const industrialBenefitWon =
+    accidentType === "industrial" ? (input.industrialInsurance?.disabilityBenefitWon ?? 0) : 0;
+  const deductionsAfterWon =
+    faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon - industrialBenefitWon;
 
   // 10. final
   const finalRawWon = Math.max(0, deductionsAfterWon);
@@ -217,6 +221,8 @@ export function computeCompensation(
   const computedAtIso = (deps.now ?? (() => new Date()))().toISOString();
 
   return {
+    // 자동차 모드는 accidentType 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(accidentType === "industrial" ? { accidentType } : {}),
     combinedLossRate,
     segments,
     lostIncomeSubtotalWon,
@@ -230,6 +236,7 @@ export function computeCompensation(
     deductions: {
       ratioSubtotalWon,
       absoluteSubtotalWon,
+      ...(accidentType === "industrial" ? { industrialBenefitWon } : {}),
       afterWon: deductionsAfterWon,
     },
     finalWon,

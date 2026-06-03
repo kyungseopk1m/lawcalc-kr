@@ -8,6 +8,7 @@ const GOLDEN_FIXTURE_SCHEMA = "1";
 const FIXED_NOW = () => new Date("2026-05-18T00:00:00.000Z");
 
 interface ExpectedShape {
+  accidentType?: "auto" | "industrial";
   segmentCount: number;
   segmentEndMonths: number[];
   lostIncomeSubtotalWon: number;
@@ -17,6 +18,7 @@ interface ExpectedShape {
   deductions: {
     ratioSubtotalWon: number;
     absoluteSubtotalWon: number;
+    industrialBenefitWon?: number;
     afterWon: number;
   };
   finalWon: number;
@@ -54,12 +56,13 @@ const cases: GoldenCase[] = Object.entries(
   .map(([, value]) => value);
 
 /**
- * compensation 도메인 골든 — v0.5.0 트랙 A 5 fixture.
- * oracle = `"manual-derivation"` 단독 (`compensation-golden-capture-result-2026-05-18.md`).
+ * compensation 도메인 골든 — v0.5.0 트랙 A 5 fixture + v0.7.0 산재 1 fixture(case-010).
+ * oracle = `"manual-derivation"` 단독 (`compensation-golden-capture-result-2026-05-18.md` /
+ * `compensation-industrial-golden-derivation-2026-06-02.md`).
  */
-describe("compensation golden cases (v0.5.0-A — engine 코어 + 매뉴얼 derivation)", () => {
-  it("loads exactly 5 cases", () => {
-    expect(cases).toHaveLength(5);
+describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴얼 derivation)", () => {
+  it("loads exactly 6 cases", () => {
+    expect(cases).toHaveLength(6);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -93,6 +96,10 @@ describe("compensation golden cases (v0.5.0-A — engine 코어 + 매뉴얼 deri
       );
       expect(result.deductions.absoluteSubtotalWon, `${c.id} absoluteSubtotal`).toBe(
         c.expected.deductions.absoluteSubtotalWon,
+      );
+      expect(result.accidentType, `${c.id} accidentType`).toBe(c.expected.accidentType);
+      expect(result.deductions.industrialBenefitWon, `${c.id} industrialBenefit`).toBe(
+        c.expected.deductions.industrialBenefitWon,
       );
       expect(result.deductions.afterWon, `${c.id} deductionsAfter`).toBe(
         c.expected.deductions.afterWon,

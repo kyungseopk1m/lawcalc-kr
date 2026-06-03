@@ -15,6 +15,7 @@ interface ExpectedInheritanceShare {
 }
 
 interface ExpectedShape {
+  accidentType?: "auto" | "industrial";
   segmentCount: number;
   segmentEndMonths: number[];
   livingCostDeductionRatio: number;
@@ -26,6 +27,7 @@ interface ExpectedShape {
   deductions: {
     ratioSubtotalWon: number;
     absoluteSubtotalWon: number;
+    industrialBenefitWon?: number;
     afterWon: number;
   };
   finalWon: number;
@@ -64,12 +66,13 @@ const cases: GoldenCase[] = Object.entries(
   .map(([, value]) => value);
 
 /**
- * compensation 자×사망 도메인 골든 — v0.6.0 트랙 A 2 fixture.
- * oracle = `"manual-derivation"` 단독 (`compensation-death-golden-derivation-2026-06-02.md`).
+ * compensation 사망 도메인 골든 — v0.6.0 자×사망 2 fixture + v0.7.0 산×사망 1 fixture(case-011).
+ * oracle = `"manual-derivation"` 단독 (`compensation-death-golden-derivation-2026-06-02.md` /
+ * `compensation-industrial-golden-derivation-2026-06-02.md`).
  */
-describe("compensation death golden cases (v0.6.0-A — 자×사망 엔진 derivation)", () => {
-  it("loads exactly 2 cases", () => {
-    expect(cases).toHaveLength(2);
+describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사망 — derivation)", () => {
+  it("loads exactly 3 cases", () => {
+    expect(cases).toHaveLength(3);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -107,6 +110,10 @@ describe("compensation death golden cases (v0.6.0-A — 자×사망 엔진 deriv
       );
       expect(result.deductions.absoluteSubtotalWon, `${c.id} absoluteSubtotal`).toBe(
         c.expected.deductions.absoluteSubtotalWon,
+      );
+      expect(result.accidentType, `${c.id} accidentType`).toBe(c.expected.accidentType);
+      expect(result.deductions.industrialBenefitWon, `${c.id} industrialBenefit`).toBe(
+        c.expected.deductions.industrialBenefitWon,
       );
       expect(result.deductions.afterWon, `${c.id} deductionsAfter`).toBe(
         c.expected.deductions.afterWon,

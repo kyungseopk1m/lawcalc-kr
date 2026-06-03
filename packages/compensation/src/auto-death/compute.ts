@@ -163,7 +163,8 @@ export function computeCompensationDeath(
   const funeralExpenseWon = input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE_WON;
   const afterFuneralWon = faultAfterWon + funeralExpenseWon;
 
-  // 8. 공제 (장례비 가산 후 base 에 적용)
+  // 8. 공제 (장례비 가산 후 base 에 적용). 산재(산×사망) 는 유족급여를 absolute 와 동일 위치에서 추가 차감 (매뉴얼 §11).
+  const accidentType = input.accidentType ?? "auto";
   const ratioItems = input.deductions?.ratio ?? [];
   const absoluteItems = input.deductions?.absolute ?? [];
   let ratioSum = 0;
@@ -171,7 +172,10 @@ export function computeCompensationDeath(
   const ratioSubtotalWon = Math.floor(afterFuneralWon * ratioSum);
   let absoluteSubtotalWon = 0;
   for (const item of absoluteItems) absoluteSubtotalWon += item.amount;
-  const deductionsAfterWon = afterFuneralWon - ratioSubtotalWon - absoluteSubtotalWon;
+  const industrialBenefitWon =
+    accidentType === "industrial" ? (input.industrialInsurance?.survivorBenefitWon ?? 0) : 0;
+  const deductionsAfterWon =
+    afterFuneralWon - ratioSubtotalWon - absoluteSubtotalWon - industrialBenefitWon;
 
   // 9. final
   const finalRawWon = Math.max(0, deductionsAfterWon);
@@ -190,6 +194,8 @@ export function computeCompensationDeath(
 
   return {
     mode: "death",
+    // 자동차 모드는 accidentType 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(accidentType === "industrial" ? { accidentType } : {}),
     livingCostDeductionRatio,
     segments,
     lostIncomeSubtotalWon,
@@ -204,6 +210,7 @@ export function computeCompensationDeath(
     deductions: {
       ratioSubtotalWon,
       absoluteSubtotalWon,
+      ...(accidentType === "industrial" ? { industrialBenefitWon } : {}),
       afterWon: deductionsAfterWon,
     },
     finalWon,

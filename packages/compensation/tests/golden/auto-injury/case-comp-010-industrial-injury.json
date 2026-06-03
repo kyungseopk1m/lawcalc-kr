@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-010-industrial-injury",
+  "title": "industrial/injury — 산재 부상, 과실 20% 후 장해급여 5천만 공제",
+  "source": "manual-derivation",
+  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 2. case-001 baseline(보통인부 360개월 영구장해 30%, 일실수입 249,399,909) 위에 사건종류 산재 + 과실 20% + 장해급여 50,000,000 추가. 산재급여는 과실상계 후 absolute 와 동일 위치 차감 (매뉴얼 §11).",
+  "input": {
+    "accidentType": "industrial",
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [{ "department": "정형외과", "ratio": 0.3 }],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0.2,
+    "deductions": { "ratio": [], "absolute": [] },
+    "industrialInsurance": { "disabilityBenefitWon": 50000000 }
+  },
+  "expected": {
+    "accidentType": "industrial",
+    "segmentCount": 1,
+    "segmentEndMonths": [360],
+    "lostIncomeSubtotalWon": 249399909,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 249399909,
+    "faultOffset": { "ratio": 0.2, "afterWon": 199519927 },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "industrialBenefitWon": 50000000,
+      "afterWon": 149519927
+    },
+    "finalWon": 149519900,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-06-02",
+    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md § 2"
+  }
+}

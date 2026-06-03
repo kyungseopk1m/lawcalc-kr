@@ -159,3 +159,43 @@ describe("computeCompensation — 10 단계 path", () => {
     expect(result.combinedLossRate).toBeCloseTo(1 - 0.5 * 0.7, 6);
   });
 });
+
+describe("computeCompensation — 산재(산×부상) 장해급여 공제 (v0.7.0)", () => {
+  it("case-comp-010 path: 과실 20% 후 장해급여 5천만 공제 → 149,519,900원", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    input.faultRatio = 0.2;
+    input.industrialInsurance = { disabilityBenefitWon: 50_000_000 };
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.accidentType).toBe("industrial");
+    expect(result.faultOffset.afterWon).toBe(199519927);
+    expect(result.deductions.industrialBenefitWon).toBe(50_000_000);
+    expect(result.deductions.afterWon).toBe(149519927);
+    expect(result.finalWon).toBe(149519900);
+  });
+
+  it("장해급여가 과실상계 후 손해를 초과하면 최종 0원 (음수 floor)", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    input.industrialInsurance = { disabilityBenefitWon: 999_999_999_999 };
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.finalWon).toBe(0);
+    expect(result.deductions.industrialBenefitWon).toBe(999_999_999_999);
+  });
+
+  it("산재인데 장해급여 미지정 → 0원 공제 (default), 자동차 최종액과 동일", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.accidentType).toBe("industrial");
+    expect(result.deductions.industrialBenefitWon).toBe(0);
+    expect(result.finalWon).toBe(249399900);
+  });
+
+  it("accidentType 미지정(자동차) → 결과에 accidentType·industrialBenefitWon 키 생략 (회귀 0)", () => {
+    const result = computeCompensation(baseInput(), { now: FIXED_NOW });
+    expect(result.accidentType).toBeUndefined();
+    expect(result.deductions.industrialBenefitWon).toBeUndefined();
+    expect(result.finalWon).toBe(249399900);
+  });
+});

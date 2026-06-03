@@ -155,6 +155,10 @@ export function validateCompensationDeathInput(input: CompensationAutoDeathInput
   if (input.mode !== "death") {
     throw new RangeError(`${PREFIX}: mode 는 "death" 여야 합니다.`);
   }
+  const accidentType = input.accidentType ?? "auto";
+  if (accidentType !== "auto" && accidentType !== "industrial") {
+    throw new RangeError(`${PREFIX}: accidentType 는 "auto" 또는 "industrial" 여야 합니다.`);
+  }
   validateBase(input.base);
   validateLostIncome(input.lostIncome);
   if (input.livingCostDeductionRatio !== undefined) {
@@ -171,6 +175,22 @@ export function validateCompensationDeathInput(input: CompensationAutoDeathInput
   }
   if (input.deductions !== undefined) {
     validateDeductions(input.deductions);
+  }
+  if (input.industrialInsurance !== undefined) {
+    if (input.industrialInsurance === null || typeof input.industrialInsurance !== "object") {
+      throw new RangeError(`${PREFIX}: industrialInsurance 객체가 필요합니다.`);
+    }
+    if (accidentType !== "industrial") {
+      throw new RangeError(
+        `${PREFIX}: industrialInsurance 는 accidentType 가 "industrial" 일 때만 지정할 수 있습니다.`,
+      );
+    }
+    if (input.industrialInsurance.survivorBenefitWon !== undefined) {
+      assertNonNegativeInteger(
+        "industrialInsurance.survivorBenefitWon",
+        input.industrialInsurance.survivorBenefitWon,
+      );
+    }
   }
   if (input.heirs !== undefined) {
     validateHeirs(input.heirs);
