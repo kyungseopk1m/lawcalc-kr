@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-03
+
+### Added
+
+- 손해배상에 **산업재해(산재)** 사건종류를 추가했습니다(`compensation@3`). 부상·사망 각 모드에서 사건종류를 자동차/산재로 고를 수 있습니다. 산재는 자동차와 같은 일실수입·과실상계 산식을 쓰고, 공제 단계에 산재보험급여 한 줄을 더합니다. 부상은 장해급여, 사망은 유족급여를 입력하면 과실상계 뒤(사망은 장례비 가산 뒤) 다른 공제와 같은 자리에서 차감합니다.
+- 산재 결과를 PDF·CSV·클립보드로 내보낼 때 산재보험급여 공제를 별도 줄로 표시합니다. 자동차 결과에는 이 줄이 나타나지 않습니다.
+- 산재 부상·사망 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 2건을 추가해 회귀 가드를 마련했습니다.
+
+### Notes
+
+- 산재 공제는 「산업재해보상보험법」상 보험급여를 같은 성질의 손해와 조정한다는 실무를 단순 공제로 따릅니다. 항목별 동질성(소극손해·치료비·장례비 풀의 정밀 분리)은 후속 검토 범위이며, 일실수입이 보험급여를 넘는 일반 사건에서는 결과가 같습니다.
+- 기존 자동차 `.lcalc` 파일(`compensation@1`/`@2`)은 불러올 때 `compensation@3` 형식으로 자동 마이그레이션되며, 사건종류가 자동차로 그대로 복원됩니다.
+
 ## [0.6.0] - 2026-06-02
 
 ### Added
@@ -270,7 +283,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...v0.5.2
 [0.5.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.4.1...v0.5.0
