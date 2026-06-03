@@ -113,7 +113,7 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
             </h3>
             <p className="text-muted-foreground">
               이자, 상속분, 소송비용, 변제충당, 손해배상 계산을 로컬에서 검토하는 데스크톱
-              워크벤치입니다. 입력값과 결과 파일은 사용자 기기 안에서 처리합니다.
+              워크벤치입니다. 입력값과 결과는 내 컴퓨터에만 저장됩니다.
             </p>
           </section>
 
