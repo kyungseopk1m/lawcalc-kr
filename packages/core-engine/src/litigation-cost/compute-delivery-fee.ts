@@ -53,7 +53,7 @@ function computeCount(input: DeliveryFeeInput, formula: DeliveryFormula): CountC
       const adjustedPartyCount = input.partyCount + formula.partyOffset;
       return {
         count: adjustedPartyCount * formula.countPerParty,
-        segment: `(이해관계인수 ${input.partyCount} + offset ${formula.partyOffset}) × ${formula.countPerParty}회`,
+        segment: `(이해관계인수 ${input.partyCount} + 가산 ${formula.partyOffset}) × ${formula.countPerParty}회`,
       };
     }
     case "baseCountPlusCreditorMultiple": {
@@ -97,7 +97,7 @@ function resolveUnitPrice(input: DeliveryFeeInput, dataset: DeliveryDataset): Un
   if (input.perDeliveryUnitPriceWon !== undefined) {
     return {
       perDeliveryUnitPriceWon: input.perDeliveryUnitPriceWon,
-      segment: `회당 단가 ${input.perDeliveryUnitPriceWon.toLocaleString("en-US")}원 (입력 override)`,
+      segment: `회당 단가 ${input.perDeliveryUnitPriceWon.toLocaleString("en-US")}원 (직접 입력)`,
     };
   }
   const entry = getDeliveryUnitPriceAt(dataset, input.filingDate);

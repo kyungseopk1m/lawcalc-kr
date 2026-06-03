@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1",
   "id": "case-001-designated",
-  "title": "지정충당 (debtorDesignation) — 단일 채권 + 478조 cost→interest→principal 순",
-  "source": "민법 제476조 (지정충당) + 제478조 (비용·이자·원본 순)",
+  "title": "지정충당 (debtorDesignation) — 단일 채권 + 479조 cost→interest→principal 순",
+  "source": "민법 제476조 (지정충당) + 제479조 (비용·이자·원본 순)",
   "input": {
     "claims": [
       {

@@ -521,7 +521,7 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
                 />
                 <Input
                   inputMode="numeric"
-                  placeholder="월 개호일수 (default 30)"
+                  placeholder="월 개호일수 (기본 30일)"
                   value={row.daysPerMonthText}
                   onChange={(e) =>
                     updateAttendantFuture(row.uid, { daysPerMonthText: e.target.value })

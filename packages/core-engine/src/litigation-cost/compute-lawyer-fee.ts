@@ -80,11 +80,11 @@ function buildFormulaText(args: {
     : args.baseAmount.toFixed(2);
   const finalDisplay = args.finalAmount.toLocaleString("en-US");
   const clampNote = args.clamped
-    ? `, clamp 적용 (raw ${args.rawMultiplier} → ${args.multiplier})`
+    ? `, 상한 적용 (산정 ${args.rawMultiplier} → ${args.multiplier})`
     : "";
   return (
     `${segments.join(" + ")} = ${baseDisplay}원, ` +
-    `multiplier ${args.multiplier}${clampNote} → ${finalDisplay}원 (제3조 ①·③항, 심급별 독립)`
+    `배율 ${args.multiplier}${clampNote} → ${finalDisplay}원 (제3조 ①·③항, 심급별 독립)`
   );
 }
 

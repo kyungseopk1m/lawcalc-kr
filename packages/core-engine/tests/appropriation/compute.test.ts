@@ -8,7 +8,7 @@ import {
 } from "../../src";
 
 describe("computeAppropriation — 단일 채권 + 명시 directive", () => {
-  it("debtorDesignation (476조 채무자 지정) — cost→interest→principal 순으로 차감 (478조)", () => {
+  it("debtorDesignation (476조 채무자 지정) — cost→interest→principal 순으로 차감 (479조)", () => {
     const input: AppropriationInput = {
       claims: [
         {

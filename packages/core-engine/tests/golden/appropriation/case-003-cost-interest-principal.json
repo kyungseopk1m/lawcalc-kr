@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1",
   "id": "case-003-cost-interest-principal",
-  "title": "법정충당 + 478조 — 단일 채권 안에서 비용→이자→원본 순 차감 검증",
-  "source": "민법 제478조 (비용·이자·원본 순서)",
+  "title": "법정충당 + 479조 — 단일 채권 안에서 비용→이자→원본 순 차감 검증",
+  "source": "민법 제479조 (비용·이자·원본 순서)",
   "input": {
     "claims": [
       {

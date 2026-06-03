@@ -465,7 +465,7 @@ describe("computeDeliveryFee / formulaText 회귀", () => {
     expect(r.formulaText).toContain("filingDate 2020-06-30");
   });
 
-  it("override 사용 시 formulaText 에 override 메타 포함", () => {
+  it("직접 입력 단가 사용 시 formulaText 에 직접 입력 메타 포함", () => {
     const r = computeDeliveryFee(
       input({
         caseType: "civilFirstInstanceCollegial",
@@ -474,6 +474,6 @@ describe("computeDeliveryFee / formulaText 회귀", () => {
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.formulaText).toContain("입력 override");
+    expect(r.formulaText).toContain("직접 입력");
   });
 });

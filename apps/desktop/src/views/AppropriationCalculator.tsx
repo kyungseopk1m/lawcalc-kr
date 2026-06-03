@@ -426,7 +426,7 @@ export function AppropriationCalculator() {
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">채권 (변제 대상)</CardTitle>
             <p className="text-xs text-muted-foreground">
-              민법 제476조 (지정충당) / 제477조 (법정충당) / 제478조 (비용·이자·원본 순) 적용.
+              민법 제476조 (지정충당) / 제477조 (법정충당) / 제479조 (비용·이자·원본 순) 적용.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -481,7 +481,7 @@ export function AppropriationCalculator() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="grid gap-1 text-xs">
-                    이행기 (dueAt)
+                    이행기
                     <Input
                       type="date"
                       value={claim.dueAt}
@@ -719,7 +719,7 @@ export function AppropriationCalculator() {
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                근거: 민법 제476조 (지정충당) / 477조 (법정충당) / 478조 (비용·이자·원본 순). 본
+                근거: 민법 제476조 (지정충당) / 477조 (법정충당) / 479조 (비용·이자·원본 순). 본
                 도메인은 v0.4 사이클에서 도입된 초기 범위입니다. 단일 변제 이벤트와 여러 채권의 잔액
                 분배만 지원하며, 이자 누적과 이자제한법 제한이율 검토는 후속 버전 범위입니다.
               </p>

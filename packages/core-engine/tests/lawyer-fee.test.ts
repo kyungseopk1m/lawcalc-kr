@@ -517,7 +517,7 @@ describe("computeLawyerFee / formulaText 회귀", () => {
     expect(r.formulaText).toContain("대한법률구조공단");
   });
 
-  it("clamp 적용 시 formulaText 에 raw → clamped 표시", () => {
+  it("상한 적용 시 formulaText 에 산정 → 적용 표시", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
@@ -528,7 +528,7 @@ describe("computeLawyerFee / formulaText 회귀", () => {
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.formulaText).toContain("clamp 적용");
+    expect(r.formulaText).toContain("상한 적용");
   });
 });
 
