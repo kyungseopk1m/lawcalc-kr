@@ -55,6 +55,31 @@ const captures = [
     assertDisclaimer: true,
     assertText: "산재보험급여 공제 (장해급여)",
   },
+  {
+    tab: "손해배상",
+    subTab: "자동차 사고 · 부상",
+    file: "readme-compensation-other-damages.png",
+    assertDisclaimer: true,
+    fullPage: true,
+    // 기타손해(향후개호비 + 기왕치료비)를 채워 결과에 개호비·치료비 줄이 보이게 한다.
+    // 셀렉터는 기타손해 카드로 스코프해 다른 "추가" 버튼과 충돌하지 않게 한다.
+    setup: async (page) => {
+      // 직전 산재 캡처의 사건종류 상태가 남아 있을 수 있어 자동차로 되돌린다(깨끗한 자동차 + 기타손해).
+      await page.getByRole("button", { name: "자동차", exact: true }).click();
+      const card = page.getByTestId("compensation-other-damages-card");
+      const add = card.getByRole("button", { name: "추가" });
+      // 향후개호비 (카드 내 2번째 "추가")
+      await add.nth(1).click();
+      await card.getByPlaceholder("직접 일당 (원)").fill("150000");
+      const dates = card.locator('input[type="date"]');
+      await dates.nth(0).fill("2026-01-01");
+      await dates.nth(1).fill("2046-01-01");
+      await card.getByPlaceholder("인원 (예: 1 / 0.5)").fill("1");
+      // 기왕치료비 (카드 내 3번째 "추가")
+      await add.nth(2).click();
+      await card.getByPlaceholder("비용 (원)").fill("3000000");
+    },
+  },
 ];
 
 function waitForServerReady(child) {
@@ -93,7 +118,7 @@ async function clickCalculate(page, { assertDisclaimer }) {
   }
 }
 
-async function captureCurrentPage(page, filename) {
+async function captureCurrentPage(page, filename, fullPage = false) {
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) {
@@ -103,7 +128,7 @@ async function captureCurrentPage(page, filename) {
   await page.waitForTimeout(2000);
   await page.screenshot({
     path: path.join(outputDir, filename),
-    fullPage: false,
+    fullPage,
   });
 }
 
@@ -144,11 +169,14 @@ async function main() {
           await page.getByTestId(capture.benefitTestId).fill(capture.benefitValue);
         }
       }
+      if (capture.setup) {
+        await capture.setup(page);
+      }
       await clickCalculate(page, capture);
       if (capture.assertText) {
         await page.getByText(capture.assertText).first().waitFor({ timeout: 10_000 });
       }
-      await captureCurrentPage(page, capture.file);
+      await captureCurrentPage(page, capture.file, capture.fullPage);
     }
 
     console.log("Capturing info dialog -> readme-info-dialog.png");
