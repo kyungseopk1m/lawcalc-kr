@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-03
+
+### Added
+
+- 손해배상에 **기타손해**(개호비·치료비·보조구)를 추가했습니다(`compensation@4`). 부상·사망 양쪽 모드에서 입력합니다.
+  - **개호비**는 기왕분(직종·총일수로 계산하고, 실제 지출액을 넣으면 그 금액으로)과 향후분(기간과 인원을 나눠 입력하면 일실수입과 같은 방식으로 호프만 현가로 환산하고, 적용 호프만이 240을 넘지 않도록 제한)으로 나뉩니다.
+  - **치료비**는 기왕분(비용·기왕증)과 향후분(1회성/반복, 필요일·수명)을 다룹니다. 반복 지출은 발생 시점마다 단리 현가계수를 더한 수치합계로 환산하고, 수치합계가 20을 넘으면 20으로 제한합니다.
+  - **보조구**는 치료비 향후분과 같은 방식(단가·필요일·수명·기왕증, 수치합계 20 제한)으로 계산합니다.
+  - 기타손해는 일실수입·위자료와 함께 과실상계 전 재산상 손해에 더해집니다.
+- 기타손해 결과를 PDF·CSV·클립보드로 내보낼 때 개호비·치료비·보조구를 줄로 나눠 표시합니다. 기타손해를 입력하지 않은 결과에는 이 줄이 나타나지 않습니다.
+- 개호비(연금형, 호프만 240 제한)와 치료비·보조구(일시금형, 수치합계 20 제한) 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 3건을 추가해 회귀 가드를 마련했습니다.
+
+### Notes
+
+- 일실퇴직금은 이번 범위에서 제외했습니다. 산출방식(A/B/C/D)의 계산 근거를 더 정리한 뒤 다음 버전에서 다룹니다.
+- 기존 손해배상 `.lcalc` 파일(`compensation@1`~`@3`)은 불러올 때 `compensation@4` 형식으로 자동 마이그레이션되며, 기타손해가 없는 파일은 그대로 복원됩니다.
+
 ## [0.7.0] - 2026-06-03
 
 ### Added
@@ -283,7 +300,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.0...v0.5.2
