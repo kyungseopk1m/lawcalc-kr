@@ -16,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - **보조구**는 치료비 향후분과 같은 방식(단가·필요일·수명·기왕증, 수치합계 20 제한)으로 계산합니다.
   - 기타손해는 일실수입·위자료와 함께 과실상계 전 재산상 손해에 더해집니다.
 - 기타손해 결과를 PDF·CSV·클립보드로 내보낼 때 개호비·치료비·보조구를 줄로 나눠 표시합니다. 기타손해를 입력하지 않은 결과에는 이 줄이 나타나지 않습니다.
-- 개호비(연금형, 호프만 240 제한)와 치료비·보조구(일시금형, 수치합계 20 제한) 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 3건을 추가해 회귀 가드를 마련했습니다.
+- 개호비(연금형, 호프만 240 제한)와 치료비·보조구(일시금형, 수치합계 20 제한) 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 3건을 추가했습니다.
 
 ### Notes
 
@@ -29,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - 손해배상에 **산업재해(산재)** 사건종류를 추가했습니다(`compensation@3`). 부상·사망 각 모드에서 사건종류를 자동차/산재로 고를 수 있습니다. 산재는 자동차와 같은 일실수입·과실상계 산식을 쓰고, 공제 단계에 산재보험급여 한 줄을 더합니다. 부상은 장해급여, 사망은 유족급여를 입력하면 과실상계 뒤(사망은 장례비 가산 뒤) 다른 공제와 같은 자리에서 차감합니다.
 - 산재 결과를 PDF·CSV·클립보드로 내보낼 때 산재보험급여 공제를 별도 줄로 표시합니다. 자동차 결과에는 이 줄이 나타나지 않습니다.
-- 산재 부상·사망 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 2건을 추가해 회귀 가드를 마련했습니다.
+- 산재 부상·사망 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 2건을 추가했습니다.
 
 ### Notes
 
@@ -42,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - 손해배상에 자동차 사고 **사망** 모드를 추가했습니다(`compensation@2`). 손해배상 탭 안에서 부상/사망 모드를 전환합니다. 사망 모드는 일실수입에서 생계비를 공제(기본 1/3, 조정 가능)하고, 과실상계 뒤에 장례비(기본 5,000,000원, 조정 가능)를 더합니다. 상속인을 입력하면 최종액을 법정상속분대로 상속인별로 분배합니다(원 단위 floor + 잔여원 선순위 배정으로 합계를 보존). 위자료·과실비율·비율/전액 공제는 부상 모드와 동일하게 입력합니다.
 - 사망 모드 결과를 PDF·CSV·클립보드로 내보낼 수 있습니다. 세 출력 모두 생계비 공제 후 일실수입, 장례비, 상속인별 분배표를 담고 `STANDARD_DISCLAIMER` 면책 고지로 마무리합니다.
-- 자×사망 5단계 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 2건(기본/상속분배)을 추가해 회귀 가드를 마련했습니다.
+- 자×사망 5단계 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 2건(기본/상속분배)을 추가했습니다.
 
 ### Changed
 
@@ -62,8 +62,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- 손해배상 탭과 변제충당 탭에 `useLcalcDirtyTracker` 를 연결해 5개 탭 (`interest` / `inheritance` / `litigation-cost` / `appropriation` / `compensation`) 의 미저장 변경 추적 정합을 회복했습니다. 어느 탭이라도 입력이 dirty 상태이면 인앱 자동업데이트 다이얼로그가 재시작 전 경고를 띄우고, `.lcalc` 저장·불러오기 직후에는 dirty 상태가 해제됩니다.
-- 릴리스 워크플로(`.github/workflows/release.yml`)의 태그 정합 결함을 두 단계 가드로 보강했습니다. v0.5.0 릴리스에서 tauri-action 이 드래프트 릴리스를 생성하는 시점에 GitHub 가 태그 앵커링을 마치기 전이라 릴리스 URL 이 `releases/tag/untagged-...` 형태로 잡히는 함정이 있어 수동으로 `gh api PATCH` 를 적용해야 했습니다. 이번 릴리스에서는 (1) tauri-action 빌드 이전에 `create-draft-release` 사전 작업이 `gh release create --draft --target <tag SHA>` 로 태그가 앵커링된 드래프트를 먼저 생성하고, (2) 빌드 완료 후 `patch-release-tag` 사후 작업이 `gh api PATCH /repos/.../releases/{id} -f tag_name=<tag>` 로 릴리스 레코드의 `tag_name` 필드 정합을 한 번 더 회복합니다. 두 가드는 서로 독립적이라 한쪽이 실패해도 나머지가 정합을 보장합니다.
+- 손해배상 탭과 변제충당 탭에 `useLcalcDirtyTracker` 를 연결해 5개 탭 (`interest` / `inheritance` / `litigation-cost` / `appropriation` / `compensation`) 의 미저장 변경 추적을 맞췄습니다. 어느 탭이라도 입력이 dirty 상태이면 인앱 자동업데이트 다이얼로그가 재시작 전 경고를 띄우고, `.lcalc` 저장·불러오기 직후에는 dirty 상태가 해제됩니다.
+- 릴리스 워크플로(`.github/workflows/release.yml`)의 태그 불일치를 두 단계 가드로 보강했습니다. v0.5.0 에서는 tauri-action 이 드래프트를 만드는 시점이 GitHub 의 태그 앵커링보다 빨라 릴리스 URL 이 `releases/tag/untagged-...` 로 잡혔고, 매번 수동으로 `gh api PATCH` 를 적용해야 했습니다. 이제 빌드 전에 `create-draft-release` 가 `gh release create --draft --target <tag SHA>` 로 태그가 박힌 드래프트를 먼저 만들고, 빌드 후 `patch-release-tag` 가 `gh api PATCH …/releases/{id} -f tag_name=<tag>` 로 `tag_name` 을 한 번 더 맞춥니다. 두 가드는 독립적이라 한쪽이 실패해도 다른 쪽이 바로잡습니다.
 
 ### Notes
 
@@ -75,7 +75,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - 자×부상 손해배상 도메인 진입을 위한 정적 데이터셋으로 호프만 단리연금현가율 표(`hoffman/v1.0.0`, 월 단위 1~480개월, 240 한도 정보)와 라이프니츠 복리현가율 표(`leibniz/v1.0.0`, 월 단위 1~480개월, 할인율 연 5%)를 번들했습니다. 이 단계에서는 데이터셋만 도입하고 엔진 연결은 이후 단계에서 진행했습니다.
 - 자×부상 일실수입 계산을 위한 외부 데이터셋으로 대한건설협회 시중노임 단가(`labor-rates/v1.0.0`, 2026.1.1 적용 직종 113개)와 통계청 KOSIS 생명표(`life-expectancy/v1.0.0`, 2023년 사망률 기준 기준값 5개 / 남녀)를 번들했습니다. 스냅샷 경과 기간을 ≤6개월 / 6~12개월 / >12개월 기준으로 판단하는 `computeStaleBadge` 함수도 함께 추가했으며, 직종 자동입력과 사용자 직접 일당 입력을 함께 두는 흐름은 이후 단계에서 도입했습니다.
-- 자×부상 손해배상 엔진 코어(`computeCompensation`)를 도입했습니다. 노동력상실률 중복 자동 합산과 한시장해 환산, 한시 종료 시점의 구간 분해, 단가 조회 또는 `directWageWon` 직접 입력, 호프만 240 한도 누적 적용, 위자료·과실상계·공제(비율/전액), 100원 미만 절사까지 10단계를 한 함수로 묶었습니다. 결과에는 `STANDARD_DISCLAIMER`와 데이터셋 식별자 4종(`labor-rates`/`life-expectancy`/`hoffman`/`leibniz`)을 함께 담습니다. 자×부상 5개 케이스는 매뉴얼 산출 근거를 기준으로 한 골든 케이스로 묶어 회귀 가드를 마련했으며, UI 탭과 `.lcalc` 기능 ID 등록은 이후 단계에서 진행했습니다.
+- 자×부상 손해배상 엔진 코어(`computeCompensation`)를 도입했습니다. 노동력상실률 중복 자동 합산과 한시장해 환산, 한시 종료 시점의 구간 분해, 단가 조회 또는 `directWageWon` 직접 입력, 호프만 240 한도 누적 적용, 위자료·과실상계·공제(비율/전액), 100원 미만 절사까지 10단계를 한 함수로 묶었습니다. 결과에는 `STANDARD_DISCLAIMER`와 데이터셋 식별자 4종(`labor-rates`/`life-expectancy`/`hoffman`/`leibniz`)을 함께 담습니다. 자×부상 5개 케이스는 매뉴얼 산출 근거를 기준으로 골든 케이스로 묶었으며, UI 탭과 `.lcalc` 기능 ID 등록은 이후 단계에서 진행했습니다.
 - 손해배상 탭과 `.lcalc` v3 `compensation@1` 기능 ID를 추가했습니다. 기초사항, 노동력상실률(영구/한시), 일실수입(직종 자동입력 + 일당 직접 입력), 위자료, 과실비율, 공제(비율/전액)를 입력할 수 있습니다. 결과 카드에는 일실수입 구간, 호프만 240 한도 표기, 최종 합계, `STANDARD_DISCLAIMER`, 데이터셋 식별자 4종을 함께 표시합니다. 대한건설협회 시중노임 스냅샷 경과 개월에 따라 결과 카드 상단 안내와 일당 직접 입력 강조가 자동 적용됩니다.
 - 손해배상 결과를 PDF·CSV·클립보드로 내보낼 수 있습니다. PDF와 CSV에는 일실수입 구간 표, 호프만 240 한도 표기, 최종 합계, 데이터셋 식별자 4종을 함께 담고, 세 출력 모두 `STANDARD_DISCLAIMER` 면책 고지로 마무리합니다.
 - README 스크린샷을 v0.5.0 기준으로 재캡처하고 5개 탭과 정보 다이얼로그 화면을 최신 UI로 갱신했습니다.
@@ -83,7 +83,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- 이자 탭 결과 카드에 면책 고지가 직접 표시되지 않던 정합 결함을 수정했습니다. 상속, 소송비용, 변제충당, 손해배상은 결과 카드에 `STANDARD_DISCLAIMER`를 별도 안내 박스로 노출했지만, 이자 탭은 결과 표 카드와 내보내기 카드 사이의 면책 고지가 누락되어 있었습니다. `InterestResult` 타입에 `disclaimer` 필드를 추가해 다른 4개 도메인과 같은 단일 출처를 따르도록 보강하고, 결과 카드 영역에도 동일한 면책 안내를 추가해 5개 출력 표면 정합을 회복했습니다.
+- 이자 탭 결과 카드에 면책 고지가 직접 표시되지 않던 문제를 수정했습니다. 상속, 소송비용, 변제충당, 손해배상은 결과 카드에 `STANDARD_DISCLAIMER`를 별도 안내 박스로 노출했지만, 이자 탭은 결과 표 카드와 내보내기 카드 사이의 면책 고지가 누락되어 있었습니다. `InterestResult` 타입에 `disclaimer` 필드를 추가해 다른 4개 도메인과 같은 단일 출처를 따르도록 보강하고, 결과 카드 영역에도 동일한 면책 안내를 추가해 5개 출력 표면을 맞췄습니다.
 
 ## [0.4.1] - 2026-05-15
 
@@ -153,7 +153,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `computeLitigationCost(input, deps?)` 통합 engine 을 추가했습니다. `computeStampDuty` / `computeDeliveryFee` / `computeLawyerFee` 를 같은 `computedAt` 으로 호출하고 `dataVersions["stamp-duty" | "delivery" | "lawyer-fee"]`, `STANDARD_DISCLAIMER`, 선택 분배표를 포함한 `LitigationCostResult` 를 반환합니다.
 - `.lcalc` v3 envelope 에 `litigation-cost@1` capability 를 추가했습니다. 소송비용 파일은 세 sub-domain dataVersion 을 envelope-level 로 저장하고 renderer/Rust shell 모두 면책 고지를 강제합니다.
 - `docs/LEGAL_REFERENCES.md` 에 소송비용 v0.3.0 근거를 추가했습니다. 「민사소송 등 인지법」, 「송달료규칙」, 「재일 87-4」 별표 1, 「변호사보수의 소송비용 산입에 관한 규칙」, 「사건별 부호문자의 부여에 관한 예규」, 대법원 2017마6274 / 2021마7301, KLAC 보수 기준을 현재 지원 범위와 연결했습니다.
-- 변호사보수 (`lawyer-fee`) 엔진과 데이터셋을 도입했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 별표 8 구간 (300만/2,000만/5,000만/1억/1.5억/2억/5억 + 5억 초과) · 제3조 ②항 (가압류·가처분 ×0.5, 변론·심문기일 시 ×1.0) · 제5조 (무변론·자백·이행권고결정 ×0.5) · 제6조 (재량 감액 무한 / 증액 ×1.5 cap) 와 KLAC (대한법률구조공단 ×0.42) 을 wire-up 했습니다. 데이터셋은 `data/lawyer-fee/v1.json` 을 single source 로 사용하고 `loadLawyerFeeDataset` / `lawyerFeeDatasetVersionTag` / `getLawyerFeeBracket` / `computeLawyerFee(input, deps?)` 를 공개하며, 누적 (compound) 적용 + clamp [0.0, 1.5] (제6조 ②항 cap) 와 KLAC 적용 사건 범위 비차단 경고를 포함합니다. 항소심·상고심은 제3조 ①·③항 정합 `perInstanceIndependent` 패턴 — caller 가 불복 범위를 `caseValue` 로 명시 입력합니다.
+- 변호사보수 (`lawyer-fee`) 엔진과 데이터셋을 도입했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 별표 8 구간 (300만/2,000만/5,000만/1억/1.5억/2억/5억 + 5억 초과) · 제3조 ②항 (가압류·가처분 ×0.5, 변론·심문기일 시 ×1.0) · 제5조 (무변론·자백·이행권고결정 ×0.5) · 제6조 (재량 감액 무한 / 증액 ×1.5 cap) 와 KLAC (대한법률구조공단 ×0.42) 을 wire-up 했습니다. 데이터셋은 `data/lawyer-fee/v1.json` 을 single source 로 사용하고 `loadLawyerFeeDataset` / `lawyerFeeDatasetVersionTag` / `getLawyerFeeBracket` / `computeLawyerFee(input, deps?)` 를 공개하며, 누적 (compound) 적용 + clamp [0.0, 1.5] (제6조 ②항 cap) 와 KLAC 적용 사건 범위 비차단 경고를 포함합니다. 항소심·상고심은 제3조 ①·③항에 맞춘 `perInstanceIndependent` 패턴으로, caller 가 불복 범위를 `caseValue` 로 명시 입력합니다.
 - 송달료 (`delivery`) 엔진과 데이터셋을 도입했습니다. 「송달료규칙」 (대법원규칙 제2921호) 의 회당 단가 + 「송달료규칙의 시행에 따른 업무처리요령 (재일 87-4)」 별표 1 의 사건구분별 송달 횟수 매트릭스를 wire-up 했으며, 시기별 단가 4 슬라이스 (2019-05-01 / 2020-07-01 / 2021-09-01 / 2025-06-01) 와 사건구분 12 종 verified 매트릭스 + 지급명령 unverified entry 를 보존합니다. 데이터셋은 `data/delivery/v1.json` 을 single source 로 사용하고 `loadDeliveryDataset` / `deliveryDatasetVersionTag` / `getDeliveryCount` / `getDeliveryUnitPriceAt` / `computeDeliveryFee(input, deps?)` 를 공개하며, `filingDate` 기준 시기별 단가 lookup 과 입력 override 모두 지원합니다.
 - 인지대 (`stamp-duty`) 엔진과 데이터셋을 도입했습니다. 「민사소송 등 인지법」 제2조 (4 구간 누진표 + 1,000원 floor + 100원 절사) · 제3조 (항소 ×1.5 / 상고 ×2.0) · 제7조 (지급명령 ×0.1 / 화해 ×0.2) · 제16조 (전자소송 ×0.9) 를 wire-up 했으며, 재심 (제8조) 은 심급별 동일 산식으로 처리합니다. 데이터셋은 `data/stamp-duty/v1.json` 을 single source 로 사용하고 `loadStampDutyDataset` / `stampDutyVersionTag` / `getStampDutyBracket` / `applyStampDutyRounding` / `computeStampDuty(input, deps?)` 를 공개하며, deps 를 통한 외부 데이터셋 주입으로 시기별 슬라이스 확장과 결정성을 보장합니다.
 - 소송비용 산정 도메인 (`litigation-cost`) 의 입력·결과 타입과 검증기를 도입했습니다. 인지대·송달료·변호사보수 3 sub-domain 의 input/result 인터페이스, 사건구분 13 종 enum (민사·가사·행정·보전·지급명령), 변호사보수 감액 옵션 5 variant (`LawyerFeeDiscount`), 감액 누적 적용 helper (`applyLawyerFeeDiscounts`, ×1.5 상한 clamp), KLAC 적용 사건 범위 비차단 경고 (`validateKlacDiscountScope`) 가 포함되며 도메인별 한국어 prefix RangeError 검증기를 제공합니다.
@@ -170,7 +170,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- 다크 모드에서 결과 합계(원리금 합계 카드 / 합계 행), 상속 결과 disclaimer, 입력 에러·계산 에러·작업 결과 토스트의 색상을 어두운 톤으로 정합했습니다. 기존에는 light 전용 amber/emerald/red 50 단계 색만 사용해 다크 배경에서 가독성이 떨어졌습니다.
+- 다크 모드에서 결과 합계(원리금 합계 카드 / 합계 행), 상속 결과 disclaimer, 입력 에러·계산 에러·작업 결과 토스트의 색상을 어두운 톤으로 맞췄습니다. 기존에는 light 전용 amber/emerald/red 50 단계 색만 사용해 다크 배경에서 가독성이 떨어졌습니다.
 - 설정·정보 다이얼로그에 키보드 접근성 개선을 추가했습니다. 화면 모드 라디오 그룹에 화살표 키 (←/→/↑/↓·Home·End) 이동을 지원하고, 두 다이얼로그 모두 Tab/Shift+Tab focus trap 과 닫을 때 트리거 버튼으로 focus 복원을 적용합니다.
 
 ### Removed
@@ -179,7 +179,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- Tailwind v4 의 `dark:` 변종이 클래스 기반 다크 토글에 반응하지 않던 결함을 수정했습니다. `globals.css` 에 `@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));` 선언을 추가해 `ThemeContext` 가 `documentElement` 에 박는 `data-theme="dark"` 와 Tailwind `dark:*` utility 발화를 정합했습니다. 이전에는 `prefers-color-scheme` 미디어 쿼리만 보고 있어 사용자가 설정에서 "다크" 를 선택해도 일부 컴포넌트(업데이트 다이얼로그 등) 가 라이트 외형을 유지하던 결함이 있었습니다.
+- Tailwind v4 의 `dark:` 변종이 클래스 기반 다크 토글에 반응하지 않던 결함을 수정했습니다. `globals.css` 에 `@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));` 선언을 추가해 `ThemeContext` 가 `documentElement` 에 박는 `data-theme="dark"` 와 Tailwind `dark:*` utility 발화를 맞췄습니다. 이전에는 `prefers-color-scheme` 미디어 쿼리만 보고 있어 사용자가 설정에서 "다크" 를 선택해도 일부 컴포넌트(업데이트 다이얼로그 등) 가 라이트 외형을 유지하던 결함이 있었습니다.
 
 ## [0.2.4] - 2026-05-10
 
@@ -216,7 +216,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - 앱 아이콘과 Header 브랜드 마크를 `Lc` 모노그램 (deep navy `#0D1B2A` + 흰색 L + 골드 C `#D4AF37` + amber baseline) 디자인으로 교체했습니다. 기존 Pillow placeholder (~19KB total) 와 lucide `Scale` 아이콘 (저울 emblem — 법원 공식 프로그램 클론 회피 정책 위반) 을 모두 제거하고 시안 raster 한 장에서 9-platform 자산을 일괄 생성합니다. `globals.css` `@theme` 에 `--color-brand-navy` / `--color-brand-gold` 토큰을 추가했습니다.
-- InfoDialog 와 README 첫 단락에 `소개 / 본질에 집중한 법률 계산 워크벤치` 카피를 추가해 브랜드 정체성 일관성을 회복했습니다.
+- InfoDialog 와 README 첫 단락에 소개 카피를 추가했습니다.
 
 ## [0.2.0] - 2026-05-10
 
