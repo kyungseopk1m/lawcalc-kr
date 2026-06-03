@@ -64,28 +64,44 @@ function normalizeV3LitigationCostFile(raw: LcalcFile): LcalcFile {
 }
 
 /**
- * `compensation@1` (자×부상) → `compensation@2` (자×부상 + 자×사망) intra-v3 migration.
+ * compensation intra-v3 normalize: `@1` (자×부상) → `@2` (자×부상 + 자×사망) → `@3` (+ 산재).
  *
- * v0.5.x 가 저장한 자×부상 `.lcalc` 파일은 `input.mode` discriminator 가 없다. v0.6.0 부터
- * 같은 `kind: "compensation"` envelope 가 자×사망(`mode: "death"`) 도 담으므로, 기존 파일에
- * `mode: "injury"` 를 명시 주입해 reader 분기를 견고하게 한다 (나머지 필드는 그대로 보존).
- * 이미 `mode` 가 있는 파일(=`compensation@2` 자×사망/자×부상)은 변경하지 않는다.
+ * - `@1 → @2`: v0.5.x 가 저장한 자×부상 파일은 `input.mode` discriminator 가 없다. v0.6.0 부터
+ *   같은 `kind: "compensation"` envelope 가 자×사망(`mode: "death"`) 도 담으므로, `mode: "injury"`
+ *   를 명시 주입해 reader 분기를 견고하게 한다.
+ * - `@2 → @3`: v0.6.x 까지의 파일은 `input.accidentType` 이 없다. v0.7.0 부터 산재(산×부상/산×사망)
+ *   가 합류하므로 기존 자동차 파일에 `accidentType: "auto"` 를 명시 주입한다. 이미 산재 파일
+ *   (`accidentType: "industrial"`)은 변경하지 않는다.
+ *
+ * 나머지 필드는 그대로 보존하며, 이미 정규화된 파일은 그대로 둔다 (byte 변경 최소).
  */
 function normalizeV3CompensationFile(raw: LcalcFile): LcalcFile {
   if (raw.kind !== "compensation") {
     return raw;
   }
   const input: unknown = raw.payload.input;
-  if (!isRecord(input) || input.mode !== undefined) {
+  if (!isRecord(input)) {
+    return raw;
+  }
+  let nextInput: Record<string, unknown> = input;
+  if (nextInput.mode === undefined) {
+    nextInput = { mode: "injury", ...nextInput };
+  }
+  if (nextInput.accidentType === undefined) {
+    nextInput = { accidentType: "auto", ...nextInput };
+  }
+  // 이미 정규화된 파일(mode·accidentType 둘 다 존재)은 nextInput 이 원본 input 참조 그대로이므로
+  // raw 를 손대지 않고 반환해 byte-identity 를 보장한다. nextInput 을 무조건 재할당하지 말 것.
+  if (nextInput === input) {
     return raw;
   }
   return {
     ...raw,
     payload: {
       ...raw.payload,
-      input: { mode: "injury", ...input },
+      input: nextInput,
     },
-  } as LcalcFile;
+  } as unknown as LcalcFile;
 }
 
 function migrateV1ToV2(

@@ -60,6 +60,7 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "appropriation@1",
   "compensation@1",
   "compensation@2",
+  "compensation@3",
 ]);
 
 const CAPABILITY_ID_PATTERN = /^[a-z][a-z0-9-]*@[1-9][0-9]*$/;

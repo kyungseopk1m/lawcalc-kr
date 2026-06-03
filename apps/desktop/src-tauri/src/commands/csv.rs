@@ -397,7 +397,7 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         escape_csv_cell(&format_currency(view.lost_income_subtotal_won)).into_owned();
     wtr.write_record(["일실수입 소계", "", "", "", lost_income_cell.as_str()])?;
 
-    let summary_rows: [(&str, String); 8] = [
+    let summary_rows: [(&str, String); 9] = [
         (
             "중복 노동력상실률",
             format!("{:.2}%", view.combined_loss_rate * 100.0),
@@ -423,9 +423,17 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
             "전액공제 소계(원)",
             format_currency(view.deductions.absolute_subtotal_won),
         ),
+        // 산재(장해급여) 공제 — 자동차 결과는 빈 key 로 skip (회귀 0).
+        match view.deductions.industrial_benefit_won {
+            Some(benefit) => ("산재보험급여 공제(장해급여)(원)", format_currency(benefit)),
+            None => ("", String::new()),
+        },
         ("최종 합계(원)", format_currency(view.final_won)),
     ];
     for (key, value) in &summary_rows {
+        if key.is_empty() {
+            continue;
+        }
         let escaped = escape_csv_cell(value).into_owned();
         wtr.write_record([*key, escaped.as_str()])?;
     }
@@ -487,7 +495,7 @@ pub fn render_compensation_death_csv_bytes(
         lost_income_cell.as_str(),
     ])?;
 
-    let summary_rows: [(&str, String); 8] = [
+    let summary_rows: [(&str, String); 9] = [
         (
             "생계비 공제 비율",
             format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
@@ -506,6 +514,11 @@ pub fn render_compensation_death_csv_bytes(
             format_currency(view.fault_offset.after_won),
         ),
         ("장례비(원)", format_currency(view.funeral_expense_won)),
+        // 산재(유족급여) 공제 — 자동차 결과는 빈 key 로 skip (회귀 0).
+        match view.deductions.industrial_benefit_won {
+            Some(benefit) => ("산재보험급여 공제(유족급여)(원)", format_currency(benefit)),
+            None => ("", String::new()),
+        },
         ("최종 합계(원)", format_currency(view.final_won)),
         ("", String::new()),
     ];
@@ -763,6 +776,7 @@ mod tests {
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
                 absolute_subtotal_won: 0.0,
+                industrial_benefit_won: None,
                 after_won: 249_399_909.0,
             },
             final_won: 249_399_900.0,
@@ -809,6 +823,23 @@ mod tests {
         assert!(body.contains("(한도)"));
     }
 
+    #[test]
+    fn compensation_csv_includes_industrial_disability_benefit_line() {
+        let mut view = compensation_sample();
+        view.deductions.industrial_benefit_won = Some(50_000_000.0);
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("산재보험급여 공제(장해급여)(원)"));
+        assert!(body.contains("\"50,000,000\""));
+    }
+
+    #[test]
+    fn compensation_csv_omits_industrial_line_for_auto() {
+        let bytes = render_compensation_csv_bytes(&compensation_sample()).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(!body.contains("산재보험급여"));
+    }
+
     fn compensation_death_sample() -> CompensationDeathResultView {
         use crate::commands::result_view::{
             CompensationDataVersionsView, CompensationDeductionsView, CompensationFaultOffsetView,
@@ -839,6 +870,7 @@ mod tests {
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
                 absolute_subtotal_won: 0.0,
+                industrial_benefit_won: None,
                 after_won: 639_222_020.0,
             },
             final_won: 639_222_000.0,
@@ -895,6 +927,16 @@ mod tests {
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
         assert!(!body.contains("상속인"));
         assert!(body.contains("장례비(원)"));
+    }
+
+    #[test]
+    fn compensation_death_csv_includes_industrial_survivor_benefit_line() {
+        let mut view = compensation_death_sample();
+        view.deductions.industrial_benefit_won = Some(100_000_000.0);
+        let bytes = render_compensation_death_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("산재보험급여 공제(유족급여)(원)"));
+        assert!(body.contains("\"100,000,000\""));
     }
 
     /// User-controlled heir name fields must not be evaluated as formulas in

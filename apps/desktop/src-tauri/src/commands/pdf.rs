@@ -765,12 +765,24 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(view.fault_offset.after_won)),
             ),
             (
-                "공제 (비율 + 전액)".into(),
-                format!(
-                    "{}원 + {}원",
-                    format_currency(view.deductions.ratio_subtotal_won),
-                    format_currency(view.deductions.absolute_subtotal_won)
-                ),
+                if view.deductions.industrial_benefit_won.is_some() {
+                    "공제 (비율 + 전액 + 산재급여)".into()
+                } else {
+                    "공제 (비율 + 전액)".into()
+                },
+                match view.deductions.industrial_benefit_won {
+                    Some(benefit) => format!(
+                        "{}원 + {}원 + {}원",
+                        format_currency(view.deductions.ratio_subtotal_won),
+                        format_currency(view.deductions.absolute_subtotal_won),
+                        format_currency(benefit)
+                    ),
+                    None => format!(
+                        "{}원 + {}원",
+                        format_currency(view.deductions.ratio_subtotal_won),
+                        format_currency(view.deductions.absolute_subtotal_won)
+                    ),
+                },
             ),
             (
                 "최종 합계".into(),
@@ -900,12 +912,24 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(view.funeral_expense_won)),
             ),
             (
-                "공제 (비율 + 전액)".into(),
-                format!(
-                    "{}원 + {}원",
-                    format_currency(view.deductions.ratio_subtotal_won),
-                    format_currency(view.deductions.absolute_subtotal_won)
-                ),
+                if view.deductions.industrial_benefit_won.is_some() {
+                    "공제 (비율 + 전액 + 산재급여)".into()
+                } else {
+                    "공제 (비율 + 전액)".into()
+                },
+                match view.deductions.industrial_benefit_won {
+                    Some(benefit) => format!(
+                        "{}원 + {}원 + {}원",
+                        format_currency(view.deductions.ratio_subtotal_won),
+                        format_currency(view.deductions.absolute_subtotal_won),
+                        format_currency(benefit)
+                    ),
+                    None => format!(
+                        "{}원 + {}원",
+                        format_currency(view.deductions.ratio_subtotal_won),
+                        format_currency(view.deductions.absolute_subtotal_won)
+                    ),
+                },
             ),
             (
                 "최종 합계".into(),
@@ -1259,6 +1283,7 @@ mod tests {
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
                 absolute_subtotal_won: 0.0,
+                industrial_benefit_won: None,
                 after_won: 249_399_909.0,
             },
             final_won: 249_399_900.0,
@@ -1313,6 +1338,7 @@ mod tests {
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
                 absolute_subtotal_won: 0.0,
+                industrial_benefit_won: None,
                 after_won: 639_222_020.0,
             },
             final_won: 639_222_000.0,

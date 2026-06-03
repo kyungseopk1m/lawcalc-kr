@@ -146,6 +146,10 @@ pub struct CompensationFaultOffsetView {
 pub struct CompensationDeductionsView {
     pub ratio_subtotal_won: f64,
     pub absolute_subtotal_won: f64,
+    /// 산재보험급여 공제 (부상=장해급여 / 사망=유족급여). 산재(`accidentType: "industrial"`)
+    /// 결과에만 존재하며, 자동차 결과에는 키가 없다 (회귀 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub industrial_benefit_won: Option<f64>,
     pub after_won: f64,
 }
 

@@ -343,3 +343,110 @@ describe("compensation @1 → @2 migration + 부상 회귀", () => {
     expect((migrated.payload.input as { mode?: string }).mode).toBe("death");
   });
 });
+
+describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
+  it("산×부상 builder: accidentType + 장해급여 주입, compute 결과 산재 라인", () => {
+    // case-comp-010 정합: 가동연한 60 (default 65 override), 과실 20% + 장해급여 5천만.
+    const state = override({
+      accidentType: "industrial",
+      retirementAgeText: "60",
+      faultRatioText: "0.2",
+      disabilityBenefitWonText: "50000000",
+    });
+    const input = buildCompensationInput(state);
+    expect(input.accidentType).toBe("industrial");
+    expect(input.industrialInsurance?.disabilityBenefitWon).toBe(50_000_000);
+    const result = computeCompensation(input);
+    expect(result.accidentType).toBe("industrial");
+    expect(result.deductions.industrialBenefitWon).toBe(50_000_000);
+    expect(result.finalWon).toBe(149_519_900);
+  });
+
+  it("산×부상 자동차 회귀: accidentType auto 면 산재 필드 미주입 + @1 envelope", () => {
+    const input = buildCompensationInput(defaultCompensationFormState());
+    expect(input.accidentType).toBeUndefined();
+    expect(input.industrialInsurance).toBeUndefined();
+    const result = computeCompensation(input);
+    const file = buildCompensationLcalcFile(input, result, "");
+    expect(file.envelopeFeatures).toEqual(["compensation@1"]);
+  });
+
+  it("산×부상 .lcalc 는 compensation@3 envelope + round-trip 복원", () => {
+    const state = override({
+      accidentType: "industrial",
+      disabilityBenefitWonText: "50000000",
+    });
+    const input = buildCompensationInput(state);
+    const result = computeCompensation(input);
+    const file = buildCompensationLcalcFile(input, result, "산재 부상");
+    expect(file.envelopeFeatures).toEqual(["compensation@3"]);
+    validateLcalcEnvelope(file);
+    const loaded = parseLoadedCompensationLcalcInput(file);
+    if (loaded.input.mode === "death") throw new Error("expected injury");
+    const reapplied = applyLoadedCompensationInput(loaded.input);
+    expect(reapplied.accidentType).toBe("industrial");
+    expect(reapplied.disabilityBenefitWonText).toBe("50000000");
+  });
+
+  it("산×부상 clipboard 에 산재보험급여(장해급여) 라인 포함", () => {
+    const state = override({
+      accidentType: "industrial",
+      disabilityBenefitWonText: "50000000",
+    });
+    const result = computeCompensation(buildCompensationInput(state));
+    const text = formatCompensationForClipboard(result);
+    expect(text).toContain("산재 사고 부상");
+    expect(text).toContain("산재보험급여 공제 (장해급여)");
+  });
+
+  it("산×사망 builder: accidentType + 유족급여 주입, compute 결과 + 분배 round-trip", () => {
+    // case-comp-011 정합: 생계비 1/3 (default "0.3333" override), 과실 10% + 유족급여 1억.
+    const state = overrideDeath({
+      accidentType: "industrial",
+      livingCostDeductionRatioText: "0.3333333333333333",
+      faultRatioText: "0.1",
+      survivorBenefitWonText: "100000000",
+      includeHeirs: true,
+      decedent: { name: "", deceasedAt: "2026-01-01" },
+      spouse: { alive: true, name: "배우자" },
+      linealDescendants: [
+        { id: "c1", name: "자녀1", deceasedBeforeOpening: false, representatives: [] },
+      ],
+    });
+    const input = buildCompensationDeathInput(state);
+    expect(input.accidentType).toBe("industrial");
+    expect(input.industrialInsurance?.survivorBenefitWon).toBe(100_000_000);
+    const result = computeCompensationDeath(input);
+    expect(result.accidentType).toBe("industrial");
+    expect(result.deductions.industrialBenefitWon).toBe(100_000_000);
+    expect(result.finalWon).toBe(450_111_400);
+    const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
+    expect(sum).toBe(result.finalWon);
+  });
+
+  it("산×사망 clipboard + .lcalc compensation@3 envelope + round-trip 복원", () => {
+    const state = overrideDeath({
+      accidentType: "industrial",
+      survivorBenefitWonText: "100000000",
+    });
+    const input = buildCompensationDeathInput(state);
+    const result = computeCompensationDeath(input);
+    expect(formatCompensationDeathForClipboard(result)).toContain("산재보험급여 공제 (유족급여)");
+    const file = buildCompensationDeathLcalcFile(input, result, "산재 사망");
+    expect(file.envelopeFeatures).toEqual(["compensation@3"]);
+    validateLcalcEnvelope(file);
+    const loaded = parseLoadedCompensationLcalcInput(file);
+    if (loaded.input.mode !== "death") throw new Error("expected death");
+    const reapplied = applyLoadedCompensationDeathInput(loaded.input);
+    expect(reapplied.accidentType).toBe("industrial");
+    expect(reapplied.survivorBenefitWonText).toBe("100000000");
+  });
+
+  it("산×사망 자동차 회귀: accidentType auto 면 @2 envelope 유지", () => {
+    const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
+    expect(input.accidentType).toBeUndefined();
+    const result = computeCompensationDeath(input);
+    const file = buildCompensationDeathLcalcFile(input, result, "");
+    expect(file.envelopeFeatures).toEqual(["compensation@2"]);
+  });
+});

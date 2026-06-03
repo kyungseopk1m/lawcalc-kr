@@ -765,7 +765,7 @@ describe("v3 compensation envelope", () => {
     expect(loaded.input.lostIncome.occupation).toBe("보통인부");
   });
 
-  it("migrateLcalcFile leaves a compensation file with an explicit mode untouched", () => {
+  it("migrateLcalcFile keeps an explicit mode but injects accidentType:auto on a compensation@2 file", () => {
     const file = buildCompensationFile();
     const deathFile = {
       ...file,
@@ -778,8 +778,40 @@ describe("v3 compensation envelope", () => {
 
     const migrated = migrateLcalcFile(deathFile);
 
-    // mode 가 이미 있으면 주입하지 않는다 — death 파일이 injury 로 오인되지 않아야 한다.
+    // mode 는 이미 있으니 그대로 두되(death 가 injury 로 오인되지 않음), @2 → @3 에서
+    // accidentType:"auto" 를 주입해 산재 파일과 reader 분기를 견고하게 한다.
     expect((migrated.payload.input as { mode?: string }).mode).toBe("death");
-    expect(migrated).toEqual(deathFile);
+    expect((migrated.payload.input as { accidentType?: string }).accidentType).toBe("auto");
+  });
+
+  it("migrateLcalcFile injects accidentType:auto into a legacy compensation@1 file (자동차 회귀 0)", () => {
+    const file = buildCompensationFile();
+    const migrated = migrateLcalcFile(file);
+    // @1 파일은 mode·accidentType 모두 없음 → mode:"injury" + accidentType:"auto" 주입.
+    expect((migrated.payload.input as { mode?: string }).mode).toBe("injury");
+    expect((migrated.payload.input as { accidentType?: string }).accidentType).toBe("auto");
+  });
+
+  it("migrateLcalcFile leaves an explicit industrial accidentType untouched (compensation@3)", () => {
+    const file = buildCompensationFile();
+    const industrialFile = {
+      ...file,
+      envelopeFeatures: ["compensation@3"],
+      payload: {
+        ...file.payload,
+        input: {
+          ...file.payload.input,
+          mode: "injury",
+          accidentType: "industrial",
+          industrialInsurance: { disabilityBenefitWon: 50_000_000 },
+        },
+      },
+    } as LcalcFile;
+
+    const migrated = migrateLcalcFile(industrialFile);
+
+    // 이미 accidentType 이 있으면 주입하지 않는다 — 산재 파일이 자동차로 오인되지 않아야 한다.
+    expect((migrated.payload.input as { accidentType?: string }).accidentType).toBe("industrial");
+    expect(migrated).toEqual(industrialFile);
   });
 });
