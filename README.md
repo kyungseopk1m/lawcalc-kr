@@ -28,7 +28,7 @@
 
 법원이 공개한 계산 프로그램은 아직도 윈도우 설치형이라, 맥이나 리눅스에서는 쓸 수 없습니다. 같은 계산을 맥에서도 돌리고 싶어서 만든 앱입니다.
 
-이자, 상속분, 소송비용, 변제충당, 손해배상(자동차 부상·사망) 다섯 가지를 다룹니다. 입력값을 넣으면 구간별 일수·이율·계산식·합계가 표로 펼쳐지고, 어떤 법령과 데이터 버전을 썼는지도 같이 보여줍니다. 결과는 `.lcalc` 파일로 저장하거나 PDF·CSV로 내보낼 수 있고, 전부 로컬에서 처리합니다.
+이자, 상속분, 소송비용, 변제충당, 손해배상(자동차·산재의 부상·사망) 다섯 가지를 다룹니다. 입력값을 넣으면 구간별 일수·이율·계산식·합계가 표로 펼쳐지고, 어떤 법령과 데이터 버전을 썼는지도 같이 보여줍니다. 결과는 `.lcalc` 파일로 저장하거나 PDF·CSV로 내보낼 수 있고, 전부 로컬에서 처리합니다.
 
 ## 주요 기능
 
@@ -74,7 +74,7 @@
   <img src="docs/assets/readme-compensation.png" alt="손해배상 부상 계산 화면" width="820">
 </p>
 
-자동차 사고를 **부상**과 **사망** 두 모드로 다룹니다. 손해배상 탭 안에서 모드를 바꾸면 됩니다.
+자동차 사고와 산업재해를 **부상**·**사망** 모드로 다룹니다. 손해배상 탭 안에서 모드를 바꾸고, 각 모드에서 사건종류(자동차/산재)를 고르면 됩니다.
 
 **부상**은 생년월일·사고일자·치료종료일, 영구/한시 노동력상실률, 직종 자동입력 또는 일당 직접 입력, 위자료, 과실비율, 비율/전액 공제를 넣으면 일실수입 구간, 호프만 240 한도, 과실상계·공제까지 거쳐 최종 합계가 나옵니다.
 
@@ -84,7 +84,13 @@
 
 **사망**은 일실수입에서 생계비를 공제(기본 1/3)하고, 과실상계 뒤에 장례비(기본 500만 원)를 더합니다. 상속인을 입력하면 최종액을 법정상속분대로 상속인별로 나눠 보여줍니다. 상속분 계산은 1991-01-01 이후 사망 케이스를 대상으로 합니다.
 
-두 모드 모두 결과에 쓰인 데이터셋(`labor-rates` / `life-expectancy` / `hoffman` / `leibniz`) 식별자와 대한건설협회 시중노임 스냅샷 경과 안내가 붙습니다.
+**산재**는 사건종류를 산재로 바꾸면 켜집니다. 산식은 자동차와 같고, 공제 단계에 산재보험급여 한 줄만 더 들어갑니다. 부상은 장해급여, 사망은 유족급여를 입력하면 과실상계 뒤에 다른 공제와 같은 자리에서 빠집니다. 결과 카드와 PDF·CSV에도 산재보험급여 공제가 별도 줄로 나옵니다.
+
+<p align="center">
+  <img src="docs/assets/readme-compensation-industrial.png" alt="산재 부상 손해배상 계산 화면 (장해급여 공제)" width="820">
+</p>
+
+어느 조합이든 결과에 쓰인 데이터셋(`labor-rates` / `life-expectancy` / `hoffman` / `leibniz`) 식별자와 대한건설협회 시중노임 스냅샷 경과 안내가 붙습니다.
 
 | 데이터셋                            | 출처와 처리                                                                                                                                  |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -156,7 +162,7 @@ GNU Affero General Public License v3.0 (이상)으로 배포합니다. 누구나
 
 ## English
 
-LawCalc Korea is a Korean legal calculation desktop app for judgment interest, statutory delay damages, simplified inheritance shares, litigation costs, payment appropriation, and auto accident compensation (injury and death).
+LawCalc Korea is a Korean legal calculation desktop app for judgment interest, statutory delay damages, simplified inheritance shares, litigation costs, payment appropriation, and accident compensation — both auto accidents and industrial accidents, in injury and death modes.
 
 The current release runs locally on macOS and Windows — interest, inheritance, litigation-cost, appropriation, and compensation calculations, transparent result traces, versioned data, and reproducible `.lcalc` files.
 

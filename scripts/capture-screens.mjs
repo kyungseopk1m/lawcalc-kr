@@ -45,6 +45,16 @@ const captures = [
     file: "readme-compensation-death.png",
     assertDisclaimer: true,
   },
+  {
+    tab: "손해배상",
+    subTab: "자동차 사고 · 부상",
+    accidentType: "산재",
+    benefitTestId: "compensation-disability-benefit-input",
+    benefitValue: "50000000",
+    file: "readme-compensation-industrial.png",
+    assertDisclaimer: true,
+    assertText: "산재보험급여 공제 (장해급여)",
+  },
 ];
 
 function waitForServerReady(child) {
@@ -127,6 +137,12 @@ async function main() {
       await page.getByRole("button", { name: capture.tab }).click();
       if (capture.subTab) {
         await page.getByRole("button", { name: capture.subTab }).click();
+      }
+      if (capture.accidentType) {
+        await page.getByRole("button", { name: capture.accidentType, exact: true }).click();
+        if (capture.benefitTestId) {
+          await page.getByTestId(capture.benefitTestId).fill(capture.benefitValue);
+        }
       }
       await clickCalculate(page, capture);
       if (capture.assertText) {
