@@ -541,6 +541,9 @@ export function AppropriationCalculator() {
                 <option value="debtorDesignation">채무자 지정 (476조 2순위)</option>
                 <option value="creditorDesignation">채권자 지정 (476조 3순위)</option>
               </Select>
+              <span className="text-xs font-normal text-muted-foreground">
+                충당 방법은 합의 → 지정(채무자·채권자) → 법정 순으로 우선합니다.
+              </span>
             </label>
             {payment.allocationType !== "legal" ? (
               <div className="grid gap-2">

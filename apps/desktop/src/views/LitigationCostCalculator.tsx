@@ -499,6 +499,10 @@ export function LitigationCostCalculator() {
         <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">변호사보수 옵션</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              「변호사보수의 소송비용 산입에 관한 규칙」 기준 (아래 옵션의 제3·5·6조는 같은 규칙
+              조항).
+            </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0 text-sm">
             {!lawyerFeeApplies ? (
