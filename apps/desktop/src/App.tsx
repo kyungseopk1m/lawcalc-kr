@@ -41,7 +41,7 @@ import { LegalCitation } from "./components/result/LegalCitation";
 import { SegmentTable } from "./components/result/SegmentTable";
 import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { useFormShortcuts } from "./hooks/use-form-shortcuts";
 import { useUpdater } from "./hooks/useUpdater";
@@ -527,7 +527,7 @@ export function App() {
       {activeTab === "appropriation" ? <AppropriationCalculator /> : null}
       {activeTab === "compensation" ? <CompensationCalculator /> : null}
       {activeTab === "interest" ? (
-        <main className="mx-auto grid w-full max-w-6xl flex-1 gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+        <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
           <section className="space-y-4" aria-labelledby="input-title">
             <Card>
               <CardHeader>
@@ -535,11 +535,8 @@ export function App() {
                   <Calculator className="h-4 w-4" aria-hidden="true" />
                   이자 계산 입력
                 </CardTitle>
-                <CardDescription>
-                  원금, 계산 기간, 이율 구간과 산정 옵션을 입력합니다.
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
+              <CardContent className="space-y-4">
                 <PrincipalInput
                   value={principal}
                   error={errors.principal}
@@ -612,9 +609,6 @@ export function App() {
                   <TableProperties className="h-4 w-4" aria-hidden="true" />
                   결과 표
                 </CardTitle>
-                <CardDescription>
-                  구간별 시작일, 종료일, 일수, 이율, 공식, 이자와 합계 행을 표시합니다.
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <SegmentTable result={result} />
@@ -684,7 +678,6 @@ export function App() {
                   <FileJson className="h-4 w-4" aria-hidden="true" />
                   내보내기
                 </CardTitle>
-                <CardDescription>계산 결과를 파일이나 클립보드로 내보냅니다.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap gap-2">
