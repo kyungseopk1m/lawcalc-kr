@@ -9,7 +9,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   APPROPRIATION_DATA_VERSION,
@@ -28,6 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { useCaseSlot } from "../lib/case-file";
 import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcAppropriationPayload, type LcalcFile } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
@@ -275,7 +276,7 @@ function buildLoadedAppropriationDirtySnapshot(
   });
 }
 
-export function AppropriationCalculator() {
+export function AppropriationCalculator({ active = true }: { active?: boolean }) {
   const [claims, setClaims] = useState<ClaimInputState[]>(() => [
     { ...emptyClaim(), id: "loan-1", name: "대여금A", principalBalanceText: "1000000" },
   ]);
@@ -297,6 +298,7 @@ export function AppropriationCalculator() {
     [claims, payment, note],
   );
   const markAppropriationClean = useLcalcDirtyTracker("appropriation", dirtySnapshot);
+  const pristineSnapshotRef = useRef(dirtySnapshot);
 
   const handleCalculate = () => {
     try {
@@ -392,22 +394,44 @@ export function AppropriationCalculator() {
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
+  const applyLoadedFile = (file: unknown) => {
+    const migratedFile = migrateLcalcFile(file);
+    validateLcalcEnvelope(migratedFile);
+    const loaded = parseLoadedAppropriationLcalcInput(migratedFile);
+    const applied = applyLoadedAppropriationInput(loaded.input);
+    const loadedNote = loaded.note ?? "";
+    setClaims(applied.claims);
+    setPayment(applied.payment);
+    setNote(loadedNote);
+    setResult(loaded.result ?? computeAppropriation(loaded.input));
+    setError(null);
+    markAppropriationClean(buildLoadedAppropriationDirtySnapshot(applied, loadedNote));
+  };
+
+  useCaseSlot("appropriation", {
+    collect: () => {
+      if (dirtySnapshot === pristineSnapshotRef.current) {
+        return { status: "pristine" };
+      }
+      try {
+        return {
+          status: "ok",
+          file: buildAppropriationLcalcFile(input, computeAppropriation(input), note),
+        };
+      } catch {
+        return { status: "invalid" };
+      }
+    },
+    apply: applyLoadedFile,
+    markSaved: () => markAppropriationClean(),
+  });
+
   const handleLoadLcalc = () =>
     runAction("load", async () => {
       const file = await ipc.loadLcalc();
       if (!file) return "불러오기를 취소했습니다.";
 
-      const migratedFile = migrateLcalcFile(file);
-      validateLcalcEnvelope(migratedFile);
-      const loaded = parseLoadedAppropriationLcalcInput(migratedFile);
-      const applied = applyLoadedAppropriationInput(loaded.input);
-      const loadedNote = loaded.note ?? "";
-      setClaims(applied.claims);
-      setPayment(applied.payment);
-      setNote(loadedNote);
-      setResult(loaded.result ?? computeAppropriation(loaded.input));
-      setError(null);
-      markAppropriationClean(buildLoadedAppropriationDirtySnapshot(applied, loadedNote));
+      applyLoadedFile(file);
       return ".lcalc 파일을 불러왔습니다.";
     });
 
@@ -417,6 +441,7 @@ export function AppropriationCalculator() {
     },
     onCalculate: handleCalculate,
     onReset: handleReset,
+    enabled: active,
   });
 
   return (

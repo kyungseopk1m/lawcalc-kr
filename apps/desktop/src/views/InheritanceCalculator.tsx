@@ -9,7 +9,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   STANDARD_DISCLAIMER,
@@ -32,6 +32,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { useCaseSlot } from "../lib/case-file";
 import { ipc, type LcalcFile, type LcalcInheritancePayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
@@ -144,7 +145,7 @@ function formatInheritanceForClipboard(result: InheritanceResult): string {
   ].join("\n");
 }
 
-export function InheritanceCalculator() {
+export function InheritanceCalculator({ active = true }: { active?: boolean }) {
   const [decedent, setDecedent] = useState<DecedentInput>({
     name: "",
     deceasedAt: "2025-01-01",
@@ -173,6 +174,7 @@ export function InheritanceCalculator() {
     [collateralFourth, decedent, linealAscendants, linealDescendants, note, siblings, spouse],
   );
   const markInheritanceClean = useLcalcDirtyTracker("inheritance", dirtySnapshot);
+  const pristineSnapshotRef = useRef(dirtySnapshot);
 
   const buildInput = (): InheritanceInput =>
     buildInheritanceInput({
@@ -311,6 +313,36 @@ export function InheritanceCalculator() {
     },
     onCalculate: handleCalculate,
     onReset: handleReset,
+    enabled: active,
+  });
+
+  const applyLoadedFile = (file: unknown) => {
+    const migratedFile = migrateLcalcFile(file);
+    validateLcalcEnvelope(migratedFile);
+    const loaded = parseLoadedInheritanceLcalcInput(migratedFile);
+    const loadedNote = loaded.note ?? "";
+    applyInput(loaded.input);
+    setNote(loadedNote);
+    const loadedResult = loaded.result ?? calculateInheritance(loaded.input);
+    setResult({ ...loadedResult, disclaimer: STANDARD_DISCLAIMER });
+    setError(null);
+    markInheritanceClean(buildLoadedInheritanceDirtySnapshot(loaded.input, loadedNote));
+  };
+
+  useCaseSlot("inheritance", {
+    collect: () => {
+      if (dirtySnapshot === pristineSnapshotRef.current) {
+        return { status: "pristine" };
+      }
+      try {
+        const input = buildInput();
+        return { status: "ok", file: buildLcalcFile(input, calculateInheritance(input)) };
+      } catch {
+        return { status: "invalid" };
+      }
+    },
+    apply: applyLoadedFile,
+    markSaved: () => markInheritanceClean(),
   });
 
   const handleLoadLcalc = () =>
@@ -320,16 +352,7 @@ export function InheritanceCalculator() {
         return "불러오기를 취소했습니다.";
       }
 
-      const migratedFile = migrateLcalcFile(file);
-      validateLcalcEnvelope(migratedFile);
-      const loaded = parseLoadedInheritanceLcalcInput(migratedFile);
-      const loadedNote = loaded.note ?? "";
-      applyInput(loaded.input);
-      setNote(loadedNote);
-      const loadedResult = loaded.result ?? calculateInheritance(loaded.input);
-      setResult({ ...loadedResult, disclaimer: STANDARD_DISCLAIMER });
-      setError(null);
-      markInheritanceClean(buildLoadedInheritanceDirtySnapshot(loaded.input, loadedNote));
+      applyLoadedFile(file);
       return ".lcalc 파일을 불러왔습니다.";
     });
 

@@ -6,6 +6,8 @@ import {
   FileJson,
   FileSpreadsheet,
   FileText,
+  FolderInput,
+  FolderOutput,
   Loader2,
   TableProperties,
   X,
@@ -45,10 +47,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { useFormShortcuts } from "./hooks/use-form-shortcuts";
 import { useUpdater } from "./hooks/useUpdater";
-import { ipc, type LcalcFile, type LcalcInterestPayload } from "./lib/ipc";
+import {
+  ipc,
+  type LcalcCaseCalculationKey,
+  type LcalcFile,
+  type LcalcInterestPayload,
+} from "./lib/ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "./lib/lcalc-dirty-state";
-import { parseLoadedLcalcInput, validateLcalcEnvelope } from "./lib/lcalc-validation";
+import {
+  parseLoadedCaseLcalcInput,
+  parseLoadedLcalcInput,
+  validateLcalcEnvelope,
+} from "./lib/lcalc-validation";
+import {
+  CASE_CALCULATION_LABELS,
+  applyCaseCalculations,
+  buildCaseLcalcFile,
+  collectCaseCalculations,
+  markCaseCalculationsSaved,
+  useCaseSlot,
+} from "./lib/case-file";
 import { AppropriationCalculator } from "./views/AppropriationCalculator";
 import { CompensationCalculator } from "./views/CompensationCalculator";
 import { InheritanceCalculator } from "./views/InheritanceCalculator";
@@ -72,7 +91,17 @@ const defaultInput: InterestInput = {
 
 const APP_VERSION = __APP_VERSION__;
 
-type ActionName = "pdf" | "csv" | "copy" | "claim" | "save" | "load";
+type ActionName = "pdf" | "csv" | "copy" | "claim" | "save" | "load" | "caseSave" | "caseLoad";
+
+type TabId = "interest" | "inheritance" | "litigationCost" | "appropriation" | "compensation";
+
+const TAB_BY_CALCULATION: Record<LcalcCaseCalculationKey, TabId> = {
+  interest: "interest",
+  inheritance: "inheritance",
+  "litigation-cost": "litigationCost",
+  appropriation: "appropriation",
+  compensation: "compensation",
+};
 
 interface ToastState {
   type: "success" | "error";
@@ -306,9 +335,10 @@ export function App() {
     () => buildInterestClaimText(result, { ending: claimEnding }),
     [claimEnding, result],
   );
-  const [activeTab, setActiveTab] = useState<
-    "interest" | "inheritance" | "litigationCost" | "appropriation" | "compensation"
-  >("interest");
+  const [activeTab, setActiveTab] = useState<TabId>("interest");
+  const [caseTitle, setCaseTitle] = useState("");
+  const [caseToast, setCaseToast] = useState<ToastState | null>(null);
+  const interestPristineSnapshotRef = useRef(dirtySnapshot);
 
   useEffect(() => {
     if (skipAutoCalculateRef.current) {
@@ -397,6 +427,39 @@ export function App() {
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
+  const applyLoadedInterestFile = (file: unknown) => {
+    const migratedFile = migrateLcalcFile(file);
+    validateLcalcEnvelope(migratedFile);
+    const loaded = parseLoadedLcalcInput(migratedFile);
+    const loadedOptions = {
+      ...loaded.input.options,
+      rounding: loaded.input.options.rounding ?? "floor",
+    };
+    const loadedNote = loaded.input.note ?? loaded.note ?? "";
+    const cleanSnapshot = buildInterestDirtySnapshot({
+      principal: loaded.input.principal,
+      startDate: loaded.input.startDate,
+      endDate: loaded.input.endDate,
+      segments: loaded.input.segments ?? [],
+      options: loadedOptions,
+      preset: loaded.preset,
+      customRate: loaded.customRate,
+      note: loadedNote,
+    });
+    skipAutoCalculateRef.current = true;
+    setPrincipal(loaded.input.principal);
+    setStartDate(loaded.input.startDate);
+    setEndDate(loaded.input.endDate);
+    setSegments(loaded.input.segments ?? []);
+    setOptions(loadedOptions);
+    setPreset(loaded.preset);
+    setCustomRate(loaded.customRate);
+    setNote(loadedNote);
+    setResult(loaded.result);
+    setCalculationError("");
+    markInterestClean(cleanSnapshot);
+  };
+
   const handleLoadLcalc = () =>
     runAction("load", async () => {
       const file = await ipc.loadLcalc();
@@ -404,38 +467,104 @@ export function App() {
         return "불러오기를 취소했습니다.";
       }
 
-      const migratedFile = migrateLcalcFile(file);
-      validateLcalcEnvelope(migratedFile);
-      const loaded = parseLoadedLcalcInput(migratedFile);
-      const loadedOptions = {
-        ...loaded.input.options,
-        rounding: loaded.input.options.rounding ?? "floor",
-      };
-      const loadedNote = loaded.input.note ?? loaded.note ?? "";
-      const cleanSnapshot = buildInterestDirtySnapshot({
-        principal: loaded.input.principal,
-        startDate: loaded.input.startDate,
-        endDate: loaded.input.endDate,
-        segments: loaded.input.segments ?? [],
-        options: loadedOptions,
-        preset: loaded.preset,
-        customRate: loaded.customRate,
-        note: loadedNote,
-      });
-      skipAutoCalculateRef.current = true;
-      setPrincipal(loaded.input.principal);
-      setStartDate(loaded.input.startDate);
-      setEndDate(loaded.input.endDate);
-      setSegments(loaded.input.segments ?? []);
-      setOptions(loadedOptions);
-      setPreset(loaded.preset);
-      setCustomRate(loaded.customRate);
-      setNote(loadedNote);
-      setResult(loaded.result);
-      setCalculationError("");
-      markInterestClean(cleanSnapshot);
+      applyLoadedInterestFile(file);
       window.requestAnimationFrame(() => resultSectionRef.current?.focus());
       return ".lcalc 파일을 불러왔습니다.";
+    });
+
+  useCaseSlot("interest", {
+    collect: () => {
+      if (dirtySnapshot === interestPristineSnapshotRef.current) {
+        return { status: "pristine" };
+      }
+      if (hasErrors) {
+        return { status: "invalid" };
+      }
+      return { status: "ok", file: buildLcalcFile(input, result) };
+    },
+    apply: applyLoadedInterestFile,
+    markSaved: () => markInterestClean(),
+  });
+
+  const runCaseAction = async (action: ActionName, task: () => Promise<string | null | void>) => {
+    if (loadingAction !== null) {
+      return;
+    }
+
+    setLoadingAction(action);
+    setCaseToast(null);
+    try {
+      const message = await task();
+      if (message) {
+        setCaseToast({ type: "success", message });
+      }
+    } catch (error) {
+      setCaseToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "작업 중 알 수 없는 오류가 발생했습니다.",
+      });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleSaveCase = () =>
+    runCaseAction("caseSave", async () => {
+      const { calculations, included, invalid } = collectCaseCalculations();
+      if (invalid.length > 0) {
+        throw new Error(
+          `${invalid.map((key) => CASE_CALCULATION_LABELS[key]).join(", ")} 탭의 입력 오류를 수정한 뒤 사건 파일을 저장해 주세요.`,
+        );
+      }
+      if (included.length === 0) {
+        throw new Error("저장할 계산이 없습니다. 탭에서 값을 입력한 뒤 다시 시도해 주세요.");
+      }
+
+      const trimmedTitle = caseTitle.trim();
+      const file = buildCaseLcalcFile(
+        trimmedTitle ? { title: trimmedTitle } : {},
+        calculations,
+        APP_VERSION,
+      );
+      const path = await ipc.saveLcalc(file);
+      if (!path) {
+        return "저장을 취소했습니다.";
+      }
+      markCaseCalculationsSaved(included);
+      const labels = included.map((key) => CASE_CALCULATION_LABELS[key]).join(", ");
+      return `사건 파일을 저장했습니다 (${labels}): ${path}`;
+    });
+
+  const handleLoadCase = () =>
+    runCaseAction("caseLoad", async () => {
+      const file = await ipc.loadLcalc();
+      if (!file) {
+        return "불러오기를 취소했습니다.";
+      }
+
+      const migratedFile = migrateLcalcFile(file);
+      validateLcalcEnvelope(migratedFile);
+
+      if (migratedFile.kind !== "case") {
+        // 단일 계산 파일도 사건 열기에서 해당 탭으로 바로 불러온다.
+        const applied = applyCaseCalculations({ [migratedFile.kind]: migratedFile });
+        const first = applied[0];
+        if (!first) {
+          throw new Error("이 파일의 계산 유형을 여는 탭이 없습니다.");
+        }
+        setActiveTab(TAB_BY_CALCULATION[first]);
+        return `${CASE_CALCULATION_LABELS[first]} 계산을 불러왔습니다.`;
+      }
+
+      const loaded = parseLoadedCaseLcalcInput(migratedFile);
+      setCaseTitle(loaded.caseInfo.title ?? loaded.caseInfo.caseNumber ?? "");
+      const applied = applyCaseCalculations(loaded.calculations);
+      const first = applied[0];
+      if (first) {
+        setActiveTab(TAB_BY_CALCULATION[first]);
+      }
+      const labels = applied.map((key) => CASE_CALCULATION_LABELS[key]).join(", ");
+      return `사건 파일을 불러왔습니다 (${labels}).`;
     });
 
   const handleCopy = () =>
@@ -519,215 +648,260 @@ export function App() {
           >
             손해배상
           </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <input
+              aria-label="사건번호·사건명"
+              className="h-8 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="사건번호·사건명"
+              value={caseTitle}
+              onChange={(event) => setCaseTitle(event.target.value)}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={loadingAction !== null}
+              onClick={() => {
+                void handleSaveCase();
+              }}
+            >
+              <FolderOutput className="h-4 w-4" aria-hidden="true" />
+              사건 저장
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={loadingAction !== null}
+              onClick={() => {
+                void handleLoadCase();
+              }}
+            >
+              <FolderInput className="h-4 w-4" aria-hidden="true" />
+              사건 열기
+            </Button>
+          </div>
         </div>
       </nav>
 
-      {activeTab === "inheritance" ? <InheritanceCalculator /> : null}
-      {activeTab === "litigationCost" ? <LitigationCostCalculator /> : null}
-      {activeTab === "appropriation" ? <AppropriationCalculator /> : null}
-      {activeTab === "compensation" ? <CompensationCalculator /> : null}
-      {activeTab === "interest" ? (
-        <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
-          <section className="space-y-4" aria-labelledby="input-title">
-            <Card>
-              <CardHeader>
-                <CardTitle id="input-title" className="flex items-center gap-2">
-                  <Calculator className="h-4 w-4" aria-hidden="true" />
-                  이자 계산 입력
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <PrincipalInput
-                  value={principal}
-                  error={errors.principal}
-                  onChange={setPrincipal}
-                />
-                <DateRangeInput
-                  startDate={startDate}
-                  endDate={endDate}
-                  error={errors.dateRange}
-                  onStartDateChange={setStartDate}
-                  onEndDateChange={setEndDate}
-                />
-                <LegalRatePreset
-                  value={preset}
-                  customRate={customRate}
-                  error={errors.customRate}
-                  onValueChange={setPreset}
-                  onCustomRateChange={setCustomRate}
-                />
-                <RateSegmentInput
-                  fallbackLabel={fallbackLabel}
-                  value={segments}
-                  error={errors.segments}
-                  onChange={setSegments}
-                />
-                <OptionsPanel value={options} onChange={setOptions} />
-                <label className="grid gap-2 text-sm font-medium">
-                  비고
-                  <textarea
-                    aria-label="비고"
-                    className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    placeholder="예: 1심 판결 선고일부터 완제일까지"
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                  />
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    ref={calculateButtonRef}
-                    type="button"
-                    disabled={hasErrors}
-                    onClick={() => handleCalculate()}
-                  >
-                    계산
-                  </Button>
-                  <Button type="button" variant="outline" onClick={handleReset}>
-                    초기화
-                  </Button>
-                </div>
-                {calculationError ? (
-                  <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-                    {calculationError}
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
-          </section>
-
-          <section
-            ref={resultSectionRef}
-            className="space-y-4 focus:outline-none"
-            aria-labelledby="result-title"
-            tabIndex={-1}
-          >
-            <SummaryCard result={result} />
-
-            <Card>
-              <CardHeader>
-                <CardTitle id="result-title" className="flex items-center gap-2">
-                  <TableProperties className="h-4 w-4" aria-hidden="true" />
-                  결과 표
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <SegmentTable result={result} />
-                <LegalCitation dataVersion={result.dataVersion} preset={preset} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" aria-hidden="true" />
-                  청구취지
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p
-                  className="rounded-md border border-border bg-muted/40 p-3 text-sm leading-relaxed"
-                  data-testid="claim-text"
-                >
-                  {claimText}
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <fieldset className="flex flex-wrap items-center gap-3">
-                    <legend className="sr-only">청구취지 종결 방식</legend>
-                    <label className="flex items-center gap-1.5 text-sm">
-                      <input
-                        checked={claimEnding === "untilFullPayment"}
-                        name="claim-ending"
-                        type="radio"
-                        onChange={() => setClaimEnding("untilFullPayment")}
-                      />
-                      다 갚는 날까지
-                    </label>
-                    <label className="flex items-center gap-1.5 text-sm">
-                      <input
-                        checked={claimEnding === "untilEndDate"}
-                        name="claim-ending"
-                        type="radio"
-                        onChange={() => setClaimEnding("untilEndDate")}
-                      />
-                      계산 종료일까지
-                    </label>
-                  </fieldset>
-                  <ActionButton
-                    action="claim"
-                    icon={Clipboard}
-                    label="복사"
-                    loadingAction={loadingAction}
-                    variant="outline"
-                    onClick={handleCopyClaim}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <div
-              className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
-              data-testid="interest-disclaimer"
-            >
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileJson className="h-4 w-4" aria-hidden="true" />
-                  내보내기
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <ActionButton
-                    action="pdf"
-                    icon={FileDown}
-                    label="PDF"
-                    loadingAction={loadingAction}
-                    variant="secondary"
-                    onClick={handleExportPdf}
-                  />
-                  <ActionButton
-                    action="csv"
-                    icon={FileSpreadsheet}
-                    label="CSV"
-                    loadingAction={loadingAction}
-                    variant="secondary"
-                    onClick={handleExportCsv}
-                  />
-                  <ActionButton
-                    action="copy"
-                    icon={Clipboard}
-                    label="복사"
-                    loadingAction={loadingAction}
-                    variant="outline"
-                    onClick={handleCopy}
-                  />
-                  <ActionButton
-                    action="save"
-                    icon={FileJson}
-                    label=".lcalc 저장"
-                    loadingAction={loadingAction}
-                    variant="outline"
-                    onClick={handleSaveLcalc}
-                  />
-                  <ActionButton
-                    action="load"
-                    icon={FileJson}
-                    label=".lcalc 열기"
-                    loadingAction={loadingAction}
-                    variant="outline"
-                    onClick={handleLoadLcalc}
-                  />
-                </div>
-                {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-              </CardContent>
-            </Card>
-          </section>
-        </main>
+      {caseToast ? (
+        <div className="mx-auto w-full max-w-6xl px-4 pt-3 sm:px-6">
+          <ToastMessage toast={caseToast} onDismiss={() => setCaseToast(null)} />
+        </div>
       ) : null}
+
+      <div className={activeTab === "inheritance" ? "contents" : "hidden"}>
+        <InheritanceCalculator active={activeTab === "inheritance"} />
+      </div>
+      <div className={activeTab === "litigationCost" ? "contents" : "hidden"}>
+        <LitigationCostCalculator active={activeTab === "litigationCost"} />
+      </div>
+      <div className={activeTab === "appropriation" ? "contents" : "hidden"}>
+        <AppropriationCalculator active={activeTab === "appropriation"} />
+      </div>
+      <div className={activeTab === "compensation" ? "contents" : "hidden"}>
+        <CompensationCalculator active={activeTab === "compensation"} />
+      </div>
+      <main
+        className={`mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)] ${
+          activeTab === "interest" ? "" : "hidden"
+        }`}
+      >
+        <section className="space-y-4" aria-labelledby="input-title">
+          <Card>
+            <CardHeader>
+              <CardTitle id="input-title" className="flex items-center gap-2">
+                <Calculator className="h-4 w-4" aria-hidden="true" />
+                이자 계산 입력
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <PrincipalInput value={principal} error={errors.principal} onChange={setPrincipal} />
+              <DateRangeInput
+                startDate={startDate}
+                endDate={endDate}
+                error={errors.dateRange}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+              />
+              <LegalRatePreset
+                value={preset}
+                customRate={customRate}
+                error={errors.customRate}
+                onValueChange={setPreset}
+                onCustomRateChange={setCustomRate}
+              />
+              <RateSegmentInput
+                fallbackLabel={fallbackLabel}
+                value={segments}
+                error={errors.segments}
+                onChange={setSegments}
+              />
+              <OptionsPanel value={options} onChange={setOptions} />
+              <label className="grid gap-2 text-sm font-medium">
+                비고
+                <textarea
+                  aria-label="비고"
+                  className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="예: 1심 판결 선고일부터 완제일까지"
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  ref={calculateButtonRef}
+                  type="button"
+                  disabled={hasErrors}
+                  onClick={() => handleCalculate()}
+                >
+                  계산
+                </Button>
+                <Button type="button" variant="outline" onClick={handleReset}>
+                  초기화
+                </Button>
+              </div>
+              {calculationError ? (
+                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+                  {calculationError}
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+        </section>
+
+        <section
+          ref={resultSectionRef}
+          className="space-y-4 focus:outline-none"
+          aria-labelledby="result-title"
+          tabIndex={-1}
+        >
+          <SummaryCard result={result} />
+
+          <Card>
+            <CardHeader>
+              <CardTitle id="result-title" className="flex items-center gap-2">
+                <TableProperties className="h-4 w-4" aria-hidden="true" />
+                결과 표
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SegmentTable result={result} />
+              <LegalCitation dataVersion={result.dataVersion} preset={preset} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-4 w-4" aria-hidden="true" />
+                청구취지
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p
+                className="rounded-md border border-border bg-muted/40 p-3 text-sm leading-relaxed"
+                data-testid="claim-text"
+              >
+                {claimText}
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <fieldset className="flex flex-wrap items-center gap-3">
+                  <legend className="sr-only">청구취지 종결 방식</legend>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      checked={claimEnding === "untilFullPayment"}
+                      name="claim-ending"
+                      type="radio"
+                      onChange={() => setClaimEnding("untilFullPayment")}
+                    />
+                    다 갚는 날까지
+                  </label>
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      checked={claimEnding === "untilEndDate"}
+                      name="claim-ending"
+                      type="radio"
+                      onChange={() => setClaimEnding("untilEndDate")}
+                    />
+                    계산 종료일까지
+                  </label>
+                </fieldset>
+                <ActionButton
+                  action="claim"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleCopyClaim}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <div
+            className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+            data-testid="interest-disclaimer"
+          >
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileJson className="h-4 w-4" aria-hidden="true" />
+                내보내기
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="pdf"
+                  icon={FileDown}
+                  label="PDF"
+                  loadingAction={loadingAction}
+                  variant="secondary"
+                  onClick={handleExportPdf}
+                />
+                <ActionButton
+                  action="csv"
+                  icon={FileSpreadsheet}
+                  label="CSV"
+                  loadingAction={loadingAction}
+                  variant="secondary"
+                  onClick={handleExportCsv}
+                />
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleCopy}
+                />
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+              {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+            </CardContent>
+          </Card>
+        </section>
+      </main>
 
       <Footer />
       <UpdateDialog api={updaterApi} />

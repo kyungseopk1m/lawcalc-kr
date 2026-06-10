@@ -123,6 +123,38 @@ export interface LcalcCompensationPayload {
   disclaimer: string;
 }
 
+/** 사건 파일(case@1)의 사건 식별 정보. 모든 필드 선택. */
+export interface LcalcCaseInfo {
+  caseNumber?: string;
+  title?: string;
+  memo?: string;
+}
+
+/** 사건 파일이 담을 수 있는 계산 슬롯 키 (도메인 kind 와 1:1). */
+export type LcalcCaseCalculationKey =
+  | "interest"
+  | "inheritance"
+  | "litigation-cost"
+  | "appropriation"
+  | "compensation";
+
+/**
+ * 사건 파일(case@1) payload.
+ *
+ * `calculations` 의 각 항목은 해당 도메인의 단일 `.lcalc` envelope 전체를 그대로
+ * 중첩한다 (schemaVersion 중복은 감수). 검증·불러오기가 기존 단일 도메인 경로를
+ * 그대로 재사용할 수 있고, 사건 파일에서 계산 하나를 떼어내도 단독 파일로 유효하다.
+ * 사건 안에 사건을 중첩하는 것은 허용하지 않는다.
+ */
+export interface LcalcCasePayload {
+  appVersion: string;
+  createdAt: string;
+  caseInfo: LcalcCaseInfo;
+  calculations: Partial<Record<LcalcCaseCalculationKey, LcalcFile>>;
+  note?: string;
+  disclaimer: string;
+}
+
 /**
  * v3 envelope — capability 메타 (envelopeFeatures) 와 데이터 슬라이스
  * (dataVersions) 를 envelope-level 로 분리한 형식. v0.3.0 부터 신규 저장
@@ -172,6 +204,13 @@ export type LcalcFile =
       envelopeFeatures: string[];
       dataVersions: Record<string, string>;
       payload: LcalcCompensationPayload;
+    }
+  | {
+      schemaVersion: "3";
+      kind: "case";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcCasePayload;
     };
 
 export type LoadableLcalcFile = LcalcFile | LcalcFileV2 | LcalcFileV1;

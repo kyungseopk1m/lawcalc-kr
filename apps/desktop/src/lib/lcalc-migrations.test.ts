@@ -670,6 +670,13 @@ describe("v3 appropriation envelope", () => {
 });
 
 describe("v3 compensation envelope", () => {
+  function compensationPayload(file: LcalcFile) {
+    if (file.kind !== "compensation") {
+      throw new Error("expected a compensation file");
+    }
+    return file.payload;
+  }
+
   function buildCompensationFile(): LcalcFile {
     const input: CompensationInput = {
       base: {
@@ -749,14 +756,16 @@ describe("v3 compensation envelope", () => {
 
   it('migrateLcalcFile injects mode:"injury" into a legacy compensation@1 file lacking mode', () => {
     const file = buildCompensationFile();
-    expect((file.payload.input as { mode?: string }).mode).toBeUndefined();
+    expect((compensationPayload(file).input as { mode?: string }).mode).toBeUndefined();
 
     const migrated = migrateLcalcFile(file);
 
-    expect((migrated.payload.input as { mode?: string }).mode).toBe("injury");
+    expect((compensationPayload(migrated).input as { mode?: string }).mode).toBe("injury");
     // 나머지 필드는 그대로 보존되고, injury parser 로 라우팅되어야 한다.
-    expect(migrated.payload.note).toBe("compensation note");
-    expect((migrated.payload.input as CompensationInput).base.birthDate).toBe("1996-01-01");
+    expect(compensationPayload(migrated).note).toBe("compensation note");
+    expect((compensationPayload(migrated).input as CompensationInput).base.birthDate).toBe(
+      "1996-01-01",
+    );
     expect(() => validateLcalcEnvelope(migrated)).not.toThrow();
     const loaded = parseLoadedCompensationLcalcInput(migrated);
     if (loaded.input.mode === "death") {
@@ -772,7 +781,7 @@ describe("v3 compensation envelope", () => {
       envelopeFeatures: ["compensation@2"],
       payload: {
         ...file.payload,
-        input: { ...file.payload.input, mode: "death" },
+        input: { ...compensationPayload(file).input, mode: "death" },
       },
     } as LcalcFile;
 
@@ -780,16 +789,20 @@ describe("v3 compensation envelope", () => {
 
     // mode 는 이미 있으니 그대로 두되(death 가 injury 로 오인되지 않음), @2 → @3 에서
     // accidentType:"auto" 를 주입해 산재 파일과 reader 분기를 견고하게 한다.
-    expect((migrated.payload.input as { mode?: string }).mode).toBe("death");
-    expect((migrated.payload.input as { accidentType?: string }).accidentType).toBe("auto");
+    expect((compensationPayload(migrated).input as { mode?: string }).mode).toBe("death");
+    expect((compensationPayload(migrated).input as { accidentType?: string }).accidentType).toBe(
+      "auto",
+    );
   });
 
   it("migrateLcalcFile injects accidentType:auto into a legacy compensation@1 file (자동차 회귀 0)", () => {
     const file = buildCompensationFile();
     const migrated = migrateLcalcFile(file);
     // @1 파일은 mode·accidentType 모두 없음 → mode:"injury" + accidentType:"auto" 주입.
-    expect((migrated.payload.input as { mode?: string }).mode).toBe("injury");
-    expect((migrated.payload.input as { accidentType?: string }).accidentType).toBe("auto");
+    expect((compensationPayload(migrated).input as { mode?: string }).mode).toBe("injury");
+    expect((compensationPayload(migrated).input as { accidentType?: string }).accidentType).toBe(
+      "auto",
+    );
   });
 
   it("migrateLcalcFile leaves an explicit industrial accidentType untouched (compensation@3)", () => {
@@ -800,7 +813,7 @@ describe("v3 compensation envelope", () => {
       payload: {
         ...file.payload,
         input: {
-          ...file.payload.input,
+          ...compensationPayload(file).input,
           mode: "injury",
           accidentType: "industrial",
           industrialInsurance: { disabilityBenefitWon: 50_000_000 },
@@ -811,7 +824,9 @@ describe("v3 compensation envelope", () => {
     const migrated = migrateLcalcFile(industrialFile);
 
     // 이미 accidentType 이 있으면 주입하지 않는다 — 산재 파일이 자동차로 오인되지 않아야 한다.
-    expect((migrated.payload.input as { accidentType?: string }).accidentType).toBe("industrial");
+    expect((compensationPayload(migrated).input as { accidentType?: string }).accidentType).toBe(
+      "industrial",
+    );
     expect(migrated).toEqual(industrialFile);
   });
 
@@ -823,7 +838,7 @@ describe("v3 compensation envelope", () => {
       payload: {
         ...file.payload,
         input: {
-          ...file.payload.input,
+          ...compensationPayload(file).input,
           mode: "injury",
           accidentType: "auto",
           otherDamages: {
@@ -837,6 +852,8 @@ describe("v3 compensation envelope", () => {
 
     // mode·accidentType 이 이미 있으므로 @3→@4 는 어떤 필드도 주입하지 않는다 (byte-identity).
     expect(migrated).toEqual(otherDamagesFile);
-    expect((migrated.payload.input as { otherDamages?: unknown }).otherDamages).toBeDefined();
+    expect(
+      (compensationPayload(migrated).input as { otherDamages?: unknown }).otherDamages,
+    ).toBeDefined();
   });
 });

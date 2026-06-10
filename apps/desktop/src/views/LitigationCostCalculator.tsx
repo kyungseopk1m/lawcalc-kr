@@ -11,7 +11,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   STANDARD_DISCLAIMER,
@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { useCaseSlot } from "../lib/case-file";
 import { formatWonInput, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcFile, type LcalcLitigationCostPayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
@@ -160,7 +161,7 @@ function buildDirtySnapshot(input: LitigationCostInput, note: string) {
 
 const caseTypeOptions = listCaseTypes();
 
-export function LitigationCostCalculator() {
+export function LitigationCostCalculator({ active = true }: { active?: boolean }) {
   const [caseType, setCaseType] = useState<CaseType>("civilFirstInstanceSingle");
   const [caseValueText, setCaseValueText] = useState("30000000");
   const [appealsLevel, setAppealsLevel] = useState<AppealsLevel>("firstInstance");
@@ -279,6 +280,7 @@ export function LitigationCostCalculator() {
   );
   const dirtySnapshot = useMemo(() => buildDirtySnapshot(input, note), [input, note]);
   const markLitigationCostClean = useLcalcDirtyTracker("litigation-cost", dirtySnapshot);
+  const pristineSnapshotRef = useRef(dirtySnapshot);
 
   const applyInput = (loaded: LitigationCostInput) => {
     setCaseType(loaded.stampDuty.caseType);
@@ -373,6 +375,34 @@ export function LitigationCostCalculator() {
       void handleSaveLcalc();
     },
     onCalculate: handleCalculate,
+    enabled: active,
+  });
+
+  const applyLoadedFile = (file: unknown) => {
+    const migratedFile = migrateLcalcFile(file);
+    validateLcalcEnvelope(migratedFile);
+    const loaded = parseLoadedLitigationCostLcalcInput(migratedFile);
+    const loadedNote = loaded.note ?? "";
+    applyInput(loaded.input);
+    setNote(loadedNote);
+    setResult(loaded.result ?? computeLitigationCost(loaded.input));
+    setError(null);
+    markLitigationCostClean(buildDirtySnapshot(loaded.input, loadedNote));
+  };
+
+  useCaseSlot("litigation-cost", {
+    collect: () => {
+      if (dirtySnapshot === pristineSnapshotRef.current) {
+        return { status: "pristine" };
+      }
+      try {
+        return { status: "ok", file: buildLcalcFile(input, computeLitigationCost(input), note) };
+      } catch {
+        return { status: "invalid" };
+      }
+    },
+    apply: applyLoadedFile,
+    markSaved: () => markLitigationCostClean(),
   });
 
   const handleLoadLcalc = () =>
@@ -380,15 +410,7 @@ export function LitigationCostCalculator() {
       const file = await ipc.loadLcalc();
       if (!file) return "불러오기를 취소했습니다.";
 
-      const migratedFile = migrateLcalcFile(file);
-      validateLcalcEnvelope(migratedFile);
-      const loaded = parseLoadedLitigationCostLcalcInput(migratedFile);
-      const loadedNote = loaded.note ?? "";
-      applyInput(loaded.input);
-      setNote(loadedNote);
-      setResult(loaded.result ?? computeLitigationCost(loaded.input));
-      setError(null);
-      markLitigationCostClean(buildDirtySnapshot(loaded.input, loadedNote));
+      applyLoadedFile(file);
       return ".lcalc 파일을 불러왔습니다.";
     });
 

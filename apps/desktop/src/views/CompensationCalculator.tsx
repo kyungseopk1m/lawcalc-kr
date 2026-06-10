@@ -13,7 +13,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import {
@@ -62,6 +62,7 @@ import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcCompensationPayload, type LcalcFile } from "../lib/ipc";
+import { useCaseSlot } from "../lib/case-file";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
@@ -821,8 +822,36 @@ type CompensationMode = "injury" | "death";
  * 손해배상 탭. 자×부상(`compensation@1`) / 자×사망(`compensation@2`) 하위 탭으로 분기한다.
  * 전체 5탭 구조는 유지하며, 6번째 탭을 만들지 않는다 (plan §4 결정 3).
  */
-export function CompensationCalculator() {
+/** 사건 파일에서 꺼낸 compensation envelope 가 사망 모드인지 판별한다. */
+function isDeathCompensationLcalcFile(file: LcalcFile): boolean {
+  if (file.kind !== "compensation") {
+    return false;
+  }
+  const input: unknown = file.payload.input;
+  return (
+    typeof input === "object" && input !== null && (input as { mode?: unknown }).mode === "death"
+  );
+}
+
+/**
+ * 부상/사망 inner view 공용 props. 사건 파일 적용 시 모드가 다르면
+ * `onApplyOtherMode` 로 wrapper 에 모드 전환을 요청하고, 전환된 view 가
+ * mount 시점에 `pendingCaseFileRef` 를 소비한다.
+ */
+interface CompensationViewProps {
+  active?: boolean;
+  pendingCaseFileRef?: React.MutableRefObject<LcalcFile | null>;
+  onApplyOtherMode?: (target: CompensationMode, file: LcalcFile) => void;
+}
+
+export function CompensationCalculator({ active = true }: { active?: boolean }) {
   const [mode, setMode] = useState<CompensationMode>("injury");
+  const pendingCaseFileRef = useRef<LcalcFile | null>(null);
+
+  const requestModeForCaseFile = (target: CompensationMode, file: LcalcFile) => {
+    pendingCaseFileRef.current = file;
+    setMode(target);
+  };
 
   return (
     <div className="flex w-full flex-1 flex-col">
@@ -846,12 +875,28 @@ export function CompensationCalculator() {
           자동차 사고 · 사망
         </Button>
       </div>
-      {mode === "injury" ? <InjuryCompensationView /> : <DeathCompensationView />}
+      {mode === "injury" ? (
+        <InjuryCompensationView
+          active={active}
+          pendingCaseFileRef={pendingCaseFileRef}
+          onApplyOtherMode={requestModeForCaseFile}
+        />
+      ) : (
+        <DeathCompensationView
+          active={active}
+          pendingCaseFileRef={pendingCaseFileRef}
+          onApplyOtherMode={requestModeForCaseFile}
+        />
+      )}
     </div>
   );
 }
 
-function InjuryCompensationView() {
+function InjuryCompensationView({
+  active = true,
+  pendingCaseFileRef,
+  onApplyOtherMode,
+}: CompensationViewProps) {
   const [state, setState] = useState<CompensationFormState>(defaultCompensationFormState);
   const [note, setNote] = useState("");
   const [result, setResult] = useState<CompensationResult | null>(null);
@@ -866,6 +911,7 @@ function InjuryCompensationView() {
 
   const dirtySnapshot = useMemo(() => buildCompensationDirtySnapshot(state, note), [state, note]);
   const markCompensationClean = useLcalcDirtyTracker("compensation", dirtySnapshot);
+  const pristineSnapshotRef = useRef(dirtySnapshot);
 
   const update = (patch: Partial<CompensationFormState>) =>
     setState((prev) => ({ ...prev, ...patch }));
@@ -940,28 +986,69 @@ function InjuryCompensationView() {
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
+  const applyLoadedFile = (file: unknown) => {
+    const migratedFile = migrateLcalcFile(file);
+    validateLcalcEnvelope(migratedFile);
+    const loaded = parseLoadedCompensationLcalcInput(migratedFile);
+    if (loaded.input.mode === "death") {
+      throw new Error('자동차 사고 사망 .lcalc 파일은 "자동차 사고 · 사망" 탭에서 열어 주세요.');
+    }
+    const injuryInput = loaded.input;
+    const appliedState = applyLoadedCompensationInput(injuryInput);
+    const loadedNote = loaded.note ?? "";
+    setState(appliedState);
+    setNote(loadedNote);
+    const loadedResult =
+      loaded.result !== undefined && loaded.result.mode !== "death"
+        ? loaded.result
+        : computeCompensation(injuryInput);
+    setResult(loadedResult);
+    setError(null);
+    markCompensationClean(buildCompensationDirtySnapshot(appliedState, loadedNote));
+  };
+
+  const applyLoadedFileRef = useRef(applyLoadedFile);
+  useEffect(() => {
+    applyLoadedFileRef.current = applyLoadedFile;
+  });
+  useEffect(() => {
+    const pending = pendingCaseFileRef?.current;
+    if (pending && !isDeathCompensationLcalcFile(pending)) {
+      pendingCaseFileRef.current = null;
+      applyLoadedFileRef.current(pending);
+    }
+  }, [pendingCaseFileRef]);
+
+  useCaseSlot("compensation", {
+    collect: () => {
+      if (dirtySnapshot === pristineSnapshotRef.current) {
+        return { status: "pristine" };
+      }
+      try {
+        const input = buildCompensationInput(state);
+        return {
+          status: "ok",
+          file: buildCompensationLcalcFile(input, computeCompensation(input), note),
+        };
+      } catch {
+        return { status: "invalid" };
+      }
+    },
+    apply: (file) => {
+      if (isDeathCompensationLcalcFile(file) && onApplyOtherMode) {
+        onApplyOtherMode("death", file);
+        return;
+      }
+      applyLoadedFile(file);
+    },
+    markSaved: () => markCompensationClean(),
+  });
+
   const handleLoadLcalc = () =>
     runAction("load", async () => {
       const file = await ipc.loadLcalc();
       if (!file) return "불러오기를 취소했습니다.";
-      const migratedFile = migrateLcalcFile(file);
-      validateLcalcEnvelope(migratedFile);
-      const loaded = parseLoadedCompensationLcalcInput(migratedFile);
-      if (loaded.input.mode === "death") {
-        throw new Error('자동차 사고 사망 .lcalc 파일은 "자동차 사고 · 사망" 탭에서 열어 주세요.');
-      }
-      const injuryInput = loaded.input;
-      const appliedState = applyLoadedCompensationInput(injuryInput);
-      const loadedNote = loaded.note ?? "";
-      setState(appliedState);
-      setNote(loadedNote);
-      const loadedResult =
-        loaded.result !== undefined && loaded.result.mode !== "death"
-          ? loaded.result
-          : computeCompensation(injuryInput);
-      setResult(loadedResult);
-      setError(null);
-      markCompensationClean(buildCompensationDirtySnapshot(appliedState, loadedNote));
+      applyLoadedFile(file);
       return ".lcalc 파일을 불러왔습니다.";
     });
 
@@ -971,6 +1058,7 @@ function InjuryCompensationView() {
     },
     onCalculate: handleCalculate,
     onReset: handleReset,
+    enabled: active,
   });
 
   const addPermanent = () => update({ permanent: [...state.permanent, emptyPermanent()] });
@@ -1479,7 +1567,11 @@ function InjuryCompensationView() {
   );
 }
 
-function DeathCompensationView() {
+function DeathCompensationView({
+  active = true,
+  pendingCaseFileRef,
+  onApplyOtherMode,
+}: CompensationViewProps) {
   const [state, setState] = useState<CompensationDeathFormState>(defaultCompensationDeathFormState);
   const [note, setNote] = useState("");
   const [result, setResult] = useState<CompensationAutoDeathResult | null>(null);
@@ -1497,6 +1589,7 @@ function DeathCompensationView() {
     [state, note],
   );
   const markCompensationClean = useLcalcDirtyTracker("compensation", dirtySnapshot);
+  const pristineSnapshotRef = useRef(dirtySnapshot);
 
   const update = (patch: Partial<CompensationDeathFormState>) =>
     setState((prev) => ({ ...prev, ...patch }));
@@ -1571,25 +1664,66 @@ function DeathCompensationView() {
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
     });
 
+  const applyLoadedFile = (file: unknown) => {
+    const migratedFile = migrateLcalcFile(file);
+    validateLcalcEnvelope(migratedFile);
+    const loaded = parseLoadedCompensationLcalcInput(migratedFile);
+    if (loaded.input.mode !== "death") {
+      throw new Error('자동차 사고 부상 .lcalc 파일은 "자동차 사고 · 부상" 탭에서 열어 주세요.');
+    }
+    const appliedState = applyLoadedCompensationDeathInput(loaded.input);
+    const loadedNote = loaded.note ?? "";
+    setState(appliedState);
+    setNote(loadedNote);
+    const loadedResult =
+      loaded.result?.mode === "death" ? loaded.result : computeCompensationDeath(loaded.input);
+    setResult(loadedResult);
+    setError(null);
+    markCompensationClean(buildCompensationDeathDirtySnapshot(appliedState, loadedNote));
+  };
+
+  const applyLoadedFileRef = useRef(applyLoadedFile);
+  useEffect(() => {
+    applyLoadedFileRef.current = applyLoadedFile;
+  });
+  useEffect(() => {
+    const pending = pendingCaseFileRef?.current;
+    if (pending && isDeathCompensationLcalcFile(pending)) {
+      pendingCaseFileRef.current = null;
+      applyLoadedFileRef.current(pending);
+    }
+  }, [pendingCaseFileRef]);
+
+  useCaseSlot("compensation", {
+    collect: () => {
+      if (dirtySnapshot === pristineSnapshotRef.current) {
+        return { status: "pristine" };
+      }
+      try {
+        const input = buildCompensationDeathInput(state);
+        return {
+          status: "ok",
+          file: buildCompensationDeathLcalcFile(input, computeCompensationDeath(input), note),
+        };
+      } catch {
+        return { status: "invalid" };
+      }
+    },
+    apply: (file) => {
+      if (!isDeathCompensationLcalcFile(file) && onApplyOtherMode) {
+        onApplyOtherMode("injury", file);
+        return;
+      }
+      applyLoadedFile(file);
+    },
+    markSaved: () => markCompensationClean(),
+  });
+
   const handleLoadLcalc = () =>
     runAction("load", async () => {
       const file = await ipc.loadLcalc();
       if (!file) return "불러오기를 취소했습니다.";
-      const migratedFile = migrateLcalcFile(file);
-      validateLcalcEnvelope(migratedFile);
-      const loaded = parseLoadedCompensationLcalcInput(migratedFile);
-      if (loaded.input.mode !== "death") {
-        throw new Error('자동차 사고 부상 .lcalc 파일은 "자동차 사고 · 부상" 탭에서 열어 주세요.');
-      }
-      const appliedState = applyLoadedCompensationDeathInput(loaded.input);
-      const loadedNote = loaded.note ?? "";
-      setState(appliedState);
-      setNote(loadedNote);
-      const loadedResult =
-        loaded.result?.mode === "death" ? loaded.result : computeCompensationDeath(loaded.input);
-      setResult(loadedResult);
-      setError(null);
-      markCompensationClean(buildCompensationDeathDirtySnapshot(appliedState, loadedNote));
+      applyLoadedFile(file);
       return ".lcalc 파일을 불러왔습니다.";
     });
 
@@ -1599,6 +1733,7 @@ function DeathCompensationView() {
     },
     onCalculate: handleCalculate,
     onReset: handleReset,
+    enabled: active,
   });
 
   const addRatioDeduction = () =>

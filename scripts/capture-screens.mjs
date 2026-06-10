@@ -111,10 +111,12 @@ function waitForServerReady(child) {
   });
 }
 
+// 모든 탭이 상시 mount(숨김 전환) 상태라 텍스트·버튼이 DOM 에 여러 개 존재한다.
+// 보이는 요소로 한정해야 strict mode 위반 없이 활성 탭만 잡힌다.
 async function clickCalculate(page, { assertDisclaimer }) {
-  await page.getByRole("button", { name: "계산", exact: true }).click();
+  await page.getByRole("button", { name: "계산", exact: true }).filter({ visible: true }).click();
   if (assertDisclaimer) {
-    await page.getByText(disclaimer).waitFor({ timeout: 10_000 });
+    await page.getByText(disclaimer).filter({ visible: true }).first().waitFor({ timeout: 10_000 });
   }
 }
 
@@ -174,7 +176,11 @@ async function main() {
       }
       await clickCalculate(page, capture);
       if (capture.assertText) {
-        await page.getByText(capture.assertText).first().waitFor({ timeout: 10_000 });
+        await page
+          .getByText(capture.assertText)
+          .filter({ visible: true })
+          .first()
+          .waitFor({ timeout: 10_000 });
       }
       await captureCurrentPage(page, capture.file, capture.fullPage);
     }

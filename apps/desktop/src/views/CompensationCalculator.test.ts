@@ -325,6 +325,7 @@ describe("compensation @1 → @2 migration + 부상 회귀", () => {
     const injuryResult = computeCompensation(injuryInput);
     const legacyFile = buildCompensationLcalcFile(injuryInput, injuryResult, "부상");
     expect(legacyFile.envelopeFeatures).toEqual(["compensation@1"]);
+    if (legacyFile.kind !== "compensation") throw new Error("expected compensation");
     // payload.input 에 mode 가 없는 v0.5.x 형태
     expect("mode" in (legacyFile.payload.input as unknown as Record<string, unknown>)).toBe(false);
 

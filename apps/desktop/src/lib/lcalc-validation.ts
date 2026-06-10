@@ -28,6 +28,9 @@ import {
 
 import type {
   LcalcAppropriationPayload,
+  LcalcCaseCalculationKey,
+  LcalcCaseInfo,
+  LcalcCasePayload,
   LcalcCompensationInput,
   LcalcCompensationPayload,
   LcalcCompensationResult,
@@ -62,7 +65,22 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "compensation@2",
   "compensation@3",
   "compensation@4",
+  "case@1",
 ]);
+
+/** 사건 파일이 담을 수 있는 계산 키 (도메인 kind 와 1:1). 사건 중첩은 불가. */
+const CASE_CALCULATION_KINDS = new Set<LcalcCaseCalculationKey>([
+  "interest",
+  "inheritance",
+  "litigation-cost",
+  "appropriation",
+  "compensation",
+]);
+
+/** 사건번호·사건명 등 짧은 식별 텍스트 길이 가드 (메모는 MAX_NOTE_LENGTH). */
+export const MAX_CASE_TEXT_LENGTH = 200;
+
+const caseFileInWrongTabMessage = '사건 .lcalc 파일입니다. 상단의 "사건 열기"로 열어 주세요.';
 
 const CAPABILITY_ID_PATTERN = /^[a-z][a-z0-9-]*@[1-9][0-9]*$/;
 
@@ -238,6 +256,9 @@ function parseInterestPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcInte
     if (file.kind === "inheritance") {
       throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
     }
+    if (file.kind === "case") {
+      throw new Error(caseFileInWrongTabMessage);
+    }
 
     throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
   }
@@ -308,6 +329,9 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
   if (file.kind !== "inheritance") {
     if (file.kind === "interest") {
       throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "case") {
+      throw new Error(caseFileInWrongTabMessage);
     }
 
     throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
@@ -577,6 +601,9 @@ function parseLitigationCostPayload(
     if (file.kind === "inheritance") {
       throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
     }
+    if (file.kind === "case") {
+      throw new Error(caseFileInWrongTabMessage);
+    }
 
     throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
   }
@@ -625,6 +652,9 @@ function parseAppropriationPayload(
     }
     if (file.kind === "litigation-cost") {
       throw new Error("소송비용 .lcalc 파일은 소송비용 탭에서 열어 주세요.");
+    }
+    if (file.kind === "case") {
+      throw new Error(caseFileInWrongTabMessage);
     }
 
     throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
@@ -709,6 +739,9 @@ function parseCompensationPayload(
     if (file.kind === "appropriation") {
       throw new Error("변제충당 .lcalc 파일은 변제충당 탭에서 열어 주세요.");
     }
+    if (file.kind === "case") {
+      throw new Error(caseFileInWrongTabMessage);
+    }
 
     throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
   }
@@ -722,6 +755,81 @@ function parseCompensationPayload(
     createdAt: requireString(payload.createdAt, "payload.createdAt"),
     input: parseCompensationInput(payload.input),
     ...(payload.result === undefined ? {} : { result: parseCompensationResult(payload.result) }),
+    ...(note === undefined ? {} : { note }),
+    disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
+  };
+}
+
+function requireBoundedCaseText(value: unknown, field: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`.lcalc 파일의 ${field} 필드는 문자열이어야 합니다.`);
+  }
+  if (value.length > MAX_CASE_TEXT_LENGTH) {
+    throw new Error(
+      `.lcalc 파일의 ${field} 필드가 너무 깁니다. 최대 ${MAX_CASE_TEXT_LENGTH}자까지 허용됩니다.`,
+    );
+  }
+  return value;
+}
+
+function isCaseCalculationKey(value: string): value is LcalcCaseCalculationKey {
+  return CASE_CALCULATION_KINDS.has(value as LcalcCaseCalculationKey);
+}
+
+function parseCasePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcCasePayload {
+  if (file.kind !== "case") {
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
+  }
+
+  const payload = requireRecord(file.payload, "payload");
+  const caseInfoRecord =
+    payload.caseInfo === undefined ? {} : requireRecord(payload.caseInfo, "payload.caseInfo");
+  const caseNumber = requireBoundedCaseText(
+    caseInfoRecord.caseNumber,
+    "payload.caseInfo.caseNumber",
+  );
+  const title = requireBoundedCaseText(caseInfoRecord.title, "payload.caseInfo.title");
+  const memo = requireBoundedNote(caseInfoRecord.memo, "payload.caseInfo.memo");
+  const caseInfo: LcalcCaseInfo = {
+    ...(caseNumber === undefined ? {} : { caseNumber }),
+    ...(title === undefined ? {} : { title }),
+    ...(memo === undefined ? {} : { memo }),
+  };
+
+  const calculationsRecord = requireRecord(payload.calculations, "payload.calculations");
+  const entries = Object.entries(calculationsRecord);
+  if (entries.length === 0) {
+    throw new Error(".lcalc 사건 파일에 저장된 계산이 없습니다.");
+  }
+
+  const calculations: LcalcCasePayload["calculations"] = {};
+  for (const [key, value] of entries) {
+    if (!isCaseCalculationKey(key)) {
+      throw new Error(
+        `.lcalc 사건 파일의 calculations["${key}"] 는 지원하지 않는 계산 유형입니다.`,
+      );
+    }
+    const nested = requireRecord(value, `payload.calculations["${key}"]`);
+    if (nested.kind !== key) {
+      throw new Error(
+        `.lcalc 사건 파일의 calculations["${key}"] 항목의 kind 가 "${key}" 와 일치해야 합니다.`,
+      );
+    }
+    // key 가 5개 도메인으로 제한되므로 사건 중첩(kind: "case")은 위에서 차단된다.
+    validateLcalcEnvelope(nested as unknown as LcalcFile);
+    calculations[key] = nested as unknown as LcalcFile;
+  }
+
+  const note = requireBoundedNote(payload.note, "payload.note");
+
+  return {
+    appVersion: requireString(payload.appVersion, "payload.appVersion"),
+    createdAt: requireString(payload.createdAt, "payload.createdAt"),
+    caseInfo,
+    calculations,
     ...(note === undefined ? {} : { note }),
     disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
   };
@@ -798,6 +906,11 @@ export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): v
 
   if (file.kind === "compensation") {
     void parseCompensationPayload(file);
+    return;
+  }
+
+  if (file.kind === "case") {
+    void parseCasePayload(file);
     return;
   }
 
@@ -958,6 +1071,21 @@ export function parseLoadedCompensationLcalcInput(file: LcalcFile): ParsedCompen
   return {
     input: payload.input,
     ...(payload.result === undefined ? {} : { result: payload.result }),
+    ...(payload.note === undefined ? {} : { note: payload.note }),
+  };
+}
+
+export interface ParsedCaseLcalcInput {
+  caseInfo: LcalcCaseInfo;
+  calculations: LcalcCasePayload["calculations"];
+  note?: string;
+}
+
+export function parseLoadedCaseLcalcInput(file: LcalcFile): ParsedCaseLcalcInput {
+  const payload = parseCasePayload(file);
+  return {
+    caseInfo: payload.caseInfo,
+    calculations: payload.calculations,
     ...(payload.note === undefined ? {} : { note: payload.note }),
   };
 }

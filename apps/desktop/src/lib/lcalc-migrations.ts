@@ -104,6 +104,41 @@ function normalizeV3CompensationFile(raw: LcalcFile): LcalcFile {
   } as unknown as LcalcFile;
 }
 
+/**
+ * case(사건) 파일 intra-v3 normalize: 중첩된 단일 도메인 envelope 들을 각 도메인의
+ * v3 normalizer (litigation-cost legacy 표기 / compensation `@N` discriminator 주입)
+ * 에 통과시킨다. 변경이 없으면 원본 참조를 그대로 반환해 byte-identity 를 보장한다.
+ */
+function normalizeV3CaseFile(raw: LcalcFile): LcalcFile {
+  if (raw.kind !== "case") {
+    return raw;
+  }
+  const calculations = raw.payload.calculations;
+  if (!isRecord(calculations)) {
+    return raw;
+  }
+  let changed = false;
+  const next: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(calculations)) {
+    const nested = value;
+    const normalized = normalizeV3CompensationFile(normalizeV3LitigationCostFile(nested));
+    if (normalized !== nested) {
+      changed = true;
+    }
+    next[key] = normalized;
+  }
+  if (!changed) {
+    return raw;
+  }
+  return {
+    ...raw,
+    payload: {
+      ...raw.payload,
+      calculations: next,
+    },
+  };
+}
+
 function migrateV1ToV2(
   raw: Extract<LoadableLcalcFile, { schemaVersion: "1" }>,
 ): Extract<LoadableLcalcFile, { schemaVersion: "2" }> {
@@ -170,7 +205,9 @@ export function migrateLcalcFile(raw: unknown): LcalcFile {
 
     const schemaVersion = current.schemaVersion;
     if (schemaVersion === CURRENT_LCALC_SCHEMA_VERSION) {
-      return normalizeV3CompensationFile(normalizeV3LitigationCostFile(current as LcalcFile));
+      return normalizeV3CaseFile(
+        normalizeV3CompensationFile(normalizeV3LitigationCostFile(current as LcalcFile)),
+      );
     }
 
     const migration = migrations[schemaVersion];
