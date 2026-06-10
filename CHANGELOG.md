@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-11
+
 ### Added
 
 - 이자 계산 결과를 **청구취지 문구**로 만들어 복사할 수 있습니다. 법원 기재례를 따라 단일 이율은 "…부터 다 갚는 날까지 연 ○%의 비율로 계산한 돈", 이율이 여러 구간이면 "…까지는 연 ○%의, 그 다음 날부터 …까지는 연 ○%의 각 비율로 계산한 돈" 형식으로 만들고, 마지막 구간을 "다 갚는 날까지"로 열어 둘지 계산 종료일로 닫을지 고를 수 있습니다.
@@ -316,7 +318,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.5.2...v0.6.0
