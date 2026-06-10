@@ -30,11 +30,14 @@ export type CaseCollectOutcome =
  *   초기 상태 그대로면 "pristine" (사건 파일에서 제외), 입력 오류면 "invalid" (저장 중단).
  * - `apply`: 사건 파일에서 꺼낸 단일 도메인 envelope 를 탭 상태로 복원.
  * - `markSaved`: 사건 파일 저장 성공 시 해당 탭의 미저장 변경 추적을 해제.
+ * - `reset`: 탭을 초기 상태로 되돌린다. 사건 파일 로드 시 그 사건에 없는 탭을 비워,
+ *   직전 사건의 잔여 입력이 다음 저장에 섞여 들어가는 교차 오염을 막는다.
  */
 export interface CaseSlot {
   collect: () => CaseCollectOutcome;
   apply: (file: LcalcFile) => void;
   markSaved: () => void;
+  reset: () => void;
 }
 
 const slots = new Map<LcalcCaseCalculationKey, CaseSlot>();
@@ -65,6 +68,7 @@ export function useCaseSlot(key: LcalcCaseCalculationKey, slot: CaseSlot): void 
         collect: () => slotRef.current.collect(),
         apply: (file) => slotRef.current.apply(file),
         markSaved: () => slotRef.current.markSaved(),
+        reset: () => slotRef.current.reset(),
       }),
     [key],
   );
@@ -98,19 +102,30 @@ export function collectCaseCalculations(): CollectedCaseCalculations {
   return { calculations, included, invalid };
 }
 
-/** 사건 파일의 계산들을 각 탭에 복원한다. 적용된 탭 키 목록을 반환. */
+/**
+ * 사건 파일의 계산들을 각 탭에 복원한다. 적용된 탭 키 목록을 반환.
+ *
+ * `resetAbsent` 가 true 면 (= 완결된 사건 파일 로드) 해당 사건에 없는 탭을 초기화해
+ * 워크스페이스를 그 사건의 상태로만 맞춘다. 단일 계산 파일을 "사건 열기"로 추가할
+ * 때는 false 로 두어 다른 탭의 입력을 보존한다.
+ */
 export function applyCaseCalculations(
   calculations: Partial<Record<LcalcCaseCalculationKey, LcalcFile>>,
+  resetAbsent = false,
 ): LcalcCaseCalculationKey[] {
   const applied: LcalcCaseCalculationKey[] = [];
   for (const key of CASE_CALCULATION_KEYS) {
     const file = calculations[key];
     const slot = slots.get(key);
-    if (!file || !slot) {
+    if (!slot) {
       continue;
     }
-    slot.apply(file);
-    applied.push(key);
+    if (file) {
+      slot.apply(file);
+      applied.push(key);
+    } else if (resetAbsent) {
+      slot.reset();
+    }
   }
   return applied;
 }

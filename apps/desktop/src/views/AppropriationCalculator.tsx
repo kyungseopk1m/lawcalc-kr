@@ -424,6 +424,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
     },
     apply: applyLoadedFile,
     markSaved: () => markAppropriationClean(),
+    reset: handleReset,
   });
 
   const handleLoadLcalc = () =>

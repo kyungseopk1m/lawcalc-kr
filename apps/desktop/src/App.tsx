@@ -484,6 +484,7 @@ export function App() {
     },
     apply: applyLoadedInterestFile,
     markSaved: () => markInterestClean(),
+    reset: handleReset,
   });
 
   const runCaseAction = async (action: ActionName, task: () => Promise<string | null | void>) => {
@@ -558,7 +559,9 @@ export function App() {
 
       const loaded = parseLoadedCaseLcalcInput(migratedFile);
       setCaseTitle(loaded.caseInfo.title ?? loaded.caseInfo.caseNumber ?? "");
-      const applied = applyCaseCalculations(loaded.calculations);
+      // 완결된 사건 파일 로드 = 워크스페이스 교체. 이 사건에 없는 탭은 초기화해
+      // 직전 사건의 잔여 입력이 다음 저장에 섞이는 교차 오염을 막는다.
+      const applied = applyCaseCalculations(loaded.calculations, true);
       const first = applied[0];
       if (first) {
         setActiveTab(TAB_BY_CALCULATION[first]);

@@ -343,6 +343,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     },
     apply: applyLoadedFile,
     markSaved: () => markInheritanceClean(),
+    reset: handleReset,
   });
 
   const handleLoadLcalc = () =>

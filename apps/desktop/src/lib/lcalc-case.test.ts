@@ -154,16 +154,19 @@ describe("case slot registry", () => {
       markSaved: () => {
         savedCount += 1;
       },
+      reset: () => undefined,
     });
     const unregisterInheritance = registerCaseSlot("inheritance", {
       collect: () => ({ status: "pristine" }),
       apply: () => undefined,
       markSaved: () => undefined,
+      reset: () => undefined,
     });
     const unregisterAppropriation = registerCaseSlot("appropriation", {
       collect: () => ({ status: "invalid" }),
       apply: () => undefined,
       markSaved: () => undefined,
+      reset: () => undefined,
     });
 
     try {
@@ -182,6 +185,50 @@ describe("case slot registry", () => {
       unregisterInterest();
       unregisterInheritance();
       unregisterAppropriation();
+    }
+  });
+
+  it("resets absent slots only when resetAbsent is set (prevents cross-case contamination)", () => {
+    const interestFile = buildInterestFile();
+    let interestApplied = 0;
+    let litigationReset = 0;
+    let litigationApplied = 0;
+
+    const unregisterInterest = registerCaseSlot("interest", {
+      collect: () => ({ status: "pristine" }),
+      apply: () => {
+        interestApplied += 1;
+      },
+      markSaved: () => undefined,
+      reset: () => undefined,
+    });
+    const unregisterLitigation = registerCaseSlot("litigation-cost", {
+      collect: () => ({ status: "pristine" }),
+      apply: () => {
+        litigationApplied += 1;
+      },
+      markSaved: () => undefined,
+      reset: () => {
+        litigationReset += 1;
+      },
+    });
+
+    try {
+      // Default merge: a tab absent from the loaded calculations is left untouched
+      // (so building a case up from single files keeps prior tabs).
+      applyCaseCalculations({ interest: interestFile });
+      expect(interestApplied).toBe(1);
+      expect(litigationReset).toBe(0);
+      expect(litigationApplied).toBe(0);
+
+      // Full case load: the absent litigation tab is reset so stale data from a
+      // previous case cannot bleed into the next save.
+      applyCaseCalculations({ interest: interestFile }, true);
+      expect(interestApplied).toBe(2);
+      expect(litigationReset).toBe(1);
+    } finally {
+      unregisterInterest();
+      unregisterLitigation();
     }
   });
 });

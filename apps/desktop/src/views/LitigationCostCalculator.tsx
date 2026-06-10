@@ -341,6 +341,32 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     }
   };
 
+  const handleReset = () => {
+    setCaseType("civilFirstInstanceSingle");
+    setCaseValueText("30000000");
+    setAppealsLevel("firstInstance");
+    setAppealValueText("30000000");
+    setPartyCountText("2");
+    setFilingDate(todayIso());
+    setIsElectronicFiling(false);
+    setIsPaymentOrder(false);
+    setIsSettlement(false);
+    setApplyNoOral(false);
+    setApplyProvisionalDiscount(false);
+    setApplyKoreaLegalAid(false);
+    setKoreaLegalAidAgreedFeeText("");
+    setCourtMultiplierText("1");
+    setCustomRateText("1");
+    setUseCourtMultiplier(false);
+    setUseCustomRate(false);
+    setDistributionMode("equal");
+    setProportionalValuesText("10000000, 20000000");
+    setNote("");
+    setResult(null);
+    setError(null);
+    setToast(null);
+  };
+
   const handleExportPdf = () =>
     runAction("pdf", async () => {
       if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
@@ -375,6 +401,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       void handleSaveLcalc();
     },
     onCalculate: handleCalculate,
+    onReset: handleReset,
     enabled: active,
   });
 
@@ -403,6 +430,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     },
     apply: applyLoadedFile,
     markSaved: () => markLitigationCostClean(),
+    reset: handleReset,
   });
 
   const handleLoadLcalc = () =>

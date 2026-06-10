@@ -1042,6 +1042,7 @@ function InjuryCompensationView({
       applyLoadedFile(file);
     },
     markSaved: () => markCompensationClean(),
+    reset: handleReset,
   });
 
   const handleLoadLcalc = () =>
@@ -1717,6 +1718,7 @@ function DeathCompensationView({
       applyLoadedFile(file);
     },
     markSaved: () => markCompensationClean(),
+    reset: handleReset,
   });
 
   const handleLoadLcalc = () =>
