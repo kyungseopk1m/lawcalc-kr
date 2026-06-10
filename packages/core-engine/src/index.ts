@@ -11,10 +11,16 @@ export type {
 
 export type { LegalRateDataset, LegalRateRecord } from "./legal-rates";
 export type { CalculateInterestDeps } from "./interest";
+export type {
+  BuildInterestClaimTextOptions,
+  ClaimTextEnding,
+  InterestClaimTextSource,
+} from "./interest-claim-text";
 export type { ResolveSegmentsDeps } from "./segments";
 export type { InterestLimitDataset, InterestLimitLaw, InterestLimitSlice } from "./interest-limits";
 
 export { calculateInterest } from "./interest";
+export { buildInterestClaimText, formatCourtDate } from "./interest-claim-text";
 export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "./days";
 export { resolveSegments } from "./segments";
 export { datasetVersionTag, getRateAt, rateHistoryFor } from "./legal-rates";

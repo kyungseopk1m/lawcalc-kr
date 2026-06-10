@@ -5,6 +5,7 @@ import {
   FileDown,
   FileJson,
   FileSpreadsheet,
+  FileText,
   Loader2,
   TableProperties,
   X,
@@ -15,8 +16,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   STANDARD_DISCLAIMER,
+  buildInterestClaimText,
   calculateInterest,
   type CalcOptions,
+  type ClaimTextEnding,
   type InterestInput,
   type InterestResult,
   type LegalRatePreset as LegalRatePresetValue,
@@ -69,7 +72,7 @@ const defaultInput: InterestInput = {
 
 const APP_VERSION = __APP_VERSION__;
 
-type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
+type ActionName = "pdf" | "csv" | "copy" | "claim" | "save" | "load";
 
 interface ToastState {
   type: "success" | "error";
@@ -298,6 +301,11 @@ export function App() {
   );
   const [calculationError, setCalculationError] = useState("");
   const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
+  const [claimEnding, setClaimEnding] = useState<ClaimTextEnding>("untilFullPayment");
+  const claimText = useMemo(
+    () => buildInterestClaimText(result, { ending: claimEnding }),
+    [claimEnding, result],
+  );
   const [activeTab, setActiveTab] = useState<
     "interest" | "inheritance" | "litigationCost" | "appropriation" | "compensation"
   >("interest");
@@ -434,6 +442,12 @@ export function App() {
     runAction("copy", async () => {
       await ipc.copyToClipboard(formatResultForClipboard(result));
       return "계산 결과를 클립보드에 복사했습니다.";
+    });
+
+  const handleCopyClaim = () =>
+    runAction("claim", async () => {
+      await ipc.copyToClipboard(claimText);
+      return "청구취지 문구를 클립보드에 복사했습니다.";
     });
 
   const handleExportPdf = () =>
@@ -605,6 +619,54 @@ export function App() {
               <CardContent className="space-y-4">
                 <SegmentTable result={result} />
                 <LegalCitation dataVersion={result.dataVersion} preset={preset} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" aria-hidden="true" />
+                  청구취지
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p
+                  className="rounded-md border border-border bg-muted/40 p-3 text-sm leading-relaxed"
+                  data-testid="claim-text"
+                >
+                  {claimText}
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <fieldset className="flex flex-wrap items-center gap-3">
+                    <legend className="sr-only">청구취지 종결 방식</legend>
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input
+                        checked={claimEnding === "untilFullPayment"}
+                        name="claim-ending"
+                        type="radio"
+                        onChange={() => setClaimEnding("untilFullPayment")}
+                      />
+                      다 갚는 날까지
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input
+                        checked={claimEnding === "untilEndDate"}
+                        name="claim-ending"
+                        type="radio"
+                        onChange={() => setClaimEnding("untilEndDate")}
+                      />
+                      계산 종료일까지
+                    </label>
+                  </fieldset>
+                  <ActionButton
+                    action="claim"
+                    icon={Clipboard}
+                    label="복사"
+                    loadingAction={loadingAction}
+                    variant="outline"
+                    onClick={handleCopyClaim}
+                  />
+                </div>
               </CardContent>
             </Card>
 
