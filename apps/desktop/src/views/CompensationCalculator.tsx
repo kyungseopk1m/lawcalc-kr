@@ -424,7 +424,7 @@ export function formatCompensationForClipboard(result: CompensationResult): stri
     `중복장해율: ${formatRatioPercent(result.combinedLossRate)}`,
     `일실수입 소계: ${formatWon(result.lostIncomeSubtotalWon)}`,
     `위자료: ${formatWon(result.solatiumWon)}`,
-    `재산상 손해 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
+    `과실상계 대상 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
     `과실상계 (${formatRatioPercent(result.faultOffset.ratio)} 후): ${formatWon(result.faultOffset.afterWon)}`,
     `비율공제 소계: ${formatWon(result.deductions.ratioSubtotalWon)}`,
     `전액공제 소계: ${formatWon(result.deductions.absoluteSubtotalWon)}`,
@@ -699,7 +699,7 @@ export function formatCompensationDeathForClipboard(result: CompensationAutoDeat
     `생계비 공제 비율: ${formatRatioPercent(result.livingCostDeductionRatio)}`,
     `일실수입 소계 (생계비 공제 후): ${formatWon(result.lostIncomeSubtotalWon)}`,
     `위자료: ${formatWon(result.solatiumWon)}`,
-    `재산상 손해 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
+    `과실상계 대상 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
     `과실상계 (${formatRatioPercent(result.faultOffset.ratio)} 후): ${formatWon(result.faultOffset.afterWon)}`,
     `장례비: ${formatWon(result.funeralExpenseWon)}`,
     `비율공제 소계: ${formatWon(result.deductions.ratioSubtotalWon)}`,
@@ -2103,7 +2103,7 @@ function DeathCompensationView({
                 />
                 <HeirGroupCard
                   title="2순위 — 직계존속"
-                  hint="부·모·조부모. 1순위 부재 시에만 분배 참여."
+                  hint="부모 우선, 부모 없을 때만 조부모 (최근친 우선, 민법 제1000조②). 1순위 부재 시에만 분배 참여."
                   heirs={state.linealAscendants}
                   onChange={(heirs) => update({ linealAscendants: heirs })}
                   allowRepresentation={false}
@@ -2119,7 +2119,7 @@ function DeathCompensationView({
                 />
                 <HeirGroupCard
                   title="4순위 — 4촌 이내 방계혈족"
-                  hint="1·2·3순위·배우자 모두 부재 시에만. 대습상속 대상 아님."
+                  hint="1·2·3순위·배우자 모두 부재 시에만. 3촌이 4촌에 우선 (최근친, 민법 제1000조②). 대습상속 대상 아님."
                   heirs={state.collateralFourth}
                   onChange={(heirs) => update({ collateralFourth: heirs })}
                   allowRepresentation={false}
@@ -2251,7 +2251,7 @@ function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
             <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>
             <span className="text-muted-foreground">위자료</span>
             <span className="text-right">{formatWon(result.solatiumWon)}</span>
-            <span className="text-muted-foreground">재산상 손해 소계</span>
+            <span className="text-muted-foreground">과실상계 대상 소계</span>
             <span className="text-right">{formatWon(result.pecuniaryDamagesSubtotalWon)}</span>
             <span className="text-muted-foreground">
               과실상계 ({formatRatioPercent(result.faultOffset.ratio)})
@@ -2471,7 +2471,7 @@ function ResultCards({ result }: { result: CompensationResult }) {
             <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>
             <span className="text-muted-foreground">위자료</span>
             <span className="text-right">{formatWon(result.solatiumWon)}</span>
-            <span className="text-muted-foreground">재산상 손해 소계</span>
+            <span className="text-muted-foreground">과실상계 대상 소계</span>
             <span className="text-right">{formatWon(result.pecuniaryDamagesSubtotalWon)}</span>
             <span className="text-muted-foreground">
               과실상계 ({formatRatioPercent(result.faultOffset.ratio)})

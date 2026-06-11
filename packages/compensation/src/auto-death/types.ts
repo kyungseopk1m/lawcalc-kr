@@ -120,7 +120,7 @@ export interface CompensationAutoDeathResult {
   otherDamages?: OtherDamagesResult;
   /** 위자료 (원). */
   solatiumWon: number;
-  /** 재산상 손해 소계 = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon`. */
+  /** 과실상계 대상 소계 (위자료 포함) = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon`. */
   pecuniaryDamagesSubtotalWon: number;
   /** 과실상계 결과. */
   faultOffset: CompensationFaultOffset;
