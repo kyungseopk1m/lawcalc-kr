@@ -11,18 +11,18 @@
 import type { STANDARD_DISCLAIMER, IsoDate, LegalRatePreset } from "@lawcalc-kr/core-engine";
 import type { OtherDamagesInput, OtherDamagesResult } from "../other-damages/types";
 
-/** 노동력상실률 영구장해 항목. `ratio` 는 0~1. `department` 는 표시용. */
+/** 노동능력상실률 영구장해 항목. `ratio` 는 0~1. `department` 는 표시용. */
 export interface PermanentDisabilityInput {
   /** 진료과 (예: "정형외과"). 표시용 라벨, 계산에 영향 없음. */
   department?: string;
-  /** 노동력상실률 (0~1). 0 거부, 1 거부. */
+  /** 노동능력상실률 (0~1). 0 거부, 1 거부. */
   ratio: number;
 }
 
-/** 노동력상실률 한시장해 항목. `years` 동안 `ratio` 적용. */
+/** 노동능력상실률 한시장해 항목. `years` 동안 `ratio` 적용. */
 export interface TemporaryDisabilityInput {
   department?: string;
-  /** 한시장해 노동력상실률 (0~1). */
+  /** 한시장해 노동능력상실률 (0~1). */
   ratio: number;
   /** 한시장해 기간 (년). 양수 정수 또는 양수 실수 허용. */
   years: number;
@@ -48,7 +48,7 @@ export interface CompensationBaseInput {
   legalRatePreset?: LegalRatePreset;
 }
 
-/** 노동력상실률 입력. 영구 + 한시 + 기왕증. */
+/** 노동능력상실률 입력. 영구 + 한시 + 기왕증. */
 export interface CompensationLossRateInput {
   permanent?: PermanentDisabilityInput[];
   temporary?: TemporaryDisabilityInput[];

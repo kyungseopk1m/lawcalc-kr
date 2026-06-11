@@ -1116,7 +1116,7 @@ function InjuryCompensationView({
               기초사항
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              민법 제393조·396조·763조 / 대법원 2018다248909 (가동연한 65세).
+              민법 제393조·제396조·제763조 / 대법원 2018다248909 (가동연한 65세).
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -1169,7 +1169,7 @@ function InjuryCompensationView({
 
         <Card>
           <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">노동력상실률</CardTitle>
+            <CardTitle className="text-sm">노동능력상실률</CardTitle>
             <p className="text-xs text-muted-foreground">
               영구장해 중복은 자동 합산 (1 − Π(1 − rᵢ)), 한시장해는 (년수/10)·rᵢ 영구 환산.
             </p>
@@ -1553,7 +1553,7 @@ function InjuryCompensationView({
           <Card>
             <CardContent className="grid gap-2 p-6 text-sm text-muted-foreground">
               <p>
-                좌측에서 기초사항, 노동력상실률, 일실수입을 입력한 후{" "}
+                좌측에서 기초사항, 노동능력상실률, 일실수입을 입력한 후{" "}
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
@@ -1776,8 +1776,9 @@ function DeathCompensationView({
               기초사항 (사망)
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              민법 제393조·396조·763조·1000조·1003조·1009조 / 대법원 2018다248909 (가동연한 65세).
-              사망은 노동력 100% 상실 전제로 일실수입을 산정한 뒤 생계비를 공제합니다.
+              민법 제393조·제396조·제763조·제1000조·제1003조·제1009조 / 대법원 2018다248909
+              (가동연한 65세). 사망은 노동능력 100% 상실 전제로 일실수입을 산정한 뒤 생계비를
+              공제합니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -2117,7 +2118,7 @@ function DeathCompensationView({
                   defaultLabel="형제자매"
                 />
                 <HeirGroupCard
-                  title="4순위 — 4촌이내 방계혈족"
+                  title="4순위 — 4촌 이내 방계혈족"
                   hint="1·2·3순위·배우자 모두 부재 시에만. 대습상속 대상 아님."
                   heirs={state.collateralFourth}
                   onChange={(heirs) => update({ collateralFourth: heirs })}
@@ -2464,7 +2465,7 @@ function ResultCards({ result }: { result: CompensationResult }) {
         </CardHeader>
         <CardContent className="grid gap-3 p-4 pt-0">
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <span className="text-muted-foreground">중복 노동력상실률</span>
+            <span className="text-muted-foreground">중복 노동능력상실률</span>
             <span className="text-right">{formatRatioPercent(result.combinedLossRate)}</span>
             <span className="text-muted-foreground">일실수입 소계</span>
             <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>

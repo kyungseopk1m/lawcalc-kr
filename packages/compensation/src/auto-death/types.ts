@@ -6,8 +6,8 @@
  * 제1000조·제1003조·제1009조 (상속분) / 자동차손해배상 보장법 / 대법원 2018다248909 (가동연한 60→65세).
  *
  * 적용 범위: v0.6.0 자×사망 single slice (capability id `compensation@2`). 산재 / 기타손해 는 별 cycle.
- * 부상 전용 필드(입원치료 종료일·노동력상실률·여명단축)는 사망 모드에서 제외된다.
- * 사망은 노동력 100% 상실을 전제로 일실수입을 산정한 뒤 생계비를 공제한다.
+ * 부상 전용 필드(입원치료 종료일·노동능력상실률·여명단축)는 사망 모드에서 제외된다.
+ * 사망은 노동능력 100% 상실을 전제로 일실수입을 산정한 뒤 생계비를 공제한다.
  */
 
 import type {
@@ -107,7 +107,7 @@ export interface CompensationAutoDeathResult {
   accidentType?: CompensationAccidentType;
   /** 적용된 생계비 공제 비율. transparency. */
   livingCostDeductionRatio: number;
-  /** 일실수입 segment 목록 (단일 segment, 노동력 100% 상실 전제 + 생계비 공제 반영). */
+  /** 일실수입 segment 목록 (단일 segment, 노동능력 100% 상실 전제 + 생계비 공제 반영). */
   segments: CompensationSegment[];
   /** 일실수입 소계 (생계비 공제 후, 원). */
   lostIncomeSubtotalWon: number;

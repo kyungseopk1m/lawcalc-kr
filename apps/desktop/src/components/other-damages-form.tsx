@@ -376,7 +376,7 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
       <CardHeader className="p-4 pb-2">
         <CardTitle className="text-sm">기타손해 (개호비 · 치료비 · 보조구)</CardTitle>
         <p className="text-xs text-muted-foreground">
-          민법 제393조·763조. 재산상 손해에 과실상계 전 합산됩니다. 미입력 시 결과에 영향이
+          민법 제393조·제763조. 재산상 손해에 과실상계 전 합산됩니다. 미입력 시 결과에 영향이
           없습니다.
         </p>
       </CardHeader>

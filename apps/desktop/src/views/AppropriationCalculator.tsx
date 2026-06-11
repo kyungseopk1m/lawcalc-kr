@@ -562,10 +562,10 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                   })
                 }
               >
-                <option value="legal">법정충당 (477조)</option>
+                <option value="legal">법정충당 (제477조)</option>
                 <option value="agreement">합의 (1순위)</option>
-                <option value="debtorDesignation">채무자 지정 (476조 2순위)</option>
-                <option value="creditorDesignation">채권자 지정 (476조 3순위)</option>
+                <option value="debtorDesignation">채무자(변제자) 지정 (제476조①)</option>
+                <option value="creditorDesignation">채권자(변제받는 자) 지정 (제476조②)</option>
               </Select>
               <span className="text-xs font-normal text-muted-foreground">
                 충당 방법은 합의 → 지정(채무자·채권자) → 법정 순으로 우선합니다.
@@ -748,7 +748,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                근거: 민법 제476조 (지정충당) / 477조 (법정충당) / 479조 (비용·이자·원본 순). 본
+                근거: 민법 제476조 (지정충당) / 제477조 (법정충당) / 제479조 (비용·이자·원본 순). 본
                 도메인은 v0.4 사이클에서 도입된 초기 범위입니다. 단일 변제 이벤트와 여러 채권의 잔액
                 분배만 지원하며, 이자 누적과 이자제한법 제한이율 검토는 후속 버전 범위입니다.
               </p>

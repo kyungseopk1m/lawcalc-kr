@@ -47,7 +47,7 @@ export interface InheritanceInput {
   linealAscendants?: HeirNode[];
   /** 3순위 형제자매. 1·2순위·배우자 모두 부재 시에만. 대습 가능 (1001조). */
   siblings?: HeirNode[];
-  /** 4순위 4촌이내 방계혈족 (1000조 ①-4). 1·2·3순위·배우자 모두 부재 시에만. 대습 X. */
+  /** 4순위 4촌 이내 방계혈족 (1000조 ①-4). 1·2·3순위·배우자 모두 부재 시에만. 대습 X. */
   collateralFourth?: HeirNode[];
 }
 

@@ -78,7 +78,7 @@ function distributeFinal(
  * 자×사망 손해배상 계산. 자×부상 엔진(`computeCompensation`)의 호프만 240·과실상계·공제·원단위절사
  * 로직을 재사용하되, 사망 특화 차이는 다음과 같다:
  *
- * 1. 노동력 100% 상실 전제 → 단일 segment `[0, totalMonths)` lossRate = 1.
+ * 1. 노동능력 100% 상실 전제 → 단일 segment `[0, totalMonths)` lossRate = 1.
  * 2. 일실수입 = `floor(월급여 × appliedHoffman × (1 - 생계비비율))` (default 생계비 1/3).
  * 3. 위자료 합산 → 과실상계.
  * 4. 과실상계 후 장례비(default 5,000,000) 전액 가산.
@@ -99,7 +99,7 @@ export function computeCompensationDeath(
   const livingCostDeductionRatio =
     input.livingCostDeductionRatio ?? DEFAULT_LIVING_COST_DEDUCTION_RATIO;
 
-  // 1. 단일 segment (노동력 100% 상실 전제)
+  // 1. 단일 segment (노동능력 100% 상실 전제)
   const retirementAge = input.base.retirementAge ?? DEFAULT_RETIREMENT_AGE;
   const retirementEndDate = addYears(input.base.birthDate, retirementAge);
   const totalMonths = monthsBetween(input.base.accidentDate, retirementEndDate);
@@ -133,7 +133,7 @@ export function computeCompensationDeath(
   const capResult = applyHoffman240Cap([rawHoffman]);
   const appliedHoffman = capResult.appliedHoffman[0] as number;
 
-  // 4. 일실수입 (생계비 공제 반영, 노동력 100% 상실)
+  // 4. 일실수입 (생계비 공제 반영, 노동능력 100% 상실)
   const amountFloorWon = Math.floor(
     monthlyWageWon * appliedHoffman * (1 - livingCostDeductionRatio),
   );

@@ -77,7 +77,7 @@ function validateInput(input: InheritanceInput): void {
     if (!heirs) continue;
     for (const h of heirs) {
       if (h.representatives && h.representatives.length > 0) {
-        throw new RangeError("직계존속과 4촌이내 방계혈족은 대습상속 대상이 아닙니다.");
+        throw new RangeError("직계존속과 4촌 이내 방계혈족은 대습상속 대상이 아닙니다.");
       }
     }
   }

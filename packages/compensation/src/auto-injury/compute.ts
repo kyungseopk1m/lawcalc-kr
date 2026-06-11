@@ -56,7 +56,7 @@ function monthsBetween(from: IsoDate, to: IsoDate): number {
 /**
  * 자×부상 손해배상 계산. 10 단계 순서 (plan v2 §6 트랙 4 A):
  *
- * 1. 노동력상실률 계산:
+ * 1. 노동능력상실률 계산:
  *    - 영구 중복 = `1 - Π(1 - perm_i.ratio)`
  *    - 한시 영구 환산 합 = `Σ (temp_i.years / 10) × temp_i.ratio` (CAP 노트 § 1.2 정원)
  *    - 합산 lossRate = `1 - (1 - 영구중복) × (1 - 한시환산합)`
@@ -92,7 +92,7 @@ export function computeCompensation(
   const permanentItems = input.lossRate.permanent ?? [];
   const temporaryItems = input.lossRate.temporary ?? [];
 
-  // 1. 노동력상실률
+  // 1. 노동능력상실률
   let permFactor = 1;
   for (const item of permanentItems) {
     permFactor *= 1 - item.ratio;

@@ -58,7 +58,7 @@ describe("calculateInheritance — 입력 검증", () => {
           },
         ],
       }),
-    ).toThrow("직계존속과 4촌이내 방계혈족은 대습상속 대상이 아닙니다.");
+    ).toThrow("직계존속과 4촌 이내 방계혈족은 대습상속 대상이 아닙니다.");
   });
 
   it("throws when no heirs exist at all", () => {
@@ -91,7 +91,7 @@ describe("calculateInheritance — 분배 정원", () => {
     expect(result.shares[0]!.rawDenominator).toBe(4);
   });
 
-  it("handles 4촌이내 방계 (4순위) when 1·2·3순위·배우자 부재", () => {
+  it("handles 4촌 이내 방계 (4순위) when 1·2·3순위·배우자 부재", () => {
     const result = calculateInheritance({
       decedent: { deceasedAt: "2025-01-01" },
       collateralFourth: [
