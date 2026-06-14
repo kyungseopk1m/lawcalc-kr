@@ -52,10 +52,12 @@ export function periodDaysSum(
 /**
  * 한 구간의 이자 계산.
  *
- * mode="totalDays":
+ * mode="totalDays" (간이식 — 전체 일수를 단일 분모로 나눔):
  *   interest = principal × rate × days / denom
  *   - leapYear="fixed365": denom = 365
  *   - leapYear="actual":   윤일(2/29)이 [from, to]에 포함되면 366, 아니면 365
+ *   - 주의: 다년 구간도 단일 분모를 적용하는 간이 방식이다. 윤일이 하나라도 포함되면 구간
+ *     전체를 366으로 나누므로, 여러 해에 걸친 정밀 계산은 period 모드를 사용한다.
  *
  * mode="period" (외부 reference 매뉴얼 기간식):
  *   1년 단위로 분할. 풀 1년 단위는 principal × rate (분모/분모 = 1).
