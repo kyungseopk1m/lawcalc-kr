@@ -31,7 +31,9 @@ Cargo.lock
 src-tauri/target/
 apps/*/src-tauri/target/
 apps/*/src-tauri/gen/
-apps/*/src-tauri/Cargo.lock
+# 데스크톱 앱(바이너리 crate)은 의존성 재현성을 위해 Cargo.lock 을 추적한다.
+# (미추적 시 CI 가 매번 latest 의존성을 받아 brotli 8.0.3 처럼 컴파일 깨진 버전이 유입됨)
+!apps/desktop/src-tauri/Cargo.lock
 apps/*/src-tauri/.taurignore
 
 # macOS
