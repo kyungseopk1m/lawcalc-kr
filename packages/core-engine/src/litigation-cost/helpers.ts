@@ -121,7 +121,7 @@ export function lawyerFeeDiscountMultiplier(
 /**
  * 누적 multiplier 적용 결과.
  *
- *   - `amountWon`: 최종 변호사보수 (`baseFeeWon × multiplier`)
+ *   - `amountWon`: 최종 변호사보수 (`floor(baseFeeWon × multiplier)`, 원 단위 절사 — 인지대와 동일 정책)
  *   - `multiplier`: clamp 후 적용 multiplier (0.0 ~ 1.5)
  *   - `rawMultiplier`: clamp 전 누적 multiplier (디버그/감사용)
  *   - `clamped`: clamp 적용 여부 (rawMultiplier 가 [0.0, 1.5] 범위 외였으면 true)
@@ -131,6 +131,26 @@ export interface ApplyLawyerFeeDiscountsResult {
   multiplier: number;
   rawMultiplier: number;
   clamped: boolean;
+}
+
+/**
+ * 유한 number 를 정확한 십진 유리수(`num` / `den`, `den = 10^k`)로 환원한다.
+ *
+ * `Number.prototype.toString` 의 최단 round-trip 표현을 파싱하므로 `0.3 → 3/10` 처럼
+ * 사용자가 의도한 십진값을 부동소수 오차 없이 복원한다. 지수 표기(`1e-7` 등)도 처리.
+ * 변호사보수 floor 계산이 부동소수 오차나 배율 양자화로 ±1원 오차를 내지 않도록 하는 helper.
+ * (입력은 변호사보수 도메인상 음수가 들어오지 않음 — base ≥ 0, multiplier ∈ [0, 1.5].)
+ */
+export function decimalToFraction(x: number): { num: bigint; den: bigint } {
+  if (!Number.isFinite(x)) throw new RangeError(`유한수가 아닙니다: ${x}`);
+  const match = x.toString().match(/^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+  if (!match) throw new RangeError(`예상치 못한 수 표현: ${x}`);
+  const [, sign, intPart, fracPart = "", expStr] = match;
+  const num = BigInt(`${sign ?? ""}${intPart ?? "0"}${fracPart}`);
+  const denExp = fracPart.length - (expStr ? Number.parseInt(expStr, 10) : 0);
+  return denExp <= 0
+    ? { num: num * 10n ** BigInt(-denExp), den: 1n }
+    : { num, den: 10n ** BigInt(denExp) };
 }
 
 /**
@@ -161,8 +181,15 @@ export function applyLawyerFeeDiscounts(
     multiplier = LAWYER_FEE_MULTIPLIER_MAX;
     clamped = true;
   }
+  // 원 단위 절사 (인지대와 동일 정책). 부동소수 곱셈 오차나 배율 양자화가 ±1원 오차를 내지
+  // 않도록, base·multiplier 의 십진 표현을 정확한 유리수로 환원해 BigInt 정수 산술로 floor 한다.
+  // 예: 2,800,000 × 0.3 = 정확히 840,000 / × 0.3571426785714286 = 999,999.5000… → 999,999.
+  const b = decimalToFraction(baseFeeWon);
+  const m = decimalToFraction(multiplier);
+  const amountWon = Number((b.num * m.num) / (b.den * m.den));
+
   return {
-    amountWon: baseFeeWon * multiplier,
+    amountWon,
     multiplier,
     rawMultiplier,
     clamped,

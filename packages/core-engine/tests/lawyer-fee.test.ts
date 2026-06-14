@@ -8,6 +8,7 @@ import {
   type LawyerFeeDataset,
   type LawyerFeeInput,
 } from "../src";
+import { decimalToFraction } from "../src/litigation-cost/helpers";
 
 const FROZEN_AT = "2026-05-11T00:00:00.000Z";
 
@@ -211,6 +212,64 @@ describe("computeLawyerFee / bracket 산식", () => {
   });
 });
 
+describe("computeLawyerFee / 원 단위 절사", () => {
+  it("비정수 base 의 최종액을 원 단위 정수로 절사한다", () => {
+    // base = 2,000,000 + (33,333,333 - 20,000,000) × 0.08 = 3,066,666.64 → floor 3,066,666
+    const r = computeLawyerFee(input({ caseValue: 33_333_333 }), { computedAt: FROZEN_AT });
+    expect(Number.isInteger(r.amount)).toBe(true);
+    expect(r.amount).toBe(3_066_666);
+  });
+
+  it("부동소수 오차로 정확히 떨어지는 보수를 1원 깎지 않는다", () => {
+    // 2,800,000 × 0.7 = 1,959,999.9999998 (부동소수) → 1,960,000
+    const r = computeLawyerFee(
+      input({ caseValue: 30_000_000, discounts: [{ kind: "customPercent", rate: 0.7 }] }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(1_960_000);
+  });
+
+  it("정수에 매우 가까운 진짜 비정수를 1원 과다 산정하지 않는다", () => {
+    // 2,800,000 × 0.3571432142855357 = 1,000,000.9999995 → 원 단위 절사 1,000,000
+    // (절대 epsilon 보정은 이 값을 1,000,001 로 잘못 올림 — 십진 유리수 산술로 방지)
+    const r = computeLawyerFee(
+      input({
+        caseValue: 30_000_000,
+        discounts: [{ kind: "customPercent", rate: 0.3571432142855357 }],
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(1_000_000);
+  });
+
+  it("양자화로 올림되던 직접 배율을 정확히 절사한다 (1e-6 양자화 회귀 방지)", () => {
+    // 2,800,000 × 0.3571426785714286 = 999,999.5000… → 999,999
+    // (1e-6 양자화는 357142.68→357143 올림으로 1,000,000 과다 산정했음 — 십진 유리수로 방지)
+    const r = computeLawyerFee(
+      input({
+        caseValue: 30_000_000,
+        discounts: [{ kind: "customPercent", rate: 0.3571426785714286 }],
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(999_999);
+  });
+});
+
+describe("decimalToFraction", () => {
+  it("십진수를 정확한 유리수로 환원한다", () => {
+    expect(decimalToFraction(0.3)).toEqual({ num: 3n, den: 10n });
+    expect(decimalToFraction(2_800_000)).toEqual({ num: 2_800_000n, den: 1n });
+    expect(decimalToFraction(3_066_666.64)).toEqual({ num: 306_666_664n, den: 100n });
+    expect(decimalToFraction(1.5)).toEqual({ num: 15n, den: 10n });
+    expect(decimalToFraction(0)).toEqual({ num: 0n, den: 1n });
+  });
+
+  it("지수 표기도 처리한다", () => {
+    expect(decimalToFraction(1e-7)).toEqual({ num: 1n, den: 10_000_000n });
+  });
+});
+
 describe("computeLawyerFee / 5 discount variant", () => {
   it("noOralHearingOrAdmission (×0.5, 제5조) — 무변론 판결", () => {
     const r = computeLawyerFee(
@@ -258,7 +317,7 @@ describe("computeLawyerFee / 5 discount variant", () => {
       },
     );
     expect(r.multiplier).toBeCloseTo(0.42);
-    expect(r.amount).toBeCloseTo(2_800_000 * 0.42);
+    expect(r.amount).toBe(1_176_000); // floor(2,800,000 × 0.42), 원 단위 정수 고정
   });
 
   it("koreaLegalAid + koreaLegalAidAgreedFeeWon override (지급보수액 cap)", () => {
@@ -283,7 +342,7 @@ describe("computeLawyerFee / 5 discount variant", () => {
       { computedAt: FROZEN_AT },
     );
     expect(r.multiplier).toBe(0.3);
-    expect(r.amount).toBe(2_800_000 * 0.3);
+    expect(r.amount).toBe(840_000); // floor(2,800,000 × 0.3), 부동소수 보정 포함
   });
 
   it("courtDiscretion 1.5 (증액 상한, 제6조 ②항)", () => {
