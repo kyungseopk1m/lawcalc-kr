@@ -36,11 +36,16 @@ function isValidIsoDate(s: string | undefined): s is string {
   return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
+/**
+ * 슬롯 유지 조건의 대습 판정 — 대습자가 1명이라도 생존해야 해당 슬롯이 상속한다.
+ * 대습자 전원이 상속개시 전 사망/결격이면 그 슬롯은 소멸한다 (죽은 자에게 지분 귀속 방지).
+ */
+function hasLivingRepresentative(h: HeirNode): boolean {
+  return h.representatives !== undefined && h.representatives.some((r) => !r.deceasedBeforeOpening);
+}
+
 function inheritsBy(heirs: HeirNode[]): boolean {
-  return heirs.some(
-    (h) =>
-      !h.deceasedBeforeOpening || (h.representatives !== undefined && h.representatives.length > 0),
-  );
+  return heirs.some((h) => !h.deceasedBeforeOpening || hasLivingRepresentative(h));
 }
 
 function aliveCount(heirs: HeirNode[]): number {
@@ -96,10 +101,7 @@ function distributeWithSpouse(
   defaultPrefix: string,
   groupUnit: bigint,
 ): RawShare[] {
-  const slotted = group.filter(
-    (h) =>
-      !h.deceasedBeforeOpening || (h.representatives !== undefined && h.representatives.length > 0),
-  );
+  const slotted = group.filter((h) => !h.deceasedBeforeOpening || hasLivingRepresentative(h));
   const slotCount = BigInt(slotted.length);
   const denominator = (spouseName !== null ? SPOUSE_UNIT : 0n) + groupUnit * slotCount;
 
@@ -111,8 +113,8 @@ function distributeWithSpouse(
   let nameIdx = 0;
   for (const h of group) {
     const isAlive = !h.deceasedBeforeOpening;
-    const hasReps = h.representatives !== undefined && h.representatives.length > 0;
-    if (!isAlive && !hasReps) continue; // 사망 + 대습자 0 → 슬롯 사라짐
+    const hasReps = hasLivingRepresentative(h);
+    if (!isAlive && !hasReps) continue; // 사망 + 생존 대습자 0 → 슬롯 사라짐
 
     const heirName = defaultName(defaultPrefix, nameIdx, h);
     const slotShare: BigFraction = { num: groupUnit, den: denominator };
@@ -120,9 +122,10 @@ function distributeWithSpouse(
     if (isAlive) {
       shares.push({ name: heirName, raw: slotShare });
     } else if (h.representatives) {
-      const repCount = BigInt(h.representatives.length);
+      const livingReps = h.representatives.filter((r) => !r.deceasedBeforeOpening);
+      const repCount = BigInt(livingReps.length);
       let repIdx = 0;
-      for (const rep of h.representatives) {
+      for (const rep of livingReps) {
         const repName = rep.name ?? `${heirName}의 대습${repIdx + 1}`;
         shares.push({
           name: repName,
@@ -141,10 +144,7 @@ function distributeWithSpouse(
  * 분모 = 살아있는 자 + 대습 보유 자.
  */
 function distributeEqual(group: HeirNode[], defaultPrefix: string): RawShare[] {
-  const slotted = group.filter(
-    (h) =>
-      !h.deceasedBeforeOpening || (h.representatives !== undefined && h.representatives.length > 0),
-  );
+  const slotted = group.filter((h) => !h.deceasedBeforeOpening || hasLivingRepresentative(h));
   const denominator = BigInt(slotted.length);
   if (denominator === 0n) return [];
 
@@ -152,7 +152,7 @@ function distributeEqual(group: HeirNode[], defaultPrefix: string): RawShare[] {
   let nameIdx = 0;
   for (const h of group) {
     const isAlive = !h.deceasedBeforeOpening;
-    const hasReps = h.representatives !== undefined && h.representatives.length > 0;
+    const hasReps = hasLivingRepresentative(h);
     if (!isAlive && !hasReps) continue;
 
     const heirName = defaultName(defaultPrefix, nameIdx, h);
@@ -161,9 +161,10 @@ function distributeEqual(group: HeirNode[], defaultPrefix: string): RawShare[] {
     if (isAlive) {
       shares.push({ name: heirName, raw: slotShare });
     } else if (h.representatives) {
-      const repCount = BigInt(h.representatives.length);
+      const livingReps = h.representatives.filter((r) => !r.deceasedBeforeOpening);
+      const repCount = BigInt(livingReps.length);
       let repIdx = 0;
-      for (const rep of h.representatives) {
+      for (const rep of livingReps) {
         const repName = rep.name ?? `${heirName}의 대습${repIdx + 1}`;
         shares.push({
           name: repName,

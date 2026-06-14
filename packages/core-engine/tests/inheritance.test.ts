@@ -132,4 +132,130 @@ describe("calculateInheritance — 분배 정원", () => {
       denominator: 2,
     });
   });
+
+  it("drops a slot when all of its representatives also died (no share to the dead)", () => {
+    const result = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      spouse: { alive: true },
+      linealDescendants: [
+        { name: "자녀1", deceasedBeforeOpening: false },
+        {
+          name: "자녀2",
+          deceasedBeforeOpening: true,
+          representatives: [{ name: "손주", deceasedBeforeOpening: true }],
+        },
+      ],
+    });
+    // 자녀2 슬롯 소멸 (대습자 전원 사망) → denom = 3(배우자) + 2(자녀1) = 5
+    expect(result.shares).toHaveLength(2);
+    expect(result.shares[0]).toMatchObject({ name: "배우자", numerator: 3, denominator: 5 });
+    expect(result.shares[1]).toMatchObject({ name: "자녀1", numerator: 2, denominator: 5 });
+  });
+
+  it("distributes only to living representatives within a slot", () => {
+    const result = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      spouse: { alive: true },
+      linealDescendants: [
+        { name: "자녀1", deceasedBeforeOpening: false },
+        {
+          name: "자녀2",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "손주A", deceasedBeforeOpening: false },
+            { name: "손주B", deceasedBeforeOpening: true },
+          ],
+        },
+      ],
+    });
+    // denom = 3 + 2*2 = 7. 자녀2 슬롯 2/7 은 생존 대습자 손주A 단독 (손주B 제외)
+    expect(result.shares).toHaveLength(3);
+    expect(result.shares[0]).toMatchObject({ name: "배우자", numerator: 3, denominator: 7 });
+    expect(result.shares[1]).toMatchObject({ name: "자녀1", numerator: 2, denominator: 7 });
+    expect(result.shares[2]).toMatchObject({ name: "손주A", numerator: 2, denominator: 7 });
+  });
+
+  it("배우자 없이 자녀 전원 사망 시 생존 대습자에게만 분배", () => {
+    const result = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      linealDescendants: [
+        {
+          name: "자녀1",
+          deceasedBeforeOpening: true,
+          representatives: [{ name: "손A", deceasedBeforeOpening: false }],
+        },
+        {
+          name: "자녀2",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "손B", deceasedBeforeOpening: false },
+            { name: "손C", deceasedBeforeOpening: false },
+          ],
+        },
+      ],
+    });
+    // denom = 2 slot × 2 = 4. 자녀1 slot 1/2 → 손A 단독, 자녀2 slot 1/2 → 손B·손C 각 1/4
+    expect(result.shares).toHaveLength(3);
+    expect(result.shares[0]).toMatchObject({ name: "손A", numerator: 1, denominator: 2 });
+    expect(result.shares[1]).toMatchObject({ name: "손B", numerator: 1, denominator: 4 });
+    expect(result.shares[2]).toMatchObject({ name: "손C", numerator: 1, denominator: 4 });
+  });
+
+  it("3순위 형제 대습에서 사망 대습자를 제외하고 생존 대습자에게 분배", () => {
+    const result = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      siblings: [
+        { name: "형제1", deceasedBeforeOpening: false },
+        {
+          name: "형제2",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "조카A", deceasedBeforeOpening: false },
+            { name: "조카B", deceasedBeforeOpening: true },
+          ],
+        },
+        {
+          name: "형제3",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "조카C", deceasedBeforeOpening: false },
+            { name: "조카D", deceasedBeforeOpening: false },
+          ],
+        },
+      ],
+    });
+    // denom = 3 slot. 형제2 slot 1/3 → 조카A 단독(조카B 제외), 형제3 slot 1/3 → 조카C·조카D 각 1/6
+    expect(result.shares).toHaveLength(4);
+    expect(result.shares[0]).toMatchObject({ name: "형제1", numerator: 1, denominator: 3 });
+    expect(result.shares[1]).toMatchObject({ name: "조카A", numerator: 1, denominator: 3 });
+    expect(result.shares[2]).toMatchObject({ name: "조카C", numerator: 1, denominator: 6 });
+    expect(result.shares[3]).toMatchObject({ name: "조카D", numerator: 1, denominator: 6 });
+  });
+
+  it("유일한 직계비속 slot 의 대습자가 전원 사망이면 상속인 없음", () => {
+    expect(() =>
+      calculateInheritance({
+        decedent: { deceasedAt: "2025-01-01" },
+        linealDescendants: [
+          {
+            name: "자녀1",
+            deceasedBeforeOpening: true,
+            representatives: [{ name: "손주", deceasedBeforeOpening: true }],
+          },
+        ],
+      }),
+    ).toThrow("상속인이 없습니다");
+  });
+
+  it("사망(대습 없음) slot 제거 후 기본 이름은 상속 slot 순번을 따른다", () => {
+    const result = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      linealDescendants: [
+        { deceasedBeforeOpening: true }, // 대습 없이 사망 → slot 제거(이름 미배정)
+        { deceasedBeforeOpening: false }, // 생존 → 기본 이름 자녀1
+        { deceasedBeforeOpening: true, representatives: [{ deceasedBeforeOpening: false }] }, // 자녀2 대습
+      ],
+    });
+    expect(result.shares.map((s) => s.name)).toEqual(["자녀1", "자녀2의 대습1"]);
+  });
 });
