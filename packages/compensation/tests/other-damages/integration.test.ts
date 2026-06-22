@@ -76,7 +76,7 @@ describe("death × 기타손해 통합", () => {
     expect(r).not.toHaveProperty("otherDamages");
   });
 
-  it("기타손해는 과실상계 전, 장례비는 과실상계 후 (위치 구분)", () => {
+  it("기타손해·장례비 모두 과실상계 대상 (적극손해)", () => {
     const r = computeCompensationDeath(
       {
         ...deathBase,
@@ -86,11 +86,13 @@ describe("death × 기타손해 통합", () => {
       },
       { now: NOW },
     );
-    // 기타손해는 pecuniary 에 포함 → 과실상계 적용 대상.
-    expect(r.pecuniaryDamagesSubtotalWon).toBe(r.lostIncomeSubtotalWon + 10000000);
-    expect(r.faultOffset.afterWon).toBe(Math.floor((r.lostIncomeSubtotalWon + 10000000) * 0.8));
-    // 장례비는 과실상계 후 가산.
-    expect(r.deductions.afterWon).toBe(r.faultOffset.afterWon + 5000000);
+    // 기타손해·장례비 모두 pecuniary 에 포함 → 과실상계 적용 대상 (장례비도 적극손해, 대법원 판례).
+    expect(r.pecuniaryDamagesSubtotalWon).toBe(r.lostIncomeSubtotalWon + 10000000 + 5000000);
+    expect(r.faultOffset.afterWon).toBe(
+      Math.floor((r.lostIncomeSubtotalWon + 10000000 + 5000000) * 0.8),
+    );
+    // 장례비는 과실상계 대상에 포함되므로 별도 가산이 없다.
+    expect(r.deductions.afterWon).toBe(r.faultOffset.afterWon);
   });
 
   it("기타손해 포함 finalWon 이 상속분배 합과 일치 (round-trip)", () => {

@@ -404,7 +404,7 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         ),
         ("위자료(원)", format_currency(view.solatium_won)),
         (
-            "재산상 손해 소계(원)",
+            "과실상계 대상 소계(원)",
             format_currency(view.pecuniary_damages_subtotal_won),
         ),
         (
@@ -525,8 +525,9 @@ pub fn render_compensation_death_csv_bytes(
             format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
         ),
         ("위자료(원)", format_currency(view.solatium_won)),
+        ("장례비(원)", format_currency(view.funeral_expense_won)),
         (
-            "재산상 손해 소계(원)",
+            "과실상계 대상 소계(원)",
             format_currency(view.pecuniary_damages_subtotal_won),
         ),
         (
@@ -537,7 +538,6 @@ pub fn render_compensation_death_csv_bytes(
             "과실상계 후(원)",
             format_currency(view.fault_offset.after_won),
         ),
-        ("장례비(원)", format_currency(view.funeral_expense_won)),
         // 산재(유족급여) 공제 — 자동차 결과는 빈 key 로 skip (회귀 0).
         match view.deductions.industrial_benefit_won {
             Some(benefit) => ("산재보험급여 공제(유족급여)(원)", format_currency(benefit)),

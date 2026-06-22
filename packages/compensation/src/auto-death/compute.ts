@@ -80,10 +80,9 @@ function distributeFinal(
  *
  * 1. 노동능력 100% 상실 전제 → 단일 segment `[0, totalMonths)` lossRate = 1.
  * 2. 일실수입 = `floor(월급여 × appliedHoffman × (1 - 생계비비율))` (default 생계비 1/3).
- * 3. 위자료 합산 → 과실상계.
- * 4. 과실상계 후 장례비(default 5,000,000) 전액 가산.
- * 5. 공제(비율/전액) 적용 → `max(0, ...)` → 100원 미만 절사 = finalWon.
- * 6. heirs 입력 시 finalWon 을 상속분(numerator/denominator)으로 분배 (floor + 잔여원 선순위).
+ * 3. 위자료 + 장례비(default 5,000,000) 합산 → 과실상계 (장례비도 적극손해로 과실상계 대상, 대법원 판례).
+ * 4. 공제(비율/전액) 적용 → `max(0, ...)` → 100원 미만 절사 = finalWon.
+ * 5. heirs 입력 시 finalWon 을 상속분(numerator/denominator)으로 분배 (floor + 잔여원 선순위).
  */
 export function computeCompensationDeath(
   input: CompensationAutoDeathInput,
@@ -162,32 +161,32 @@ export function computeCompensationDeath(
       : null) ?? undefined;
   const otherDamagesSubtotalWon = otherDamagesResult?.subtotalWon ?? 0;
 
-  // 5. 위자료
+  // 5. 위자료 + 장례비 (장례비도 적극적 손해 → 과실상계 대상. 대법원 판례:
+  //    "{(재산상 손해[소극손해=일실수입 + 적극손해=장례비·기타손해] + 위자료) × (1 − 과실비율)} − 공제".
+  //    종전엔 장례비를 과실상계 후 전액 가산해 과실 사건에서 과다 산정됐다.)
   const solatiumWon = input.solatiumWon ?? 0;
-  const pecuniaryDamagesSubtotalWon = lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon;
+  const funeralExpenseWon = input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE_WON;
+  const pecuniaryDamagesSubtotalWon =
+    lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon + funeralExpenseWon;
 
-  // 6. 과실상계
+  // 6. 과실상계 (장례비 포함 전체에 적용)
   const faultRatio = input.faultRatio ?? 0;
   const faultBeforeWon = pecuniaryDamagesSubtotalWon;
   const faultAfterWon = Math.floor(faultBeforeWon * (1 - faultRatio));
 
-  // 7. 장례비 (과실상계 후 전액 가산)
-  const funeralExpenseWon = input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE_WON;
-  const afterFuneralWon = faultAfterWon + funeralExpenseWon;
-
-  // 8. 공제 (장례비 가산 후 base 에 적용). 산재(산×사망) 는 유족급여를 absolute 와 동일 위치에서 추가 차감 (매뉴얼 §11).
+  // 7. 공제 (과실상계 후 base 에 적용). 산재(산×사망) 는 유족급여를 absolute 와 동일 위치에서 추가 차감 (매뉴얼 §11).
   const accidentType = input.accidentType ?? "auto";
   const ratioItems = input.deductions?.ratio ?? [];
   const absoluteItems = input.deductions?.absolute ?? [];
   let ratioSum = 0;
   for (const item of ratioItems) ratioSum += item.ratio;
-  const ratioSubtotalWon = Math.floor(afterFuneralWon * ratioSum);
+  const ratioSubtotalWon = Math.floor(faultAfterWon * ratioSum);
   let absoluteSubtotalWon = 0;
   for (const item of absoluteItems) absoluteSubtotalWon += item.amount;
   const industrialBenefitWon =
     accidentType === "industrial" ? (input.industrialInsurance?.survivorBenefitWon ?? 0) : 0;
   const deductionsAfterWon =
-    afterFuneralWon - ratioSubtotalWon - absoluteSubtotalWon - industrialBenefitWon;
+    faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon - industrialBenefitWon;
 
   // 9. final
   const finalRawWon = Math.max(0, deductionsAfterWon);

@@ -3,7 +3,7 @@
   "id": "case-comp-011-industrial-death",
   "title": "industrial/death — 산재 사망, 과실 10% + 장례비 + 유족급여 1억 공제, 배우자+자녀1 분배 (3:2)",
   "source": "manual-derivation",
-  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 3. case-008 baseline(30세男 생계비 1/3, 420개월 240 cap, 일실수입 605,679,360) 위에 사건종류 산재 + 과실 10% + 장례비 500만 + 유족급여 100,000,000. 산재급여는 과실상계·장례비 가산 후 absolute 와 동일 위치 차감 (매뉴얼 §11). 상속 배우자 3/5 자녀 2/5.",
+  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 3. case-008 baseline(30세男 생계비 1/3, 420개월 240 cap, 일실수입 605,679,360) 위에 사건종류 산재 + 장례비 500만(적극손해 → 과실상계 대상, 소계 610,679,360) + 과실 10% → 549,611,424 + 유족급여 100,000,000. 산재급여는 과실상계 후 absolute 와 동일 위치 차감 (매뉴얼 §11) → 449,611,424 → 449,611,400. 상속 배우자 3/5 자녀 2/5.",
   "input": {
     "mode": "death",
     "accidentType": "industrial",
@@ -35,20 +35,20 @@
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 605679360,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 605679360,
-    "faultOffset": { "ratio": 0.1, "afterWon": 545111424 },
+    "pecuniaryDamagesSubtotalWon": 610679360,
+    "faultOffset": { "ratio": 0.1, "afterWon": 549611424 },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
       "industrialBenefitWon": 100000000,
-      "afterWon": 450111424
+      "afterWon": 449611424
     },
-    "finalWon": 450111400,
+    "finalWon": 449611400,
     "hoffman240CapCappedAtIndex": 0,
     "inheritanceShares": [
-      { "name": "배우자", "numerator": 3, "denominator": 5, "amountWon": 270066840 },
-      { "name": "자녀1", "numerator": 2, "denominator": 5, "amountWon": 180044560 }
+      { "name": "배우자", "numerator": 3, "denominator": 5, "amountWon": 269766840 },
+      { "name": "자녀1", "numerator": 2, "denominator": 5, "amountWon": 179844560 }
     ],
     "dataVersions": {
       "laborRates": "labor-rates/v1.0.0",

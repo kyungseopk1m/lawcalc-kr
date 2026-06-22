@@ -3,7 +3,7 @@
   "id": "case-comp-008-auto-death-basic",
   "title": "auto/death basic — 30세男 사망, 생계비 1/3 + 장례비 500만, 상속 없음",
   "source": "manual-derivation",
-  "notes": "compensation-death-golden-derivation-2026-06-02.md § 2. 가동연한 65세(420개월), rawHoffman H[420]=242.46633829 > 240 → appliedHoffman 240 cap, 생계비 1/3 공제, 장례비 500만 가산, 100원 절사.",
+  "notes": "compensation-death-golden-derivation-2026-06-02.md § 2. 가동연한 65세(420개월), rawHoffman H[420]=242.46633829 > 240 → appliedHoffman 240 cap, 생계비 1/3 공제, 장례비 500만을 과실상계 대상(적극손해)에 포함(과실 0이라 finalWon 불변), 100원 절사.",
   "input": {
     "mode": "death",
     "base": {
@@ -27,8 +27,8 @@
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 605679360,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 605679360,
-    "faultOffset": { "ratio": 0, "afterWon": 605679360 },
+    "pecuniaryDamagesSubtotalWon": 610679360,
+    "faultOffset": { "ratio": 0, "afterWon": 610679360 },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,

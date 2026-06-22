@@ -3,7 +3,7 @@
   "id": "case-comp-014-other-damages-death",
   "title": "auto/death 기타손해 — 개호비+치료비 + 생계비 1/3 + 장례비 + 과실 10% + 상속분배",
   "source": "manual-derivation",
-  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md § 4. 사망 일실수입 baseline = case-008(보통인부, 가동 65세 H[420]=242.466>240 cap, 생계비 1/3 → 605,679,360). 기타손해(개호비 향후[0,120] 인원1 = 172068×30×H[120](97.145152)=501,467,161 + 치료비 기왕 10,000,000) = 511,467,161 → 과실상계 전 합산. 위자료 50,000,000. 과실 10% 후 1,050,431,868 + 장례비 500만 = 1,055,431,868 → 100원 절사 1,055,431,800. 상속 배우자3/7·자녀2/7·자녀2/7 분배(잔여원 선순위).",
+  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md § 4. 사망 일실수입 baseline = case-008(보통인부, 가동 65세 H[420]=242.466>240 cap, 생계비 1/3 → 605,679,360). 기타손해(개호비 향후[0,120] 인원1 = 172068×30×H[120](97.145152)=501,467,161 + 치료비 기왕 10,000,000) = 511,467,161. 위자료 50,000,000 + 장례비 500만(적극손해) 모두 과실상계 전 합산 → 소계 1,172,146,521. 과실 10% → 1,054,931,868 → 100원 절사 1,054,931,800. 상속 배우자3/7·자녀2/7·자녀2/7 분배(잔여원 선순위).",
   "input": {
     "mode": "death",
     "base": {
@@ -52,15 +52,15 @@
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 605679360,
     "solatiumWon": 50000000,
-    "pecuniaryDamagesSubtotalWon": 1167146521,
-    "faultOffset": { "ratio": 0.1, "afterWon": 1050431868 },
+    "pecuniaryDamagesSubtotalWon": 1172146521,
+    "faultOffset": { "ratio": 0.1, "afterWon": 1054931868 },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 1055431868
+      "afterWon": 1054931868
     },
-    "finalWon": 1055431800,
+    "finalWon": 1054931800,
     "hoffman240CapCappedAtIndex": 0,
     "otherDamagesSubtotalWon": 511467161,
     "otherDamages": {
@@ -69,9 +69,9 @@
       "applianceWon": 0
     },
     "inheritanceShares": [
-      { "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 452327915 },
-      { "name": "자녀1", "numerator": 2, "denominator": 7, "amountWon": 301551943 },
-      { "name": "자녀2", "numerator": 2, "denominator": 7, "amountWon": 301551942 }
+      { "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 452113629 },
+      { "name": "자녀1", "numerator": 2, "denominator": 7, "amountWon": 301409086 },
+      { "name": "자녀2", "numerator": 2, "denominator": 7, "amountWon": 301409085 }
     ],
     "dataVersions": {
       "laborRates": "labor-rates/v1.0.0",

@@ -428,7 +428,8 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     const result = computeCompensationDeath(input);
     expect(result.accidentType).toBe("industrial");
     expect(result.deductions.industrialBenefitWon).toBe(100_000_000);
-    expect(result.finalWon).toBe(450_111_400);
+    // 장례비(500만)가 과실상계(10%) 대상에 포함 → 종전 450,111,400 − 500,000 = 449,611,400.
+    expect(result.finalWon).toBe(449_611_400);
     const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
     expect(sum).toBe(result.finalWon);
   });

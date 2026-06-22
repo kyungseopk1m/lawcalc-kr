@@ -759,7 +759,7 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(view.solatium_won)),
             ),
             (
-                "재산상 손해 소계".into(),
+                "과실상계 대상 소계".into(),
                 format!("{}원", format_currency(view.pecuniary_damages_subtotal_won)),
             ),
             (
@@ -938,16 +938,16 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(view.solatium_won)),
             ),
             (
-                "재산상 손해 소계".into(),
+                "장례비".into(),
+                format!("{}원", format_currency(view.funeral_expense_won)),
+            ),
+            (
+                "과실상계 대상 소계".into(),
                 format!("{}원", format_currency(view.pecuniary_damages_subtotal_won)),
             ),
             (
                 format!("과실상계 ({:.0}%)", view.fault_offset.ratio * 100.0),
                 format!("{}원", format_currency(view.fault_offset.after_won)),
-            ),
-            (
-                "장례비".into(),
-                format!("{}원", format_currency(view.funeral_expense_won)),
             ),
             (
                 if view.deductions.industrial_benefit_won.is_some() {

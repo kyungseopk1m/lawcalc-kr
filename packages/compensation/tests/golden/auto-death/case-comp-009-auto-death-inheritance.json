@@ -3,7 +3,7 @@
   "id": "case-comp-009-auto-death-inheritance",
   "title": "auto/death inheritance — 40세男 사망, 배우자+자녀2 분배 (3:2:2), 잔여원 선순위",
   "source": "manual-derivation",
-  "notes": "compensation-death-golden-derivation-2026-06-02.md § 3. 가동연한 65세(300개월), rawHoffman H[300]=194.34575275 < 240 → cap 미적용, 위자료 8천만 + 과실 20% + 장례비 500만 + 절대공제 12,345,678원, 상속 배우자 3/7 자녀 2/7 × 2, floor 후 잔여 1원 배우자 배정.",
+  "notes": "compensation-death-golden-derivation-2026-06-02.md § 3. 가동연한 65세(300개월), rawHoffman H[300]=194.34575275 < 240 → cap 미적용, 일실수입 490,463,379 + 위자료 8천만 + 장례비 500만(적극손해 → 과실상계 대상) = 소계 575,463,379, 과실 20% → 460,370,703, 절대공제 12,345,678원 → 448,025,025 → 100원 절사 448,025,000. 상속 배우자 3/7 자녀 2/7 × 2, floor 후 잔여 2원 배우자·자녀1 배정.",
   "input": {
     "mode": "death",
     "base": {
@@ -39,20 +39,20 @@
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 490463379,
     "solatiumWon": 80000000,
-    "pecuniaryDamagesSubtotalWon": 570463379,
-    "faultOffset": { "ratio": 0.2, "afterWon": 456370703 },
+    "pecuniaryDamagesSubtotalWon": 575463379,
+    "faultOffset": { "ratio": 0.2, "afterWon": 460370703 },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 12345678,
-      "afterWon": 449025025
+      "afterWon": 448025025
     },
-    "finalWon": 449025000,
+    "finalWon": 448025000,
     "hoffman240CapCappedAtIndex": null,
     "inheritanceShares": [
-      { "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 192439286 },
-      { "name": "자녀1", "numerator": 2, "denominator": 7, "amountWon": 128292857 },
-      { "name": "자녀2", "numerator": 2, "denominator": 7, "amountWon": 128292857 }
+      { "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 192010715 },
+      { "name": "자녀1", "numerator": 2, "denominator": 7, "amountWon": 128007143 },
+      { "name": "자녀2", "numerator": 2, "denominator": 7, "amountWon": 128007142 }
     ],
     "dataVersions": {
       "laborRates": "labor-rates/v1.0.0",

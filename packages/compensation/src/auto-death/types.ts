@@ -48,7 +48,7 @@ export type CompensationHeirsInput = InheritanceInput;
 
 /** 산재(사망) 보험급여 공제 입력. `accidentType === "industrial"` 일 때만 의미. */
 export interface CompensationIndustrialInsuranceDeath {
-  /** 유족급여 (원, ≥ 0 정수). 과실상계·장례비 가산 후 전액 공제. default 0. */
+  /** 유족급여 (원, ≥ 0 정수). 과실상계 후 base 에서 전액 공제. default 0. */
   survivorBenefitWon?: number;
 }
 
@@ -67,7 +67,7 @@ export interface CompensationAutoDeathInput {
   lostIncome: CompensationLostIncomeInput;
   /** 생계비 공제 비율 (0~1). default 1/3. 일실수입에 `(1 - ratio)` 가 곱해진다. */
   livingCostDeductionRatio?: number;
-  /** 장례비 (원, ≥ 0 정수). default 5,000,000. 과실상계 후 전액 가산. */
+  /** 장례비 (원, ≥ 0 정수). default 5,000,000. 적극손해로 과실상계 대상에 포함 (대법원 판례). */
   funeralExpenseWon?: number;
   /** 위자료 (유족 위자료, 원 ≥ 0 정수). default 0. */
   solatiumWon?: number;
@@ -120,15 +120,15 @@ export interface CompensationAutoDeathResult {
   otherDamages?: OtherDamagesResult;
   /** 위자료 (원). */
   solatiumWon: number;
-  /** 과실상계 대상 소계 (위자료 포함) = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon`. */
+  /** 과실상계 대상 소계 (위자료·장례비 포함) = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon + funeralExpenseWon`. */
   pecuniaryDamagesSubtotalWon: number;
   /** 과실상계 결과. */
   faultOffset: CompensationFaultOffset;
-  /** 장례비 (원). 과실상계 후 전액 가산. */
+  /** 장례비 (원). 적극손해로 과실상계 대상 소계에 포함 (대법원 판례). */
   funeralExpenseWon: number;
-  /** 공제 결과 (장례비 가산 후 base 에 적용). */
+  /** 공제 결과 (과실상계 후 base 에 적용). */
   deductions: CompensationDeductionsResult;
-  /** 최종 합계 = `max(0, 과실상계 후 + 장례비 - 공제)` → 100원 미만 절사 후 정수. */
+  /** 최종 합계 = `max(0, 과실상계 후 - 공제)` → 100원 미만 절사 후 정수. */
   finalWon: number;
   /** 상속인별 분배 (heirs 입력 시에만). 합계 = finalWon. */
   inheritanceShares?: CompensationInheritanceShare[];

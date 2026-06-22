@@ -235,6 +235,12 @@ pub fn disclaimer_text(disclaimer: Option<&str>) -> &str {
 }
 
 pub fn format_currency(amount: f64) -> String {
+    // 비정상 입력(NaN/Inf) 방어. f64→i64 `as` 캐스트는 saturating 이라 메모리 안전성
+    // 문제는 없으나, Inf 가 들어오면 9,223,372,036,854,775,807 같은 쓰레기 금액이
+    // 출력될 수 있다. 정상(유한) 금액은 종전과 byte-identical 이라 골든 무영향.
+    if !amount.is_finite() {
+        return "-".to_string();
+    }
     let n = amount.round() as i64;
     let s = n.abs().to_string();
     let mut grouped = String::with_capacity(s.len() + s.len() / 3);
@@ -385,6 +391,14 @@ mod tests {
         assert_eq!(format_currency(1000.0), "1,000");
         assert_eq!(format_currency(1234567.0), "1,234,567");
         assert_eq!(format_currency(-1234.0), "-1,234");
+    }
+
+    #[test]
+    fn format_currency_guards_non_finite() {
+        // IPC-2: NaN/Inf 입력은 saturating 캐스트로 쓰레기 금액(i64::MAX 등)을 내지 않고 "-" 반환.
+        assert_eq!(format_currency(f64::NAN), "-");
+        assert_eq!(format_currency(f64::INFINITY), "-");
+        assert_eq!(format_currency(f64::NEG_INFINITY), "-");
     }
 
     #[test]

@@ -71,25 +71,27 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
     input.solatiumWon = 80000000;
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.solatiumWon).toBe(80000000);
-    expect(result.pecuniaryDamagesSubtotalWon).toBe(605679360 + 80000000);
+    expect(result.pecuniaryDamagesSubtotalWon).toBe(605679360 + 80000000 + 5000000);
     expect(result.finalWon).toBe(Math.floor((605679360 + 80000000 + 5000000) / 100) * 100);
   });
 
-  it("과실상계 50% — 장례비는 과실상계 후 전액 가산", () => {
+  it("과실상계 50% — 장례비도 과실상계 대상 (적극손해)", () => {
     const input = baseInput();
     input.faultRatio = 0.5;
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.faultOffset.ratio).toBe(0.5);
-    expect(result.faultOffset.afterWon).toBe(302839680);
-    expect(result.finalWon).toBe(307839600);
+    // 장례비 500만이 과실상계 base 에 포함: floor((605,679,360 + 5,000,000) × 0.5).
+    expect(result.faultOffset.afterWon).toBe(305339680);
+    expect(result.finalWon).toBe(305339600);
   });
 
-  it("경계: 과실 100% → 일실수입 0, 장례비만 잔존", () => {
+  it("경계: 과실 100% → 장례비 포함 전부 0 (장례비도 과실상계 대상)", () => {
     const input = baseInput();
     input.faultRatio = 1;
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.faultOffset.afterWon).toBe(0);
-    expect(result.finalWon).toBe(5000000);
+    // 종전엔 장례비 500만이 과실상계 후 가산돼 잔존했으나, 이제 장례비도 과실상계 대상이라 0.
+    expect(result.finalWon).toBe(0);
   });
 
   it("공제 (전액공제 + 비율공제) 조합", () => {
@@ -180,12 +182,12 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
       ],
     };
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
-    expect(result.finalWon).toBe(449025000);
+    expect(result.finalWon).toBe(448025000);
     const shares = result.inheritanceShares!;
-    // floor: 192439285 / 128292857 / 128292857, remainder 1 → 배우자
-    expect(shares[0]!.amountWon).toBe(192439286);
-    expect(shares[1]!.amountWon).toBe(128292857);
-    expect(shares[2]!.amountWon).toBe(128292857);
+    // floor: 192010714 / 128007142 / 128007142, remainder 2 → 배우자·자녀1
+    expect(shares[0]!.amountWon).toBe(192010715);
+    expect(shares[1]!.amountWon).toBe(128007143);
+    expect(shares[2]!.amountWon).toBe(128007142);
     expect(shares.reduce((a, s) => a + s.amountWon, 0)).toBe(result.finalWon);
   });
 
@@ -218,7 +220,7 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
 });
 
 describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (v0.7.0)", () => {
-  it("case-comp-011 path: 과실 10% + 장례비 + 유족급여 1억 공제 → 450,111,400원, 배우자/자녀 분배", () => {
+  it("case-comp-011 path: 과실 10% + 장례비(과실상계 대상) + 유족급여 1억 공제 → 449,611,400원, 배우자/자녀 분배", () => {
     const input = baseInput();
     input.accidentType = "industrial";
     input.faultRatio = 0.1;
@@ -230,14 +232,14 @@ describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (
     };
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.accidentType).toBe("industrial");
-    expect(result.faultOffset.afterWon).toBe(545111424);
+    expect(result.faultOffset.afterWon).toBe(549611424);
     expect(result.funeralExpenseWon).toBe(5_000_000);
     expect(result.deductions.industrialBenefitWon).toBe(100_000_000);
-    expect(result.deductions.afterWon).toBe(450111424);
-    expect(result.finalWon).toBe(450111400);
+    expect(result.deductions.afterWon).toBe(449611424);
+    expect(result.finalWon).toBe(449611400);
     expect(result.inheritanceShares).toEqual([
-      { name: "배우자", numerator: 3, denominator: 5, amountWon: 270066840 },
-      { name: "자녀1", numerator: 2, denominator: 5, amountWon: 180044560 },
+      { name: "배우자", numerator: 3, denominator: 5, amountWon: 269766840 },
+      { name: "자녀1", numerator: 2, denominator: 5, amountWon: 179844560 },
     ]);
     const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
     expect(sum).toBe(result.finalWon);

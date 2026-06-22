@@ -60,7 +60,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
-import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
+import { formatWon, formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcCompensationPayload, type LcalcFile } from "../lib/ipc";
 import { useCaseSlot } from "../lib/case-file";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
@@ -346,10 +346,6 @@ export function applyLoadedCompensationInput(input: CompensationInput): Compensa
         : String(input.industrialInsurance.disabilityBenefitWon),
     otherDamages: applyOtherDamagesInput(input.otherDamages),
   };
-}
-
-function formatWon(value: number): string {
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원`;
 }
 
 function formatRatioPercent(value: number): string {
@@ -699,9 +695,9 @@ export function formatCompensationDeathForClipboard(result: CompensationAutoDeat
     `생계비 공제 비율: ${formatRatioPercent(result.livingCostDeductionRatio)}`,
     `일실수입 소계 (생계비 공제 후): ${formatWon(result.lostIncomeSubtotalWon)}`,
     `위자료: ${formatWon(result.solatiumWon)}`,
+    `장례비: ${formatWon(result.funeralExpenseWon)}`,
     `과실상계 대상 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
     `과실상계 (${formatRatioPercent(result.faultOffset.ratio)} 후): ${formatWon(result.faultOffset.afterWon)}`,
-    `장례비: ${formatWon(result.funeralExpenseWon)}`,
     `비율공제 소계: ${formatWon(result.deductions.ratioSubtotalWon)}`,
     `전액공제 소계: ${formatWon(result.deductions.absoluteSubtotalWon)}`,
   ];
@@ -1912,7 +1908,7 @@ function DeathCompensationView({
               </div>
               {state.accidentType === "industrial" ? (
                 <label className="grid gap-2 text-sm font-medium">
-                  유족급여 (원) — 과실상계·장례비 가산 후 공제
+                  유족급여 (원) — 과실상계 후 공제
                   <Input
                     inputMode="numeric"
                     placeholder="예: 100,000,000"
@@ -2103,7 +2099,7 @@ function DeathCompensationView({
                 />
                 <HeirGroupCard
                   title="2순위 — 직계존속"
-                  hint="부모 우선, 부모 없을 때만 조부모 (최근친 우선, 민법 제1000조②). 1순위 부재 시에만 분배 참여."
+                  hint="최근친만 입력하세요 — 부모가 있으면 조부모는 비워 두세요 (제1000조②). 입력한 직계존속은 균분 처리되므로 촌수가 다른 분을 함께 넣으면 안 됩니다. 1순위 부재 시에만 참여."
                   heirs={state.linealAscendants}
                   onChange={(heirs) => update({ linealAscendants: heirs })}
                   allowRepresentation={false}
@@ -2119,7 +2115,7 @@ function DeathCompensationView({
                 />
                 <HeirGroupCard
                   title="4순위 — 4촌 이내 방계혈족"
-                  hint="1·2·3순위·배우자 모두 부재 시에만. 3촌이 4촌에 우선 (최근친, 민법 제1000조②). 대습상속 대상 아님."
+                  hint="1·2·3순위·배우자 모두 부재 시에만. 최근친만 입력하세요 — 3촌(예: 삼촌)이 있으면 4촌(예: 사촌)은 비워 두세요 (제1000조②). 입력한 방계는 균분 처리됩니다. 대습상속 대상 아님."
                   heirs={state.collateralFourth}
                   onChange={(heirs) => update({ collateralFourth: heirs })}
                   allowRepresentation={false}
@@ -2251,14 +2247,14 @@ function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
             <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>
             <span className="text-muted-foreground">위자료</span>
             <span className="text-right">{formatWon(result.solatiumWon)}</span>
+            <span className="text-muted-foreground">장례비</span>
+            <span className="text-right">{formatWon(result.funeralExpenseWon)}</span>
             <span className="text-muted-foreground">과실상계 대상 소계</span>
             <span className="text-right">{formatWon(result.pecuniaryDamagesSubtotalWon)}</span>
             <span className="text-muted-foreground">
               과실상계 ({formatRatioPercent(result.faultOffset.ratio)})
             </span>
             <span className="text-right">{formatWon(result.faultOffset.afterWon)}</span>
-            <span className="text-muted-foreground">장례비</span>
-            <span className="text-right">{formatWon(result.funeralExpenseWon)}</span>
             <span className="text-muted-foreground">비율공제 소계</span>
             <span className="text-right">{formatWon(result.deductions.ratioSubtotalWon)}</span>
             <span className="text-muted-foreground">전액공제 소계</span>
