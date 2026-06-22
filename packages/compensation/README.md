@@ -1,12 +1,11 @@
 # @lawcalc-kr/compensation
 
-손해배상 (compensation) 도메인 엔진. v0.5 cycle 의 자×부상 (auto-injury) single slice 를 `compensation@1` capability 로 동결한다.
+손해배상 (compensation) 도메인 엔진. 자×부상 (auto-injury) 에서 시작해 자×사망·산재·기타손해까지 다루는 capability (`@1`~`@4`, 아래 "도메인 확장 정원" 참조).
 
 ## 책임 범위
 
 - 입력 검증 (`validateCompensationInput`)
 - 일실수입 / 위자료 / 적극손해 / 기왕증 / 과실상계 / 손익공제 계산 (`computeCompensation`)
-- capability id 상수 `COMPENSATION_CAPABILITY_ID`
 
 ## 외부 의존
 

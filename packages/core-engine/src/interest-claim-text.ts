@@ -30,7 +30,13 @@ export function formatCourtDate(iso: IsoDate): string {
 }
 
 function formatPercent(rate: number): string {
-  return `${(rate * 100).toLocaleString("ko-KR", { maximumFractionDigits: 3 })}%`;
+  // 청구취지 표시이율 정책: 백분율 기준 소수점 **최대 10자리**.
+  // - 법정이율(5/6/12/15/20%)·실무 약정이율(소수 몇 자리)은 손실 없이 정확히 표기된다.
+  // - 계산은 항상 입력 raw rate 를 그대로 쓴다. 백분율 10자리(= rate 소수 12자리)를 넘는
+  //   극단 정밀도 이율(법원 제출 문서엔 비현실적)만 표기 시 반올림되며, 그 경우에 한해
+  //   표시이율이 계산이율과 미세하게 어긋날 수 있다.
+  // - 상한을 15+ 로 올리면 0.07 → "7.000000000000001" 같은 IEEE754 잡음이 새므로 10 으로 고정.
+  return `${(rate * 100).toLocaleString("ko-KR", { maximumFractionDigits: 10 })}%`;
 }
 
 /**

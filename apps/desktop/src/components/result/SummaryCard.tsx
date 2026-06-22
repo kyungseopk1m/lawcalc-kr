@@ -1,18 +1,11 @@
 import type { InterestResult } from "@lawcalc-kr/core-engine";
 
+import { formatWon } from "../../lib/format-won";
 import { cn } from "../../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface SummaryCardProps {
   result: InterestResult;
-}
-
-const numberFormatter = new Intl.NumberFormat("ko-KR", {
-  maximumFractionDigits: 0,
-});
-
-function formatWon(value: number) {
-  return `${numberFormatter.format(value)}원`;
 }
 
 function formatComputedAt(value: string) {

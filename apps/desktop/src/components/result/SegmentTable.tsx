@@ -1,17 +1,10 @@
 import type { InterestResult, InterestSegment } from "@lawcalc-kr/core-engine";
 
+import { formatWon } from "../../lib/format-won";
 import { FormulaCell } from "./FormulaCell";
 
 interface SegmentTableProps {
   result: InterestResult;
-}
-
-const numberFormatter = new Intl.NumberFormat("ko-KR", {
-  maximumFractionDigits: 0,
-});
-
-function formatWon(value: number) {
-  return `${numberFormatter.format(value)}원`;
 }
 
 function formatRate(rate: number) {

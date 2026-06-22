@@ -101,6 +101,42 @@ describe("resolveSegments — legalRatePreset auto-split (소촉법)", () => {
     };
     expect(resolveSegments(input)).toEqual([{ from: "2024-01-01", to: "2024-12-31", rate: 0.12 }]);
   });
+
+  // INT-1: 자동분할 커버리지 가드. 데이터셋 최초 시행일보다 앞선 구간이 입력되면
+  // 종전엔 그 구간이 "조용히" 누락된 채 과소계산된 결과가 반환됐다 → 이제 명시적으로 throw.
+  it("throws when the range starts before the dataset's earliest slice (no silent under-calc) [INT-1]", () => {
+    // promotion 최초 슬라이스 = 2003-06-01. 시작일이 그 이전이면 leading gap.
+    const input: InterestInput = {
+      principal: 1_000_000,
+      startDate: "2002-01-01",
+      endDate: "2004-12-31",
+      legalRatePreset: "promotion",
+      options: opts,
+    };
+    expect(() => resolveSegments(input)).toThrow(/no rate covering 2002-01-01/);
+  });
+
+  it("still throws when the range is entirely before any slice (out.length === 0) [INT-1]", () => {
+    const input: InterestInput = {
+      principal: 1_000_000,
+      startDate: "2001-01-01",
+      endDate: "2002-12-31",
+      legalRatePreset: "promotion",
+      options: opts,
+    };
+    expect(() => resolveSegments(input)).toThrow(/no rate/);
+  });
+
+  it("does not throw when the range is fully covered from the earliest applicable slice [INT-1]", () => {
+    const input: InterestInput = {
+      principal: 1_000_000,
+      startDate: "2010-01-01",
+      endDate: "2024-12-31",
+      legalRatePreset: "promotion",
+      options: opts,
+    };
+    expect(() => resolveSegments(input)).not.toThrow();
+  });
 });
 
 describe("resolveSegments — customRate", () => {

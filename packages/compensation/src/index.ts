@@ -49,5 +49,3 @@ export {
   validateOtherDamagesInput,
   type OtherDamagesContext,
 } from "./other-damages";
-
-export const COMPENSATION_CAPABILITY_ID = "compensation@1" as const;

@@ -84,6 +84,29 @@ export function resolveSegments(input: InterestInput, deps?: ResolveSegmentsDeps
       `resolveSegments: legalRatePreset "${legalRatePreset}" has no rate covering ${startDate}..${endDate}`,
     );
   }
+  // 자동분할 커버리지 가드: explicit segment 경로(validateExplicitSegments)가 강제하는
+  // 불변식 — 첫 구간 from == startDate, 구간 인접, 마지막 구간 to == endDate — 을 auto
+  // 경로에도 동일하게 강제한다. 데이터셋 최초 시행일보다 앞선 기간(예: 소촉법 2003-06-01
+  // 이전)이 입력되면 종전엔 그 구간이 "조용히" 누락된 채 과소계산된 결과가 정상처럼
+  // 반환됐다. 법률 계산기에서 침묵 과소계산은 가장 위험한 결함이므로 loud error 를 택한다.
+  if (out[0]!.from !== startDate) {
+    throw new RangeError(
+      `resolveSegments: legalRatePreset "${legalRatePreset}" has no rate covering ${startDate} ` +
+        `(earliest available rate starts ${out[0]!.from}); supply an explicit segment for the period before ${out[0]!.from}`,
+    );
+  }
+  for (let i = 1; i < out.length; i++) {
+    if (addDays(out[i - 1]!.to, 1) !== out[i]!.from) {
+      throw new RangeError(
+        `resolveSegments: legalRatePreset "${legalRatePreset}" has a coverage gap between ${out[i - 1]!.to} and ${out[i]!.from}`,
+      );
+    }
+  }
+  if (out[out.length - 1]!.to !== endDate) {
+    throw new RangeError(
+      `resolveSegments: legalRatePreset "${legalRatePreset}" has no rate covering through ${endDate} (last covered ${out[out.length - 1]!.to})`,
+    );
+  }
   return out;
 }
 

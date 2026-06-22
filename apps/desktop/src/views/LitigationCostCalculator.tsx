@@ -33,7 +33,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { useCaseSlot } from "../lib/case-file";
-import { formatWonInput, parseWonText } from "../lib/format-won";
+import { formatWon, formatWonInput, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcFile, type LcalcLitigationCostPayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
@@ -54,10 +54,6 @@ interface ToastState {
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function formatWon(value: number) {
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원`;
 }
 
 function formatComputedAt(value: string): string {

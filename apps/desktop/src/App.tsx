@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   STANDARD_DISCLAIMER,
+  addDays,
   buildInterestClaimText,
   calculateInterest,
   type CalcOptions,
@@ -27,6 +28,8 @@ import {
   type LegalRatePreset as LegalRatePresetValue,
   type RateSegment,
 } from "@lawcalc-kr/core-engine";
+
+import { formatWon } from "./lib/format-won";
 
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
@@ -133,12 +136,6 @@ function validateInput(input: InterestInput, preset: LegalRatePresetOption, cust
   };
 }
 
-function addDays(date: string, days: number) {
-  const value = new Date(`${date}T00:00:00.000Z`);
-  value.setUTCDate(value.getUTCDate() + days);
-  return value.toISOString().slice(0, 10);
-}
-
 function validateSegments(startDate: string, endDate: string, segments: RateSegment[]) {
   if (segments.length === 0) {
     return "";
@@ -181,10 +178,6 @@ function validateSegments(startDate: string, endDate: string, segments: RateSegm
   }
 
   return "";
-}
-
-function formatWon(value: number) {
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원`;
 }
 
 function formatOptionLabels(options: CalcOptions) {

@@ -427,7 +427,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="2순위 — 직계존속"
-          hint="부모 우선, 부모 없을 때만 조부모 (최근친 우선, 민법 제1000조②). 1순위 부재 시에만 분배 참여. 대습상속 대상 아님 (제1001조)."
+          hint="최근친만 입력하세요 — 부모가 있으면 조부모는 비워 두세요 (제1000조②). 입력한 직계존속은 균분 처리되므로 촌수가 다른 분을 함께 넣으면 안 됩니다. 1순위 부재 시에만 참여. 대습상속 대상 아님 (제1001조)."
           heirs={linealAscendants}
           onChange={setLinealAscendants}
           allowRepresentation={false}
@@ -445,7 +445,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="4순위 — 4촌 이내 방계혈족"
-          hint="1·2·3순위·배우자 모두 부재 시에만. 3촌이 4촌에 우선 (최근친, 민법 제1000조②). 대습상속 대상 아님."
+          hint="1·2·3순위·배우자 모두 부재 시에만. 최근친만 입력하세요 — 3촌(예: 삼촌)이 있으면 4촌(예: 사촌)은 비워 두세요 (제1000조②). 입력한 방계는 균분 처리됩니다. 대습상속 대상 아님."
           heirs={collateralFourth}
           onChange={setCollateralFourth}
           allowRepresentation={false}

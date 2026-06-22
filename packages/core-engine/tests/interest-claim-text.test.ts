@@ -98,6 +98,31 @@ describe("buildInterestClaimText", () => {
     expect(text).toContain("연 3.5%의 비율로 계산한 돈");
   });
 
+  it("formats common rates without IEEE754 noise [INT-4]", () => {
+    for (const [rate, shown] of [
+      [0.05, "연 5%"],
+      [0.06, "연 6%"],
+      [0.07, "연 7%"], // (0.07*100) 의 부동소수 꼬리(7.000000000000001)가 새지 않아야 함
+      [0.0825, "연 8.25%"],
+      [0.18, "연 18%"],
+    ] as const) {
+      const text = buildInterestClaimText({
+        principal: 1_000_000,
+        segments: [segment("2026-01-01", "2026-12-31", rate)],
+      });
+      expect(text).toContain(`${shown}의 비율로 계산한 돈`);
+    }
+  });
+
+  it("renders multi-decimal agreement rates losslessly up to 10 percent-decimals [INT-4]", () => {
+    const text = buildInterestClaimText({
+      principal: 1_000_000,
+      segments: [segment("2026-01-01", "2026-12-31", 0.123456)],
+    });
+    // 종전 maximumFractionDigits:3 은 12.346% 로 반올림했다. 이제 12.3456% 로 정확 표기.
+    expect(text).toContain("연 12.3456%의 비율로 계산한 돈");
+  });
+
   it("renders three chained segments in claim order", () => {
     const text = buildInterestClaimText({
       principal: 20_000_000,

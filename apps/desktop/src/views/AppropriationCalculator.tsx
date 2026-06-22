@@ -29,7 +29,7 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { useCaseSlot } from "../lib/case-file";
-import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
+import { formatWon, formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcAppropriationPayload, type LcalcFile } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
@@ -207,10 +207,6 @@ export function buildAppropriationLcalcFile(
     dataVersions: { appropriation: result.dataVersion },
     payload,
   };
-}
-
-function formatWon(value: number): string {
-  return `${value.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원`;
 }
 
 function formatComputedAt(value: string): string {
