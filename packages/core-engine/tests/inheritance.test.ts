@@ -259,3 +259,164 @@ describe("calculateInheritance — 분배 정원", () => {
     expect(result.shares.map((s) => s.name)).toEqual(["자녀1", "자녀2의 대습1"]);
   });
 });
+
+describe("calculateInheritance — 최근친 우선 + 배우자 대습 (§1000②·§1003②·§1009②)", () => {
+  const frac = (s: { name: string; numerator: number; denominator: number }) =>
+    `${s.name}=${s.numerator}/${s.denominator}`;
+
+  it("INH-1 방계 4순위: 삼촌(3촌)이 사촌(4촌)에 우선 → 삼촌 단독", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      collateralFourth: [
+        { name: "삼촌", deceasedBeforeOpening: false, degree: 3 },
+        { name: "사촌", deceasedBeforeOpening: false, degree: 4 },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["삼촌=1/1"]);
+  });
+
+  it("INH-2 직계존속: 부(1촌)가 조부(2촌)에 우선 → 부 단독", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      linealAscendants: [
+        { name: "부", deceasedBeforeOpening: false, degree: 1 },
+        { name: "조부", deceasedBeforeOpening: false, degree: 2 },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["부=1/1"]);
+  });
+
+  it("INH-2 최근친 전원 사망 시 차순위 촌수가 상속 (부·모 사망 → 조부)", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      linealAscendants: [
+        { name: "부", deceasedBeforeOpening: true, degree: 1 },
+        { name: "모", deceasedBeforeOpening: true, degree: 1 },
+        { name: "조부", deceasedBeforeOpening: false, degree: 2 },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["조부=1/1"]);
+  });
+
+  it("INH-2 + 배우자: 부(1촌) 우선·조부 배제 → 배우자 3/5, 부 2/5", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      spouse: { alive: true },
+      linealAscendants: [
+        { name: "부", deceasedBeforeOpening: false, degree: 1 },
+        { name: "조부", deceasedBeforeOpening: false, degree: 2 },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["배우자=3/5", "부=2/5"]);
+  });
+
+  it("INH-3 배우자 대습 5할 가산: 손주 1/5, 며느리 3/10 (손주:며느리=2:3)", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      linealDescendants: [
+        { name: "자녀B", deceasedBeforeOpening: false },
+        {
+          name: "자녀A",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "손주", deceasedBeforeOpening: false },
+            { name: "며느리", deceasedBeforeOpening: false, isSpouseOfRepresented: true },
+          ],
+        },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["자녀B=1/2", "손주=1/5", "며느리=3/10"]);
+  });
+
+  it("하위호환: 배우자 표시 없는 대습은 종전대로 균분 (손주·며느리 각 1/4)", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      linealDescendants: [
+        { name: "자녀B", deceasedBeforeOpening: false },
+        {
+          name: "자녀A",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "손주", deceasedBeforeOpening: false },
+            { name: "며느리", deceasedBeforeOpening: false },
+          ],
+        },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["자녀B=1/2", "손주=1/4", "며느리=1/4"]);
+  });
+
+  it("하위호환: degree 미지정 직계존속은 종전대로 균분 (부·모 각 1/2)", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      linealAscendants: [
+        { name: "부", deceasedBeforeOpening: false },
+        { name: "모", deceasedBeforeOpening: false },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["부=1/2", "모=1/2"]);
+  });
+
+  it("형제자매 대습도 배우자 5할 가산: 조카 1/5, 형수 3/10 (§1001·§1003②·§1009②)", () => {
+    const r = calculateInheritance({
+      decedent: { deceasedAt: "2025-01-01" },
+      siblings: [
+        { name: "형제B", deceasedBeforeOpening: false },
+        {
+          name: "형제A",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "조카", deceasedBeforeOpening: false },
+            { name: "형수", deceasedBeforeOpening: false, isSpouseOfRepresented: true },
+          ],
+        },
+      ],
+    });
+    expect(r.shares.map(frac)).toEqual(["형제B=1/2", "조카=1/5", "형수=3/10"]);
+  });
+
+  it("촌수가 0 이하/비정수면 RangeError (방계·직계존속)", () => {
+    expect(() =>
+      calculateInheritance({
+        decedent: { deceasedAt: "2025-01-01" },
+        collateralFourth: [{ name: "삼촌", deceasedBeforeOpening: false, degree: 0 }],
+      }),
+    ).toThrow("촌수(degree)는 1 이상의 정수여야 합니다.");
+    expect(() =>
+      calculateInheritance({
+        decedent: { deceasedAt: "2025-01-01" },
+        linealAscendants: [{ name: "부", deceasedBeforeOpening: false, degree: 1.5 }],
+      }),
+    ).toThrow("촌수(degree)는 1 이상의 정수여야 합니다.");
+  });
+
+  it("촌수 검증은 HeirNode 공통 필드 — 직계비속·형제자매·대습 노드에도 적용 (public API 경계)", () => {
+    // 직계비속의 degree 는 계산에 안 쓰이지만 잘못된 값은 거부한다.
+    expect(() =>
+      calculateInheritance({
+        decedent: { deceasedAt: "2025-01-01" },
+        linealDescendants: [{ name: "자녀", deceasedBeforeOpening: false, degree: 0 }],
+      }),
+    ).toThrow("촌수(degree)는 1 이상의 정수여야 합니다.");
+    // 형제자매
+    expect(() =>
+      calculateInheritance({
+        decedent: { deceasedAt: "2025-01-01" },
+        siblings: [{ name: "형제", deceasedBeforeOpening: false, degree: -2 }],
+      }),
+    ).toThrow("촌수(degree)는 1 이상의 정수여야 합니다.");
+    // 대습 노드 (재귀)
+    expect(() =>
+      calculateInheritance({
+        decedent: { deceasedAt: "2025-01-01" },
+        linealDescendants: [
+          {
+            name: "자녀A",
+            deceasedBeforeOpening: true,
+            representatives: [{ name: "손주", deceasedBeforeOpening: false, degree: 0 }],
+          },
+        ],
+      }),
+    ).toThrow("촌수(degree)는 1 이상의 정수여야 합니다.");
+  });
+});

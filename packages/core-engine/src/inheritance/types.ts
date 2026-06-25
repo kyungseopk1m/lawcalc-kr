@@ -20,6 +20,18 @@ export interface HeirNode {
   name?: string;
   deceasedBeforeOpening: boolean;
   representatives?: HeirNode[];
+  /**
+   * 촌수 (직계존속: 부모 1·조부모 2 / 방계 4순위: 삼촌 3·사촌 4).
+   * 같은 순위 안에서 촌수가 다르면 최근친(최소 촌수)만 상속한다 (민법 §1000②).
+   * 미지정 시 그룹 전원을 동순위로 보고 균분한다 (하위호환 — 기존 입력·`.lcalc` 무영향).
+   * 직계비속/형제자매에는 적용하지 않는다(촌수 동일 또는 대습으로 처리).
+   */
+  degree?: number;
+  /**
+   * 이 대습상속인이 피대습자의 배우자(며느리·사위)인지. §1003② 대습 + §1009② 5할 가산.
+   * `representatives` 안에서만 의미가 있다. 미지정 시 직계비속 대습자로 보고 균분한다(하위호환).
+   */
+  isSpouseOfRepresented?: boolean;
 }
 
 /**

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1",
+  "id": "case-011",
+  "title": "배우자 대습 5할 가산 — 자녀A 사망, 손주 + 며느리 대습 (§1003②·§1009②)",
+  "source": "manual-derivation",
+  "notes": "자녀B 생존 + 자녀A 상속개시 전 사망 → 자녀A 슬롯을 손주·며느리(피대습자 배우자, §1003②)가 대습. §1009② 준용으로 손주:며느리 = 2:3. 슬롯 분모 = 0(배우자 미존재) + 2*2 = 4. 자녀A 슬롯 2/4 → 손주 (2/5)*(2/4)=4/20=1/5, 며느리 (3/5)*(2/4)=6/20=3/10. 자녀B 2/4=1/2. 합 1.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "linealDescendants": [
+      { "name": "자녀B", "deceasedBeforeOpening": false },
+      {
+        "name": "자녀A",
+        "deceasedBeforeOpening": true,
+        "representatives": [
+          { "name": "손주", "deceasedBeforeOpening": false },
+          { "name": "며느리", "deceasedBeforeOpening": false, "isSpouseOfRepresented": true }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [
+      { "name": "자녀B", "numerator": 1, "denominator": 2 },
+      { "name": "손주", "numerator": 1, "denominator": 5 },
+      { "name": "며느리", "numerator": 3, "denominator": 10 }
+    ]
+  }
+}

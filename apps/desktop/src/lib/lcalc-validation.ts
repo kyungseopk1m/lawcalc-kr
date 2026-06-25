@@ -238,6 +238,26 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
     );
   }
 
+  const degree = record.degree;
+  if (degree !== undefined) {
+    if (typeof degree !== "number" || !Number.isInteger(degree) || degree <= 0) {
+      throw new Error(`.lcalc 파일의 ${field}.degree 필드는 1 이상의 정수여야 합니다.`);
+    }
+    node.degree = degree;
+  }
+
+  const isSpouseOfRepresented = record.isSpouseOfRepresented;
+  if (isSpouseOfRepresented !== undefined) {
+    if (typeof isSpouseOfRepresented !== "boolean") {
+      throw new Error(
+        `.lcalc 파일의 ${field}.isSpouseOfRepresented 필드는 true 또는 false 여야 합니다.`,
+      );
+    }
+    if (isSpouseOfRepresented) {
+      node.isSpouseOfRepresented = true;
+    }
+  }
+
   return node;
 }
 

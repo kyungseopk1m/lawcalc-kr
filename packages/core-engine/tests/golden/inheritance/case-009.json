@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1",
+  "id": "case-009",
+  "title": "방계 4순위 최근친 우선 — 삼촌(3촌) + 사촌(4촌) → 삼촌 단독 (§1000②)",
+  "source": "manual-derivation",
+  "notes": "민법 §1000② 최근친 우선. 4촌 이내 방계혈족 중 3촌(삼촌)이 4촌(사촌)에 우선 → 삼촌 단독 1/1, 사촌 배제. 1·2·3순위·배우자 모두 부재. degree 로 촌수 표기.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "collateralFourth": [
+      { "name": "삼촌", "deceasedBeforeOpening": false, "degree": 3 },
+      { "name": "사촌", "deceasedBeforeOpening": false, "degree": 4 }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [{ "name": "삼촌", "numerator": 1, "denominator": 1 }]
+  }
+}

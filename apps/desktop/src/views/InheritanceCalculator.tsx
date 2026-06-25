@@ -47,14 +47,16 @@ interface ToastState {
   message: string;
 }
 
-function heirsFromNodesForDirtySnapshot(heirs: HeirNode[] | undefined) {
+function heirsFromNodesForDirtySnapshot(heirs: HeirNode[] | undefined, defaultDegree?: number) {
   return (
     heirs?.map((heir) => ({
       name: heir.name ?? "",
       deceasedBeforeOpening: heir.deceasedBeforeOpening,
+      degree: heir.degree ?? defaultDegree,
       representatives:
         heir.representatives?.map((representative) => ({
           name: representative.name ?? "",
+          isSpouseOfRepresented: representative.isSpouseOfRepresented ?? false,
         })) ?? [],
     })) ?? []
   );
@@ -99,9 +101,9 @@ function buildLoadedInheritanceDirtySnapshot(input: InheritanceInput, note: stri
       name: input.spouse?.name ?? "",
     },
     linealDescendants: heirsFromNodesForDirtySnapshot(input.linealDescendants),
-    linealAscendants: heirsFromNodesForDirtySnapshot(input.linealAscendants),
+    linealAscendants: heirsFromNodesForDirtySnapshot(input.linealAscendants, 1),
     siblings: heirsFromNodesForDirtySnapshot(input.siblings),
-    collateralFourth: heirsFromNodesForDirtySnapshot(input.collateralFourth),
+    collateralFourth: heirsFromNodesForDirtySnapshot(input.collateralFourth, 3),
     note,
   });
 }
@@ -427,11 +429,16 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="2순위 — 직계존속"
-          hint="최근친만 입력하세요 — 부모가 있으면 조부모는 비워 두세요 (제1000조②). 입력한 직계존속은 균분 처리되므로 촌수가 다른 분을 함께 넣으면 안 됩니다. 1순위 부재 시에만 참여. 대습상속 대상 아님 (제1001조)."
+          hint="각 직계존속의 촌수를 고르세요. 부모(1촌)·조부모(2촌) 중 최근친만 상속합니다 — 부모가 있으면 조부모는 자동 제외 (제1000조②). 1순위 부재 시에만 참여. 대습상속 대상 아님 (제1001조)."
           heirs={linealAscendants}
           onChange={setLinealAscendants}
           allowRepresentation={false}
           defaultLabel="직계존속"
+          degreeOptions={[
+            { value: 1, label: "부모 (1촌)" },
+            { value: 2, label: "조부모 (2촌)" },
+            { value: 3, label: "증조부모 (3촌)" },
+          ]}
         />
 
         <HeirGroupCard
@@ -445,11 +452,15 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="4순위 — 4촌 이내 방계혈족"
-          hint="1·2·3순위·배우자 모두 부재 시에만. 최근친만 입력하세요 — 3촌(예: 삼촌)이 있으면 4촌(예: 사촌)은 비워 두세요 (제1000조②). 입력한 방계는 균분 처리됩니다. 대습상속 대상 아님."
+          hint="1·2·3순위·배우자 모두 부재 시에만. 각 방계혈족의 촌수를 고르세요. 3촌(예: 삼촌)이 4촌(예: 사촌)에 우선해 최근친만 상속합니다 (제1000조②). 대습상속 대상 아님."
           heirs={collateralFourth}
           onChange={setCollateralFourth}
           allowRepresentation={false}
           defaultLabel="방계혈족"
+          degreeOptions={[
+            { value: 3, label: "3촌" },
+            { value: 4, label: "4촌" },
+          ]}
         />
 
         <div className="flex gap-2">

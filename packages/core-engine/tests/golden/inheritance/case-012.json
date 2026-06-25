@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "1",
+  "id": "case-012",
+  "title": "형제자매 대습 + 배우자 5할 가산 — 형제A 사망, 조카 + 형수 대습 (§1001·§1003②·§1009②)",
+  "source": "manual-derivation",
+  "notes": "1·2순위·배우자 모두 부재 → 3순위 형제자매 상속. 형제B 생존 + 형제A 상속개시 전 사망 → 형제A 슬롯을 조카(형제A의 직계비속)·형수(피대습자 배우자, §1003②)가 §1001 대습. §1010②→§1009② 준용으로 조카:형수 = 2:3. 슬롯 분모 = 살아있는·대습보유 2. 형제A 슬롯 1/2 → 조카 (2/5)*(1/2)=1/5, 형수 (3/5)*(1/2)=3/10. 형제B 1/2. 합 1. (형제자매 대습 배우자 가산은 실무 혼동 지점이라 명시 고정.)",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "siblings": [
+      { "name": "형제B", "deceasedBeforeOpening": false },
+      {
+        "name": "형제A",
+        "deceasedBeforeOpening": true,
+        "representatives": [
+          { "name": "조카", "deceasedBeforeOpening": false },
+          { "name": "형수", "deceasedBeforeOpening": false, "isSpouseOfRepresented": true }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [
+      { "name": "형제B", "numerator": 1, "denominator": 2 },
+      { "name": "조카", "numerator": 1, "denominator": 5 },
+      { "name": "형수", "numerator": 3, "denominator": 10 }
+    ]
+  }
+}

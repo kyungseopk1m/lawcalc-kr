@@ -13,11 +13,26 @@ import { Input } from "./ui/input";
  * 동일한 상속인 입력 UI를 사용하도록 추출한 모듈. 입력 모델(`HeirInput`/`SpouseInput`/
  * `DecedentInput`)과 도메인 입력(`InheritanceInput`/`HeirNode`) 간 변환 헬퍼를 함께 제공한다.
  */
+export interface RepInput {
+  id: string;
+  name: string;
+  /** 피대습자의 배우자(며느리·사위)인지 — §1009② 5할 가산 대상. */
+  isSpouseOfRepresented?: boolean;
+}
+
 export interface HeirInput {
   id: string;
   name: string;
   deceasedBeforeOpening: boolean;
-  representatives: { id: string; name: string }[];
+  /** 촌수 — 직계존속·방계 4순위에서 최근친 우선 판정(§1000②). 그 외 그룹은 미사용. */
+  degree?: number;
+  representatives: RepInput[];
+}
+
+/** 촌수 선택 옵션 (직계존속·방계 4순위 그룹에 전달). */
+export interface DegreeOption {
+  value: number;
+  label: string;
 }
 
 export interface SpouseInput {
@@ -46,12 +61,18 @@ export function toHeirNode(h: HeirInput, allowRepresentation: boolean): HeirNode
   if (name) {
     node.name = name;
   }
+  if (h.degree !== undefined) {
+    node.degree = h.degree;
+  }
   if (allowRepresentation && h.deceasedBeforeOpening && h.representatives.length > 0) {
     node.representatives = h.representatives.map((r) => {
       const representative: HeirNode = { deceasedBeforeOpening: false };
       const representativeName = r.name.trim();
       if (representativeName) {
         representative.name = representativeName;
+      }
+      if (r.isSpouseOfRepresented) {
+        representative.isSpouseOfRepresented = true;
       }
       return representative;
     });
@@ -64,10 +85,12 @@ export function fromHeirNode(h: HeirNode): HeirInput {
     id: newHeirId(),
     name: h.name ?? "",
     deceasedBeforeOpening: h.deceasedBeforeOpening,
+    ...(h.degree !== undefined ? { degree: h.degree } : {}),
     representatives:
       h.representatives?.map((representative) => ({
         id: newHeirId(),
         name: representative.name ?? "",
+        ...(representative.isSpouseOfRepresented ? { isSpouseOfRepresented: true } : {}),
       })) ?? [],
   };
 }
@@ -121,9 +144,12 @@ export function applyInheritanceInput(input: InheritanceInput): HeirGroupsState 
       name: input.spouse?.name ?? "",
     },
     linealDescendants: input.linealDescendants?.map(fromHeirNode) ?? [],
-    linealAscendants: input.linealAscendants?.map(fromHeirNode) ?? [],
+    // 직계존속·방계는 촌수 그룹 — 미지정 legacy 입력은 최근친(부모 1촌 / 삼촌 3촌)으로 기본 표기.
+    linealAscendants:
+      input.linealAscendants?.map((h) => ({ ...fromHeirNode(h), degree: h.degree ?? 1 })) ?? [],
     siblings: input.siblings?.map(fromHeirNode) ?? [],
-    collateralFourth: input.collateralFourth?.map(fromHeirNode) ?? [],
+    collateralFourth:
+      input.collateralFourth?.map((h) => ({ ...fromHeirNode(h), degree: h.degree ?? 3 })) ?? [],
   };
 }
 
@@ -131,8 +157,10 @@ export function heirsForDirtySnapshot(heirs: HeirInput[]) {
   return heirs.map((heir) => ({
     name: heir.name,
     deceasedBeforeOpening: heir.deceasedBeforeOpening,
+    degree: heir.degree,
     representatives: heir.representatives.map((representative) => ({
       name: representative.name,
+      isSpouseOfRepresented: representative.isSpouseOfRepresented ?? false,
     })),
   }));
 }
@@ -144,6 +172,8 @@ export interface HeirGroupCardProps {
   onChange: (heirs: HeirInput[]) => void;
   allowRepresentation: boolean;
   defaultLabel: string;
+  /** 촌수 선택 옵션 (직계존속·방계 4순위). 지정 시 각 상속인에 촌수 select 표시 + 추가 시 최근친 기본값. */
+  degreeOptions?: DegreeOption[];
 }
 
 export function HeirGroupCard({
@@ -153,12 +183,17 @@ export function HeirGroupCard({
   onChange,
   allowRepresentation,
   defaultLabel,
+  degreeOptions,
 }: HeirGroupCardProps) {
   const update = (idx: number, patch: Partial<HeirInput>) => {
     onChange(heirs.map((h, i) => (i === idx ? { ...h, ...patch } : h)));
   };
   const remove = (idx: number) => {
     onChange(heirs.filter((_, i) => i !== idx));
+  };
+  const addHeir = () => {
+    const fresh = emptyHeir();
+    onChange([...heirs, degreeOptions ? { ...fresh, degree: degreeOptions[0]!.value } : fresh]);
   };
   const addRep = (idx: number) => {
     onChange(
@@ -169,13 +204,15 @@ export function HeirGroupCard({
       ),
     );
   };
-  const updateRep = (idx: number, repIdx: number, name: string) => {
+  const updateRep = (idx: number, repIdx: number, patch: Partial<RepInput>) => {
     onChange(
       heirs.map((h, i) =>
         i === idx
           ? {
               ...h,
-              representatives: h.representatives.map((r, j) => (j === repIdx ? { ...r, name } : r)),
+              representatives: h.representatives.map((r, j) =>
+                j === repIdx ? { ...r, ...patch } : r,
+              ),
             }
           : h,
       ),
@@ -214,6 +251,23 @@ export function HeirGroupCard({
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
+            {degreeOptions ? (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                촌수
+                <select
+                  className="rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground"
+                  value={String(h.degree ?? degreeOptions[0]!.value)}
+                  onChange={(e) => update(idx, { degree: Number(e.target.value) })}
+                >
+                  {degreeOptions.map((opt) => (
+                    <option key={opt.value} value={String(opt.value)}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[11px]">최근친만 상속 (§1000②)</span>
+              </label>
+            ) : null}
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
@@ -231,21 +285,33 @@ export function HeirGroupCard({
               <div className="grid gap-2 border-t border-border pt-2">
                 <p className="text-xs font-medium text-foreground">대습상속인 (1차)</p>
                 {h.representatives.map((r, repIdx) => (
-                  <div key={r.id} className="flex items-center gap-2">
-                    <Input
-                      placeholder={`예: ${h.name || `${defaultLabel}${idx + 1}`}의 대습${repIdx + 1}`}
-                      value={r.name}
-                      onChange={(e) => updateRep(idx, repIdx, e.target.value)}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="대습 삭제"
-                      onClick={() => removeRep(idx, repIdx)}
-                      type="button"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  <div key={r.id} className="grid gap-1">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        placeholder={`예: ${h.name || `${defaultLabel}${idx + 1}`}의 대습${repIdx + 1}`}
+                        value={r.name}
+                        onChange={(e) => updateRep(idx, repIdx, { name: e.target.value })}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="대습 삭제"
+                        onClick={() => removeRep(idx, repIdx)}
+                        type="button"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={r.isSpouseOfRepresented ?? false}
+                        onChange={(e) =>
+                          updateRep(idx, repIdx, { isSpouseOfRepresented: e.target.checked })
+                        }
+                      />
+                      피대습자(사망한 상속인)의 배우자 — 5할 가산 (§1009②)
+                    </label>
                   </div>
                 ))}
                 <Button
@@ -262,13 +328,7 @@ export function HeirGroupCard({
             ) : null}
           </div>
         ))}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onChange([...heirs, emptyHeir()])}
-          type="button"
-          className="w-fit"
-        >
+        <Button variant="outline" size="sm" onClick={addHeir} type="button" className="w-fit">
           <Plus className="mr-1 h-3 w-3" />
           {defaultLabel} 추가
         </Button>

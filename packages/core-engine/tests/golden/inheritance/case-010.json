@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1",
+  "id": "case-010",
+  "title": "직계존속 최근친 우선 — 부(1촌) + 조부(2촌) → 부 단독 (§1000②)",
+  "source": "manual-derivation",
+  "notes": "민법 §1000② 최근친 우선. 직계존속 중 1촌(부모)이 2촌(조부모)에 우선 → 부 단독 1/1, 조부 배제. 부모 생존 시 조부모는 상속권 없음. 1순위·배우자 부재. degree 로 촌수 표기.",
+  "input": {
+    "decedent": { "deceasedAt": "2025-01-01" },
+    "linealAscendants": [
+      { "name": "부", "deceasedBeforeOpening": false, "degree": 1 },
+      { "name": "조부", "deceasedBeforeOpening": false, "degree": 2 }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance/v1.0.0",
+    "shares": [{ "name": "부", "numerator": 1, "denominator": 1 }]
+  }
+}
