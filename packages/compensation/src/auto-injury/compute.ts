@@ -56,15 +56,15 @@ function monthsBetween(from: IsoDate, to: IsoDate): number {
 /**
  * 자×부상 손해배상 계산. 10 단계 순서 (plan v2 §6 트랙 4 A):
  *
- * 1. 노동능력상실률 계산:
- *    - 영구 중복 = `1 - Π(1 - perm_i.ratio)`
- *    - 한시 영구 환산 합 = `Σ (temp_i.years / 10) × temp_i.ratio` (CAP 노트 § 1.2 정원)
- *    - 합산 lossRate = `1 - (1 - 영구중복) × (1 - 한시환산합)`
- * 2. segment 분해:
- *    - 영구 중복 > 0 또는 한시 없음 → 단일 segment `[0, totalMonths)` lossRate = 합산 lossRate
- *    - 영구 중복 = 0 AND 한시 존재 → segment A `[0, tempEndMonth)` lossRate = 한시환산합 +
- *      segment B `[tempEndMonth, totalMonths)` lossRate = 0
- *      (CAP 노트 § 5.2 case-comp-005 정원 — 한시 종료 boundary 가 cut)
+ * 1. 노동능력상실률 factor:
+ *    - 영구 중복 = `1 - Π(1 - perm_i.ratio)`.
+ *    - 한시장해는 환산하지 않고 raw `ratio` 를 실제 한시기간 `[0, round(years×12))` 에만 적용한다.
+ *      (법령원본상 `년수/10` 환산은 기왕증 기여도 산정 전용이며 일실수입 상실률에는 쓰지 않는다.)
+ * 2. segment 분해 (기간식):
+ *    - 경계 = distinct 한시 종료월 + 가동연한 종료월(totalMonths).
+ *    - segment `[s, e)` lossRate = `1 - Π(1 - perm_i.ratio) × Π(1 - temp_j.ratio | temp_j 종료 ≥ e)`
+ *      (그 구간 동안 살아있는 한시장해만 영구분과 중복 합산). 한시 종료 후 segment 는 영구분만.
+ *    - `combinedLossRate` = 첫 segment lossRate (한시기간 포함 최고율; 영구만일 때 = permanentTotal).
  * 3. segment 단가:
  *    - `directWageWon` override 우선, 없으면 `getLaborRateAt(dataset, occupation, accidentDate)`.
  *    - lookup miss 시 RangeError (UI 측 트랙 U 5-1 에서 directWageWon override 노출).
@@ -92,36 +92,18 @@ export function computeCompensation(
   const permanentItems = input.lossRate.permanent ?? [];
   const temporaryItems = input.lossRate.temporary ?? [];
 
-  // 1. 노동능력상실률
+  // 1. 노동능력상실률 factor (영구 중복 = 1 - Π(1 - r_i))
   let permFactor = 1;
   for (const item of permanentItems) {
     permFactor *= 1 - item.ratio;
   }
-  const permanentTotal = 1 - permFactor;
-  let temporaryConvertedSum = 0;
-  for (const item of temporaryItems) {
-    temporaryConvertedSum += (item.years / 10) * item.ratio;
-  }
-  if (temporaryConvertedSum > 1) {
-    temporaryConvertedSum = 1;
-  }
-  const combinedLossRate = 1 - (1 - permanentTotal) * (1 - temporaryConvertedSum);
 
-  // 2. segment 분해
+  // 2. segment 분해 (Option B 기간식 — 한시장해는 실제 한시기간 [0, 종료월) 에만 적용)
   const retirementAge = input.base.retirementAge ?? DEFAULT_RETIREMENT_AGE;
   const retirementEndDate = addYears(input.base.birthDate, retirementAge);
   const totalMonths = monthsBetween(input.base.accidentDate, retirementEndDate);
   if (totalMonths <= 0) {
     throw new RangeError("손해배상 계산 실패: 가동연한 종료일이 사고일 이전이거나 같습니다.");
-  }
-  const hasTemporary = temporaryItems.length > 0;
-  let temporaryEndMonth = 0;
-  if (hasTemporary) {
-    for (const item of temporaryItems) {
-      const candidate = Math.round(item.years * 12);
-      if (candidate > temporaryEndMonth) temporaryEndMonth = candidate;
-    }
-    if (temporaryEndMonth > totalMonths) temporaryEndMonth = totalMonths;
   }
 
   interface SegmentPlan {
@@ -129,20 +111,29 @@ export function computeCompensation(
     endMonth: number;
     lossRate: number;
   }
-  let segmentPlans: SegmentPlan[];
-  if (
-    permanentTotal === 0 &&
-    hasTemporary &&
-    temporaryEndMonth > 0 &&
-    temporaryEndMonth < totalMonths
-  ) {
-    segmentPlans = [
-      { startMonth: 0, endMonth: temporaryEndMonth, lossRate: combinedLossRate },
-      { startMonth: temporaryEndMonth, endMonth: totalMonths, lossRate: 0 },
-    ];
-  } else {
-    segmentPlans = [{ startMonth: 0, endMonth: totalMonths, lossRate: combinedLossRate }];
+  // 각 한시장해는 [0, 종료월) 적용. 가동연한 초과분은 clamp.
+  const temporaries = temporaryItems.map((item) => ({
+    endMonth: Math.min(Math.round(item.years * 12), totalMonths),
+    ratio: item.ratio,
+  }));
+  // segment 경계 = distinct 한시 종료월(0 초과 ~ totalMonths) + 가동연한 종료월.
+  const boundaries = Array.from(new Set([...temporaries.map((t) => t.endMonth), totalMonths]))
+    .filter((m) => m > 0 && m <= totalMonths)
+    .sort((a, b) => a - b);
+  const segmentPlans: SegmentPlan[] = [];
+  let cursorMonth = 0;
+  for (const boundary of boundaries) {
+    if (boundary <= cursorMonth) continue;
+    // 이 구간 [cursorMonth, boundary) 동안 살아있는 한시장해(종료 ≥ boundary)만 영구분과 중복.
+    let factor = permFactor;
+    for (const t of temporaries) {
+      if (t.endMonth >= boundary) factor *= 1 - t.ratio;
+    }
+    segmentPlans.push({ startMonth: cursorMonth, endMonth: boundary, lossRate: 1 - factor });
+    cursorMonth = boundary;
   }
+  // combinedLossRate = 첫 segment(한시기간 포함 최고율). 영구만일 때 = permanentTotal.
+  const combinedLossRate = (segmentPlans[0] as SegmentPlan).lossRate;
 
   // 3. segment 단가
   let dailyWageWon: number;

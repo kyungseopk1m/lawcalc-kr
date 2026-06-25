@@ -42,15 +42,22 @@ describe("computeCompensation — 10 단계 path", () => {
     expect(result.hoffman240Cap.cappedAtIndex).toBeNull();
   });
 
-  it("case-comp-002 path: 한시 5y×20% 환산 + 영구 58% → 단일 segment 0.622 → 517,089,100원", () => {
+  it("case-comp-002 path: 한시 5y×20% + 영구 58% → 기간식 [0,60) 0.664 + [60,360) 0.58 → 499,170,700원", () => {
     const input = baseInput();
     input.lossRate.permanent = [{ department: "신장내과", ratio: 0.58 }];
     input.lossRate.temporary = [{ department: "정형외과", ratio: 0.2, years: 5 }];
     const result = computeCompensation(input, { now: FIXED_NOW });
-    expect(result.combinedLossRate).toBeCloseTo(0.622, 6);
-    expect(result.segments).toHaveLength(1);
-    expect(result.lostIncomeSubtotalWon).toBe(517089145);
-    expect(result.finalWon).toBe(517089100);
+    // combinedLossRate = 첫 segment(한시기간) 최고율 = 1-(1-0.58)(1-0.20) = 0.664
+    expect(result.combinedLossRate).toBeCloseTo(0.664, 6);
+    expect(result.segments).toHaveLength(2);
+    expect(result.segments[0]!.startMonth).toBe(0);
+    expect(result.segments[0]!.endMonth).toBe(60);
+    expect(result.segments[0]!.lossRate).toBeCloseTo(0.664, 6);
+    expect(result.segments[1]!.startMonth).toBe(60);
+    expect(result.segments[1]!.endMonth).toBe(360);
+    expect(result.segments[1]!.lossRate).toBeCloseTo(0.58, 6);
+    expect(result.lostIncomeSubtotalWon).toBe(499170732);
+    expect(result.finalWon).toBe(499170700);
   });
 
   it("case-comp-003 path: 영구 30% + 가동 65세 480개월 → 240 cap → 272,555,700원", () => {
@@ -66,7 +73,7 @@ describe("computeCompensation — 10 단계 path", () => {
     expect(result.finalWon).toBe(272555700);
   });
 
-  it("case-comp-005 path: 한시 5y×30% 단독 + 영구 0% → segment split (cut at 60m) → 30,352,800원", () => {
+  it("case-comp-005 path: 한시 5y×30% 단독 + 영구 0% → 기간식 [0,60) raw 0.30 + [60,360) 0 → 60,705,600원", () => {
     const input = baseInput();
     input.lossRate.permanent = [];
     input.lossRate.temporary = [{ department: "정형외과", ratio: 0.3, years: 5 }];
@@ -74,14 +81,15 @@ describe("computeCompensation — 10 단계 path", () => {
     expect(result.segments).toHaveLength(2);
     expect(result.segments[0]!.startMonth).toBe(0);
     expect(result.segments[0]!.endMonth).toBe(60);
-    expect(result.segments[0]!.lossRate).toBeCloseTo(0.15, 6);
+    // 환산 없이 raw 0.30 적용 (종전 /10 환산 0.15 는 50% 과소)
+    expect(result.segments[0]!.lossRate).toBeCloseTo(0.3, 6);
     expect(result.segments[1]!.startMonth).toBe(60);
     expect(result.segments[1]!.endMonth).toBe(360);
     expect(result.segments[1]!.lossRate).toBe(0);
-    expect(result.segments[0]!.amountFloorWon).toBe(30352813);
+    expect(result.segments[0]!.amountFloorWon).toBe(60705626);
     expect(result.segments[1]!.amountFloorWon).toBe(0);
-    expect(result.lostIncomeSubtotalWon).toBe(30352813);
-    expect(result.finalWon).toBe(30352800);
+    expect(result.lostIncomeSubtotalWon).toBe(60705626);
+    expect(result.finalWon).toBe(60705600);
   });
 
   it("case-comp-007 path: case-001 + 과실 30% + 전액공제 8M → 166,579,900원", () => {

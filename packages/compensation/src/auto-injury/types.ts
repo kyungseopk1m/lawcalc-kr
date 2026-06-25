@@ -186,7 +186,10 @@ export interface CompensationResult {
    * 자동차 모드는 키 생략 → 기존 골든/`.lcalc` 결과 byte-identical (회귀 0).
    */
   accidentType?: CompensationAccidentType;
-  /** 중복장해율 자동 합산 = `1 - Π(1 - r_i)`. transparency. */
+  /**
+   * 최고 노동능력상실률 = 첫 segment lossRate (한시기간 포함 최고율).
+   * 영구만 있을 때 = `1 - Π(1 - perm_i.ratio)`. transparency.
+   */
   combinedLossRate: number;
   /** 일실수입 segment 목록. */
   segments: CompensationSegment[];

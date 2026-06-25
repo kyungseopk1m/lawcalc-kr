@@ -1167,7 +1167,7 @@ function InjuryCompensationView({
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">노동능력상실률</CardTitle>
             <p className="text-xs text-muted-foreground">
-              영구장해 중복은 자동 합산 (1 − Π(1 − rᵢ)), 한시장해는 (년수/10)·rᵢ 영구 환산.
+              영구장해 중복은 자동 합산 (1 − Π(1 − rᵢ)), 한시장해는 입력한 기간 동안만 상실률 적용.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">

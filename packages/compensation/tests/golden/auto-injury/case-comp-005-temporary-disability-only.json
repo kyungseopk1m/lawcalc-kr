@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1",
   "id": "case-comp-005-temporary-disability-only",
-  "title": "한시 5y×30% 단독 + 영구 0% → segment split (한시 종료 boundary cut)",
+  "title": "한시 5y×30% 단독 + 영구 0% → [0,60) 0.30 + [60,360) 0 (Option B 기간식)",
   "source": "manual-derivation",
-  "notes": "compensation-golden-capture-result-2026-05-18.md § 5. permanentTotal = 0 + 한시 존재 → segment A [0, 60) lossRate 0.15 + segment B [60, 360) lossRate 0. segment B 합산 0.",
+  "notes": "COMP-2 기간식. 한시장해 raw 0.30 을 실제 한시기간 [0,60) 에만 적용(환산 없음): segment A [0,60) lossRate 0.30 = floor(3785496×0.30×H[60]) = 60705626, segment B [60,360) lossRate 0. (종전 /10 환산 0.15 → 30352813 은 50% 과소.)",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -29,16 +29,16 @@
   "expected": {
     "segmentCount": 2,
     "segmentEndMonths": [60, 360],
-    "lostIncomeSubtotalWon": 30352813,
+    "lostIncomeSubtotalWon": 60705626,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 30352813,
-    "faultOffset": { "ratio": 0, "afterWon": 30352813 },
+    "pecuniaryDamagesSubtotalWon": 60705626,
+    "faultOffset": { "ratio": 0, "afterWon": 60705626 },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 30352813
+      "afterWon": 60705626
     },
-    "finalWon": 30352800,
+    "finalWon": 60705600,
     "hoffman240CapCappedAtIndex": null,
     "dataVersions": {
       "laborRates": "labor-rates/v1.0.0",
@@ -49,7 +49,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-05-18",
-    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 5"
+    "derivedAt": "2026-06-25",
+    "derivedBy": "COMP-2 기간식 재도출 — calc-correctness-fixes-2026-06-21.md §B + compensation-other-damages-golden-derivation-2026-06-03.md"
   }
 }
