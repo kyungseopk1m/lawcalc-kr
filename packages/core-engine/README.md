@@ -192,7 +192,7 @@ packages/core-engine/
 │   ├── types.ts                       # 공개 타입 (InterestInput / CalcOptions / InterestResult …)
 │   ├── days.ts                        # 일수 계산 (countDays / addDays / addYears / containsLeapDay …)
 │   ├── segments.ts                    # resolveSegments — 명시/프리셋/customRate 구간 확정 (deps?: { dataset })
-│   ├── legal-rates.ts                 # 데이터셋 검증 + getRateAt / rateHistoryFor / datasetVersionTag
+│   ├── legal-rates.ts                 # 데이터셋 검증 + rateHistoryFor / datasetVersionTag
 │   ├── legal-rates.dataset.generated.ts  # 자동 생성 — 수동 편집 금지
 │   ├── interest.ts                    # calculateInterest(input, deps?) — 메인 엔트리, applyRounding (v2)
 │   ├── inheritance/                    # calculateInheritance(input) — 상속분 간이 계산
@@ -203,7 +203,7 @@ packages/core-engine/
 │   └── index.ts                       # public surface 재출력
 ├── tests/
 │   ├── days.test.ts
-│   ├── legal-rates.test.ts            # 검증/getRateAt/rateHistoryFor (loadLegalRates 는 internal import)
+│   ├── legal-rates.test.ts            # 검증/rateHistoryFor (loadLegalRates 는 internal import)
 │   ├── segments.test.ts
 │   ├── interest.test.ts
 │   ├── edge.test.ts                   # 긴 기간/큰 원금/same-day/0 rate/floor 누적

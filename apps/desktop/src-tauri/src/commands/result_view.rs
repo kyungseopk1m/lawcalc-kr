@@ -100,7 +100,6 @@ pub struct LitigationCostDistributionView {
     pub total_won: i64,
     pub per_party: Vec<i64>,
     pub remainder: i64,
-    pub basis: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -131,8 +130,6 @@ pub struct CompensationSegmentView {
     pub end_month: i64,
     pub loss_rate: f64,
     pub daily_wage_won: f64,
-    pub monthly_wage_won: f64,
-    pub raw_hoffman: f64,
     pub applied_hoffman: f64,
     pub amount_floor_won: f64,
 }
@@ -141,7 +138,6 @@ pub struct CompensationSegmentView {
 #[serde(rename_all = "camelCase")]
 pub struct CompensationFaultOffsetView {
     pub ratio: f64,
-    pub before_won: f64,
     pub after_won: f64,
 }
 
@@ -154,7 +150,6 @@ pub struct CompensationDeductionsView {
     /// 결과에만 존재하며, 자동차 결과에는 키가 없다 (회귀 0).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub industrial_benefit_won: Option<f64>,
-    pub after_won: f64,
 }
 
 /// Typed view of the `@lawcalc-kr/compensation` `OtherDamagesResult` summary
@@ -236,9 +231,10 @@ pub fn disclaimer_text(disclaimer: Option<&str>) -> &str {
 
 pub fn format_currency(amount: f64) -> String {
     // 비정상 입력(NaN/Inf) 방어. f64→i64 `as` 캐스트는 saturating 이라 메모리 안전성
-    // 문제는 없으나, Inf 가 들어오면 9,223,372,036,854,775,807 같은 쓰레기 금액이
-    // 출력될 수 있다. 정상(유한) 금액은 종전과 byte-identical 이라 골든 무영향.
-    if !amount.is_finite() {
+    // 문제는 없으나, Inf 또는 i64 범위를 넘는 유한값(예: 1e30)이 들어오면 saturating 으로
+    // 9,223,372,036,854,775,807 같은 쓰레기 금액이 출력될 수 있다. 두 경우 모두 "-" 로 차단.
+    // 정상(유한·범위 내) 금액은 종전과 byte-identical 이라 골든 무영향.
+    if !amount.is_finite() || amount.abs() >= 9.2e18 {
         return "-".to_string();
     }
     let n = amount.round() as i64;
@@ -259,6 +255,10 @@ pub fn format_currency(amount: f64) -> String {
 }
 
 pub fn format_rate_percent(rate: f64) -> String {
+    // 비정상 입력(NaN/Inf) 방어 — format_currency 와 대칭. 정상(유한) 율은 byte-identical.
+    if !rate.is_finite() {
+        return "-".to_string();
+    }
     // 0.05 → "5%", 0.123 → "12.3%". Trim trailing zeros after one decimal.
     let pct = rate * 100.0;
     if (pct - pct.round()).abs() < 1e-9 {
@@ -399,6 +399,9 @@ mod tests {
         assert_eq!(format_currency(f64::NAN), "-");
         assert_eq!(format_currency(f64::INFINITY), "-");
         assert_eq!(format_currency(f64::NEG_INFINITY), "-");
+        // A2: 유한이지만 i64 범위를 넘는 값(1e30)도 saturating 쓰레기 대신 "-".
+        assert_eq!(format_currency(1e30), "-");
+        assert_eq!(format_currency(-1e30), "-");
     }
 
     #[test]
@@ -407,6 +410,14 @@ mod tests {
         assert_eq!(format_rate_percent(0.06), "6%");
         assert_eq!(format_rate_percent(0.12), "12%");
         assert_eq!(format_rate_percent(0.123), "12.3%");
+    }
+
+    #[test]
+    fn format_rate_percent_guards_non_finite() {
+        // A1: format_currency 와 대칭 — 비정상 율은 "NaN%"/"inf%" 대신 "-".
+        assert_eq!(format_rate_percent(f64::NAN), "-");
+        assert_eq!(format_rate_percent(f64::INFINITY), "-");
+        assert_eq!(format_rate_percent(f64::NEG_INFINITY), "-");
     }
 
     #[test]

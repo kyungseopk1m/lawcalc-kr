@@ -23,7 +23,7 @@ export { calculateInterest } from "./interest";
 export { buildInterestClaimText, formatCourtDate } from "./interest-claim-text";
 export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "./days";
 export { resolveSegments } from "./segments";
-export { datasetVersionTag, getRateAt, rateHistoryFor } from "./legal-rates";
+export { datasetVersionTag, rateHistoryFor } from "./legal-rates";
 export {
   capHistoryFor,
   getCapAt,

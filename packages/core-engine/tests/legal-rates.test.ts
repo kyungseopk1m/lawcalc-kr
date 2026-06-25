@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { datasetVersionTag, getRateAt, rateHistoryFor, type LegalRateDataset } from "../src";
+import { datasetVersionTag, rateHistoryFor, type LegalRateDataset } from "../src";
 import { loadLegalRates } from "../src/legal-rates";
 
 describe("loadLegalRates default dataset", () => {
@@ -90,38 +90,6 @@ describe("loadLegalRates default dataset", () => {
       ],
     };
     expect(() => loadLegalRates(bad)).toThrow(/>= 0/);
-  });
-});
-
-describe("getRateAt (소촉법 변경 이력)", () => {
-  const ds = loadLegalRates();
-
-  it("returns 0.05 for civil at any in-effect date", () => {
-    expect(getRateAt(ds, "civil", "2026-05-09")).toBe(0.05);
-    expect(getRateAt(ds, "civil", "1990-01-01")).toBe(0.05);
-  });
-
-  it("returns 0.06 for commercial", () => {
-    expect(getRateAt(ds, "commercial", "2026-05-09")).toBe(0.06);
-  });
-
-  it("promotion: 0.20 (2003-06-01 ~ 2015-09-30)", () => {
-    expect(getRateAt(ds, "promotion", "2010-01-01")).toBe(0.2);
-    expect(getRateAt(ds, "promotion", "2015-09-30")).toBe(0.2);
-  });
-
-  it("promotion: 0.15 (2015-10-01 ~ 2019-05-31)", () => {
-    expect(getRateAt(ds, "promotion", "2015-10-01")).toBe(0.15);
-    expect(getRateAt(ds, "promotion", "2019-05-31")).toBe(0.15);
-  });
-
-  it("promotion: 0.12 (2019-06-01 ~ )", () => {
-    expect(getRateAt(ds, "promotion", "2019-06-01")).toBe(0.12);
-    expect(getRateAt(ds, "promotion", "2026-05-09")).toBe(0.12);
-  });
-
-  it("returns undefined for date before any record", () => {
-    expect(getRateAt(ds, "promotion", "2000-01-01")).toBeUndefined();
   });
 });
 

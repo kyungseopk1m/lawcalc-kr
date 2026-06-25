@@ -108,31 +108,6 @@ export function datasetVersionTag(dataset: LegalRateDataset): string {
 }
 
 /**
- * 특정 날짜에 `code`에 대해 적용되는 연이율을 반환한다. 없으면 undefined.
- *
- * 변경 이력(현재 + previousVersions)을 모두 검사해 `validFrom <= date <= validTo (or null)`
- * 만족하는 항목을 반환한다.
- */
-export function getRateAt(
-  dataset: LegalRateDataset,
-  code: LegalRateCode,
-  date: IsoDate,
-): number | undefined {
-  assertIsoDate(date, "getRateAt.date");
-  const record = dataset.rates.find((r) => r.code === code);
-  if (!record) return undefined;
-  if (date >= record.validFrom && (record.validTo === null || date <= record.validTo)) {
-    return record.annualRate;
-  }
-  for (const prev of record.previousVersions ?? []) {
-    if (date >= prev.validFrom && date <= prev.validTo) {
-      return prev.annualRate;
-    }
-  }
-  return undefined;
-}
-
-/**
  * 변경 이력 평면 리스트 (현재 + previousVersions, validFrom 오름차순).
  * `[validFrom, validTo|null, rate]` 튜플로 반환되어 segments에서 자동 분할에 쓰인다.
  */

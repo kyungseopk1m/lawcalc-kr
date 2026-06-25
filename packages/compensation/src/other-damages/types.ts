@@ -94,16 +94,6 @@ export interface OtherDamagesInput {
   appliance?: TreatmentFutureInput[];
 }
 
-/** 수치합계 20 cap 적용 정보 (transparency). */
-export interface ValueSumCapInfo {
-  /** cap 전 수치합계 (단리 현가계수 합). */
-  rawSum: number;
-  /** cap 후 적용 수치합계. */
-  appliedSum: number;
-  /** cap 발생 여부 (UI 빨간 표시 trigger). */
-  capped: boolean;
-}
-
 /** 개호비 결과 (transparency). */
 export interface AttendantCareResult {
   /** 기왕개호비 합 (원). */
