@@ -407,7 +407,7 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
 
     let summary_rows: [(&str, String); 9] = [
         (
-            "중복 노동력상실률",
+            "중복 노동능력상실률",
             format!("{:.2}%", view.combined_loss_rate * 100.0),
         ),
         ("위자료(원)", format_currency(view.solatium_won)),

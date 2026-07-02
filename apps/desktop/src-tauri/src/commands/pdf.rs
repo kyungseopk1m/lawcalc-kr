@@ -747,7 +747,7 @@ impl<'a> PageWriter<'a> {
     fn draw_compensation_summary(&mut self, view: &CompensationResultView) {
         let mut lines: Vec<(String, String)> = vec![
             (
-                "중복 노동력상실률".into(),
+                "중복 노동능력상실률".into(),
                 format!("{:.2}%", view.combined_loss_rate * 100.0),
             ),
             (
