@@ -166,6 +166,23 @@ describe("computeCompensation — 10 단계 path", () => {
     const result = computeCompensation(input, { now: FIXED_NOW });
     expect(result.combinedLossRate).toBeCloseTo(1 - 0.5 * 0.7, 6);
   });
+
+  // 외부 대조 (oracle: manual-worked-example) — 공개 계산프로그램 매뉴얼의 기본 예시 수치.
+  // 매뉴얼: 신장내과 개별수치 58% + 기왕증 50% (사전 반영 58→29) + 안과 13% + 치과 1.06%
+  // → 중복장해 38.88% 자동 표시. combinedLossRate = 1 - Π(1 - r_i) 가 이 표시값을 재현한다.
+  // (기왕증 기여도 39.09%·지급치료비 공제 2,553,120원은 본 엔진이 산출하지 않는 개념이라 대조 범위 밖.)
+  it("combinedLossRate matches manual worked example (신장내과 29% + 안과 13% + 치과 1.06% → 38.88%)", () => {
+    const input = baseInput();
+    input.lossRate.permanent = [
+      { department: "신장내과", ratio: 0.29 },
+      { department: "안과", ratio: 0.13 },
+      { department: "치과", ratio: 0.0106 },
+    ];
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.combinedLossRate).toBeCloseTo(1 - 0.71 * 0.87 * 0.9894, 10);
+    // 매뉴얼 표시 소수 둘째자리 = 38.88%
+    expect(Math.round(result.combinedLossRate * 10000) / 100).toBe(38.88);
+  });
 });
 
 describe("computeCompensation — 산재(산×부상) 장해급여 공제 (2021다241618 전합, 공제 후 과실상계)", () => {
