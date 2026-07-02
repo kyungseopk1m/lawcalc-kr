@@ -131,7 +131,17 @@
 
 ### macOS
 
-`.dmg`를 받아 앱을 Applications로 옮기고 실행하면 됩니다. 아직 Apple Notarization을 하지 않아 Gatekeeper 경고가 뜰 수 있습니다. 이때는 Finder에서 앱을 **Control-클릭 → 열기** 하거나, **시스템 설정 → 개인정보 보호 및 보안**에서 실행을 허용하면 됩니다.
+**Homebrew (권장)**
+
+```bash
+brew tap kyungseopk1m/lawcalc-kr
+brew trust kyungseopk1m/lawcalc-kr
+brew install --cask lawcalc-kr
+```
+
+`brew trust`는 서드파티 tap을 신뢰하는 단계로, 최초 1회만 실행하면 됩니다.
+
+또는 `.dmg`를 직접 받아 앱을 Applications로 옮기고 실행해도 됩니다. 아직 Apple Notarization을 하지 않아 Gatekeeper 경고가 뜰 수 있습니다. 이때는 Finder에서 앱을 **Control-클릭 → 열기** 하거나, **시스템 설정 → 개인정보 보호 및 보안**에서 실행을 허용하면 됩니다.
 
 ### Windows
 
