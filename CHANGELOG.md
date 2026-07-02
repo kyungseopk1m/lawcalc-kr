@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-02
+
 ### Fixed
 
 - 소송비용의 **인지액 산식**을 「민사소송 등 인지법」 제2조 문언대로 바로잡았습니다. 각 구간에서 **소가 전체**에 요율을 곱하고 보정 상수(5천원·5만5천원·55만5천원)를 더해야 하는데, 이전에는 구간 초과분에만 요율을 적용해 소가 1천만원 이상 전 구간에서 인지액이 적게 나왔습니다(예: 소가 5,000만원 소장 185,000원 → 230,000원, 소가 1,000만원 5,000원 → 50,000원). 항소·상고·지급명령·화해·전자소송 금액과 소송비용 합계·분배표도 함께 바로잡혔습니다. 인지법 손계산과 대한법률구조공단 자동계산 대조 검증 케이스를 추가했습니다.
@@ -342,7 +344,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.6.0...v0.7.0
