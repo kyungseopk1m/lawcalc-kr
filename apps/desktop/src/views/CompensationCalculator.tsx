@@ -401,6 +401,23 @@ function buildCompensationDirtySnapshot(state: CompensationFormState, note: stri
   return createLcalcDirtySnapshot({ state: stateForDirtySnapshot(state), note });
 }
 
+/**
+ * 산재보험급여 공제 클립보드 줄 (일실수입 한도 선공제 — 2021다241618 전합). 부상·사망 공용.
+ */
+function buildIndustrialBenefitLines(
+  industrialBenefit: NonNullable<CompensationResult["industrialBenefit"]>,
+  benefitLabel: "장해급여" | "유족급여",
+): string[] {
+  const capSuffix =
+    industrialBenefit.deductedWon < industrialBenefit.benefitWon
+      ? ` (급여 ${formatWon(industrialBenefit.benefitWon)} 중 일실수입 한도)`
+      : "";
+  return [
+    `산재보험급여 공제 (${benefitLabel}): ${formatWon(industrialBenefit.deductedWon)}${capSuffix}`,
+    `공제 후 일실수입: ${formatWon(industrialBenefit.lostIncomeAfterWon)}`,
+  ];
+}
+
 export function formatCompensationForClipboard(result: CompensationResult): string {
   const segmentRows = result.segments
     .map(
@@ -413,19 +430,25 @@ export function formatCompensationForClipboard(result: CompensationResult): stri
     )
     .join("\n");
 
-  const lines = [
+  const lines: string[] = [
     result.accidentType === "industrial"
       ? "LawCalc Korea 산재 사고 부상 손해배상 계산 결과"
       : "LawCalc Korea 자동차 사고 부상 손해배상 계산 결과",
     `중복장해율: ${formatRatioPercent(result.combinedLossRate)}`,
     `일실수입 소계: ${formatWon(result.lostIncomeSubtotalWon)}`,
+  ];
+  if (result.industrialBenefit !== undefined) {
+    lines.push(...buildIndustrialBenefitLines(result.industrialBenefit, "장해급여"));
+  }
+  lines.push(
     `위자료: ${formatWon(result.solatiumWon)}`,
     `과실상계 대상 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
     `과실상계 (${formatRatioPercent(result.faultOffset.ratio)} 후): ${formatWon(result.faultOffset.afterWon)}`,
     `비율공제 소계: ${formatWon(result.deductions.ratioSubtotalWon)}`,
     `전액공제 소계: ${formatWon(result.deductions.absoluteSubtotalWon)}`,
-  ];
+  );
   if (result.deductions.industrialBenefitWon !== undefined) {
+    // legacy — ≤ v0.9.x 로 저장된 .lcalc 결과(과실상계 후 총액 공제)를 그대로 표시.
     lines.push(
       `산재보험급여 공제 (장해급여): ${formatWon(result.deductions.industrialBenefitWon)}`,
     );
@@ -694,14 +717,20 @@ export function formatCompensationDeathForClipboard(result: CompensationAutoDeat
       : "LawCalc Korea 자동차 사고 사망 손해배상 계산 결과",
     `생계비 공제 비율: ${formatRatioPercent(result.livingCostDeductionRatio)}`,
     `일실수입 소계 (생계비 공제 후): ${formatWon(result.lostIncomeSubtotalWon)}`,
+  ];
+  if (result.industrialBenefit !== undefined) {
+    lines.push(...buildIndustrialBenefitLines(result.industrialBenefit, "유족급여"));
+  }
+  lines.push(
     `위자료: ${formatWon(result.solatiumWon)}`,
     `장례비: ${formatWon(result.funeralExpenseWon)}`,
     `과실상계 대상 소계: ${formatWon(result.pecuniaryDamagesSubtotalWon)}`,
     `과실상계 (${formatRatioPercent(result.faultOffset.ratio)} 후): ${formatWon(result.faultOffset.afterWon)}`,
     `비율공제 소계: ${formatWon(result.deductions.ratioSubtotalWon)}`,
     `전액공제 소계: ${formatWon(result.deductions.absoluteSubtotalWon)}`,
-  ];
+  );
   if (result.deductions.industrialBenefitWon !== undefined) {
+    // legacy — ≤ v0.9.x 로 저장된 .lcalc 결과(과실상계 후 총액 공제)를 그대로 표시.
     lines.push(
       `산재보험급여 공제 (유족급여): ${formatWon(result.deductions.industrialBenefitWon)}`,
     );
@@ -1553,8 +1582,9 @@ function InjuryCompensationView({
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                자동차 사고 사망은 상단 "자동차 사고 · 사망" 탭에서 계산합니다. 산재,
-                기타손해(개호비 등)는 후속 버전에서 다룹니다.
+                자동차 사고 사망은 상단 "자동차 사고 · 사망" 탭에서 계산합니다. 산재는 사건종류에서
+                선택하고, 기타손해(개호비 · 치료비 · 보조구)는 좌측 기타손해 입력에서 함께
+                계산합니다.
               </p>
             </CardContent>
           </Card>
@@ -2254,6 +2284,12 @@ function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
             </span>
             <span className="text-muted-foreground">일실수입 소계 (생계비 공제 후)</span>
             <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>
+            {result.industrialBenefit !== undefined ? (
+              <IndustrialBenefitResultRows
+                industrialBenefit={result.industrialBenefit}
+                benefitLabel="유족급여"
+              />
+            ) : null}
             <span className="text-muted-foreground">위자료</span>
             <span className="text-right">{formatWon(result.solatiumWon)}</span>
             <span className="text-muted-foreground">장례비</span>
@@ -2269,9 +2305,13 @@ function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
             <span className="text-muted-foreground">전액공제 소계</span>
             <span className="text-right">{formatWon(result.deductions.absoluteSubtotalWon)}</span>
             {result.deductions.industrialBenefitWon !== undefined ? (
+              // legacy — ≤ v0.9.x 로 저장된 .lcalc 결과(과실상계 후 총액 공제)를 그대로 표시.
               <>
                 <span className="text-muted-foreground">산재보험급여 공제 (유족급여)</span>
-                <span className="text-right" data-testid="compensation-death-industrial-benefit">
+                <span
+                  className="text-right"
+                  data-testid="compensation-death-industrial-benefit-legacy"
+                >
                   {formatWon(result.deductions.industrialBenefitWon)}
                 </span>
               </>
@@ -2461,6 +2501,36 @@ function OtherDamagesResultRows({ otherDamages }: { otherDamages: OtherDamagesRe
   );
 }
 
+/**
+ * 산재보험급여 공제 행 (일실수입 한도 선공제 — 2021다241618 전합). 부상·사망 결과 카드 공용.
+ */
+function IndustrialBenefitResultRows({
+  industrialBenefit,
+  benefitLabel,
+}: {
+  industrialBenefit: NonNullable<CompensationResult["industrialBenefit"]>;
+  benefitLabel: "장해급여" | "유족급여";
+}) {
+  const capped = industrialBenefit.deductedWon < industrialBenefit.benefitWon;
+  return (
+    <>
+      <span className="text-muted-foreground">산재보험급여 공제 ({benefitLabel})</span>
+      <span className="text-right" data-testid="compensation-industrial-benefit">
+        {formatWon(industrialBenefit.deductedWon)}
+        {capped ? (
+          <span className="ml-1 text-xs text-muted-foreground">
+            (급여 {formatWon(industrialBenefit.benefitWon)} 중 일실수입 한도)
+          </span>
+        ) : null}
+      </span>
+      <span className="text-muted-foreground">공제 후 일실수입</span>
+      <span className="text-right" data-testid="compensation-industrial-lost-income-after">
+        {formatWon(industrialBenefit.lostIncomeAfterWon)}
+      </span>
+    </>
+  );
+}
+
 function ResultCards({ result }: { result: CompensationResult }) {
   return (
     <>
@@ -2474,6 +2544,12 @@ function ResultCards({ result }: { result: CompensationResult }) {
             <span className="text-right">{formatRatioPercent(result.combinedLossRate)}</span>
             <span className="text-muted-foreground">일실수입 소계</span>
             <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>
+            {result.industrialBenefit !== undefined ? (
+              <IndustrialBenefitResultRows
+                industrialBenefit={result.industrialBenefit}
+                benefitLabel="장해급여"
+              />
+            ) : null}
             <span className="text-muted-foreground">위자료</span>
             <span className="text-right">{formatWon(result.solatiumWon)}</span>
             <span className="text-muted-foreground">과실상계 대상 소계</span>
@@ -2487,9 +2563,10 @@ function ResultCards({ result }: { result: CompensationResult }) {
             <span className="text-muted-foreground">전액공제 소계</span>
             <span className="text-right">{formatWon(result.deductions.absoluteSubtotalWon)}</span>
             {result.deductions.industrialBenefitWon !== undefined ? (
+              // legacy — ≤ v0.9.x 로 저장된 .lcalc 결과(과실상계 후 총액 공제)를 그대로 표시.
               <>
                 <span className="text-muted-foreground">산재보험급여 공제 (장해급여)</span>
-                <span className="text-right" data-testid="compensation-industrial-benefit">
+                <span className="text-right" data-testid="compensation-industrial-benefit-legacy">
                   {formatWon(result.deductions.industrialBenefitWon)}
                 </span>
               </>

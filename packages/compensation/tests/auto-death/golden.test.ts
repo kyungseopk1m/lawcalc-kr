@@ -21,6 +21,7 @@ interface ExpectedShape {
   livingCostDeductionRatio: number;
   lostIncomeSubtotalWon: number;
   solatiumWon: number;
+  industrialBenefit?: { benefitWon: number; deductedWon: number; lostIncomeAfterWon: number };
   pecuniaryDamagesSubtotalWon: number;
   faultOffset: { ratio: number; afterWon: number };
   funeralExpenseWon: number;
@@ -77,8 +78,8 @@ const cases: GoldenCase[] = Object.entries(
  * `compensation-industrial-golden-derivation-2026-06-02.md`).
  */
 describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사망 — derivation)", () => {
-  it("loads exactly 4 cases", () => {
-    expect(cases).toHaveLength(4);
+  it("loads exactly 5 cases", () => {
+    expect(cases).toHaveLength(5);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -118,7 +119,10 @@ describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사�
         c.expected.deductions.absoluteSubtotalWon,
       );
       expect(result.accidentType, `${c.id} accidentType`).toBe(c.expected.accidentType);
-      expect(result.deductions.industrialBenefitWon, `${c.id} industrialBenefit`).toBe(
+      expect(result.industrialBenefit, `${c.id} industrialBenefit`).toEqual(
+        c.expected.industrialBenefit,
+      );
+      expect(result.deductions.industrialBenefitWon, `${c.id} legacy industrialBenefitWon`).toBe(
         c.expected.deductions.industrialBenefitWon,
       );
       expect(result.deductions.afterWon, `${c.id} deductionsAfter`).toBe(

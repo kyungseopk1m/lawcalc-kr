@@ -8,9 +8,9 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    disclaimer_text, format_currency, format_rate_percent, options_summary,
-    CompensationDeathResultView, CompensationOtherDamagesView, CompensationResultView,
-    InheritanceResultView, LitigationCostResultView, ResultView,
+    disclaimer_text, format_currency, format_rate_percent, industrial_benefit_value_text,
+    options_summary, CompensationDeathResultView, CompensationOtherDamagesView,
+    CompensationResultView, InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 /// CSV formula injection defense.
@@ -397,6 +397,14 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         escape_csv_cell(&format_currency(view.lost_income_subtotal_won)).into_owned();
     wtr.write_record(["일실수입 소계", "", "", "", lost_income_cell.as_str()])?;
 
+    // 산재(장해급여) — 일실수입 한도 선공제 (2021다241618 전합). 자동차 결과는 skip (회귀 0).
+    if let Some(ib) = &view.industrial_benefit {
+        let deducted_cell = escape_csv_cell(&industrial_benefit_value_text(ib)).into_owned();
+        wtr.write_record(["산재보험급여 공제(장해급여)(원)", deducted_cell.as_str()])?;
+        let after_cell = escape_csv_cell(&format_currency(ib.lost_income_after_won)).into_owned();
+        wtr.write_record(["공제 후 일실수입(원)", after_cell.as_str()])?;
+    }
+
     let summary_rows: [(&str, String); 9] = [
         (
             "중복 노동력상실률",
@@ -423,7 +431,7 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
             "전액공제 소계(원)",
             format_currency(view.deductions.absolute_subtotal_won),
         ),
-        // 산재(장해급여) 공제 — 자동차 결과는 빈 key 로 skip (회귀 0).
+        // legacy — ≤ v0.9.x 저장 결과(과실상계 후 총액 공제)만 해당. 신 결과·자동차는 skip.
         match view.deductions.industrial_benefit_won {
             Some(benefit) => ("산재보험급여 공제(장해급여)(원)", format_currency(benefit)),
             None => ("", String::new()),
@@ -519,6 +527,14 @@ pub fn render_compensation_death_csv_bytes(
         lost_income_cell.as_str(),
     ])?;
 
+    // 산재(유족급여) — 일실수입 한도 선공제 (2021다241618 전합). 자동차 결과는 skip (회귀 0).
+    if let Some(ib) = &view.industrial_benefit {
+        let deducted_cell = escape_csv_cell(&industrial_benefit_value_text(ib)).into_owned();
+        wtr.write_record(["산재보험급여 공제(유족급여)(원)", deducted_cell.as_str()])?;
+        let after_cell = escape_csv_cell(&format_currency(ib.lost_income_after_won)).into_owned();
+        wtr.write_record(["공제 후 일실수입(원)", after_cell.as_str()])?;
+    }
+
     let summary_rows: [(&str, String); 9] = [
         (
             "생계비 공제 비율",
@@ -538,7 +554,7 @@ pub fn render_compensation_death_csv_bytes(
             "과실상계 후(원)",
             format_currency(view.fault_offset.after_won),
         ),
-        // 산재(유족급여) 공제 — 자동차 결과는 빈 key 로 skip (회귀 0).
+        // legacy — ≤ v0.9.x 저장 결과(과실상계 후 총액 공제)만 해당. 신 결과·자동차는 skip.
         match view.deductions.industrial_benefit_won {
             Some(benefit) => ("산재보험급여 공제(유족급여)(원)", format_currency(benefit)),
             None => ("", String::new()),
@@ -791,6 +807,7 @@ mod tests {
             }],
             lost_income_subtotal_won: 249_399_909.0,
             solatium_won: 0.0,
+            industrial_benefit: None,
             pecuniary_damages_subtotal_won: 249_399_909.0,
             fault_offset: CompensationFaultOffsetView {
                 ratio: 0.0,
@@ -863,6 +880,39 @@ mod tests {
         assert!(!body.contains("산재보험급여"));
     }
 
+    #[test]
+    fn compensation_csv_renders_industrial_benefit_pre_fault_rows() {
+        use crate::commands::result_view::CompensationIndustrialBenefitView;
+        let mut view = compensation_sample();
+        view.industrial_benefit = Some(CompensationIndustrialBenefitView {
+            benefit_won: 50_000_000.0,
+            deducted_won: 50_000_000.0,
+            lost_income_after_won: 199_399_909.0,
+        });
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("산재보험급여 공제(장해급여)(원)"));
+        assert!(body.contains("공제 후 일실수입(원)"));
+        assert!(body.contains("\"199,399,909\""));
+        // 급여 전액 공제 (한도 미발동) — 한도 안내 문구 없음.
+        assert!(!body.contains("일실수입 한도"));
+    }
+
+    #[test]
+    fn compensation_csv_marks_industrial_benefit_cap() {
+        use crate::commands::result_view::CompensationIndustrialBenefitView;
+        let mut view = compensation_sample();
+        view.industrial_benefit = Some(CompensationIndustrialBenefitView {
+            benefit_won: 300_000_000.0,
+            deducted_won: 249_399_909.0,
+            lost_income_after_won: 0.0,
+        });
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("일실수입 한도"));
+        assert!(body.contains("\"249,399,909"));
+    }
+
     fn other_damages_sample() -> CompensationOtherDamagesView {
         CompensationOtherDamagesView {
             attendant_care_won: 120_000_000.0,
@@ -912,6 +962,7 @@ mod tests {
             }],
             lost_income_subtotal_won: 554_222_020.0,
             solatium_won: 80_000_000.0,
+            industrial_benefit: None,
             pecuniary_damages_subtotal_won: 634_222_020.0,
             fault_offset: CompensationFaultOffsetView {
                 ratio: 0.0,
@@ -988,6 +1039,22 @@ mod tests {
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
         assert!(body.contains("산재보험급여 공제(유족급여)(원)"));
         assert!(body.contains("\"100,000,000\""));
+    }
+
+    #[test]
+    fn compensation_death_csv_renders_industrial_benefit_pre_fault_rows() {
+        use crate::commands::result_view::CompensationIndustrialBenefitView;
+        let mut view = compensation_death_sample();
+        view.industrial_benefit = Some(CompensationIndustrialBenefitView {
+            benefit_won: 100_000_000.0,
+            deducted_won: 100_000_000.0,
+            lost_income_after_won: 505_679_360.0,
+        });
+        let bytes = render_compensation_death_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("산재보험급여 공제(유족급여)(원)"));
+        assert!(body.contains("공제 후 일실수입(원)"));
+        assert!(body.contains("\"505,679,360\""));
     }
 
     #[test]

@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1",
-  "id": "case-comp-010-industrial-injury",
-  "title": "industrial/injury — 산재 부상, 장해급여 5천만 선공제(일실수입 한도) 후 과실 20%",
+  "id": "case-comp-015-industrial-injury-benefit-cap",
+  "title": "industrial/injury — 장해급여가 일실수입을 초과: 일실수입 한도 공제, 위자료 보존",
   "source": "manual-derivation",
-  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 2 (2026-07-02 COMP-6 재도출). case-001 baseline(보통인부 360개월 영구장해 30%, 일실수입 249,399,909) 위에 사건종류 산재 + 과실 20% + 장해급여 50,000,000. 대법원 2022. 3. 24. 선고 2021다241618 전원합의체 — 산재급여는 같은 성질(일실수입) 한도에서 먼저 공제 후 과실상계: (249,399,909 − 50,000,000) × 0.8 = floor(159,519,927.2) = 159,519,927 → 100원 절사 159,519,900.",
+  "notes": "COMP-6 capping 검산 (2026-07-02). case-010 과 동일 base(일실수입 249,399,909)에 위자료 5,000,000 + 장해급여 300,000,000(> 일실수입). 2021다241618 전합 — 공제는 같은 성질(일실수입) 한도: deducted = 249,399,909, 초과분 50,600,091 은 위자료를 잠식하지 않는다. pecuniary = 0 + 5,000,000 → × 0.8 = 4,000,000 = final. 구 방식(총액 공제)이었다면 0원.",
   "input": {
     "accidentType": "industrial",
     "base": {
@@ -28,14 +28,14 @@
       "occupation": "보통인부",
       "discountMethod": "hoffman"
     },
-    "solatiumWon": 0,
+    "solatiumWon": 5000000,
     "faultRatio": 0.2,
     "deductions": {
       "ratio": [],
       "absolute": []
     },
     "industrialInsurance": {
-      "disabilityBenefitWon": 50000000
+      "disabilityBenefitWon": 300000000
     }
   },
   "expected": {
@@ -43,23 +43,23 @@
     "segmentCount": 1,
     "segmentEndMonths": [360],
     "lostIncomeSubtotalWon": 249399909,
-    "solatiumWon": 0,
+    "solatiumWon": 5000000,
     "industrialBenefit": {
-      "benefitWon": 50000000,
-      "deductedWon": 50000000,
-      "lostIncomeAfterWon": 199399909
+      "benefitWon": 300000000,
+      "deductedWon": 249399909,
+      "lostIncomeAfterWon": 0
     },
-    "pecuniaryDamagesSubtotalWon": 199399909,
+    "pecuniaryDamagesSubtotalWon": 5000000,
     "faultOffset": {
       "ratio": 0.2,
-      "afterWon": 159519927
+      "afterWon": 4000000
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 159519927
+      "afterWon": 4000000
     },
-    "finalWon": 159519900,
+    "finalWon": 4000000,
     "hoffman240CapCappedAtIndex": null,
     "dataVersions": {
       "laborRates": "labor-rates/v1.0.0",
@@ -71,6 +71,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-07-02",
-    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md § 2 (COMP-6 공제 후 과실상계 재도출)"
+    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md §D (COMP-6 capping 손계산)"
   }
 }

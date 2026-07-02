@@ -25,9 +25,9 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    disclaimer_text, format_currency, format_rate_percent, options_summary,
-    CompensationDeathResultView, CompensationOtherDamagesView, CompensationResultView,
-    InheritanceResultView, LitigationCostResultView, ResultView,
+    disclaimer_text, format_currency, format_rate_percent, industrial_benefit_value_text,
+    options_summary, CompensationDeathResultView, CompensationOtherDamagesView,
+    CompensationResultView, InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
@@ -745,7 +745,7 @@ impl<'a> PageWriter<'a> {
     }
 
     fn draw_compensation_summary(&mut self, view: &CompensationResultView) {
-        let lines: [(String, String); 8] = [
+        let mut lines: Vec<(String, String)> = vec![
             (
                 "중복 노동력상실률".into(),
                 format!("{:.2}%", view.combined_loss_rate * 100.0),
@@ -754,6 +754,19 @@ impl<'a> PageWriter<'a> {
                 "일실수입 소계".into(),
                 format!("{}원", format_currency(view.lost_income_subtotal_won)),
             ),
+        ];
+        // 산재보험급여 (장해급여) — 일실수입 한도 선공제 (2021다241618 전합).
+        if let Some(ib) = &view.industrial_benefit {
+            lines.push((
+                "산재급여 공제 (장해급여)".into(),
+                industrial_benefit_value_text(ib),
+            ));
+            lines.push((
+                "공제 후 일실수입".into(),
+                format!("{}원", format_currency(ib.lost_income_after_won)),
+            ));
+        }
+        lines.extend([
             (
                 "위자료".into(),
                 format!("{}원", format_currency(view.solatium_won)),
@@ -791,7 +804,7 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(view.final_won)),
             ),
             ("계산 시각".into(), view.computed_at.clone()),
-        ];
+        ]);
         let label_w = 38.0;
         for (label, value) in &lines {
             self.text(label, 10.0, self.left(), self.y - 4.0);
@@ -924,7 +937,7 @@ impl<'a> PageWriter<'a> {
     }
 
     fn draw_compensation_death_summary(&mut self, view: &CompensationDeathResultView) {
-        let lines: [(String, String); 9] = [
+        let mut lines: Vec<(String, String)> = vec![
             (
                 "생계비 공제 비율".into(),
                 format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
@@ -933,6 +946,19 @@ impl<'a> PageWriter<'a> {
                 "일실수입 소계 (생계비 공제 후)".into(),
                 format!("{}원", format_currency(view.lost_income_subtotal_won)),
             ),
+        ];
+        // 산재보험급여 (유족급여) — 일실수입 한도 선공제 (2021다241618 전합).
+        if let Some(ib) = &view.industrial_benefit {
+            lines.push((
+                "산재급여 공제 (유족급여)".into(),
+                industrial_benefit_value_text(ib),
+            ));
+            lines.push((
+                "공제 후 일실수입".into(),
+                format!("{}원", format_currency(ib.lost_income_after_won)),
+            ));
+        }
+        lines.extend([
             (
                 "위자료".into(),
                 format!("{}원", format_currency(view.solatium_won)),
@@ -974,7 +1000,7 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(view.final_won)),
             ),
             ("계산 시각".into(), view.computed_at.clone()),
-        ];
+        ]);
         let label_w = 46.0;
         for (label, value) in &lines {
             self.text(label, 10.0, self.left(), self.y - 4.0);
@@ -1310,6 +1336,7 @@ mod tests {
             }],
             lost_income_subtotal_won: 249_399_909.0,
             solatium_won: 0.0,
+            industrial_benefit: None,
             pecuniary_damages_subtotal_won: 249_399_909.0,
             fault_offset: CompensationFaultOffsetView {
                 ratio: 0.0,
@@ -1374,6 +1401,7 @@ mod tests {
             }],
             lost_income_subtotal_won: 554_222_020.0,
             solatium_won: 80_000_000.0,
+            industrial_benefit: None,
             pecuniary_damages_subtotal_won: 634_222_020.0,
             fault_offset: CompensationFaultOffsetView {
                 ratio: 0.0,

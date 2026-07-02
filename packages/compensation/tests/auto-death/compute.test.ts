@@ -219,8 +219,8 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
   });
 });
 
-describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (v0.7.0)", () => {
-  it("case-comp-011 path: 과실 10% + 장례비(과실상계 대상) + 유족급여 1억 공제 → 449,611,400원, 배우자/자녀 분배", () => {
+describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (2021다241618 전합, 공제 후 과실상계)", () => {
+  it("case-comp-011 path: 유족급여 1억 선공제(일실수입 한도) 후 과실 10% → 459,611,400원, 배우자/자녀 분배", () => {
     const input = baseInput();
     input.accidentType = "industrial";
     input.faultRatio = 0.1;
@@ -232,17 +232,40 @@ describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (
     };
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.accidentType).toBe("industrial");
-    expect(result.faultOffset.afterWon).toBe(549611424);
+    // (605,679,360 − 100,000,000 + 장례비 5,000,000) × 0.9 = 459,611,424
+    expect(result.industrialBenefit).toEqual({
+      benefitWon: 100_000_000,
+      deductedWon: 100_000_000,
+      lostIncomeAfterWon: 505_679_360,
+    });
+    expect(result.pecuniaryDamagesSubtotalWon).toBe(510_679_360);
+    expect(result.faultOffset.afterWon).toBe(459611424);
     expect(result.funeralExpenseWon).toBe(5_000_000);
-    expect(result.deductions.industrialBenefitWon).toBe(100_000_000);
-    expect(result.deductions.afterWon).toBe(449611424);
-    expect(result.finalWon).toBe(449611400);
+    expect(result.deductions.industrialBenefitWon).toBeUndefined();
+    expect(result.deductions.afterWon).toBe(459611424);
+    expect(result.finalWon).toBe(459611400);
     expect(result.inheritanceShares).toEqual([
-      { name: "배우자", numerator: 3, denominator: 5, amountWon: 269766840 },
-      { name: "자녀1", numerator: 2, denominator: 5, amountWon: 179844560 },
+      { name: "배우자", numerator: 3, denominator: 5, amountWon: 275766840 },
+      { name: "자녀1", numerator: 2, denominator: 5, amountWon: 183844560 },
     ]);
     const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
     expect(sum).toBe(result.finalWon);
+  });
+
+  it("유족급여가 일실수입을 초과하면 일실수입 한도로만 공제 — 위자료·장례비는 잠식하지 않는다", () => {
+    const input = baseInput();
+    input.accidentType = "industrial";
+    input.solatiumWon = 10_000_000;
+    input.industrialInsurance = { survivorBenefitWon: 999_999_999_999 };
+    const result = computeCompensationDeath(input, { now: FIXED_NOW });
+    expect(result.industrialBenefit).toEqual({
+      benefitWon: 999_999_999_999,
+      deductedWon: 605_679_360,
+      lostIncomeAfterWon: 0,
+    });
+    // 위자료 10,000,000 + 장례비 5,000,000 보존 (과실 0).
+    expect(result.pecuniaryDamagesSubtotalWon).toBe(15_000_000);
+    expect(result.finalWon).toBe(15_000_000);
   });
 
   it("산재인데 유족급여 미지정 → 0원 공제 (default)", () => {
@@ -250,13 +273,18 @@ describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (
     input.accidentType = "industrial";
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.accidentType).toBe("industrial");
-    expect(result.deductions.industrialBenefitWon).toBe(0);
+    expect(result.industrialBenefit).toEqual({
+      benefitWon: 0,
+      deductedWon: 0,
+      lostIncomeAfterWon: 605_679_360,
+    });
     expect(result.finalWon).toBe(610679300);
   });
 
-  it("accidentType 미지정(자동차) → accidentType·industrialBenefitWon 키 생략 (회귀 0)", () => {
+  it("accidentType 미지정(자동차) → accidentType·industrialBenefit 키 생략 (회귀 0)", () => {
     const result = computeCompensationDeath(baseInput(), { now: FIXED_NOW });
     expect(result.accidentType).toBeUndefined();
+    expect(result.industrialBenefit).toBeUndefined();
     expect(result.deductions.industrialBenefitWon).toBeUndefined();
     expect(result.finalWon).toBe(610679300);
   });

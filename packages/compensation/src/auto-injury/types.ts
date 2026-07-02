@@ -96,14 +96,19 @@ export interface CompensationDeductionsInput {
 /**
  * 사건종류. `"auto"` = 손해배상(자, 자동차) / `"industrial"` = 손해배상(산, 산업재해).
  *
- * 사건유형(부상/사망)과 직교한다. 산재는 자동차 산식과 동일하되 공제 단계에
- * 산재보험급여(부상=장해급여 / 사망=유족급여) 1줄이 과실상계 후 추가 차감된다 (매뉴얼 §11).
+ * 사건유형(부상/사망)과 직교한다. 산재는 자동차 산식과 동일하되 산재보험급여
+ * (부상=장해급여 / 사망=유족급여) 를 같은 성질의 손해인 일실수입(소극손해)에서 **먼저 공제한 뒤
+ * 과실상계** 한다 (대법원 2022. 3. 24. 선고 2021다241618 전원합의체 — "공제 후 과실상계",
+ * 위자료·장례비·기타손해 등 다른 성질의 손해는 잠식하지 않는다).
  */
 export type CompensationAccidentType = "auto" | "industrial";
 
 /** 산재(부상) 보험급여 공제 입력. `accidentType === "industrial"` 일 때만 의미. */
 export interface CompensationIndustrialInsuranceInjury {
-  /** 장해급여 (원, ≥ 0 정수). 과실상계 후 전액 공제. default 0. */
+  /**
+   * 장해급여 (원, ≥ 0 정수). 일실수입(소극손해) 한도에서 과실상계 전에 공제 (2021다241618 전합).
+   * default 0.
+   */
   disabilityBenefitWon?: number;
 }
 
@@ -158,11 +163,30 @@ export interface CompensationDeductionsResult {
   ratioSubtotalWon: number;
   absoluteSubtotalWon: number;
   /**
-   * 공제된 산재보험급여 (부상=장해급여 / 사망=유족급여, 원).
-   * `accidentType === "industrial"` 일 때만 포함된다 (자동차 모드는 키 생략 → 회귀 0).
+   * legacy (≤ v0.9.x 저장 결과 표시 전용) — 과실상계 후 총액에서 차감하던 구 방식의
+   * 산재보험급여. 신 결과는 이 키를 내보내지 않고 `CompensationResult.industrialBenefit`
+   * (공제 후 과실상계, 2021다241618 전합) 을 사용한다. `.lcalc` 로 저장된 구 결과를
+   * 그대로 렌더링하기 위해서만 유지.
    */
   industrialBenefitWon?: number;
   afterWon: number;
+}
+
+/**
+ * 산재보험급여 공제 결과 (부상=장해급여 / 사망=유족급여).
+ * `accidentType === "industrial"` 일 때만 포함된다.
+ *
+ * 대법원 2022. 3. 24. 선고 2021다241618 전원합의체 — 보험급여는 같은 성질의 손해
+ * (일실수입=소극손해) 에서 **먼저 공제한 다음 과실상계** 하며("공제 후 과실상계"),
+ * 다른 성질의 손해(위자료·장례비·기타손해)에서는 공제하지 않는다.
+ */
+export interface CompensationIndustrialBenefitResult {
+  /** 입력한 보험급여 (원). */
+  benefitWon: number;
+  /** 실제 공제액 = `min(benefitWon, 일실수입 소계)` (원). 동질 손해 한도. */
+  deductedWon: number;
+  /** 공제 후 일실수입 = `일실수입 소계 - deductedWon` (원, ≥ 0). */
+  lostIncomeAfterWon: number;
 }
 
 /** dataset 식별자 4종. `labor-rates/vX.Y.Z` 등. */
@@ -204,7 +228,15 @@ export interface CompensationResult {
   otherDamages?: OtherDamagesResult;
   /** 위자료 (원). */
   solatiumWon: number;
-  /** 과실상계 대상 소계 (위자료 포함) = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon`. */
+  /**
+   * 산재보험급여 공제 (장해급여, 공제 후 과실상계 — 2021다241618 전합).
+   * `accidentType === "industrial"` 일 때만 포함된다 (자동차 모드 키 생략 → 회귀 0).
+   */
+  industrialBenefit?: CompensationIndustrialBenefitResult;
+  /**
+   * 과실상계 대상 소계 (위자료 포함) = `일실수입 + otherDamagesSubtotalWon + solatiumWon`.
+   * 산재는 산재보험급여 공제 후 일실수입 (`industrialBenefit.lostIncomeAfterWon`) 기준.
+   */
   pecuniaryDamagesSubtotalWon: number;
   /** 과실상계 결과. */
   faultOffset: CompensationFaultOffset;

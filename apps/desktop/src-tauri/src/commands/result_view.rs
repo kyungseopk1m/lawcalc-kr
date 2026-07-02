@@ -109,6 +109,10 @@ pub struct CompensationResultView {
     pub segments: Vec<CompensationSegmentView>,
     pub lost_income_subtotal_won: f64,
     pub solatium_won: f64,
+    /// 산재보험급여 공제 (장해급여, 일실수입 한도 선공제 — 2021다241618 전합).
+    /// 산재 결과에만 존재하며, 자동차 결과에는 키가 없다 (회귀 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub industrial_benefit: Option<CompensationIndustrialBenefitView>,
     pub pecuniary_damages_subtotal_won: f64,
     pub fault_offset: CompensationFaultOffsetView,
     pub deductions: CompensationDeductionsView,
@@ -146,10 +150,21 @@ pub struct CompensationFaultOffsetView {
 pub struct CompensationDeductionsView {
     pub ratio_subtotal_won: f64,
     pub absolute_subtotal_won: f64,
-    /// 산재보험급여 공제 (부상=장해급여 / 사망=유족급여). 산재(`accidentType: "industrial"`)
-    /// 결과에만 존재하며, 자동차 결과에는 키가 없다 (회귀 0).
+    /// legacy — ≤ v0.9.x 저장 결과(과실상계 후 총액 공제)의 산재보험급여
+    /// (부상=장해급여 / 사망=유족급여). 신 결과는 이 키 대신 최상위
+    /// `industrial_benefit` (일실수입 한도 선공제) 을 사용한다.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub industrial_benefit_won: Option<f64>,
+}
+
+/// 산재보험급여 공제 (일실수입 한도 선공제 후 과실상계 — 대법원 2022. 3. 24. 선고
+/// 2021다241618 전원합의체). 산재 결과에만 존재한다.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationIndustrialBenefitView {
+    pub benefit_won: f64,
+    pub deducted_won: f64,
+    pub lost_income_after_won: f64,
 }
 
 /// Typed view of the `@lawcalc-kr/compensation` `OtherDamagesResult` summary
@@ -193,6 +208,10 @@ pub struct CompensationDeathResultView {
     pub segments: Vec<CompensationSegmentView>,
     pub lost_income_subtotal_won: f64,
     pub solatium_won: f64,
+    /// 산재보험급여 공제 (유족급여, 일실수입 한도 선공제 — 2021다241618 전합).
+    /// 산재 결과에만 존재 (회귀 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub industrial_benefit: Option<CompensationIndustrialBenefitView>,
     pub pecuniary_damages_subtotal_won: f64,
     pub fault_offset: CompensationFaultOffsetView,
     pub funeral_expense_won: f64,
@@ -251,6 +270,20 @@ pub fn format_currency(amount: f64) -> String {
         format!("-{signed}")
     } else {
         signed
+    }
+}
+
+/// 산재보험급여 공제 값 텍스트 — 공제액 + (급여가 일실수입을 초과해 한도가 걸린 경우) 급여 원액 안내.
+/// PDF·CSV 공용, UI 클립보드 표기와 동일 규칙.
+pub fn industrial_benefit_value_text(ib: &CompensationIndustrialBenefitView) -> String {
+    if ib.deducted_won < ib.benefit_won {
+        format!(
+            "{}원 (급여 {}원 중 일실수입 한도)",
+            format_currency(ib.deducted_won),
+            format_currency(ib.benefit_won)
+        )
+    } else {
+        format!("{}원", format_currency(ib.deducted_won))
     }
 }
 

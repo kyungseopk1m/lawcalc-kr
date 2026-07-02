@@ -194,17 +194,27 @@ export function computeCompensation(
       : null) ?? undefined;
   const otherDamagesSubtotalWon = otherDamagesResult?.subtotalWon ?? 0;
 
+  // 6.7. 산재보험급여(장해급여) 공제 — 같은 성질의 손해(일실수입=소극손해) 한도에서
+  //      먼저 공제한 뒤 과실상계 한다 (대법원 2022. 3. 24. 선고 2021다241618 전원합의체
+  //      "공제 후 과실상계"). 위자료·기타손해 등 다른 성질의 손해는 잠식하지 않는다.
+  //      자동차 모드는 benefit 0 → byte-identical (회귀 0).
+  const accidentType = input.accidentType ?? "auto";
+  const industrialBenefitInputWon =
+    accidentType === "industrial" ? (input.industrialInsurance?.disabilityBenefitWon ?? 0) : 0;
+  const industrialDeductedWon = Math.min(industrialBenefitInputWon, lostIncomeSubtotalWon);
+  const lostIncomeAfterIndustrialWon = lostIncomeSubtotalWon - industrialDeductedWon;
+
   // 7. 위자료
   const solatiumWon = input.solatiumWon ?? 0;
-  const pecuniaryDamagesSubtotalWon = lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon;
+  const pecuniaryDamagesSubtotalWon =
+    lostIncomeAfterIndustrialWon + otherDamagesSubtotalWon + solatiumWon;
 
   // 8. 과실상계
   const faultRatio = input.faultRatio ?? 0;
   const faultBeforeWon = pecuniaryDamagesSubtotalWon;
   const faultAfterWon = Math.floor(faultBeforeWon * (1 - faultRatio));
 
-  // 9. 공제 (과실상계 후). 산재(산×부상) 는 장해급여를 absolute 와 동일 위치에서 추가 차감 (매뉴얼 §11).
-  const accidentType = input.accidentType ?? "auto";
+  // 9. 공제 (과실상계 후) — 비율·전액 공제. 산재급여는 6.7 에서 선공제 (2021다241618 전합).
   const ratioItems = input.deductions?.ratio ?? [];
   const absoluteItems = input.deductions?.absolute ?? [];
   let ratioSum = 0;
@@ -212,10 +222,7 @@ export function computeCompensation(
   const ratioSubtotalWon = Math.floor(faultAfterWon * ratioSum);
   let absoluteSubtotalWon = 0;
   for (const item of absoluteItems) absoluteSubtotalWon += item.amount;
-  const industrialBenefitWon =
-    accidentType === "industrial" ? (input.industrialInsurance?.disabilityBenefitWon ?? 0) : 0;
-  const deductionsAfterWon =
-    faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon - industrialBenefitWon;
+  const deductionsAfterWon = faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon;
 
   // 10. final
   const finalRawWon = Math.max(0, deductionsAfterWon);
@@ -234,6 +241,16 @@ export function computeCompensation(
       ? { otherDamagesSubtotalWon, otherDamages: otherDamagesResult }
       : {}),
     solatiumWon,
+    // 산재만 포함 — 자동차 모드 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(accidentType === "industrial"
+      ? {
+          industrialBenefit: {
+            benefitWon: industrialBenefitInputWon,
+            deductedWon: industrialDeductedWon,
+            lostIncomeAfterWon: lostIncomeAfterIndustrialWon,
+          },
+        }
+      : {}),
     pecuniaryDamagesSubtotalWon,
     faultOffset: {
       ratio: faultRatio,
@@ -243,7 +260,6 @@ export function computeCompensation(
     deductions: {
       ratioSubtotalWon,
       absoluteSubtotalWon,
-      ...(accidentType === "industrial" ? { industrialBenefitWon } : {}),
       afterWon: deductionsAfterWon,
     },
     finalWon,

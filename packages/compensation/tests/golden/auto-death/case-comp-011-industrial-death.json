@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1",
   "id": "case-comp-011-industrial-death",
-  "title": "industrial/death — 산재 사망, 과실 10% + 장례비 + 유족급여 1억 공제, 배우자+자녀1 분배 (3:2)",
+  "title": "industrial/death — 산재 사망, 유족급여 1억 선공제(일실수입 한도) 후 과실 10% + 상속분배",
   "source": "manual-derivation",
-  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 3. case-008 baseline(30세男 생계비 1/3, 420개월 240 cap, 일실수입 605,679,360) 위에 사건종류 산재 + 장례비 500만(적극손해 → 과실상계 대상, 소계 610,679,360) + 과실 10% → 549,611,424 + 유족급여 100,000,000. 산재급여는 과실상계 후 absolute 와 동일 위치 차감 (매뉴얼 §11) → 449,611,424 → 449,611,400. 상속 배우자 3/5 자녀 2/5.",
+  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 3 (2026-07-02 COMP-6 재도출). 2021다241618 전합 — 유족급여는 생계비 공제 후 일실수입 한도에서 먼저 공제 후 과실상계: (605,679,360 − 100,000,000 + 장례비 5,000,000) × 0.9 = 459,611,424 → 절사 459,611,400. 상속: 배우자 3/5 = 275,766,840 / 자녀1 2/5 = 183,844,560 (합계 보존).",
   "input": {
     "mode": "death",
     "accidentType": "industrial",
@@ -21,11 +21,23 @@
     "funeralExpenseWon": 5000000,
     "solatiumWon": 0,
     "faultRatio": 0.1,
-    "industrialInsurance": { "survivorBenefitWon": 100000000 },
+    "industrialInsurance": {
+      "survivorBenefitWon": 100000000
+    },
     "heirs": {
-      "decedent": { "deceasedAt": "2026-01-01" },
-      "spouse": { "name": "배우자", "alive": true },
-      "linealDescendants": [{ "name": "자녀1", "deceasedBeforeOpening": false }]
+      "decedent": {
+        "deceasedAt": "2026-01-01"
+      },
+      "spouse": {
+        "name": "배우자",
+        "alive": true
+      },
+      "linealDescendants": [
+        {
+          "name": "자녀1",
+          "deceasedBeforeOpening": false
+        }
+      ]
     }
   },
   "expected": {
@@ -35,20 +47,37 @@
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 605679360,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 610679360,
-    "faultOffset": { "ratio": 0.1, "afterWon": 549611424 },
+    "industrialBenefit": {
+      "benefitWon": 100000000,
+      "deductedWon": 100000000,
+      "lostIncomeAfterWon": 505679360
+    },
+    "pecuniaryDamagesSubtotalWon": 510679360,
+    "faultOffset": {
+      "ratio": 0.1,
+      "afterWon": 459611424
+    },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "industrialBenefitWon": 100000000,
-      "afterWon": 449611424
+      "afterWon": 459611424
     },
-    "finalWon": 449611400,
+    "finalWon": 459611400,
     "hoffman240CapCappedAtIndex": 0,
     "inheritanceShares": [
-      { "name": "배우자", "numerator": 3, "denominator": 5, "amountWon": 269766840 },
-      { "name": "자녀1", "numerator": 2, "denominator": 5, "amountWon": 179844560 }
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 5,
+        "amountWon": 275766840
+      },
+      {
+        "name": "자녀1",
+        "numerator": 2,
+        "denominator": 5,
+        "amountWon": 183844560
+      }
     ],
     "dataVersions": {
       "laborRates": "labor-rates/v1.0.0",
@@ -59,7 +88,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-06-02",
-    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md § 3"
+    "derivedAt": "2026-07-02",
+    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md § 3 (COMP-6 공제 후 과실상계 재도출)"
   }
 }

@@ -22,6 +22,7 @@ import type {
   CompensationDeductionsInput,
   CompensationDeductionsResult,
   CompensationFaultOffset,
+  CompensationIndustrialBenefitResult,
   CompensationLostIncomeInput,
   CompensationSegment,
   Hoffman240CapTable,
@@ -48,7 +49,10 @@ export type CompensationHeirsInput = InheritanceInput;
 
 /** 산재(사망) 보험급여 공제 입력. `accidentType === "industrial"` 일 때만 의미. */
 export interface CompensationIndustrialInsuranceDeath {
-  /** 유족급여 (원, ≥ 0 정수). 과실상계 후 base 에서 전액 공제. default 0. */
+  /**
+   * 유족급여 (원, ≥ 0 정수). 일실수입(생계비 공제 후, 소극손해) 한도에서 과실상계 전에
+   * 공제 (2021다241618 전합). default 0.
+   */
   survivorBenefitWon?: number;
 }
 
@@ -56,8 +60,9 @@ export interface CompensationIndustrialInsuranceDeath {
  * 자×사망 손해배상 입력.
  *
  * `mode: "death"` discriminator 로 부상 입력(`CompensationInput`)과 구분한다.
- * `accidentType === "industrial"` 이면 산×사망: 산식은 자×사망과 동일하되 공제 단계에
- * 유족급여 1줄이 추가 차감된다 (매뉴얼 §11).
+ * `accidentType === "industrial"` 이면 산×사망: 산식은 자×사망과 동일하되 유족급여를
+ * 같은 성질의 손해인 일실수입에서 먼저 공제한 뒤 과실상계 한다 (대법원 2022. 3. 24.
+ * 선고 2021다241618 전원합의체 — 위자료·장례비·기타손해는 잠식하지 않는다).
  */
 export interface CompensationAutoDeathInput {
   mode: "death";
@@ -120,7 +125,15 @@ export interface CompensationAutoDeathResult {
   otherDamages?: OtherDamagesResult;
   /** 위자료 (원). */
   solatiumWon: number;
-  /** 과실상계 대상 소계 (위자료·장례비 포함) = `lostIncomeSubtotalWon + otherDamagesSubtotalWon + solatiumWon + funeralExpenseWon`. */
+  /**
+   * 산재보험급여 공제 (유족급여, 공제 후 과실상계 — 2021다241618 전합).
+   * `accidentType === "industrial"` 일 때만 포함된다 (자동차 모드 키 생략 → 회귀 0).
+   */
+  industrialBenefit?: CompensationIndustrialBenefitResult;
+  /**
+   * 과실상계 대상 소계 (위자료·장례비 포함) = `일실수입 + otherDamagesSubtotalWon + solatiumWon + funeralExpenseWon`.
+   * 산재는 유족급여 공제 후 일실수입 (`industrialBenefit.lostIncomeAfterWon`) 기준.
+   */
   pecuniaryDamagesSubtotalWon: number;
   /** 과실상계 결과. */
   faultOffset: CompensationFaultOffset;

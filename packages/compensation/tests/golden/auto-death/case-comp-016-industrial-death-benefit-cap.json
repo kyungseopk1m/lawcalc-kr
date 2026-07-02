@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1",
+  "id": "case-comp-016-industrial-death-benefit-cap",
+  "title": "industrial/death — 유족급여가 일실수입을 초과: 일실수입 한도 공제, 위자료·장례비 보존",
+  "source": "manual-derivation",
+  "notes": "COMP-6 capping 검산 (2026-07-02). case-011 과 동일 base(생계비 공제 후 일실수입 605,679,360)에 위자료 10,000,000 + 유족급여 700,000,000(> 일실수입), 상속인 없음. 2021다241618 전합 — deducted = 605,679,360, 초과분은 위자료·장례비를 잠식하지 않는다. pecuniary = 0 + 10,000,000 + 5,000,000 → × 0.9 = 13,500,000 = final. 구 방식이었다면 0원.",
+  "input": {
+    "mode": "death",
+    "accidentType": "industrial",
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 65
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "funeralExpenseWon": 5000000,
+    "solatiumWon": 10000000,
+    "faultRatio": 0.1,
+    "industrialInsurance": {
+      "survivorBenefitWon": 700000000
+    }
+  },
+  "expected": {
+    "accidentType": "industrial",
+    "segmentCount": 1,
+    "segmentEndMonths": [420],
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "lostIncomeSubtotalWon": 605679360,
+    "solatiumWon": 10000000,
+    "industrialBenefit": {
+      "benefitWon": 700000000,
+      "deductedWon": 605679360,
+      "lostIncomeAfterWon": 0
+    },
+    "pecuniaryDamagesSubtotalWon": 15000000,
+    "faultOffset": {
+      "ratio": 0.1,
+      "afterWon": 13500000
+    },
+    "funeralExpenseWon": 5000000,
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 13500000
+    },
+    "finalWon": 13500000,
+    "inheritanceShares": null,
+    "hoffman240CapCappedAtIndex": 0,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-07-02",
+    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md §D (COMP-6 capping 손계산)"
+  }
+}

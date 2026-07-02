@@ -367,8 +367,10 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     expect(input.industrialInsurance?.disabilityBenefitWon).toBe(50_000_000);
     const result = computeCompensation(input);
     expect(result.accidentType).toBe("industrial");
-    expect(result.deductions.industrialBenefitWon).toBe(50_000_000);
-    expect(result.finalWon).toBe(149_519_900);
+    // 2021다241618 전합 — 장해급여는 일실수입 한도에서 선공제 후 과실상계.
+    expect(result.industrialBenefit?.deductedWon).toBe(50_000_000);
+    expect(result.deductions.industrialBenefitWon).toBeUndefined();
+    expect(result.finalWon).toBe(159_519_900);
   });
 
   it("산×부상 자동차 회귀: accidentType auto 면 산재 필드 미주입 + @1 envelope", () => {
@@ -427,9 +429,11 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     expect(input.industrialInsurance?.survivorBenefitWon).toBe(100_000_000);
     const result = computeCompensationDeath(input);
     expect(result.accidentType).toBe("industrial");
-    expect(result.deductions.industrialBenefitWon).toBe(100_000_000);
-    // 장례비(500만)가 과실상계(10%) 대상에 포함 → 종전 450,111,400 − 500,000 = 449,611,400.
-    expect(result.finalWon).toBe(449_611_400);
+    // 2021다241618 전합 — 유족급여는 일실수입(생계비 공제 후) 한도에서 선공제 후 과실상계:
+    // (605,679,360 − 100,000,000 + 장례비 5,000,000) × 0.9 = 459,611,424 → 절사 459,611,400.
+    expect(result.industrialBenefit?.deductedWon).toBe(100_000_000);
+    expect(result.deductions.industrialBenefitWon).toBeUndefined();
+    expect(result.finalWon).toBe(459_611_400);
     const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
     expect(sum).toBe(result.finalWon);
   });

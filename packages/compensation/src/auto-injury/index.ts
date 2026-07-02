@@ -6,6 +6,7 @@ export type {
   CompensationDeductionsInput,
   CompensationDeductionsResult,
   CompensationFaultOffset,
+  CompensationIndustrialBenefitResult,
   CompensationIndustrialInsuranceInjury,
   CompensationInput,
   CompensationLossRateInput,
