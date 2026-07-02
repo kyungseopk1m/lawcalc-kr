@@ -55,6 +55,11 @@ export function computeAppropriation(input: AppropriationInput): AppropriationRe
     remaining = applyLegalAllocation(works, input.payment.amount, computedAt);
   } else {
     remaining = applyExplicitDirective(input.payment.allocation, input.payment.amount, workMap);
+    // 지정(합의·채무자·채권자) 대상 합계보다 변제액이 크면, 잉여는 민법 제477조 법정충당
+    // 순서로 잔여 채권 (지정 대상의 잔액 포함) 에 cascade 한다 (통설).
+    if (remaining > 0) {
+      remaining = applyLegalAllocation(works, remaining, computedAt, "잉여 ");
+    }
   }
 
   const totals = buildTotals(works);
@@ -90,7 +95,12 @@ function applyExplicitDirective(
   return pool;
 }
 
-function applyLegalAllocation(works: ClaimWork[], paymentAmount: number, asOf: IsoDate): number {
+function applyLegalAllocation(
+  works: ClaimWork[],
+  paymentAmount: number,
+  asOf: IsoDate,
+  labelPrefix = "",
+): number {
   let pool = paymentAmount;
   let priorityIndex = 0;
 
@@ -105,7 +115,7 @@ function applyLegalAllocation(works: ClaimWork[], paymentAmount: number, asOf: I
 
     const groups = rankLegal(tier);
     const topGroup = groups[0]!;
-    const priorityLabel = formatPriorityLabel(priorityIndex, dueReached, topGroup);
+    const priorityLabel = labelPrefix + formatPriorityLabel(priorityIndex, dueReached, topGroup);
     priorityIndex += 1;
 
     if (topGroup.length === 1) {

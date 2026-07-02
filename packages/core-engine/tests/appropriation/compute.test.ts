@@ -66,7 +66,7 @@ describe("computeAppropriation — 단일 채권 + 명시 directive", () => {
     expect(result.payment.appliedAmount).toBe(1000);
   });
 
-  it("creditorDesignation (3순위 채권자 지정) — sum(targets) < payment.amount 시 잉여는 unapplied", () => {
+  it("creditorDesignation (3순위 채권자 지정) — sum(targets) < payment.amount 시 잉여는 같은 채권 잔액에 477조 cascade", () => {
     const input: AppropriationInput = {
       claims: [
         {
@@ -85,9 +85,96 @@ describe("computeAppropriation — 단일 채권 + 명시 directive", () => {
       computedAt: "2026-05-15",
     };
     const result = computeAppropriation(input);
-    expect(result.claims[0]!.principalApplied).toBe(3000);
+    // 지정 3,000 + 잉여 2,000 cascade (제477조) = 5,000 전액 충당.
+    expect(result.claims[0]!.principalApplied).toBe(5000);
+    expect(result.claims[0]!.principalBalanceAfter).toBe(5000);
+    expect(result.payment.unappliedAmount).toBe(0);
+    expect(result.payment.appliedAmount).toBe(5000);
+    expect(result.claims[0]!.statutoryRank?.priorityLabel).toContain("잉여 법정충당 1순위");
+  });
+});
+
+describe("computeAppropriation — 명시충당 잉여 477조 cascade", () => {
+  it("잉여가 지정 대상 잔액 → 후순위 채권 순으로 cascade (변제기 도래 우선)", () => {
+    const input: AppropriationInput = {
+      claims: [
+        { id: "a", interestBalance: 1000, principalBalance: 4000, dueAt: "2025-01-01" },
+        { id: "b", principalBalance: 3000, dueAt: "2025-02-01" },
+      ],
+      payment: {
+        amount: 10000,
+        allocation: {
+          type: "debtorDesignation",
+          targets: [{ claimId: "a", amount: 2000 }],
+        },
+      },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    const a = result.claims.find((c) => c.claimId === "a")!;
+    const b = result.claims.find((c) => c.claimId === "b")!;
+    // 지정: a 에 2,000 (이자 1,000 → 원본 1,000). 잉여 8,000 cascade:
+    // 1순위 a (변제기 선도래) 잔액 3,000 소진 → 2순위 b 에 3,000 → 잔여 2,000 은 반환.
+    expect(a.interestApplied).toBe(1000);
+    expect(a.principalApplied).toBe(4000);
+    expect(a.principalBalanceAfter).toBe(0);
+    expect(b.principalApplied).toBe(3000);
+    expect(b.principalBalanceAfter).toBe(0);
+    expect(result.payment.appliedAmount).toBe(8000);
     expect(result.payment.unappliedAmount).toBe(2000);
-    expect(result.payment.appliedAmount).toBe(3000);
+    expect(a.statutoryRank?.priorityLabel).toContain("잉여 법정충당 1순위");
+    expect(b.statutoryRank?.priorityLabel).toContain("잉여 법정충당 2순위");
+  });
+
+  it("잉여 cascade 도 변제기 미도래 채권은 도래 채권 뒤로 미룬다", () => {
+    const input: AppropriationInput = {
+      claims: [
+        { id: "due", principalBalance: 1000, dueAt: "2025-01-01" },
+        { id: "notDue", principalBalance: 5000, dueAt: "2027-01-01" },
+      ],
+      payment: {
+        amount: 4000,
+        allocation: {
+          type: "debtorDesignation",
+          targets: [{ claimId: "due", amount: 500 }],
+        },
+      },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    const due = result.claims.find((c) => c.claimId === "due")!;
+    const notDue = result.claims.find((c) => c.claimId === "notDue")!;
+    // 잉여 3,500: 도래 채권 잔액 500 먼저 → 미도래 채권에 3,000.
+    expect(due.principalApplied).toBe(1000);
+    expect(notDue.principalApplied).toBe(3000);
+    expect(result.payment.unappliedAmount).toBe(0);
+    expect(due.statutoryRank?.dueReached).toBe(true);
+    expect(notDue.statutoryRank?.dueReached).toBe(false);
+  });
+
+  it("모든 채권 소진 후 잔여 잉여는 unapplied (반환) 로 남는다", () => {
+    const input: AppropriationInput = {
+      claims: [{ id: "c1", principalBalance: 1000, dueAt: "2025-01-01" }],
+      payment: {
+        amount: 5000,
+        allocation: { type: "agreement", targets: [{ claimId: "c1", amount: 1000 }] },
+      },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    expect(result.claims[0]!.principalBalanceAfter).toBe(0);
+    expect(result.payment.appliedAmount).toBe(1000);
+    expect(result.payment.unappliedAmount).toBe(4000);
+  });
+
+  it("legal 경로의 priorityLabel 은 prefix 없이 유지된다", () => {
+    const input: AppropriationInput = {
+      claims: [{ id: "c1", principalBalance: 5000, dueAt: "2025-01-01" }],
+      payment: { amount: 3000, allocation: { type: "legal" } },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    expect(result.claims[0]!.statutoryRank?.priorityLabel).toMatch(/^법정충당 1순위/);
   });
 });
 

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1",
+  "id": "case-006-designation-surplus-cascade",
+  "title": "지정충당 잉여 — 제477조 법정충당 cascade (지정 대상 잔액 → 후순위 채권 순)",
+  "source": "민법 제476조 (지정충당) + 제477조 (법정충당) + 제479조 (비용·이자·원본 순)",
+  "notes": "지정 대상 합계 60,000 < 변제액 130,000. 잉여 70,000 은 제477조 순서 (변제기 도래 → 변제이익 → 변제기 선도래) 로 cascade — 1순위 loan-a 잔액 50,000 소진 후 2순위 loan-b 에 20,000 (이자 5,000 → 원본 15,000, 제479조). 손계산: A applied = 60,000 지정 + 50,000 잉여 = 110,000 / B applied = 20,000 / 합계 130,000 = 변제액, 미충당 0.",
+  "input": {
+    "claims": [
+      {
+        "id": "loan-a",
+        "name": "대여금 A",
+        "costBalance": 2000,
+        "interestBalance": 8000,
+        "principalBalance": 100000,
+        "dueAt": "2025-01-10"
+      },
+      {
+        "id": "loan-b",
+        "name": "대여금 B",
+        "interestBalance": 5000,
+        "principalBalance": 50000,
+        "dueAt": "2025-03-01"
+      }
+    ],
+    "payment": {
+      "amount": 130000,
+      "allocation": {
+        "type": "debtorDesignation",
+        "targets": [{ "claimId": "loan-a", "amount": 60000 }]
+      }
+    },
+    "computedAt": "2026-05-15"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 130000,
+      "allocationType": "debtorDesignation",
+      "appliedAmount": 130000,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 2000,
+      "totalInterestApplied": 13000,
+      "totalPrincipalApplied": 115000,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 35000,
+      "remainingGrandTotal": 35000
+    },
+    "claims": [
+      {
+        "claimId": "loan-a",
+        "costApplied": 2000,
+        "interestApplied": 8000,
+        "principalApplied": 100000,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 0,
+        "totalApplied": 110000
+      },
+      {
+        "claimId": "loan-b",
+        "costApplied": 0,
+        "interestApplied": 5000,
+        "principalApplied": 15000,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 35000,
+        "totalApplied": 20000
+      }
+    ]
+  }
+}

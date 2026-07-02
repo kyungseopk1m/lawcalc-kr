@@ -564,7 +564,8 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 <option value="creditorDesignation">채권자(변제받는 자) 지정 (제476조②)</option>
               </Select>
               <span className="text-xs font-normal text-muted-foreground">
-                충당 방법은 합의 → 지정(채무자·채권자) → 법정 순으로 우선합니다.
+                충당 방법은 합의 → 지정(채무자·채권자) → 법정 순으로 우선합니다. 충당 대상보다
+                변제액이 크면 잉여는 법정충당(제477조) 순서로 잔여 채권에 충당합니다.
               </span>
             </label>
             {payment.allocationType !== "legal" ? (
