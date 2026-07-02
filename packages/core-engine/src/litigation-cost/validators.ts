@@ -79,6 +79,9 @@ export function validateStampDutyInput(input: StampDutyInput): void {
   if (input.isPaymentOrder && input.isSettlement) {
     fail(prefix, "지급명령과 화해는 동시에 적용할 수 없습니다");
   }
+  if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
+    fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
+  }
 }
 
 // ===== Delivery Fee =====

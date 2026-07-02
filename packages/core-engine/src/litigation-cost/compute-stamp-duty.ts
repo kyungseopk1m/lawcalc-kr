@@ -1,3 +1,4 @@
+import { decimalToFraction } from "./helpers";
 import {
   getAppealsMultiplier,
   getStampDutyBracket,
@@ -21,10 +22,16 @@ import { validateStampDutyInput } from "./validators";
  *
  *   1. validateStampDutyInput(input)  — 음수 소가 / 무효 caseType / 항소 + 특별절차 등 거부.
  *   2. bracket = getStampDutyBracket(dataset, caseValue)  — 4구간 매칭.
- *   3. baseLine = bracket.baseAmount + (caseValue - bracket.scopeStart) × bracket.rate.
+ *   3. baseLine = caseValue × bracket.rate + bracket.baseAmount — 인지법 제2조 ①은 **소가
+ *      전체**에 구간 요율을 곱하고 보정 상수(5천/5만5천/55만5천원)를 더하는 연속 보정식이다
+ *      (구간 경계에서 값이 이어진다: 1천만×50/10,000 = 1천만×45/10,000 + 5,000 = 50,000).
+ *      v0.10.0 전 구현은 변호사보수 별표("…까지 부분" 요율)와 동형인 구간별 누진식
+ *      `baseAmount + (caseValue − scopeStart) × rate` 로 오적용해 1천만원 이상 전 구간을
+ *      과소계산했다 (예: 소가 5천만 소장 185,000 ← 정답 230,000). KLAC 자동계산·법령
+ *      원문(법률 제20003호) 대조로 확정 후 교정.
  *   4. × appealsMultiplier (1심 1.0 / 항소 1.5 / 상고 2.0, 제3조).
  *   5. × specialProcedure (지급명령 ×0.1 제7조 ②항 / 화해 ×0.2 제7조 ①항, 1심 only).
- *   6. × electronicFiling (×0.9, 제16조).
+ *   6. × electronicFiling (×0.9, 제16조 — filingDate 가 시행일 2011-10-19 이전이면 미적용).
  *   7. 재심 (isRetrial=true): 산식 무영향 (제8조 본문 "심급에 따라 ... 금액"), formulaText prefix 만.
  *   8. applyStampDutyRounding  — 1,000원 floor + 100원 절사 (제2조 ②항), 모든 multiplier 적용 후 마지막.
  *
@@ -73,10 +80,10 @@ function appealsLevelLabelKo(level: AppealsLevel): string {
 }
 
 function bracketFormulaSegment(bracket: StampDutyBracket, caseValue: number): string {
-  if (bracket.baseAmount === 0 && bracket.scopeStart === 0) {
+  if (bracket.baseAmount === 0) {
     return `소가 ${caseValue.toLocaleString("en-US")} × ${bracket.rate}`;
   }
-  return `(${bracket.baseAmount.toLocaleString("en-US")} + (${caseValue.toLocaleString("en-US")} - ${bracket.scopeStart.toLocaleString("en-US")}) × ${bracket.rate})`;
+  return `(소가 ${caseValue.toLocaleString("en-US")} × ${bracket.rate} + ${bracket.baseAmount.toLocaleString("en-US")})`;
 }
 
 function buildFormulaText(args: {
@@ -87,6 +94,7 @@ function buildFormulaText(args: {
   specialMultiplier: number | null;
   specialLabel: string | null;
   electronicMultiplier: number | null;
+  electronicSkippedNote: string | null;
   preRounding: number;
   finalAmount: number;
 }): string {
@@ -100,6 +108,9 @@ function buildFormulaText(args: {
   }
   if (args.electronicMultiplier !== null) {
     segments.push(`전자소송 (×${args.electronicMultiplier})`);
+  }
+  if (args.electronicSkippedNote !== null) {
+    segments.push(args.electronicSkippedNote);
   }
 
   const arithmetic: string[] = [bracketFormulaSegment(args.bracket, args.input.caseValue)];
@@ -129,7 +140,15 @@ export function computeStampDuty(
   const dataset = loadStampDutyDataset(deps?.dataset);
   const bracket = getStampDutyBracket(dataset, input.caseValue);
 
-  const baseLine = bracket.baseAmount + (input.caseValue - bracket.scopeStart) * bracket.rate;
+  // 인지법 제2조 ① — 소가 전체 × 요율 + 보정 상수 (연속 보정식, 상단 doc 참조).
+  // float 곱(예: 50,000,000 × 0.0045 = 224,999.99999999997)이 100원 절사(제2조 ②)를
+  // 아래로 새게 하므로, 요율을 정확 유리수(0.0045 → 45/10,000)로 곱해 계산한다
+  // (변호사보수 floor 와 동일 정책 — decimalToFraction).
+  const rate = decimalToFraction(bracket.rate);
+  const value = decimalToFraction(input.caseValue);
+  const num = value.num * rate.num + BigInt(bracket.baseAmount) * value.den * rate.den;
+  const den = value.den * rate.den;
+  const baseLine = Number(num) / Number(den);
 
   const appealsMultiplier = getAppealsMultiplier(dataset, input.appealsLevel);
 
@@ -143,9 +162,18 @@ export function computeStampDuty(
     specialLabel = "화해";
   }
 
-  const electronicMultiplier = input.isElectronicFiling
+  // 제16조 전자소송 감액 — filingDate 가 시행일 이전이면 미적용 (미지정 시 현행 사건으로 간주).
+  const electronicEffectiveFrom = dataset.electronicFilingDiscount.effectiveFrom;
+  const electronicApplies =
+    input.isElectronicFiling === true &&
+    (input.filingDate === undefined || input.filingDate >= electronicEffectiveFrom);
+  const electronicMultiplier = electronicApplies
     ? dataset.electronicFilingDiscount.multiplier
     : null;
+  const electronicSkippedNote =
+    input.isElectronicFiling === true && !electronicApplies
+      ? `전자소송 감액 미적용 (접수일 ${input.filingDate} — 제16조 시행 ${electronicEffectiveFrom} 전)`
+      : null;
 
   let preRounding = baseLine * appealsMultiplier;
   if (specialMultiplier !== null) {
@@ -165,6 +193,7 @@ export function computeStampDuty(
     specialMultiplier,
     specialLabel,
     electronicMultiplier,
+    electronicSkippedNote,
     preRounding,
     finalAmount,
   });

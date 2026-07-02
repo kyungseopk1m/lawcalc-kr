@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "id": "case-003-stamp-500m-paper",
+  "title": "인지액 — 소장, 소가 5억원 = 2,055,000원",
+  "source": "statute-derivation + external-web-capture(KLAC)",
+  "notes": "인지법 §2① 3호: 500,000,000 × 40/10,000 + 55,000 = 2,055,000. KLAC 캡처 = 2,055,000 일치.",
+  "input": {
+    "caseValue": 500000000,
+    "caseType": "civilFirstInstanceCollegial",
+    "appealsLevel": "firstInstance"
+  },
+  "expected": {
+    "amount": 2055000,
+    "dataVersion": "stamp-duty/v1.0.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-07-02",
+    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md §G (인지법 제2조·제3조·제7조·제16조 정수 손계산)",
+    "externalCapture": {
+      "source": "대한법률구조공단 소송비용 자동계산 (본안사건 인지 및 송달료 계산)",
+      "sourceUrl": "https://www.klac.or.kr/legalstruct/autoCostCalculation.do",
+      "capturedAt": "2026-07-02",
+      "method": "클라이언트 JS 산식 직접 분석 + 동일 입력 재현 (서버 계산 아님)"
+    }
+  }
+}

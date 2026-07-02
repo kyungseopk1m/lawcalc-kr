@@ -203,12 +203,12 @@ describe("applyStampDutyRounding (제2조 ②항)", () => {
 });
 
 describe("computeStampDuty / 누진 산식 + 심급 + 반올림", () => {
-  // 소가 1,000만원 1심: 1구간 (rate 0.005, base 0). 10,000,000 × 0.005 = 50,000.
-  // 그러나 10,000,000 은 2구간 진입 (scopeStart <= caseValue < scopeEnd 규칙).
-  // 2구간 base 5,000 + (10,000,000 - 10,000,000) × 0.0045 = 5,000 → 100원 절사 후 5,000.
-  it("소가 10,000,000 1심 = 5,000원 (2구간 진입, base 만)", () => {
+  // 소가 1,000만원 1심: 2구간 진입 (scopeStart <= caseValue < scopeEnd 규칙).
+  // 인지법 §2① 2호 — 소가 전체 × 0.0045 + 5,000 = 45,000 + 5,000 = 50,000.
+  // (1구간 상한 9,999,999 × 0.005 ≈ 49,999 와 이어지는 연속 보정식.)
+  it("소가 10,000,000 1심 = 50,000원 (2구간 경계, 연속)", () => {
     const r = computeStampDuty(input({ caseValue: 10_000_000 }), { computedAt: FROZEN_AT });
-    expect(r.amount).toBe(5000);
+    expect(r.amount).toBe(50_000);
     expect(r.dataVersion).toBe("stamp-duty/v1.0.0");
     expect(r.computedAt).toBe(FROZEN_AT);
   });
@@ -224,60 +224,62 @@ describe("computeStampDuty / 누진 산식 + 심급 + 반올림", () => {
     expect(r.amount).toBe(1000);
   });
 
-  it("소가 100,000,000 1심 = 55,000원 (3구간 진입, base 만)", () => {
+  it("소가 100,000,000 1심 = 455,000원 (3구간 경계, 연속)", () => {
+    // 100,000,000 × 0.004 + 55,000 = 455,000. (2구간 상한과 연속.)
     const r = computeStampDuty(input({ caseValue: 100_000_000 }), { computedAt: FROZEN_AT });
-    expect(r.amount).toBe(55_000);
+    expect(r.amount).toBe(455_000);
   });
 
-  it("소가 50,000,000 1심 = 185,000원 (2구간 중간)", () => {
-    // 5,000 + (50,000,000 - 10,000,000) × 0.0045 = 5,000 + 180,000 = 185,000.
+  it("소가 50,000,000 1심 = 230,000원 (2구간 중간)", () => {
+    // 50,000,000 × 0.0045 + 5,000 = 225,000 + 5,000 = 230,000 (인지법 §2① 2호, 소가 전체).
     const r = computeStampDuty(input({ caseValue: 50_000_000 }), { computedAt: FROZEN_AT });
-    expect(r.amount).toBe(185_000);
+    expect(r.amount).toBe(230_000);
   });
 
-  it("소가 1,000,000,000 1심 = 555,000원 (4구간 진입)", () => {
+  it("소가 1,000,000,000 1심 = 4,055,000원 (4구간 경계, 연속)", () => {
+    // 1,000,000,000 × 0.0035 + 555,000 = 3,500,000 + 555,000 = 4,055,000.
     const r = computeStampDuty(input({ caseValue: 1_000_000_000 }), { computedAt: FROZEN_AT });
-    expect(r.amount).toBe(555_000);
+    expect(r.amount).toBe(4_055_000);
   });
 
-  it("소가 10,000,000,000 1심 = 32,055,000원 (4구간)", () => {
-    // 555,000 + (10,000,000,000 - 1,000,000,000) × 0.0035 = 555,000 + 31,500,000 = 32,055,000.
+  it("소가 10,000,000,000 1심 = 35,555,000원 (4구간)", () => {
+    // 10,000,000,000 × 0.0035 + 555,000 = 35,000,000 + 555,000 = 35,555,000.
     const r = computeStampDuty(input({ caseValue: 10_000_000_000 }), { computedAt: FROZEN_AT });
-    expect(r.amount).toBe(32_055_000);
+    expect(r.amount).toBe(35_555_000);
   });
 
-  it("소가 50,000,000 항소 = 277,500원 (base × 1.5)", () => {
-    // 185,000 × 1.5 = 277,500.
+  it("소가 50,000,000 항소 = 345,000원 (base × 1.5)", () => {
+    // 230,000 × 1.5 = 345,000.
     const r = computeStampDuty(input({ caseValue: 50_000_000, appealsLevel: "appeal" }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.amount).toBe(277_500);
+    expect(r.amount).toBe(345_000);
   });
 
-  it("소가 50,000,000 상고 = 370,000원 (base × 2)", () => {
-    // 185,000 × 2 = 370,000.
+  it("소가 50,000,000 상고 = 460,000원 (base × 2)", () => {
+    // 230,000 × 2 = 460,000.
     const r = computeStampDuty(input({ caseValue: 50_000_000, appealsLevel: "supreme" }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.amount).toBe(370_000);
+    expect(r.amount).toBe(460_000);
   });
 });
 
 describe("computeStampDuty / 특별절차 (지급명령 / 화해)", () => {
-  it("지급명령 1심 (10분의 1): 소가 50,000,000 = 18,500원", () => {
-    // 185,000 × 0.1 = 18,500 → 100원 절사 후 18,500.
+  it("지급명령 1심 (10분의 1): 소가 50,000,000 = 23,000원", () => {
+    // 230,000 × 0.1 = 23,000 → 100원 절사 후 23,000.
     const r = computeStampDuty(input({ caseValue: 50_000_000, isPaymentOrder: true }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.amount).toBe(18_500);
+    expect(r.amount).toBe(23_000);
   });
 
-  it("화해 1심 (5분의 1): 소가 50,000,000 = 37,000원", () => {
-    // 185,000 × 0.2 = 37,000.
+  it("화해 1심 (5분의 1): 소가 50,000,000 = 46,000원", () => {
+    // 230,000 × 0.2 = 46,000.
     const r = computeStampDuty(input({ caseValue: 50_000_000, isSettlement: true }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.amount).toBe(37_000);
+    expect(r.amount).toBe(46_000);
   });
 
   it("지급명령 + 항소 동시 = RangeError (validator)", () => {
@@ -294,30 +296,73 @@ describe("computeStampDuty / 특별절차 (지급명령 / 화해)", () => {
 });
 
 describe("computeStampDuty / 전자소송 (×0.9)", () => {
-  it("전자소송 1심 소가 50,000,000 = 166,500원", () => {
-    // 185,000 × 0.9 = 166,500.
+  it("전자소송 1심 소가 50,000,000 = 207,000원", () => {
+    // 230,000 × 0.9 = 207,000.
     const r = computeStampDuty(input({ caseValue: 50_000_000, isElectronicFiling: true }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.amount).toBe(166_500);
+    expect(r.amount).toBe(207_000);
   });
 
-  it("전자소송 항소 소가 50,000,000 = 249,700원", () => {
-    // 185,000 × 1.5 × 0.9 = 249,750 → 100원 절사 → 249,700.
+  it("전자소송 항소 소가 50,000,000 = 310,500원", () => {
+    // 230,000 × 1.5 × 0.9 = 310,500.
     const r = computeStampDuty(
       input({ caseValue: 50_000_000, appealsLevel: "appeal", isElectronicFiling: true }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.amount).toBe(249_700);
+    expect(r.amount).toBe(310_500);
   });
 
-  it("전자소송 + 지급명령 1심 소가 50,000,000 = 16,600원", () => {
-    // 185,000 × 0.1 × 0.9 = 16,650 → 100원 절사 → 16,600.
+  it("전자소송 + 지급명령 1심 소가 50,000,000 = 20,700원", () => {
+    // 230,000 × 0.1 × 0.9 = 20,700.
     const r = computeStampDuty(
       input({ caseValue: 50_000_000, isPaymentOrder: true, isElectronicFiling: true }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.amount).toBe(16_600);
+    expect(r.amount).toBe(20_700);
+  });
+});
+
+describe("computeStampDuty / 전자소송 감액 filingDate 게이트 (제16조 시행 2011-10-19)", () => {
+  it("접수일 2011-10-19 (시행일 당일) = 감액 적용", () => {
+    // 230,000 × 0.9 = 207,000.
+    const r = computeStampDuty(
+      input({ caseValue: 50_000_000, isElectronicFiling: true, filingDate: "2011-10-19" }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(207_000);
+    expect(r.formulaText).toContain("전자소송 (×0.9)");
+  });
+
+  it("접수일 2011-10-18 (시행 전날) = 감액 미적용 + 산식에 사유 노트", () => {
+    const r = computeStampDuty(
+      input({ caseValue: 50_000_000, isElectronicFiling: true, filingDate: "2011-10-18" }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(230_000);
+    expect(r.formulaText).toContain("전자소송 감액 미적용");
+    expect(r.formulaText).toContain("2011-10-19");
+  });
+
+  it("접수일 미지정 = 현행 사건 간주, 감액 적용 (기존 동작 유지)", () => {
+    const r = computeStampDuty(input({ caseValue: 50_000_000, isElectronicFiling: true }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.amount).toBe(207_000);
+  });
+
+  it("전자소송 미지정 + 과거 접수일 = 감액 경로 무관, 노트 없음", () => {
+    const r = computeStampDuty(input({ caseValue: 50_000_000, filingDate: "2010-01-01" }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.amount).toBe(230_000);
+    expect(r.formulaText).not.toContain("전자소송");
+  });
+
+  it("접수일 ISO 형식 위반 거부", () => {
+    expect(() =>
+      computeStampDuty(input({ isElectronicFiling: true, filingDate: "2011/10/19" })),
+    ).toThrow(/접수일이 ISO 형식이 아닙니다/);
   });
 });
 
@@ -354,7 +399,7 @@ describe("computeStampDuty / dataset injection 결정성", () => {
 
   it("default 호출 (deps 미지정) → bundled dataset 사용", () => {
     const r = computeStampDuty(case50m, { computedAt: FROZEN_AT });
-    expect(r.amount).toBe(185_000);
+    expect(r.amount).toBe(230_000);
     expect(r.dataVersion).toBe("stamp-duty/v1.0.0");
   });
 
@@ -373,7 +418,7 @@ describe("computeStampDuty / dataset injection 결정성", () => {
     const r = computeStampDuty(case50m, { dataset: custom, computedAt: FROZEN_AT });
     expect(r.dataVersion).toBe("stamp-duty/v9.9.9-test");
     // 2구간 진입이라 rate override 는 무영향이지만 dataVersion 은 반영.
-    expect(r.amount).toBe(185_000);
+    expect(r.amount).toBe(230_000);
   });
 
   it("잘못된 dataset 주입 → validate 단계에서 throw", () => {

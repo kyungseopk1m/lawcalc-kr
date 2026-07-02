@@ -221,6 +221,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
         ...(isPaymentOrder ? { isPaymentOrder: true } : {}),
         ...(isSettlement ? { isSettlement: true } : {}),
         ...(isElectronicFiling ? { isElectronicFiling: true } : {}),
+        ...(filingDate ? { filingDate } : {}),
       },
       deliveryFee: {
         caseType,
@@ -284,7 +285,12 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     setAppealsLevel(loaded.stampDuty.appealsLevel);
     setAppealValueText(String(loaded.lawyerFee.caseValue));
     setPartyCountText(String(loaded.deliveryFee.partyCount));
-    setFilingDate(loaded.deliveryFee.filingDate ?? loaded.lawyerFee.filingDate ?? todayIso());
+    setFilingDate(
+      loaded.stampDuty.filingDate ??
+        loaded.deliveryFee.filingDate ??
+        loaded.lawyerFee.filingDate ??
+        todayIso(),
+    );
     setIsElectronicFiling(Boolean(loaded.stampDuty.isElectronicFiling));
     setIsPaymentOrder(Boolean(loaded.stampDuty.isPaymentOrder));
     setIsSettlement(Boolean(loaded.stampDuty.isSettlement));

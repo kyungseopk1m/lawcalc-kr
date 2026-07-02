@@ -508,7 +508,7 @@ describe("validateLcalcEnvelope", () => {
     validateLcalcEnvelope(litigationFile);
     const loaded = parseLoadedLitigationCostLcalcInput(litigationFile);
     expect(loaded.input.distribution?.mode).toBe("equal");
-    expect(loaded.result?.totalAmount).toBe(3_060_000);
+    expect(loaded.result?.totalAmount).toBe(3_105_000);
     expect(loaded.note).toBe("litigation note");
   });
 

@@ -457,6 +457,14 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
     ...(isSettlement === undefined ? {} : { isSettlement }),
     ...(isElectronicFiling === undefined ? {} : { isElectronicFiling }),
     ...(isRetrial === undefined ? {} : { isRetrial }),
+    ...(stampDutyRecord.filingDate === undefined
+      ? {}
+      : {
+          filingDate: requireString(
+            stampDutyRecord.filingDate,
+            "payload.input.stampDuty.filingDate",
+          ),
+        }),
   };
   validateStampDutyInput(stampDuty);
 

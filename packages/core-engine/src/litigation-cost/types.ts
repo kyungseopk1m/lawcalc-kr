@@ -29,7 +29,9 @@ export type Domain = "stampDuty" | "deliveryFee" | "lawyerFee";
 export type AppealsLevel = "firstInstance" | "appeal" | "supreme";
 
 /**
- * 인지대 누진표 한 구간. 누진 산식: amount = baseAmount + (caseValue - scopeStart) × rate.
+ * 인지대 구간 (인지법 제2조 ①). 산식: amount = caseValue × rate + baseAmount —
+ * **소가 전체**에 구간 요율을 곱하고 보정 상수를 더하는 연속 보정식이다 (변호사보수
+ * 별표의 "…까지 부분" 구간별 누진식과 다름). scopeStart/scopeEnd 는 구간 매칭 전용.
  * scopeEnd null = 무한대 (마지막 구간, 인지법 제2조 제4호 "10억원 이상").
  */
 export interface StampDutyBracket {
@@ -64,6 +66,12 @@ export interface StampDutyInput {
   isSettlement?: boolean;
   isElectronicFiling?: boolean;
   isRetrial?: boolean;
+  /**
+   * 접수일 — 전자소송 감액 (제16조) 적용 여부 분기.
+   * 제16조 시행일 (dataset `electronicFilingDiscount.effectiveFrom`, 2011-10-19) 이전 접수는
+   * 감액 미적용. 미지정 시 현행 사건으로 간주해 감액을 적용한다 (송달료 슬라이스와 동일 정책).
+   */
+  filingDate?: IsoDate;
 }
 
 export interface StampDutyResult {

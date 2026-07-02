@@ -25,10 +25,10 @@ describe("litigation-cost / computeLitigationCost", () => {
   it("combines stamp-duty, delivery, lawyer-fee, disclaimer, and dataVersions", () => {
     const result = computeLitigationCost(baseInput, { computedAt });
 
-    expect(result.stampDuty.amount).toBe(95_000);
+    expect(result.stampDuty.amount).toBe(140_000);
     expect(result.deliveryFee.amount).toBe(165_000);
     expect(result.lawyerFee.amount).toBe(2_800_000);
-    expect(result.totalAmount).toBe(3_060_000);
+    expect(result.totalAmount).toBe(3_105_000);
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
     expect(result.dataVersions).toEqual({
       "stamp-duty": "stamp-duty/v1.0.0",
@@ -52,8 +52,8 @@ describe("litigation-cost / computeLitigationCost", () => {
 
     expect(result.distribution).toEqual({
       mode: "equal",
-      totalWon: 3_060_000,
-      perParty: [1_530_000, 1_530_000],
+      totalWon: 3_105_000,
+      perParty: [1_552_500, 1_552_500],
       remainder: 0,
       basis: "partyCount",
     });
@@ -68,7 +68,7 @@ describe("litigation-cost / computeLitigationCost", () => {
       { computedAt },
     );
 
-    expect(result.distribution?.perParty).toEqual([1_530_000, 1_530_000]);
+    expect(result.distribution?.perParty).toEqual([1_552_500, 1_552_500]);
   });
 
   it("adds proportional distribution when requested", () => {
@@ -82,8 +82,8 @@ describe("litigation-cost / computeLitigationCost", () => {
 
     expect(result.distribution).toEqual({
       mode: "proportional",
-      totalWon: 3_060_000,
-      perParty: [1_020_000, 2_040_000],
+      totalWon: 3_105_000,
+      perParty: [1_035_000, 2_070_000],
       remainder: 0,
       basis: "partyValuesWon",
     });
