@@ -41,6 +41,13 @@ export function LegalRatePreset({
           <option value="custom">직접 입력</option>
         </Select>
       </label>
+      {value === "promotion" ? (
+        <span className="text-xs font-normal text-muted-foreground">
+          소촉법 이율은 2003-06-01부터 적용됩니다. 그 이전 기간은 위헌결정(헌재 2003. 4. 24.
+          2002헌가15)에 따라 민법·상법 법정이율로 계산하고, 위헌결정 전 확정판결의 연 25%는 판결문
+          기재 이율을 직접 입력하세요.
+        </span>
+      ) : null}
       {value === "custom" ? (
         <label className="grid gap-2 text-sm font-medium">
           직접 입력 이율 (%)
