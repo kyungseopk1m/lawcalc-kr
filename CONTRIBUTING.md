@@ -73,13 +73,13 @@ pnpm test:golden
 7. GitHub draft release 가 생성되면 macOS 와 Windows artifact 를 직접 받아 한 번씩 실행해 dialog/save/load/export 다섯 동작을 확인합니다 (publish 직전 게이트).
 8. 면책 고지가 화면과 출력 양쪽에 노출되는지 확인 후 publish.
 
-## 인앱 업데이터 (계획)
+## 인앱 업데이터
 
-`tauri-plugin-updater` 기반의 자동 업데이트는 v0.2+ 단계 후보입니다. 본문 작성 시점에는 사용자가 GitHub Releases 에서 직접 새 버전을 받아 설치합니다. 도입이 결정되면 signing key·`latest.json` 엔드포인트·채널 정책이 함께 명세됩니다.
+`tauri-plugin-updater` 기반 자동 업데이트가 동작합니다. 릴리스 워크플로가 서명된 자산(`latest.json`, `.sig`, `.app.tar.gz`)을 생성하고, 앱은 시작 시 새 버전을 확인해 다운로드 → 설치 → 재시작 흐름을 안내합니다. 업데이터 관련 변경은 서명 검증과 dirty guard(미저장 변경 보호)를 함께 확인해 주세요.
 
 ## 사용자 테스트 / 피드백
 
-v0.1.x 단계는 소규모 사용자 (변호사·법무 실무자) 의 피드백 루프에 최적화되어 있습니다. 보고 채널은 GitHub Issues 입니다. 다음 항목이 포함되면 빠르게 분류할 수 있습니다.
+사용자 (변호사·법무 실무자) 피드백은 GitHub Issues 로 받습니다. 다음 항목이 포함되면 빠르게 분류할 수 있습니다.
 
 - OS / 버전, 설치 결과 (정상 / 경고 후 진행 / 차단).
 - 입력 시나리오 — 원금·시작일·종료일·이율 프리셋·옵션.

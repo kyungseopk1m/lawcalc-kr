@@ -58,7 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - **개호비**는 기왕분(직종·총일수로 계산하고, 실제 지출액을 넣으면 그 금액으로)과 향후분(기간과 인원을 나눠 입력하면 일실수입과 같은 방식으로 호프만 현가로 환산하고, 적용 호프만이 240을 넘지 않도록 제한)으로 나뉩니다.
   - **치료비**는 기왕분(비용·기왕증)과 향후분(1회성/반복, 필요일·수명)을 다룹니다. 반복 지출은 발생 시점마다 단리 현가계수를 더한 수치합계로 환산하고, 수치합계가 20을 넘으면 20으로 제한합니다.
   - **보조구**는 치료비 향후분과 같은 방식(단가·필요일·수명·기왕증, 수치합계 20 제한)으로 계산합니다.
-  - 기타손해는 일실수입·위자료와 함께 과실상계 전 재산상 손해에 더해집니다.
+  - 기타손해는 일실수입·위자료와 함께 과실상계 대상 손해에 더해집니다.
 - 기타손해 결과를 PDF·CSV·클립보드로 내보낼 때 개호비·치료비·보조구를 줄로 나눠 표시합니다. 기타손해를 입력하지 않은 결과에는 이 줄이 나타나지 않습니다.
 - 개호비(연금형, 호프만 240 제한)와 치료비·보조구(일시금형, 수치합계 20 제한) 산식을 매뉴얼 산출 근거로 검산한 골든 케이스 3건을 추가했습니다.
 
@@ -127,7 +127,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- 이자 탭 결과 카드에 면책 고지가 직접 표시되지 않던 문제를 수정했습니다. 상속, 소송비용, 변제충당, 손해배상은 결과 카드에 `STANDARD_DISCLAIMER`를 별도 안내 박스로 노출했지만, 이자 탭은 결과 표 카드와 내보내기 카드 사이의 면책 고지가 누락되어 있었습니다. `InterestResult` 타입에 `disclaimer` 필드를 추가해 다른 4개 도메인과 같은 단일 출처를 따르도록 보강하고, 결과 카드 영역에도 동일한 면책 안내를 추가해 5개 출력 표면을 맞췄습니다.
+- 이자 탭 결과 카드에 면책 고지가 직접 표시되지 않던 문제를 수정했습니다. 상속, 소송비용, 변제충당, 손해배상은 결과 카드에 `STANDARD_DISCLAIMER`를 별도 안내 박스로 노출했지만, 이자 탭은 결과 표 카드와 내보내기 카드 사이의 면책 고지가 누락되어 있었습니다. `InterestResult` 타입에 `disclaimer` 필드를 추가해 다른 4개 도메인과 같은 단일 출처를 따르도록 보강하고, 결과 카드 영역에도 동일한 면책 안내를 추가해 다섯 출력 위치를 맞췄습니다.
 
 ## [0.4.1] - 2026-05-15
 
@@ -242,7 +242,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- 인앱 자동업데이트를 추가했습니다. `tauri-plugin-updater` 기반으로 앱 시작 시 새 버전을 확인하고, hop 차용 state machine UI 로 사용 가능 알림 → 다운로드 진행률 → 설치 완료 → 재시작 흐름을 제공합니다.
+- 인앱 자동업데이트를 추가했습니다. `tauri-plugin-updater` 기반으로 앱 시작 시 새 버전을 확인하고, 단계형 UI 로 사용 가능 알림 → 다운로드 진행률 → 설치 완료 → 재시작 흐름을 제공합니다.
 - `.lcalc` 미저장 변경사항 dirty guard 를 업데이트 재시작 단계에 연결했습니다. 저장하지 않은 변경사항이 있으면 재시작 버튼을 비활성화하고 저장 후 진행하도록 안내합니다.
 - `interest-limits/v1` dataset 을 추가했습니다. 이자제한법 제한이율 변경 이력 4개 구간(30% / 25% / 24% / 20%)을 버전 관리 데이터로 포함합니다.
 
@@ -266,7 +266,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- 상속분 간이 계산 탭을 추가했습니다. 외부 reference 매뉴얼 (private) 을 근거로 한 8 골든 케이스 + 단위 테스트가 포함됩니다.
+- 상속분 간이 계산 탭을 추가했습니다. 공식 공개 매뉴얼을 근거로 한 8 골든 케이스 + 단위 테스트가 포함됩니다.
 - `.lcalc` 파일 형식을 v2 envelope (`{ schemaVersion: "2", kind: "interest" | "inheritance", payload }`) 로 확장하고, v1 (interest 단일) 파일을 자동으로 v2 로 변환하는 마이그레이션 registry 를 추가했습니다.
 - 면책 고지 단일 source (`STANDARD_DISCLAIMER` from `@lawcalc-kr/core-engine`) 를 도입해 화면 / PDF / CSV / 클립보드 / `.lcalc` 5 surface 에 동일 문구를 적용합니다.
 - 법정이율 dataset 주입 API 를 추가했습니다. `calculateInterest(input, { dataset })` 형태로 호출할 수 있으며, 기본 dataset 은 codegen 으로 `data/legal-rates/v1.json` 단일 출처에서 생성됩니다.
@@ -284,14 +284,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - toast 오류 메시지에서 macOS/Linux/Windows 절대 경로 + 사용자 계정명 + 패닉 스택 프레임을 redact 하도록 `apps/desktop/src-tauri/src/error.rs` 에 `sanitize_for_user` 헬퍼를 도입하고, IPC 명령의 영문 prefix (`dialog task`) 를 한국어 prefix (`파일 대화 상자 작업 실패`) 로 일관 적용했습니다.
-- 윤년 02-29 시작 + 비윤년 1년 후 만기 케이스의 풀 1년 cycle 정의를 민법 159·160조 통설로 정정했습니다. 변호사 답변(A안) 채택. 예: `[2024-02-29, 2025-02-28]` 은 정확히 1년 만료로 처리되며 (민법 160조 3항 "최종의 월에 해당일이 없는 때 그 월의 말일") 이자 = `1,000,000 × 5% = 50,000` 입니다 (이전 50,136 → 50,000). `addYears` 가 02-29 → 02-28 로 clip 한 결과 자체를 cycle 만료일로 인정하고 다음 cursor 를 03-01 로 잡는 `periodCycleEnd` 헬퍼를 도입했습니다 (`packages/core-engine/src/interest.ts`). 회귀 fixture `case-009` (정확 1년) + `case-010` (1년 + 15일 partial) 신규. 정책 단일 출처: `docs/INTEREST_FORMULAS.md` §4.1 + `docs/LEGAL_REFERENCES.md`.
-- 소수 이율(`12.345%` 등) 다구간 누적 시 부동소수점 결과가 흔들리지 않도록 `tests/edge.test.ts` 에 회귀 2건을 고정했습니다 (TIER-A #7).
+- 윤년 02-29 시작 + 비윤년 1년 후 만기 케이스의 풀 1년 cycle 정의를 민법 159·160조 통설로 정정했습니다. 변호사 답변(A안) 채택. 예: `[2024-02-29, 2025-02-28]` 은 정확히 1년 만료로 처리되며 (민법 160조 3항 "최종의 월에 해당일이 없는 때 그 월의 말일") 이자 = `1,000,000 × 5% = 50,000` 입니다 (이전 50,136 → 50,000). `addYears` 가 02-29 → 02-28 로 clip 한 결과 자체를 cycle 만료일로 인정하고 다음 cursor 를 03-01 로 잡는 `periodCycleEnd` 헬퍼를 도입했습니다 (`packages/core-engine/src/interest.ts`). 회귀 fixture `case-009` (정확 1년) + `case-010` (1년 + 15일 partial) 신규. 정책 근거: `docs/LEGAL_REFERENCES.md`.
+- 소수 이율(`12.345%` 등) 다구간 누적 시 부동소수점 결과가 흔들리지 않도록 `tests/edge.test.ts` 에 회귀 2건을 고정했습니다.
 - `.lcalc` 로드 시 `legalRatePreset` 누락 또는 잘못된 custom rate 를 조용히 5%로 대체하지 않고 사용자에게 오류를 표시하도록 정리했습니다.
 - 입력 오류가 있는 상태에서 `.lcalc` 저장을 막고, 중복 액션 실행 중 재진입을 차단했습니다.
 
 ### Documentation
 
-- `mode="totalDays"` + `leapYear="actual"` 가 1년 초과 구간에서 분모를 단일 (365 또는 366) 로 확정하는 한계를 `docs/INTEREST_FORMULAS.md` §3 caveat 으로 명시하고, 정확 비례 계산이 필요한 경우 `mode="period"` 사용을 권장합니다 (TIER-A #3 docs caveat).
+- `mode="totalDays"` + `leapYear="actual"` 가 1년 초과 구간에서 분모를 단일 (365 또는 366) 로 확정하는 한계를 문서화하고, 정확 비례 계산이 필요한 경우 `mode="period"` 사용을 권장합니다.
 
 ### Compatibility
 

@@ -38,7 +38,7 @@
   <img src="docs/assets/readme-interest.png" alt="판결금 이자 계산 화면" width="820">
 </p>
 
-사용자는 원금·기간·이율만 넣으면 됩니다. 법정이율(민법 5%, 상법 6%, 소촉법)은 프리셋으로 고르고, 중간에 이율이 바뀌면 그 구간을 끊어 넣습니다. 결과표에는 구간마다 일수·이율·계산식·이자·원리금이 펼쳐져 검산하기 좋습니다.
+원금·기간·이율만 넣으면 됩니다. 법정이율(민법 5%, 상법 6%, 소촉법)은 프리셋으로 고르고, 중간에 이율이 바뀌면 그 구간을 끊어 넣습니다. 결과표에는 구간마다 일수·이율·계산식·이자·원리금이 펼쳐져 검산하기 좋습니다.
 
 결과를 청구취지 문구로도 만들어 줍니다. 문장을 복사해 소장이나 지급명령 신청서에 붙이면 됩니다.
 
@@ -86,9 +86,9 @@
   <img src="docs/assets/readme-compensation-death.png" alt="손해배상 사망 계산 화면" width="820">
 </p>
 
-**사망**은 일실수입에서 생계비를 공제하고(기본 1/3), 과실상계 뒤에 장례비(기본 500만 원)를 더합니다. 상속인을 넣으면 최종액을 법정상속분대로 상속인별로 나눠 보여줍니다. 상속분 계산은 1991-01-01 이후 사망 케이스를 대상으로 합니다.
+**사망**은 일실수입에서 생계비를 공제하고(기본 1/3), 장례비(기본 500만 원)와 위자료를 더한 값 전체에 과실상계를 적용합니다. 상속인을 넣으면 최종액을 법정상속분대로 상속인별로 나눠 보여줍니다. 상속분 계산은 1991-01-01 이후 사망 케이스를 대상으로 합니다.
 
-**산재**는 사건종류를 산재로 바꾸면 켜집니다. 산식은 자동차와 같고, 공제 단계에 산재보험급여 한 줄만 더 들어갑니다. 부상은 장해급여, 사망은 유족급여를 넣으면 과실상계 뒤 다른 공제와 같은 자리에서 빠지고, 결과 카드와 PDF·CSV에도 별도 줄로 나옵니다.
+**산재**는 사건종류를 산재로 바꾸면 켜집니다. 산식은 자동차와 같고, 산재보험급여 공제 한 단계만 더 들어갑니다. 부상은 장해급여, 사망은 유족급여를 넣으면 같은 성질의 손해인 일실수입 한도에서 먼저 공제한 뒤 과실상계를 적용하고(대법원 2021다241618 전원합의체), 결과 카드와 PDF·CSV에도 별도 줄로 나옵니다.
 
 <p align="center">
   <img src="docs/assets/readme-compensation-industrial.png" alt="산재 부상 손해배상 계산 화면 (장해급여 공제)" width="820">
@@ -105,13 +105,13 @@
   <img src="docs/assets/readme-compensation-other-damages.png" alt="기타손해(개호비·치료비·보조구) 입력과 결과 화면" width="820">
 </p>
 
-어떤 조합으로 계산하든, 결과에 쓰인 데이터셋(`labor-rates` / `life-expectancy` / `hoffman` / `leibniz`) 식별자와 대한건설협회 시중노임 스냅샷의 경과 안내가 붙습니다.
+어떤 조합으로 계산하든, 결과에는 사용한 데이터셋(`labor-rates` / `life-expectancy` / `hoffman` / `leibniz`) 식별자가 붙고, 대한건설협회 시중노임 스냅샷이 얼마나 오래됐는지도 함께 표시합니다.
 
-| 데이터셋                            | 출처와 처리                                                                                                                      |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `labor-rates/v1.0.0`                | 대한건설협회 시중노임 단가. 라이선스 검토에서 허용된 방식으로 번들합니다. 직종 자동입력과 일당 직접 입력을 항상 함께 제공합니다. |
-| `life-expectancy/v1.0.0`            | 통계청 KOSIS 생명표. KOSIS 이용 안내상 자유 이용·재사용·재배포 범위로 확인했고, 출처표시·왜곡 금지 원칙을 따릅니다.              |
-| `hoffman/v1.0.0` / `leibniz/v1.0.0` | 할인율 5% 기준 정적 수학표. 호프만 표는 월 단위 단리연금현가율과 240 한도를 담고 있습니다.                                       |
+| 데이터셋                            | 출처와 처리                                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `labor-rates/v1.0.0`                | 대한건설협회 시중노임 단가. 출처와 스냅샷 시점을 명시해 번들하고, 직종 자동입력과 일당 직접 입력을 항상 함께 제공합니다.  |
+| `life-expectancy/v1.0.0`            | 통계청 KOSIS 생명표. KOSIS 이용 안내에서 자유 이용·재사용·재배포가 허용됨을 확인했고, 출처표시·왜곡 금지 원칙을 따릅니다. |
+| `hoffman/v1.0.0` / `leibniz/v1.0.0` | 할인율 5% 기준 정적 수학표. 호프만 표는 월 단위 단리연금현가율과 240 한도를 담고 있습니다.                                |
 
 ### 공통 기능
 
@@ -179,7 +179,7 @@ This project stands on the shoulders of Hon. Jung Kyungheon (J., Gwangju Distric
 
 ## 라이선스
 
-GNU Affero General Public License v3.0 이상으로 배포합니다. 누구나 자유롭게 쓰고 고치고 재배포할 수 있습니다. 다만 수정본을 네트워크 서비스로 제공하거나 재배포할 때는 같은 라이선스로 소스를 공개해야 합니다. 자세한 내용은 [LICENSE](LICENSE)에 있습니다. 상업 라이선스가 필요하면 Licensor (kyungseopk1m)에게 문의해 주세요.
+GNU Affero General Public License v3.0 이상으로 배포합니다. 누구나 자유롭게 쓰고 고치고 재배포할 수 있습니다. 다만 수정본을 네트워크 서비스로 제공하거나 재배포할 때는 같은 라이선스로 소스를 공개해야 합니다. 자세한 내용은 [LICENSE](LICENSE)에 있습니다. 상업 라이선스가 필요하면 저작권자(kyungseopk1m)에게 문의해 주세요.
 
 > **의무 발동 조건 예시**
 >
@@ -188,8 +188,8 @@ GNU Affero General Public License v3.0 이상으로 배포합니다. 누구나 �
 
 ## English
 
-LawCalc Korea is a Korean legal calculation desktop app for judgment interest, statutory delay damages, simplified inheritance shares, litigation costs, payment appropriation, and accident compensation — both auto accidents and industrial accidents, in injury and death modes.
+LawCalc Korea is a local desktop app for Korean legal calculations: judgment interest and delay damages, simplified inheritance shares, litigation costs, payment appropriation, and accident compensation — auto accidents and industrial accidents, in injury and death modes.
 
-The current release runs locally on macOS and Windows — interest, inheritance, litigation-cost, appropriation, and compensation calculations, transparent result traces, versioned data, and reproducible `.lcalc` files.
+It runs on macOS and Windows, keeps case data on the user's computer, shows how every result was derived, and saves reproducible `.lcalc` files with versioned data.
 
 Distributed under the GNU Affero General Public License v3.0 or later. Any modified version made available to users over a network — or redistributed as a derivative work — must be released under the same license with source code available. See [LICENSE](LICENSE) for the full text. For commercial licensing inquiries, please contact the Licensor (kyungseopk1m).
