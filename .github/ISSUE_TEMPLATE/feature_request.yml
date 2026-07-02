@@ -1,0 +1,32 @@
+name: 기능 요청 (Feature request)
+description: 새 계산 기능·도메인·편의 기능을 제안합니다.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        구현·검증에 쓸 수 있는 공개 근거(법령·공식 매뉴얼 §)가 있으면 함께 적어주세요.
+  - type: textarea
+    id: description
+    attributes:
+      label: 기능 설명
+      description: 무엇을 계산·표시·저장하고 싶은지 구체적으로 적어주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: basis
+    attributes:
+      label: 근거 (법령·공식 매뉴얼)
+      description: 조문 번호, 공식 계산프로그램 매뉴얼의 해당 § 등. (매뉴얼 본문 전재는 저작권상 넣지 마세요.)
+      placeholder: |
+        예: 민법 제766조 소멸시효 / 공식 매뉴얼 "◇ 일실퇴직금" §
+    validations:
+      required: false
+  - type: textarea
+    id: use-case
+    attributes:
+      label: 사용 사례
+      description: 어떤 상황에서 필요한지, 지금은 어떻게 우회하고 있는지 적어주세요.
+    validations:
+      required: true

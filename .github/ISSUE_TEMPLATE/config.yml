@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 사용법 질문 (Q&A)
+    url: https://github.com/kyungseopk1m/lawcalc-kr/discussions/categories/q-a
+    about: 버그가 아닌 사용법 질문은 Discussions Q&A 에 남겨주세요.
+  - name: 아이디어 / 도메인 제안
+    url: https://github.com/kyungseopk1m/lawcalc-kr/discussions/categories/ideas
+    about: 우선순위·방향에 대한 토론은 Discussions Ideas 에서 진행합니다.

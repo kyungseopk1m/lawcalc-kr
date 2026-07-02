@@ -1,0 +1,42 @@
+name: 데이터셋 최신화 (Dataset stale)
+description: 법정이율·임금·생명표 등 내장 데이터가 최신 값과 다를 때 신고합니다.
+title: "[dataset] "
+labels: ["dataset-stale"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        앱은 법령·통계 데이터를 스냅샷으로 내장합니다. 값이 바뀌었다면 출처와 함께 알려주세요.
+  - type: dropdown
+    id: dataset-id
+    attributes:
+      label: 데이터셋
+      options:
+        - legal-rates (법정이율)
+        - interest-limits (이자제한법)
+        - stamp-duty (인지액)
+        - delivery (송달료)
+        - lawyer-fee (변호사보수)
+        - labor-rates (임금실태 / 노임단가)
+        - life-expectancy (생명표)
+        - hoffman (호프만 계수)
+        - leibniz (라이프니츠 계수)
+    validations:
+      required: true
+  - type: input
+    id: source-url
+    attributes:
+      label: 최신 출처 URL
+      description: 공공기관·공식 통계 페이지 등 확인 가능한 출처.
+      placeholder: https://...
+    validations:
+      required: true
+  - type: textarea
+    id: changed-value
+    attributes:
+      label: 변경된 값 (현재 → 최신)
+      description: 어떤 값이 언제부터 어떻게 바뀌었는지 적어주세요.
+      placeholder: |
+        예: 민사 법정이율 연 5% → 연 5% (변경일 …), 또는 도시일용 노임 …원 → …원
+    validations:
+      required: true

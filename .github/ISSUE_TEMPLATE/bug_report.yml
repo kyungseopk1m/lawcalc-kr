@@ -1,0 +1,71 @@
+name: 버그 리포트 (Bug report)
+description: 계산 결과 오류·앱 오작동을 재현 단계와 함께 신고합니다.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        재현 가능한 정보를 채워주시면 확인이 빨라집니다. 개인정보(실제 사건번호·당사자명 등)는 넣지 마세요.
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 단계
+      description: 어떤 도메인에서 무엇을 입력하고 어떤 버튼을 눌렀는지 순서대로 적어주세요.
+      placeholder: |
+        1. 손해배상(자×부상) 탭 진입
+        2. 생년월일 …, 사고일 …, 영구장해 30% 입력
+        3. 계산 클릭
+    validations:
+      required: true
+  - type: textarea
+    id: input-json
+    attributes:
+      label: 입력값 (JSON 또는 값 목록)
+      description: 가능하면 .lcalc 저장 파일의 input 부분이나 입력한 값 전체를 붙여주세요.
+      render: json
+    validations:
+      required: false
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: 기대 결과 vs 실제 결과
+      description: 근거(법령·매뉴얼·계산 과정)가 있으면 함께 적어주세요.
+      placeholder: |
+        기대: 일실수입 …원 (근거: …)
+        실제: …원
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: 도메인
+      options:
+        - 이자 (지연손해금)
+        - 상속분
+        - 소송비용 (인지·송달료)
+        - 변제충당
+        - 손해배상(자×부상)
+        - 손해배상(자×사망)
+        - 손해배상(산재)
+        - 기타손해 (개호비·치료비·보조구)
+        - 앱 전반 / 저장·불러오기 / 업데이트
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: 운영체제
+      options:
+        - macOS
+        - Windows
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 앱 버전
+      description: 정보 다이얼로그(앱 하단)에서 확인할 수 있습니다.
+      placeholder: v0.10.0
+    validations:
+      required: true
