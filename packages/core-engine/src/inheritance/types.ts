@@ -12,7 +12,7 @@ import type { IsoDate } from "../types";
 /**
  * 상속인 노드. 4 순위 그룹의 원소이자 대습상속인의 원소.
  *
- * - `deceasedBeforeOpening`: 매뉴얼의 "사망여부 체크". 결격(민법 1004조) 도 동일하게 true 로 입력.
+ * - `deceasedBeforeOpening`: 상속개시 전 사망 여부 입력. 결격(민법 1004조) 도 동일하게 true 로 입력.
  * - `representatives`: 1차 대습 상속인. v0.2 첫 PR 은 1차만 지원.
  *   재귀 type 으로 v0.3+ 에서 N차 대습 일반화 대비 — runtime 에서 depth ≥ 2 거부.
  */
@@ -38,7 +38,7 @@ export interface HeirNode {
  * 상속분 계산 입력.
  *
  * 4 순위 분리 필드 (직계비속/직계존속/형제자매/방계4촌) + 배우자 단수.
- * 매뉴얼 §3 ② "선순위 자동 우선" 정책 = 상위 순위 1명 이상 입력 시 하위 순위 자동 무시.
+ * 상위 순위가 1명 이상 입력되면 하위 순위는 자동으로 무시하는 선순위 우선 정책을 따른다.
  *
  * 한국어 라벨 출처: source-extraction-spike-2026-05-09.md §8.3 (UI strings verbatim).
  */

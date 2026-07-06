@@ -1,7 +1,7 @@
 /**
  * 기타손해 전용 cap / 현가 헬퍼.
  *
- * - `applyValueSum20Cap`: 치료비/보조구 일시금 현가계수 합 20 cap (매뉴얼 §6-나 L440).
+ * - `applyValueSum20Cap`: 치료비/보조구 일시금 현가계수 합 20 cap (공개 매뉴얼 기타손해 항목 근거).
  * - `singlePaymentHoffman`: 단리 일시금 현가계수 `1 / (1 + 0.05 × months/12)` (사고일 base).
  *
  * 개호비의 호프만 240 cap 은 연금형이라 `@lawcalc-kr/datasets-compensation` 의
@@ -11,7 +11,7 @@
 /** 단리 할인율 (연 5%). 호프만식 정합 (leibniz 복리 아님). */
 export const SINGLE_PAYMENT_DISCOUNT_RATE = 0.05;
 
-/** 수치합계 cap 기본값 (매뉴얼 §6-나·다). */
+/** 수치합계 cap 기본값 (공개 매뉴얼 기타손해 항목 근거). */
 export const VALUE_SUM_CAP = 20;
 
 /** 수치합계 20 cap 적용 결과. */
@@ -42,7 +42,7 @@ export function singlePaymentHoffman(months: number): number {
 /**
  * 치료비/보조구 수치합계(단리 일시금 현가계수 합)에 20 cap 을 적용한다.
  *
- * 매뉴얼 §6-나 L440 "과잉배상 방지를 위하여 수치합계가 20을 초과하면 20으로 제한된다".
+ * 과잉배상 방지를 위해 항목별 단리 현가계수 합이 20 을 초과하면 20 으로 제한한다.
  * 항목(치료비 종류)별로 독립 적용한다.
  */
 export function applyValueSum20Cap(rawSum: number, cap = VALUE_SUM_CAP): ValueSum20CapResult {

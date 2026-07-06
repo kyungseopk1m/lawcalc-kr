@@ -5,8 +5,8 @@ import type { IsoDate } from "./types";
  * 호프만 단리연금현가율 표 (월 단위, 할인율 5%/년).
  *
  * `values[i-1]` 가 i 개월 단리연금현가율. 즉 `values[0]` = H[1] = 1 / (1 + 0.05/12).
- * `maxIndex` 는 매뉴얼 §5-마 L291 "414개월 초과 시 단리연금현가율이 240을 넘게 되면
- * 240 을 적용" 정원의 cumulative 상한.
+ * `maxIndex` 는 누적 단리연금현가율의 상한(240). 가동기간이 길어질수록(약 414개월 초과)
+ * 단리 현가율이 과도해지는 것을 막기 위한 상한이다 (공개 매뉴얼 근거).
  */
 export interface HoffmanDataset {
   version: string;
@@ -90,7 +90,7 @@ export interface Hoffman240CapResult {
 /**
  * 호프만 단리연금현가율 240 cap 을 segment 단위로 적용한다.
  *
- * 매뉴얼 §5-마 L289-301 정원:
+ * 240 cap 적용 규칙 (공개 매뉴얼 근거):
  * - 직전 순번까지 적용호프만 누적합 + 현재 segment raw 호프만 > 240 → 240 에서 직전 누적합을
  *   뺀 값으로 clip.
  * - clip 이 한 번 적용되면 이후 segment 의 적용호프만은 모두 0 (cumulative 가 이미 240 도달).

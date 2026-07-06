@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn sanitize_redacts_macos_home_path() {
         assert_eq!(
-            sanitize_for_user("Permission denied: /Users/sup/Desktop/calc.lcalc"),
+            sanitize_for_user("Permission denied: /Users/tester/Desktop/calc.lcalc"),
             "Permission denied: <경로>"
         );
     }
@@ -258,7 +258,7 @@ mod tests {
     /// 이미 redact 된 한국어 prefix 만 보여야 한다.
     #[test]
     fn invalid_path_display_redacts_absolute_path_in_toast() {
-        let leak = "could not convert /Users/sup/Library/Containers/x/Data/calc.lcalc";
+        let leak = "could not convert /Users/tester/Library/Containers/x/Data/calc.lcalc";
         let toast = Error::InvalidPath(leak.into()).to_string();
         assert!(toast.starts_with("잘못된 파일 경로:"));
         assert!(toast.contains("<경로>"));

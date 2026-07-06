@@ -239,8 +239,8 @@ packages/core-engine/
 
 - 이자: `tests/golden/case-XXX.json` 에 입력 + 기대 출력으로 동결.
 - `case-001..006` 은 엔진 내부 회귀 (`source: engine-internal-w2`).
-- `case-007` 은 공식 공개 매뉴얼의 예시를 직접 인용했다 (`mode="period"`, `leapYear="actual"`,
-  2015-05-01 시작 → 1년 사이 2016-02-29 포함 → 분모 366).
+- `case-007` 은 윤일이 포함된 1년 미만 기간의 분모 366 산정을 독립 유도한 케이스다 (`mode="period"`,
+  `leapYear="actual"`, 2015-05-01 시작 → 기간 내 2016-02-29 포함 → 분모 366).
 - `case-009 / case-010` 은 후속 회귀 케이스 (반올림 옵션 / 윤년 만기 등).
 - `case-008-input.json` (golden-pending) 은 외부 대조 캡처 대기용 입력 시트다. 외부 공식 계산 결과를
   확보하면 골든 케이스로 추가한다.

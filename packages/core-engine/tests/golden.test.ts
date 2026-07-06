@@ -50,7 +50,7 @@ const cases: GoldenCase[] = Object.entries(modules)
  * 1. 회귀 테스트 — 엔진의 의도된 동작을 고정 (`source: engine-internal-w2`)
  * 2. 외부 기준 일치 — 외부 reference 도구/매뉴얼 캡처 (`source: ...`)
  *
- * W2에서는 1번 위주, 매뉴얼 예시 인용 케이스 1건 포함 (case-007).
+ * W2에서는 1번 위주, 윤일 분모 366 산정을 독립 유도한 케이스 1건 포함 (case-007).
  * Windows VM에서 외부 reference site 캡처 케이스는 후속 W에서 추가하며,
  * 그때 source 필드를 그대로 갱신해 출처 변화를 추적한다.
  *
