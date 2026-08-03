@@ -13,13 +13,16 @@ export function formatWon(value: number): string {
 }
 
 export function formatWonInput(text: string): string {
-  const digits = text.replaceAll(",", "").replace(/[^\d]/g, "");
+  const digits = parseWonText(text);
   if (digits.length === 0) return "";
   return wonFormatter.format(Number(digits));
 }
 
 export function parseWonText(text: string): string {
-  return text.replaceAll(",", "").replace(/[^\d]/g, "");
+  // 소수점 이하는 버린다. 비-숫자를 그냥 지우면 소수점이 사라지면서 자릿수가 붙어
+  // "30,000,000.00" 이 3,000,000,000 (100배) 이 된다. 원 단위 정수만 받는 입력이다.
+  const integerPart = text.split(".")[0] ?? "";
+  return integerPart.replaceAll(",", "").replace(/[^\d]/g, "");
 }
 
 export function parseWonAmount(text: string, fallback = 0): number {

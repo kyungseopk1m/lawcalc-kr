@@ -31,8 +31,9 @@ describe("formatWonInput", () => {
     expect(formatWonInput("-1000")).toBe("1,000");
   });
 
-  it("소수점은 제거되어 정수 digit 만 합쳐 처리", () => {
-    expect(formatWonInput("1000.5")).toBe("10,005");
+  it("소수점 이하는 버린다 (정수부만 사용)", () => {
+    // 이전에는 소수점만 지워 "1000.5" 가 10,005 로 읽혔다 (자릿수가 붙어 10배).
+    expect(formatWonInput("1000.5")).toBe("1,000");
   });
 
   it("한자/한글 등 비 digit 은 제거", () => {
@@ -91,5 +92,14 @@ describe("parseWonAmount", () => {
 
   it("leading-zero 는 Number 변환 시 제거", () => {
     expect(parseWonAmount("00012345")).toBe(12345);
+  });
+
+  it("소수점 이하를 붙여 읽지 않는다", () => {
+    // 소수점만 지우면 "30,000,000.00" 이 3,000,000,000 이 되어 100배로 부풀었다.
+    expect(parseWonText("30,000,000.00")).toBe("30000000");
+    expect(parseWonAmount("30,000,000.00")).toBe(30_000_000);
+    expect(parseWonAmount("1.5")).toBe(1);
+    expect(parseWonAmount("0.99")).toBe(0);
+    expect(formatWonInput("30,000,000.00")).toBe("30,000,000");
   });
 });
