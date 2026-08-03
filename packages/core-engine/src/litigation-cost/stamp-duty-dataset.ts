@@ -35,6 +35,27 @@ export interface StampDutySpecialProcedures {
   settlement: StampDutySpecialProcedureEntry;
 }
 
+/**
+ * 보전처분(가압류·가처분) 인지는 인지법 제9조 ②항이 근거다. 제2조 소장 누진표와 별개 체계다.
+ *
+ *   - `general`: 가압류·다툼의 대상에 관한 가처분 신청/이의/취소 = 정액 (현행 1만원).
+ *   - `provisionalStatus`: 임시의 지위를 정하기 위한 가처분 신청/이의/취소 = 본안 인지액의 1/2,
+ *     상한 50만원.
+ */
+export interface StampDutyProvisionalMeasures {
+  general: {
+    flatWon: number;
+    rateText: string;
+    sourceArticle: string;
+  };
+  provisionalStatus: {
+    ratioToMainStampDuty: number;
+    capWon: number;
+    rateText: string;
+    sourceArticle: string;
+  };
+}
+
 export interface StampDutyAppealsMultipliers {
   firstInstance: number;
   appeal: number;
@@ -71,6 +92,7 @@ export interface StampDutyDataset {
   brackets: StampDutyBracket[];
   appealsMultipliers: StampDutyAppealsMultipliers;
   specialProcedures: StampDutySpecialProcedures;
+  provisionalMeasures: StampDutyProvisionalMeasures;
   electronicFilingDiscount: StampDutyElectronicFilingDiscount;
   historyNote: StampDutyHistoryNote;
 }
@@ -202,6 +224,27 @@ function validate(dataset: StampDutyDataset): void {
     specialProcedures.settlement.multiplier,
     "specialProcedures.settlement.multiplier",
   );
+
+  const { provisionalMeasures } = dataset;
+  if (!provisionalMeasures) {
+    throw new Error("StampDutyDataset: provisionalMeasures is required");
+  }
+  assertFiniteNonNegative(
+    provisionalMeasures.general.flatWon,
+    "provisionalMeasures.general.flatWon",
+  );
+  assertMultiplierInOpenUnit(
+    provisionalMeasures.provisionalStatus.ratioToMainStampDuty,
+    "provisionalMeasures.provisionalStatus.ratioToMainStampDuty",
+  );
+  if (
+    !Number.isFinite(provisionalMeasures.provisionalStatus.capWon) ||
+    provisionalMeasures.provisionalStatus.capWon <= 0
+  ) {
+    throw new RangeError(
+      `provisionalMeasures.provisionalStatus.capWon: must be > 0 (got ${provisionalMeasures.provisionalStatus.capWon})`,
+    );
+  }
 
   const { electronicFilingDiscount } = dataset;
   if (!electronicFilingDiscount) {

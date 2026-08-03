@@ -51,7 +51,15 @@ function discountSegment(discount: LawyerFeeDiscount): string {
     case "noOralHearingOrAdmission":
       return `제5조 (${discount.reason}, ×0.5)`;
     case "provisionalCase":
-      return `제3조 ②항 (가압류·가처분, ${discount.hasOralHearing ? "변론·심문기일 있음 ×1.0" : "×0.5"})`;
+      if (discount.applicationKind === "objectionOrCancellation") {
+        return "제3조 ②항 (가압류·가처분 이의·취소 신청사건 ×0.5, 단서 대상 아님)";
+      }
+      if (discount.hasOralHearing === false) {
+        return "제3조 ②항 단서 (가압류·가처분 신청사건, 변론·심문을 거치지 않아 산입 불가 ×0)";
+      }
+      return discount.hasOralHearing === true
+        ? "제3조 ②항 (가압류·가처분 신청사건, 변론·심문 거침 ×0.5)"
+        : "제3조 ②항 본문 (가압류·가처분 ×0.5)";
     case "koreaLegalAid":
       return "대한법률구조공단 (×0.42 default)";
     case "courtDiscretion":
@@ -110,32 +118,76 @@ export function computeLawyerFee(
 
   const baseAmount = bracket.baseAmount + (input.caseValue - bracket.scopeStart) * bracket.rate;
 
+  // 제3조 ②항 본문에 따라 보전 사건(카합/카단)이면 별표액의 1/2 이 적용된다. 호출자가
+  // discount 를 빠뜨려도 사건구분만으로 걸리게 한다. 명시 discount 가 있으면 그쪽을 쓴다
+  // (둘 다 적용하면 1/4 이 된다).
+  const isProvisionalCase =
+    input.caseType === "provisionalMeasureCollegial" ||
+    input.caseType === "provisionalMeasureSingle";
+  const provisionalAutoApplied =
+    isProvisionalCase && !input.discounts.some((d) => d.kind === "provisionalCase");
+  const effectiveDiscounts: LawyerFeeDiscount[] = provisionalAutoApplied
+    ? [...input.discounts, { kind: "provisionalCase" }]
+    : [...input.discounts];
+
   const { amountWon, multiplier, rawMultiplier, clamped } = applyLawyerFeeDiscounts(
     baseAmount,
-    input.discounts,
+    effectiveDiscounts,
     input.koreaLegalAidAgreedFeeWon,
   );
 
+  // 제3조 ①항. 산입 보수는 지급보수액의 범위 내에서 별표 기준으로 산정한다. agreedFeeWon 을 주면
+  // min(별표 산정액, 지급보수액) 으로 cap (감사 F2). 미지정 시 결과는 별표 상한액이지 실제 산입액이
+  // 아님을 formulaText 로 격리 고지한다.
+  const hasAgreedFee =
+    input.agreedFeeWon !== undefined &&
+    Number.isFinite(input.agreedFeeWon) &&
+    input.agreedFeeWon >= 0;
+  const agreedFeeCapApplied = hasAgreedFee && input.agreedFeeWon! < amountWon;
+  const finalAmount = agreedFeeCapApplied ? input.agreedFeeWon! : amountWon;
+
   const koreaLegalAidWarnings = validateKoreaLegalAidDiscountScope(input.caseType, input.discounts);
 
-  const formulaText = buildFormulaText({
-    bracket,
-    input,
-    baseAmount,
-    appliedDiscounts: input.discounts,
-    rawMultiplier,
-    multiplier,
-    clamped,
-    finalAmount: amountWon,
-  });
+  // 제3조 ②항 단서는 사실관계(변론·심문 개최 여부)라 입력 없이는 판정할 수 없다. 본문만 적용한
+  // 결과라는 것을 격리 고지한다 (제3조 ①항 지급보수액 미입력 고지와 같은 관용구).
+  // 이의·취소 신청사건은 단서 대상이 아니므로 고지할 미확인 사항이 없다.
+  const provisionalClauseNote =
+    isProvisionalCase &&
+    !effectiveDiscounts.some(
+      (d) =>
+        d.kind === "provisionalCase" &&
+        (d.hasOralHearing !== undefined || d.applicationKind === "objectionOrCancellation"),
+    )
+      ? " · 신청사건이면 변론 또는 심문을 거친 경우에 한해 산입됨 (제3조 ②항 단서 미반영)"
+      : "";
+
+  const capNote = agreedFeeCapApplied
+    ? ` → 지급보수액 ${input.agreedFeeWon!.toLocaleString("en-US")}원 한도 적용 (제3조 ①항)`
+    : hasAgreedFee
+      ? ` (지급보수액 ${input.agreedFeeWon!.toLocaleString("en-US")}원 이내라 별표 산정액을 그대로 산입)`
+      : " · 지급보수액 미입력: 별표 상한액이며 실제 산입액은 지급보수액 범위 내로 제한됨 (제3조 ①항)";
+
+  const formulaText =
+    buildFormulaText({
+      bracket,
+      input,
+      baseAmount,
+      appliedDiscounts: effectiveDiscounts,
+      rawMultiplier,
+      multiplier,
+      clamped,
+      finalAmount: amountWon,
+    }) +
+    capNote +
+    provisionalClauseNote;
 
   return {
-    amount: amountWon,
+    amount: finalAmount,
     baseAmount,
     multiplier,
     rawMultiplier,
     multiplierClamped: clamped,
-    appliedDiscounts: input.discounts,
+    appliedDiscounts: effectiveDiscounts,
     koreaLegalAidWarnings,
     formulaText,
     dataVersion: lawyerFeeDatasetVersionTag(dataset),

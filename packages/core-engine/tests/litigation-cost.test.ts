@@ -107,13 +107,14 @@ describe("litigation-cost / lawyerFeeDiscountMultiplier", () => {
     }
   });
 
-  it("provisionalCase → hasOralHearing 분기 (true=1.0, false=0.5)", () => {
+  it("provisionalCase → 본문 0.5 / 단서 미충족 0 (미지정은 본문)", () => {
     expect(
       lawyerFeeDiscountMultiplier({ kind: "provisionalCase", hasOralHearing: false }, 1_000_000),
-    ).toBe(0.5);
+    ).toBe(0);
     expect(
       lawyerFeeDiscountMultiplier({ kind: "provisionalCase", hasOralHearing: true }, 1_000_000),
-    ).toBe(1.0);
+    ).toBe(0.5);
+    expect(lawyerFeeDiscountMultiplier({ kind: "provisionalCase" }, 1_000_000)).toBe(0.5);
   });
 
   it("koreaLegalAid → 0.42 default (koreaLegalAidAgreedFeeWon 미지정 시)", () => {
@@ -165,7 +166,7 @@ describe("litigation-cost / applyLawyerFeeDiscounts", () => {
 
   it("가압류 ×0.5 + 무변론 ×0.5 = ×0.25 (compound)", () => {
     const r = applyLawyerFeeDiscounts(10_000_000, [
-      { kind: "provisionalCase", hasOralHearing: false },
+      { kind: "provisionalCase" },
       { kind: "noOralHearingOrAdmission", reason: "noOralHearing" },
     ]);
     expect(r.multiplier).toBe(0.25);

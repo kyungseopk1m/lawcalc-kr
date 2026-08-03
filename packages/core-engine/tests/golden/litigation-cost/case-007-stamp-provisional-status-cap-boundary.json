@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1",
+  "id": "case-007-stamp-provisional-status-cap-boundary",
+  "title": "인지액 — 임시지위 가처분, 소가 236,250,000원 = 500,000원 (상한 정확 경계)",
+  "source": "statute-derivation",
+  "notes": "임시의 지위를 정하는 가처분은 본안 인지액의 2분의 1이고 상한이 50만원이다 (제9조 제2항 단서). 본안은 236,250,000 × 40/10,000 + 55,000 = 1,000,000 이고, 그 절반이 정확히 상한과 같아지는 소가다. 여기서 소가가 조금이라도 크면 상한이 걸리고, 작으면 절반 산식이 그대로 남는다.",
+  "input": {
+    "caseValue": 236250000,
+    "caseType": "provisionalMeasureCollegial",
+    "appealsLevel": "firstInstance",
+    "provisionalMeasureType": "provisionalStatus"
+  },
+  "expected": {
+    "amount": 500000,
+    "dataVersion": "stamp-duty/v1.1.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-03",
+    "derivedBy": "인지법 제2조 제1항 3호 + 제9조 제2항 단서 원문 대조 후 정수 손계산 (국가법령정보센터 현행, 법률 제20003호)",
+    "noExternalCaptureReason": "대한법률구조공단 자동계산은 본안사건 인지·송달료만 다뤄 보전처분 신청 인지에 대조 대상이 없다"
+  }
+}

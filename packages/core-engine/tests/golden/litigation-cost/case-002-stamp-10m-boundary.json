@@ -11,7 +11,7 @@
   },
   "expected": {
     "amount": 50000,
-    "dataVersion": "stamp-duty/v1.0.0"
+    "dataVersion": "stamp-duty/v1.1.0"
   },
   "metadata": {
     "oracle": "statute-derivation",

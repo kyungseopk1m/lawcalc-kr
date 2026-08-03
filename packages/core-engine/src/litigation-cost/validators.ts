@@ -71,13 +71,44 @@ export function validateStampDutyInput(input: StampDutyInput): void {
   if (!APPEALS_LEVELS.includes(input.appealsLevel)) {
     fail(prefix, `심급이 유효하지 않습니다 (입력: ${String(input.appealsLevel)})`);
   }
-  // 지급명령·화해는 1심 only — 인지법 제7조. 항소/상고 + 특별절차 동시 지정 거부.
-  if ((input.isPaymentOrder || input.isSettlement) && input.appealsLevel !== "firstInstance") {
+  // 지급명령(독촉)은 caseType paymentOrder 자체가 제7조 ②항 대상이라, flag 없이 사건구분만으로도
+  // 특별절차로 취급한다 (엔진 파생과 일치). 소장식 인지가 새던 UI 결함(감사 F3) 차단.
+  const isPaymentOrder = input.isPaymentOrder === true || input.caseType === "paymentOrder";
+  // 지급명령·화해는 1심에서만 적용된다 (인지법 제7조). 항소·상고와 동시 지정은 거부한다.
+  if ((isPaymentOrder || input.isSettlement) && input.appealsLevel !== "firstInstance") {
     fail(prefix, `지급명령·화해는 1심에서만 적용됩니다 (현재 심급: ${input.appealsLevel})`);
   }
   // 지급명령 + 화해 동시 지정 거부 — 상호 배타.
-  if (input.isPaymentOrder && input.isSettlement) {
+  if (isPaymentOrder && input.isSettlement) {
     fail(prefix, "지급명령과 화해는 동시에 적용할 수 없습니다");
+  }
+  // 보전처분(가압류·가처분)은 제9조 ②항 별도 체계라 심급 배수나 지급명령·화해와 무관하다.
+  const isProvisional =
+    input.caseType === "provisionalMeasureCollegial" ||
+    input.caseType === "provisionalMeasureSingle";
+  if (isProvisional) {
+    if (
+      input.provisionalMeasureType !== undefined &&
+      input.provisionalMeasureType !== "general" &&
+      input.provisionalMeasureType !== "provisionalStatus"
+    ) {
+      fail(
+        prefix,
+        `보전처분 종류가 유효하지 않습니다 (입력: ${String(input.provisionalMeasureType)})`,
+      );
+    }
+    if (isPaymentOrder || input.isSettlement) {
+      fail(
+        prefix,
+        "보전처분 인지에는 지급명령·화해 감액을 적용할 수 없습니다 (제9조 ②항 별도 체계)",
+      );
+    }
+    if (input.appealsLevel !== "firstInstance") {
+      fail(
+        prefix,
+        `보전처분 인지는 심급 배수를 적용하지 않습니다 (현재 심급: ${input.appealsLevel})`,
+      );
+    }
   }
   if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
@@ -138,8 +169,18 @@ function validateLawyerFeeDiscount(discount: LawyerFeeDiscount, prefix: string):
       }
       return;
     case "provisionalCase":
-      if (typeof discount.hasOralHearing !== "boolean") {
-        fail(prefix, "provisionalCase.hasOralHearing 은 boolean 이어야 합니다");
+      if (discount.hasOralHearing !== undefined && typeof discount.hasOralHearing !== "boolean") {
+        fail(prefix, "provisionalCase.hasOralHearing 은 boolean 이거나 미지정이어야 합니다");
+      }
+      if (
+        discount.applicationKind !== undefined &&
+        discount.applicationKind !== "application" &&
+        discount.applicationKind !== "objectionOrCancellation"
+      ) {
+        fail(
+          prefix,
+          `provisionalCase.applicationKind 가 유효하지 않습니다 (입력: ${String(discount.applicationKind)})`,
+        );
       }
       return;
     case "koreaLegalAid":
@@ -190,6 +231,18 @@ export function validateLawyerFeeInput(input: LawyerFeeInput): void {
   for (const d of input.discounts) {
     validateLawyerFeeDiscount(d, prefix);
   }
+  // 제3조 ②항은 가압류·가처분 사건에만 적용된다. 본안 사건구분에 이 감액이 붙으면 오적용이다.
+  if (
+    input.caseType !== "provisionalMeasureCollegial" &&
+    input.caseType !== "provisionalMeasureSingle" &&
+    input.discounts.some((d) => d.kind === "provisionalCase")
+  ) {
+    fail(
+      prefix,
+      "제3조 ②항 감액은 가압류·가처분 사건구분에만 적용됩니다 (현재 사건구분: " +
+        `${input.caseType})`,
+    );
+  }
   if (
     input.koreaLegalAidAgreedFeeWon !== undefined &&
     !isFiniteNonNegative(input.koreaLegalAidAgreedFeeWon)
@@ -198,6 +251,9 @@ export function validateLawyerFeeInput(input: LawyerFeeInput): void {
       prefix,
       `대한법률구조공단 약정보수액이 유효하지 않습니다 (입력: ${String(input.koreaLegalAidAgreedFeeWon)})`,
     );
+  }
+  if (input.agreedFeeWon !== undefined && !isFiniteNonNegative(input.agreedFeeWon)) {
+    fail(prefix, `지급보수액이 유효하지 않습니다 (입력: ${String(input.agreedFeeWon)})`);
   }
   if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);

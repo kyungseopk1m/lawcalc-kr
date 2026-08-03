@@ -24,7 +24,7 @@ function input(overrides: Partial<LawyerFeeInput> = {}): LawyerFeeInput {
 describe("loadLawyerFeeDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadLawyerFeeDataset();
-    expect(ds.version).toBe("1.1.0");
+    expect(ds.version).toBe("1.2.0");
     expect(ds.brackets).toHaveLength(8);
     expect(ds.brackets.map((b) => b.baseAmount)).toEqual([
       300_000, 300_000, 2_000_000, 4_400_000, 7_400_000, 9_400_000, 10_400_000, 13_400_000,
@@ -33,8 +33,8 @@ describe("loadLawyerFeeDataset / 기본 dataset", () => {
     expect(ds.appealsRule.policy).toBe("perInstanceIndependent");
   });
 
-  it("lawyerFeeDatasetVersionTag 는 lawyer-fee/v1.1.0", () => {
-    expect(lawyerFeeDatasetVersionTag(loadLawyerFeeDataset())).toBe("lawyer-fee/v1.1.0");
+  it("lawyerFeeDatasetVersionTag 는 lawyer-fee/v1.2.0", () => {
+    expect(lawyerFeeDatasetVersionTag(loadLawyerFeeDataset())).toBe("lawyer-fee/v1.2.0");
   });
 
   it("override 도 동일하게 검증한다", () => {
@@ -174,7 +174,7 @@ describe("computeLawyerFee / bracket 산식", () => {
     expect(r.baseAmount).toBe(300_000);
     expect(r.amount).toBe(300_000);
     expect(r.multiplier).toBe(1.0);
-    expect(r.dataVersion).toBe("lawyer-fee/v1.1.0");
+    expect(r.dataVersion).toBe("lawyer-fee/v1.2.0");
     expect(r.computedAt).toBe(FROZEN_AT);
   });
 
@@ -283,7 +283,8 @@ describe("computeLawyerFee / 5 discount variant", () => {
     expect(r.amount).toBe(2_800_000 * 0.5);
   });
 
-  it("provisionalCase hasOralHearing=false (×0.5, 제3조 ②항)", () => {
+  it("provisionalCase hasOralHearing=false → 제3조 ②항 단서, 산입 불가 (×0)", () => {
+    // 단서: 신청사건은 변론 또는 심문을 거친 경우에 한한다 → 미거침이면 산입 대상이 아니다.
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
@@ -292,11 +293,12 @@ describe("computeLawyerFee / 5 discount variant", () => {
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.multiplier).toBe(0.5);
-    expect(r.amount).toBe(2_800_000 * 0.5);
+    expect(r.multiplier).toBe(0);
+    expect(r.amount).toBe(0);
+    expect(r.formulaText).toContain("산입 불가");
   });
 
-  it("provisionalCase hasOralHearing=true (×1.0, 제3조 ②항 단서)", () => {
+  it("provisionalCase hasOralHearing=true → 본문 1/2 (×0.5)", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
@@ -305,8 +307,86 @@ describe("computeLawyerFee / 5 discount variant", () => {
       }),
       { computedAt: FROZEN_AT },
     );
-    expect(r.multiplier).toBe(1.0);
-    expect(r.amount).toBe(2_800_000);
+    expect(r.multiplier).toBe(0.5);
+    expect(r.amount).toBe(2_800_000 * 0.5);
+  });
+
+  it("이의·취소 신청사건은 단서 대상이 아니라 변론 여부와 무관하게 1/2", () => {
+    // 단서는 "가압류, 가처분 명령의 신청사건에 있어서는" 으로 한정된다.
+    const r = computeLawyerFee(
+      input({
+        caseValue: 30_000_000,
+        caseType: "provisionalMeasureCollegial",
+        discounts: [
+          {
+            kind: "provisionalCase",
+            applicationKind: "objectionOrCancellation",
+            hasOralHearing: false,
+          },
+        ],
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.multiplier).toBe(0.5);
+    expect(r.amount).toBe(1_400_000);
+    expect(r.formulaText).toContain("단서 대상 아님");
+    // 단서가 걸리지 않으므로 미확인 고지도 붙지 않는다.
+    expect(r.formulaText).not.toContain("단서 미반영");
+  });
+
+  it("applicationKind 미지정은 신청사건으로 본다", () => {
+    const r = computeLawyerFee(
+      input({
+        caseValue: 30_000_000,
+        caseType: "provisionalMeasureCollegial",
+        discounts: [{ kind: "provisionalCase", hasOralHearing: false }],
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.multiplier).toBe(0);
+  });
+
+  it("보전 사건구분이면 discount 미지정이라도 제3조 ②항 본문 1/2 자동 적용", () => {
+    // 사건구분이 authoritative. 호출자가 flag 를 놓쳐 별표 전액이 나오던 결함 차단.
+    const r = computeLawyerFee(
+      input({
+        caseValue: 30_000_000,
+        caseType: "provisionalMeasureCollegial",
+        discounts: [],
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.multiplier).toBe(0.5);
+    expect(r.amount).toBe(1_400_000);
+    expect(r.appliedDiscounts).toEqual([{ kind: "provisionalCase" }]);
+    // 단서는 사실관계라 입력 없이 판정할 수 없다. 그래서 따로 고지한다.
+    expect(r.formulaText).toContain("제3조 ②항 단서 미반영");
+  });
+
+  it("자동 적용은 명시 discount 가 있으면 중복되지 않는다 (1/4 방지)", () => {
+    const r = computeLawyerFee(
+      input({
+        caseValue: 30_000_000,
+        caseType: "provisionalMeasureSingle",
+        discounts: [{ kind: "provisionalCase", hasOralHearing: true }],
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.multiplier).toBe(0.5);
+    expect(r.appliedDiscounts).toHaveLength(1);
+  });
+
+  it("본안 사건구분에 제3조 ②항 감액이 붙으면 거부한다", () => {
+    expect(() =>
+      computeLawyerFee(
+        input({
+          caseValue: 30_000_000,
+          caseType: "civilFirstInstanceCollegial",
+          discounts: [{ kind: "provisionalCase", hasOralHearing: true }],
+        }),
+        { computedAt: FROZEN_AT },
+      ),
+    ).toThrow(/가압류·가처분 사건구분에만/);
   });
 
   it("koreaLegalAid (×0.42 default)", () => {
@@ -530,9 +610,9 @@ describe("computeLawyerFee / validator integration", () => {
 });
 
 describe("computeLawyerFee / dataset injection 결정성", () => {
-  it("default 호출 → bundled dataset 사용 (lawyer-fee/v1.1.0)", () => {
+  it("default 호출 → bundled dataset 사용 (lawyer-fee/v1.2.0)", () => {
     const r = computeLawyerFee(input(), { computedAt: FROZEN_AT });
-    expect(r.dataVersion).toBe("lawyer-fee/v1.1.0");
+    expect(r.dataVersion).toBe("lawyer-fee/v1.2.0");
   });
 
   it("custom dataset 주입 → dataVersion 변경", () => {
@@ -610,5 +690,36 @@ describe("computeLawyerFee / per_instance_independent (G2 §2.4 정정 검증)",
     });
     expect(first.amount).toBe(7_400_000);
     expect(appealOnlyHalfDisputed.amount).toBe(4_400_000);
+  });
+});
+
+describe("computeLawyerFee / 지급보수액 cap (제3조 ①항, 감사 F2)", () => {
+  it("지급보수액이 별표 산정액보다 작으면 cap: 별표 2,800,000 vs 지급 1,000,000 → 1,000,000원", () => {
+    const r = computeLawyerFee(input({ caseValue: 30_000_000, agreedFeeWon: 1_000_000 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.amount).toBe(1_000_000);
+    expect(r.baseAmount).toBe(2_800_000); // 별표 산정액은 그대로 보존
+    expect(r.formulaText).toContain("지급보수액 1,000,000원 한도 적용");
+  });
+
+  it("지급보수액이 별표 산정액 이상이면 별표액 산입: 지급 5,000,000 → 2,800,000원", () => {
+    const r = computeLawyerFee(input({ caseValue: 30_000_000, agreedFeeWon: 5_000_000 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.amount).toBe(2_800_000);
+    expect(r.formulaText).toContain("이내");
+  });
+
+  it("지급보수액 미입력 시 별표 상한액 + 격리 고지", () => {
+    const r = computeLawyerFee(input({ caseValue: 30_000_000 }), { computedAt: FROZEN_AT });
+    expect(r.amount).toBe(2_800_000);
+    expect(r.formulaText).toContain("지급보수액 미입력");
+  });
+
+  it("음수 지급보수액 = RangeError", () => {
+    expect(() => computeLawyerFee(input({ agreedFeeWon: -1 }))).toThrow(
+      /지급보수액이 유효하지 않습니다/,
+    );
   });
 });

@@ -13,7 +13,7 @@
   },
   "expected": {
     "amount": 20700,
-    "dataVersion": "stamp-duty/v1.0.0"
+    "dataVersion": "stamp-duty/v1.1.0"
   },
   "metadata": {
     "oracle": "statute-derivation",

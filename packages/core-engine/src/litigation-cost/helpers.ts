@@ -98,8 +98,14 @@ export function lawyerFeeDiscountMultiplier(
   switch (discount.kind) {
     case "noOralHearingOrAdmission":
       return 0.5;
+    // 제3조 ②항 본문은 보전 사건 전반에 별표액의 1/2 을 적용한다. 단서는 신청사건에만
+    // 걸리고, 변론이나 심문을 거친 경우에만 산입하므로 안 거쳤으면 산입할 수 없다.
+    // 이의·취소 신청사건은 단서 대상이 아니라 변론 여부와 상관없이 1/2 이다.
     case "provisionalCase":
-      return discount.hasOralHearing ? 1.0 : 0.5;
+      if (discount.applicationKind === "objectionOrCancellation") {
+        return 0.5;
+      }
+      return discount.hasOralHearing === false ? 0 : 0.5;
     case "koreaLegalAid":
       if (
         koreaLegalAidAgreedFeeWon !== undefined &&

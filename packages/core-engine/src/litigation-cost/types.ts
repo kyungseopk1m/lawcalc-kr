@@ -67,6 +67,13 @@ export interface StampDutyInput {
   isElectronicFiling?: boolean;
   isRetrial?: boolean;
   /**
+   * 보전처분(가압류·가처분, caseType `provisionalMeasure*`) 인지 분기. 근거는 인지법 제9조 ②항.
+   *   - `general` (기본): 가압류·다툼대상 가처분 = 정액 1만원.
+   *   - `provisionalStatus`: 임시의 지위를 정하기 위한 가처분 = 본안 인지액의 1/2 (상한 50만원).
+   * 보전 사건구분이 아닌 경우 무시된다. 미지정 시 `general` 로 간주.
+   */
+  provisionalMeasureType?: "general" | "provisionalStatus";
+  /**
    * 접수일 — 전자소송 감액 (제16조) 적용 여부 분기.
    * 제16조 시행일 (dataset `electronicFilingDiscount.effectiveFrom`, 2011-10-19) 이전 접수는
    * 감액 미적용. 미지정 시 현행 사건으로 간주해 감액을 적용한다 (송달료 슬라이스와 동일 정책).
@@ -192,7 +199,7 @@ export type NoOralHearingReason =
  * 변호사보수 감액/조정 옵션. G5 final 5 variant.
  *
  *   - `noOralHearingOrAdmission`: 제5조 (×0.5)
- *   - `provisionalCase`: 제3조 ②항 (×0.5 또는 ×1.0 — 변론·심문기일 분기)
+ *   - `provisionalCase`: 제3조 ②항 (본문 ×0.5 / 신청사건 변론·심문 미거침이면 단서로 산입 불가 ×0)
  *   - `koreaLegalAid`: 대한법률구조공단 약정보수액 cap (별표 × 0.42 default, 민·가사 한정)
  *   - `courtDiscretion`: 제6조 (감액 0.0~1.0, 증액 1.0~1.5)
  *   - `customPercent`: 본 규칙 외 합의/특약
@@ -202,7 +209,18 @@ export type NoOralHearingReason =
  */
 export type LawyerFeeDiscount =
   | { kind: "noOralHearingOrAdmission"; reason: NoOralHearingReason }
-  | { kind: "provisionalCase"; hasOralHearing: boolean }
+  /**
+   * 제3조 ②항. 본문은 보전 사건에 별표 산정액의 1/2 을 적용하고, 단서는 신청사건에 한해
+   * 변론이나 심문을 거친 경우에만 산입하도록 제한한다. 이의·취소 신청사건은 단서 대상이 아니다.
+   *
+   * `applicationKind` 미지정은 신청사건으로 본다. `hasOralHearing` 미지정은 단서를 확인하지
+   * 못한 상태라 본문만 적용한다 (×0.5). 신청사건에서 `false` 면 산입할 수 없어 ×0 이다.
+   */
+  | {
+      kind: "provisionalCase";
+      applicationKind?: "application" | "objectionOrCancellation";
+      hasOralHearing?: boolean;
+    }
   | { kind: "koreaLegalAid" }
   | { kind: "courtDiscretion"; multiplier: number }
   | { kind: "customPercent"; rate: number };
@@ -218,6 +236,13 @@ export interface LawyerFeeInput {
    * 미지정 시 0.42 default (대한법률구조공단 정본 source).
    */
   koreaLegalAidAgreedFeeWon?: number;
+  /**
+   * 지급보수액. 당사자가 보수계약으로 지급하였거나 지급할 실제 보수액이다 (본 규칙 제3조 ①항).
+   * 소송비용에 산입되는 보수는 지급보수액의 범위 내에서 별표 기준으로 산정하므로, 지정 시
+   * 최종 산입액 = min(별표 산정액, agreedFeeWon) 으로 cap 한다. 미지정 시 결과는 별표 상한액이며
+   * 실제 산입액이 아니다. formulaText 로 그 사실을 따로 고지한다 (감사 F2).
+   */
+  agreedFeeWon?: number;
   /** 접수일 — 시기별 슬라이스 분기용. PR 4 dataset 진입 시 wire-up. */
   filingDate?: IsoDate;
 }

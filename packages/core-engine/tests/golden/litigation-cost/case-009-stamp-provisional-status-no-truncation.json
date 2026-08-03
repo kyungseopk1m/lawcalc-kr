@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1",
+  "id": "case-009-stamp-provisional-status-no-truncation",
+  "title": "인지액 — 임시지위 가처분, 소가 1,100만원 = 27,250원 (제9조 경로 절사 없음)",
+  "source": "statute-derivation",
+  "notes": "본안은 11,000,000 × 45/10,000 + 5,000 = 54,500 이다. 제2조 제2항 절사는 이 본안 금액을 낼 때 이미 반영돼 있고, 그 절반인 27,250 에 100원 절사를 다시 적용하지 않는다. 제7조 제4항은 화해·지급명령에 대해 제2조 제2항을 준용한다고 밝혔지만 나중에 생긴 제9조 제2항 단서에는 그런 문구가 없고, 인지규칙과 재민 91-1 예규 본문에도 일반 절사 규정이 없다.",
+  "input": {
+    "caseValue": 11000000,
+    "caseType": "provisionalMeasureSingle",
+    "appealsLevel": "firstInstance",
+    "provisionalMeasureType": "provisionalStatus"
+  },
+  "expected": {
+    "amount": 27250,
+    "dataVersion": "stamp-duty/v1.1.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-03",
+    "derivedBy": "인지법 제2조·제7조 제4항·제9조 제2항 단서 원문 대조 후 손계산. 절사 규정이 없다는 점은 인지규칙과 재민 91-1 예규 본문 검색으로 확인",
+    "noExternalCaptureReason": "대한법률구조공단 자동계산은 본안사건 인지·송달료만 다뤄 보전처분 신청 인지에 대조 대상이 없다"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1",
+  "id": "case-006-stamp-provisional-general-50m",
+  "title": "인지액 — 일반 가압류 신청, 소가 5,000만원 = 10,000원 (정액)",
+  "source": "statute-derivation",
+  "notes": "인지법 제9조 제2항 본문에 따라 가압류·가처분 신청서에는 1만원을 붙인다. 제2조 소장 누진식(소가 5,000만원이면 230,000원)과 상관없는 정액이라 소가가 얼마든 10,000원이다. 보전처분에 소장식을 잘못 적용하던 결함을 여기서 막는다.",
+  "input": {
+    "caseValue": 50000000,
+    "caseType": "provisionalMeasureSingle",
+    "appealsLevel": "firstInstance"
+  },
+  "expected": {
+    "amount": 10000,
+    "dataVersion": "stamp-duty/v1.1.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-03",
+    "derivedBy": "인지법 제9조 제2항 본문 원문 대조 (국가법령정보센터 현행, 법률 제20003호)",
+    "noExternalCaptureReason": "대한법률구조공단 자동계산은 본안사건 인지·송달료만 다뤄 보전처분 신청 인지에 대조 대상이 없다"
+  }
+}

@@ -25,14 +25,14 @@ function input(overrides: Partial<StampDutyInput> = {}): StampDutyInput {
 describe("loadStampDutyDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadStampDutyDataset();
-    expect(ds.version).toBe("1.0.0");
+    expect(ds.version).toBe("1.1.0");
     expect(ds.brackets).toHaveLength(4);
     expect(ds.brackets.map((b) => b.baseAmount)).toEqual([0, 5000, 55000, 555000]);
     expect(ds.brackets.map((b) => b.rate)).toEqual([0.005, 0.0045, 0.004, 0.0035]);
   });
 
-  it("stampDutyVersionTag 는 stamp-duty/v1.0.0", () => {
-    expect(stampDutyVersionTag(loadStampDutyDataset())).toBe("stamp-duty/v1.0.0");
+  it("stampDutyVersionTag 는 stamp-duty/v1.1.0", () => {
+    expect(stampDutyVersionTag(loadStampDutyDataset())).toBe("stamp-duty/v1.1.0");
   });
 
   it("override 도 동일하게 검증한다", () => {
@@ -209,7 +209,7 @@ describe("computeStampDuty / 누진 산식 + 심급 + 반올림", () => {
   it("소가 10,000,000 1심 = 50,000원 (2구간 경계, 연속)", () => {
     const r = computeStampDuty(input({ caseValue: 10_000_000 }), { computedAt: FROZEN_AT });
     expect(r.amount).toBe(50_000);
-    expect(r.dataVersion).toBe("stamp-duty/v1.0.0");
+    expect(r.dataVersion).toBe("stamp-duty/v1.1.0");
     expect(r.computedAt).toBe(FROZEN_AT);
   });
 
@@ -400,7 +400,7 @@ describe("computeStampDuty / dataset injection 결정성", () => {
   it("default 호출 (deps 미지정) → bundled dataset 사용", () => {
     const r = computeStampDuty(case50m, { computedAt: FROZEN_AT });
     expect(r.amount).toBe(230_000);
-    expect(r.dataVersion).toBe("stamp-duty/v1.0.0");
+    expect(r.dataVersion).toBe("stamp-duty/v1.1.0");
   });
 
   it("custom dataset 주입 → version 변경 + 산출 변화", () => {
@@ -456,5 +456,138 @@ describe("computeStampDuty / formulaText 회귀", () => {
   it("소가 0 1심 formulaText 는 (소가 × rate) 형태", () => {
     const r = computeStampDuty(input({ caseValue: 0 }), { computedAt: FROZEN_AT });
     expect(r.formulaText).toContain("1심 (×1)");
+  });
+});
+
+describe("computeStampDuty / 지급명령 caseType 자동적용 (감사 F3)", () => {
+  it("caseType=paymentOrder 는 flag 없이도 10분의 1 적용: 소가 50,000,000 = 23,000원", () => {
+    // 사건구분만 고르고 isPaymentOrder 체크를 놓쳐 소장 인지(230,000)가 나오던 UI 결함 차단.
+    const r = computeStampDuty(input({ caseValue: 50_000_000, caseType: "paymentOrder" }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.amount).toBe(23_000);
+    expect(r.formulaText).toContain("지급명령");
+  });
+
+  it("caseType=paymentOrder + 항소 = RangeError (지급명령은 1심)", () => {
+    expect(() =>
+      computeStampDuty(input({ caseType: "paymentOrder", appealsLevel: "appeal" })),
+    ).toThrow(/지급명령·화해는 1심에서만/);
+  });
+});
+
+describe("computeStampDuty / 보전처분 제9조 ②항 (감사 F1)", () => {
+  it("일반 가압류·가처분 (기본): 소가 무관 정액 10,000원", () => {
+    // 소가 5천만 카단. 제2조 소장식(230,000)이 아니라 제9조 정액이다.
+    const r = computeStampDuty(
+      input({ caseValue: 50_000_000, caseType: "provisionalMeasureSingle" }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(10_000);
+    expect(r.formulaText).toContain("제9조 ②항 전단");
+  });
+
+  it("임시지위 가처분: 본안 인지액의 1/2, 소가 50,000,000 이면 115,000원", () => {
+    // 본안 230,000 × 0.5 = 115,000 (상한 50만 미도달).
+    const r = computeStampDuty(
+      input({
+        caseValue: 50_000_000,
+        caseType: "provisionalMeasureCollegial",
+        provisionalMeasureType: "provisionalStatus",
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(115_000);
+    expect(r.formulaText).toContain("제9조 ②항 후단");
+  });
+
+  it("임시지위 가처분 상한 정확 경계: 본안 1,000,000 (소가 236,250,000) × 0.5 = 500,000원", () => {
+    // 236,250,000 × 0.004 + 55,000 = 1,000,000 → ×0.5 = 500,000 = 상한과 정확히 일치.
+    const r = computeStampDuty(
+      input({
+        caseValue: 236_250_000,
+        caseType: "provisionalMeasureCollegial",
+        provisionalMeasureType: "provisionalStatus",
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(500_000);
+  });
+
+  it("임시지위 가처분 상한 50만원: 본안 4,055,000 × 0.5 = 2,027,500 → 500,000원", () => {
+    const r = computeStampDuty(
+      input({
+        caseValue: 1_000_000_000,
+        caseType: "provisionalMeasureCollegial",
+        provisionalMeasureType: "provisionalStatus",
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(500_000);
+    expect(r.formulaText).toContain("상한");
+  });
+
+  it("일반 가압류·가처분 + 전자소송 (×0.9): 10,000 → 9,000원", () => {
+    const r = computeStampDuty(
+      input({
+        caseValue: 50_000_000,
+        caseType: "provisionalMeasureSingle",
+        isElectronicFiling: true,
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(9_000);
+  });
+
+  it("제9조 경로는 100원 절사를 적용하지 않는다 (제2조 ②항 준용 없음)", () => {
+    // 본안 54,500(제2조 ②항 절사 적용 완료) × 0.5 = 27,250. 제7조 ④항과 달리 제9조에는
+    // 제2조 ②항 준용 규정이 없으므로 여기서 다시 100원 절사할 근거가 없다.
+    const r = computeStampDuty(
+      input({
+        caseValue: 11_000_000,
+        caseType: "provisionalMeasureSingle",
+        provisionalMeasureType: "provisionalStatus",
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(27_250);
+    expect(r.formulaText).toContain("본안 인지액 54,500 × 0.5 = 27,250원");
+    expect(r.formulaText).not.toContain("절사");
+    expect(r.formulaText).not.toContain("제2조");
+  });
+
+  it("본안 인지액 자체에는 제2조 ②항 절사가 적용된다", () => {
+    // 소가 9,999,999 → 49,999.995 → 제2조 ②항으로 49,900. 그 1/2 = 24,950.
+    const r = computeStampDuty(
+      input({
+        caseValue: 9_999_999,
+        caseType: "provisionalMeasureSingle",
+        provisionalMeasureType: "provisionalStatus",
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(24_950);
+    expect(r.formulaText).toContain("본안 인지액 49,900");
+  });
+
+  it("정액 경로는 1,000원 floor 없이 그대로 나온다", () => {
+    const r = computeStampDuty(
+      input({ caseValue: 50_000_000, caseType: "provisionalMeasureSingle" }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.amount).toBe(10_000);
+    expect(r.formulaText).toContain("= 10,000원");
+  });
+
+  it("보전처분 + 항소 = RangeError (심급 배수 무관)", () => {
+    expect(() =>
+      computeStampDuty(input({ caseType: "provisionalMeasureSingle", appealsLevel: "appeal" })),
+    ).toThrow(/보전처분 인지는 심급 배수를/);
+  });
+
+  it("보전처분 + 지급명령 flag = RangeError (제9조 별도 체계)", () => {
+    expect(() =>
+      computeStampDuty(input({ caseType: "provisionalMeasureSingle", isPaymentOrder: true })),
+    ).toThrow(/보전처분 인지에는 지급명령·화해/);
   });
 });

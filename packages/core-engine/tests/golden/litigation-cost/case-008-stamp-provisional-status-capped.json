@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1",
+  "id": "case-008-stamp-provisional-status-capped",
+  "title": "인지액 — 임시지위 가처분, 소가 10억원 = 500,000원 (상한 적용)",
+  "source": "statute-derivation",
+  "notes": "상한이 실제로 걸리는 경우다. 본안은 1,000,000,000 × 35/10,000 + 555,000 = 4,055,000 이고 그 절반인 2,027,500 이 상한 50만원을 넘어 잘린다. case-007 은 절반값과 상한이 같아지는 지점이라 상한을 올리는 변경을 잡지 못한다. 상한값 자체는 이 케이스가 지킨다.",
+  "input": {
+    "caseValue": 1000000000,
+    "caseType": "provisionalMeasureCollegial",
+    "appealsLevel": "firstInstance",
+    "provisionalMeasureType": "provisionalStatus"
+  },
+  "expected": {
+    "amount": 500000,
+    "dataVersion": "stamp-duty/v1.1.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-03",
+    "derivedBy": "인지법 제2조 제1항 4호 + 제9조 제2항 단서 원문 대조 후 정수 손계산 (국가법령정보센터 현행, 법률 제20003호)",
+    "noExternalCaptureReason": "대한법률구조공단 자동계산은 본안사건 인지·송달료만 다뤄 보전처분 신청 인지에 대조 대상이 없다"
+  }
+}

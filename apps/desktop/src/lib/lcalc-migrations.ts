@@ -56,11 +56,82 @@ function normalizeLegacyLawyerFeeValue(value: unknown): unknown {
   return normalized;
 }
 
+const PROVISIONAL_CASE_TYPES = ["provisionalMeasureCollegial", "provisionalMeasureSingle"];
+
+/**
+ * v0.10.0 이하는 보전처분(카합/카단)에 심급이나 특별절차 제한이 없어서, 항소심이나 화해·
+ * 지급명령 감액이 같이 저장된 파일이 있다. 보전처분 인지를 제9조 ②항 체계로 옮긴 뒤로는
+ * `validateStampDutyInput` 이 그 조합을 거부하는데, 이 검증이 파싱 단계에 있어서 손대지
+ * 않으면 파일이 열리지도 않는다.
+ *
+ * 입력만 제9조 ②항에 맞게 낮추고 저장된 `result` 는 그대로 둔다. 화면에는 저장 당시 값이
+ * 뜨고, 다시 계산하면 현행 산식으로 나온다.
+ */
+function normalizeLegacyProvisionalStampDuty(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const stampDuty = input.stampDuty;
+  if (!isRecord(stampDuty) || typeof stampDuty.caseType !== "string") {
+    return input;
+  }
+  if (!PROVISIONAL_CASE_TYPES.includes(stampDuty.caseType)) {
+    return input;
+  }
+  const needsAppealsReset =
+    typeof stampDuty.appealsLevel === "string" && stampDuty.appealsLevel !== "firstInstance";
+  const needsSpecialProcedureDrop =
+    stampDuty.isPaymentOrder === true || stampDuty.isSettlement === true;
+  if (!needsAppealsReset && !needsSpecialProcedureDrop) {
+    return input;
+  }
+
+  const nextStampDuty: Record<string, unknown> = { ...stampDuty, appealsLevel: "firstInstance" };
+  delete nextStampDuty.isPaymentOrder;
+  delete nextStampDuty.isSettlement;
+  return { ...input, stampDuty: nextStampDuty };
+}
+
+/**
+ * v0.10.0 이하는 본안 사건구분에도 제3조 ②항 감액(`provisionalCase`)을 붙일 수 있었다. 이제
+ * 그 감액은 가압류·가처분 전용이라 `validateLawyerFeeInput` 이 거부한다. 잘못 붙은 감액을
+ * 떼어내지 않으면 구파일이 열리지 않는다.
+ */
+function normalizeLegacyProvisionalLawyerFee(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
+  const lawyerFee = input.lawyerFee;
+  if (!isRecord(lawyerFee) || typeof lawyerFee.caseType !== "string") {
+    return input;
+  }
+  if (PROVISIONAL_CASE_TYPES.includes(lawyerFee.caseType)) {
+    return input;
+  }
+  const discounts = lawyerFee.discounts;
+  if (!Array.isArray(discounts)) {
+    return input;
+  }
+  const kept = discounts.filter((d) => !(isRecord(d) && d.kind === "provisionalCase"));
+  if (kept.length === discounts.length) {
+    return input;
+  }
+  return { ...input, lawyerFee: { ...lawyerFee, discounts: kept } };
+}
+
 function normalizeV3LitigationCostFile(raw: LcalcFile): LcalcFile {
   if (raw.kind !== "litigation-cost") {
     return raw;
   }
-  return normalizeLegacyLawyerFeeValue(raw) as LcalcFile;
+  // 보전처분 정규화를 먼저 돌린다. raw 가 litigation-cost 로 좁혀진 상태라 payload.input 에
+  // 타입 단언 없이 접근할 수 있다.
+  const input: unknown = raw.payload.input;
+  const nextInput = isRecord(input)
+    ? normalizeLegacyProvisionalLawyerFee(normalizeLegacyProvisionalStampDuty(input))
+    : input;
+  const next =
+    nextInput === input
+      ? raw
+      : ({ ...raw, payload: { ...raw.payload, input: nextInput } } as unknown as LcalcFile);
+  return normalizeLegacyLawyerFeeValue(next) as LcalcFile;
 }
 
 /**

@@ -31,9 +31,9 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.totalAmount).toBe(3_105_000);
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
     expect(result.dataVersions).toEqual({
-      "stamp-duty": "stamp-duty/v1.0.0",
+      "stamp-duty": "stamp-duty/v1.1.0",
       delivery: "delivery/v1.1.0",
-      "lawyer-fee": "lawyer-fee/v1.1.0",
+      "lawyer-fee": "lawyer-fee/v1.2.0",
     });
     expect(result.computedAt).toBe(computedAt);
     expect(result.stampDuty.computedAt).toBe(computedAt);
@@ -129,7 +129,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.lawyerFee.appliedDiscounts).toEqual([]);
     expect(result.lawyerFee.koreaLegalAidWarnings).toEqual([]);
     expect(result.lawyerFee.formulaText).toContain("변호사보수 산입 외 사건구분");
-    expect(result.lawyerFee.dataVersion).toBe("lawyer-fee/v1.1.0");
+    expect(result.lawyerFee.dataVersion).toBe("lawyer-fee/v1.2.0");
     expect(result.lawyerFee.computedAt).toBe(computedAt);
 
     // 송달료: 재일 87-4 별표 1 — 독촉사건 6회 × 채권자·채무자 2명 × 5,500원
@@ -140,9 +140,55 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.stampDuty.amount).toBeGreaterThan(0);
     expect(result.totalAmount).toBe(result.stampDuty.amount + result.deliveryFee.amount);
     expect(result.dataVersions).toEqual({
-      "stamp-duty": "stamp-duty/v1.0.0",
+      "stamp-duty": "stamp-duty/v1.1.0",
       delivery: "delivery/v1.1.0",
-      "lawyer-fee": "lawyer-fee/v1.1.0",
+      "lawyer-fee": "lawyer-fee/v1.2.0",
     });
+  });
+});
+
+describe("computeLitigationCost / 감사 F1·F3 통합 회귀 가드", () => {
+  it("caseType=paymentOrder 는 flag 없이 인지 1/10 자동 적용 (F3)", () => {
+    const input: LitigationCostInput = {
+      stampDuty: { caseValue: 50_000_000, caseType: "paymentOrder", appealsLevel: "firstInstance" },
+      deliveryFee: { caseType: "paymentOrder", partyCount: 2 },
+      lawyerFee: { caseValue: 50_000_000, caseType: "paymentOrder", discounts: [] },
+    };
+    const r = computeLitigationCost(input, { computedAt });
+    expect(r.stampDuty.amount).toBe(23_000); // 230,000 × 0.1, 소장식(230,000) 아님
+  });
+
+  it("임시지위 가처분 인지는 본안 1/2 + 변호사보수 정상 계산 (F1)", () => {
+    const input: LitigationCostInput = {
+      stampDuty: {
+        caseValue: 50_000_000,
+        caseType: "provisionalMeasureCollegial",
+        appealsLevel: "firstInstance",
+        provisionalMeasureType: "provisionalStatus",
+      },
+      deliveryFee: { caseType: "provisionalMeasureCollegial", partyCount: 2 },
+      lawyerFee: {
+        caseValue: 50_000_000,
+        caseType: "provisionalMeasureCollegial",
+        discounts: [],
+      },
+    };
+    const r = computeLitigationCost(input, { computedAt });
+    expect(r.stampDuty.amount).toBe(115_000); // 230,000 × 0.5
+    expect(r.lawyerFee.amount).toBeGreaterThan(0); // 보전은 lawyerFee 산입 대상
+  });
+
+  it("일반 가압류·가처분 인지는 정액 1만원 (F1)", () => {
+    const input: LitigationCostInput = {
+      stampDuty: {
+        caseValue: 50_000_000,
+        caseType: "provisionalMeasureSingle",
+        appealsLevel: "firstInstance",
+      },
+      deliveryFee: { caseType: "provisionalMeasureSingle", partyCount: 2 },
+      lawyerFee: { caseValue: 50_000_000, caseType: "provisionalMeasureSingle", discounts: [] },
+    };
+    const r = computeLitigationCost(input, { computedAt });
+    expect(r.stampDuty.amount).toBe(10_000);
   });
 });

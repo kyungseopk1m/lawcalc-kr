@@ -457,6 +457,14 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
     ...(isSettlement === undefined ? {} : { isSettlement }),
     ...(isElectronicFiling === undefined ? {} : { isElectronicFiling }),
     ...(isRetrial === undefined ? {} : { isRetrial }),
+    ...(stampDutyRecord.provisionalMeasureType === undefined
+      ? {}
+      : {
+          provisionalMeasureType: requireString(
+            stampDutyRecord.provisionalMeasureType,
+            "payload.input.stampDuty.provisionalMeasureType",
+          ) as "general" | "provisionalStatus",
+        }),
     ...(stampDutyRecord.filingDate === undefined
       ? {}
       : {
@@ -532,6 +540,14 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
           koreaLegalAidAgreedFeeWon: requireNonNegativeNumber(
             koreaLegalAidAgreedFeeWon,
             "payload.input.lawyerFee.koreaLegalAidAgreedFeeWon",
+          ),
+        }),
+    ...(lawyerRecord.agreedFeeWon === undefined
+      ? {}
+      : {
+          agreedFeeWon: requireNonNegativeNumber(
+            lawyerRecord.agreedFeeWon,
+            "payload.input.lawyerFee.agreedFeeWon",
           ),
         }),
     ...(lawyerRecord.filingDate === undefined

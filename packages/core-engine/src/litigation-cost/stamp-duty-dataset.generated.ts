@@ -5,8 +5,8 @@
 import type { StampDutyDataset } from "./stamp-duty-dataset";
 
 export const DEFAULT_STAMP_DUTY_DATASET: StampDutyDataset = {
-  "version": "1.0.0",
-  "updatedAt": "2026-05-11",
+  "version": "1.1.0",
+  "updatedAt": "2026-08-03",
   "sourceLaw": {
     "name": "민사소송 등 인지법",
     "lsId": "001195",
@@ -74,6 +74,19 @@ export const DEFAULT_STAMP_DUTY_DATASET: StampDutyDataset = {
       "multiplier": 0.2,
       "rateText": "5분의 1",
       "sourceArticle": "제7조 ①항"
+    }
+  },
+  "provisionalMeasures": {
+    "general": {
+      "flatWon": 10000,
+      "rateText": "정액 1만원",
+      "sourceArticle": "제9조 ②항 전단"
+    },
+    "provisionalStatus": {
+      "ratioToMainStampDuty": 0.5,
+      "capWon": 500000,
+      "rateText": "본안 인지액의 2분의 1 (상한 50만원)",
+      "sourceArticle": "제9조 ②항 후단"
     }
   },
   "electronicFilingDiscount": {

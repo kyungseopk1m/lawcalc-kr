@@ -28,6 +28,8 @@ interface GoldenCase {
       capturedAt: string;
       method: string;
     };
+    /** 외부 대조 대상이 없는 케이스의 사유. externalCapture 와 배타. */
+    noExternalCaptureReason?: string;
   };
 }
 
@@ -57,9 +59,15 @@ describe("litigation-cost golden cases (v0.10.0 — 인지법 손계산 + KLAC �
     for (const c of cases) {
       expect(c.schemaVersion, `${c.id} schemaVersion`).toBe(GOLDEN_FIXTURE_SCHEMA);
       expect(c.metadata.oracle, `${c.id} oracle`).toBe("statute-derivation");
-      expect(c.metadata.externalCapture?.sourceUrl, `${c.id} externalCapture`).toContain(
-        "klac.or.kr",
-      );
+      // 외부 대조가 가능한 케이스만 캡처를 요구한다. 보전처분(제9조 ②항) 신청 인지는 KLAC
+      // 자동계산이 본안사건만 다뤄 대조 대상이 없으므로, fixture 가 사유를 명시하게 한다.
+      if (c.metadata.externalCapture === undefined) {
+        expect(c.metadata.noExternalCaptureReason, `${c.id} noExternalCaptureReason`).toBeTruthy();
+      } else {
+        expect(c.metadata.externalCapture.sourceUrl, `${c.id} externalCapture`).toContain(
+          "klac.or.kr",
+        );
+      }
     }
   });
 

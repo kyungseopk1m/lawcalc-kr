@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "updatedAt": "2026-05-15",
+  "version": "1.2.0",
+  "updatedAt": "2026-08-03",
   "sourceLaw": {
     "name": "변호사보수의 소송비용 산입에 관한 규칙",
     "lsId": "005866",
@@ -94,7 +94,7 @@
   "modifiers": {
     "provisionalSeizureOrInjunction": {
       "multiplier": 0.5,
-      "exception": "변론 또는 심문기일이 있는 경우 그대로 (1.0 적용)",
+      "exception": "본문의 1/2 은 보전 사건 전반에 적용된다. 단서는 신청사건에만 걸리며, 변론 또는 심문을 거친 경우에 한하여 산입한다 (미거침 시 산입 불가). 이의·취소 신청사건은 단서 대상이 아니므로 변론 여부와 무관하게 1/2.",
       "sourceArticle": "제3조 ②항",
       "enumVariant": "provisionalCase"
     },

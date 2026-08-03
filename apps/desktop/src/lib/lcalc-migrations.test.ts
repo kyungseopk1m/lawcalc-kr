@@ -222,6 +222,158 @@ describe("migrateLcalcFile", () => {
     expect(loaded.result?.lawyerFee.formulaText).toBe("대한법률구조공단 (×0.42 default)");
   });
 
+  it("opens a legacy provisional-measure file saved with an appeal level", () => {
+    // v0.10.0 이하는 보전처분에 심급·특별절차 제한이 없었다. 정규화하지 않으면 파싱 단계의
+    // validateStampDutyInput 이 거부해 파일이 열리지 않는다.
+    const legacy = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": "stamp-duty/v1.0.0",
+        delivery: "delivery/v1.0.0",
+        "lawyer-fee": "lawyer-fee/v2.0.0",
+      },
+      payload: {
+        appVersion: "0.10.0",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        input: {
+          stampDuty: {
+            caseValue: 50_000_000,
+            caseType: "provisionalMeasureSingle",
+            appealsLevel: "appeal",
+            isSettlement: true,
+          },
+          deliveryFee: { caseType: "provisionalMeasureSingle", partyCount: 2 },
+          lawyerFee: {
+            caseValue: 50_000_000,
+            caseType: "provisionalMeasureSingle",
+            discounts: [],
+          },
+        },
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    const migrated = migrateLcalcFile(legacy);
+    validateLcalcEnvelope(migrated);
+    const loaded = parseLoadedLitigationCostLcalcInput(migrated);
+
+    expect(loaded.input.stampDuty.appealsLevel).toBe("firstInstance");
+    expect(loaded.input.stampDuty.isSettlement).toBeUndefined();
+    expect(loaded.input.stampDuty.caseType).toBe("provisionalMeasureSingle");
+    expect(loaded.input.stampDuty.caseValue).toBe(50_000_000);
+  });
+
+  it("drops a 제3조 ②항 discount misapplied to a 본안 사건구분 in a legacy file", () => {
+    // v0.10.0 이하는 본안 사건구분에도 이 감액을 붙일 수 있었다. 이제 validator 가 거부하므로
+    // 정규화하지 않으면 구파일이 열리지 않는다.
+    const legacy = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": "stamp-duty/v1.1.0",
+        delivery: "delivery/v1.0.0",
+        "lawyer-fee": "lawyer-fee/v1.2.0",
+      },
+      payload: {
+        appVersion: "0.10.0",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        input: {
+          stampDuty: {
+            caseValue: 30_000_000,
+            caseType: "civilFirstInstanceCollegial",
+            appealsLevel: "firstInstance",
+          },
+          deliveryFee: { caseType: "civilFirstInstanceCollegial", partyCount: 2 },
+          lawyerFee: {
+            caseValue: 30_000_000,
+            caseType: "civilFirstInstanceCollegial",
+            discounts: [
+              { kind: "provisionalCase", hasOralHearing: false },
+              { kind: "customPercent", rate: 0.5 },
+            ],
+          },
+        },
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    const loaded = parseLoadedLitigationCostLcalcInput(migrateLcalcFile(legacy));
+    expect(loaded.input.lawyerFee.discounts).toEqual([{ kind: "customPercent", rate: 0.5 }]);
+  });
+
+  it("keeps a 제3조 ②항 discount on a 보전 사건구분", () => {
+    const legacy = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": "stamp-duty/v1.1.0",
+        delivery: "delivery/v1.0.0",
+        "lawyer-fee": "lawyer-fee/v1.2.0",
+      },
+      payload: {
+        appVersion: "0.10.0",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        input: {
+          stampDuty: {
+            caseValue: 30_000_000,
+            caseType: "provisionalMeasureSingle",
+            appealsLevel: "firstInstance",
+          },
+          deliveryFee: { caseType: "provisionalMeasureSingle", partyCount: 2 },
+          lawyerFee: {
+            caseValue: 30_000_000,
+            caseType: "provisionalMeasureSingle",
+            discounts: [{ kind: "provisionalCase", hasOralHearing: false }],
+          },
+        },
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    const loaded = parseLoadedLitigationCostLcalcInput(migrateLcalcFile(legacy));
+    expect(loaded.input.lawyerFee.discounts).toEqual([
+      { kind: "provisionalCase", hasOralHearing: false },
+    ]);
+  });
+
+  it("leaves a non-provisional file's appeal level alone", () => {
+    const appealFile = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": "stamp-duty/v1.0.0",
+        delivery: "delivery/v1.0.0",
+        "lawyer-fee": "lawyer-fee/v2.0.0",
+      },
+      payload: {
+        appVersion: "0.10.0",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        input: {
+          stampDuty: {
+            caseValue: 50_000_000,
+            caseType: "civilFirstInstanceSingle",
+            appealsLevel: "appeal",
+          },
+          deliveryFee: { caseType: "civilFirstInstanceSingle", partyCount: 2 },
+          lawyerFee: {
+            caseValue: 50_000_000,
+            caseType: "civilFirstInstanceSingle",
+            discounts: [],
+          },
+        },
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    const loaded = parseLoadedLitigationCostLcalcInput(migrateLcalcFile(appealFile));
+    expect(loaded.input.stampDuty.appealsLevel).toBe("appeal");
+  });
+
   it("rejects unsupported versions with a Korean user-facing message", () => {
     expect(() => migrateLcalcFile({ ...sampleV1, schemaVersion: "9" })).toThrow(
       "지원하지 않는 .lcalc 버전입니다: 9",
@@ -557,6 +709,55 @@ describe("validateLcalcEnvelope", () => {
     expect(loaded.input.lawyerFee.discounts).toEqual([]);
     expect(loaded.result?.lawyerFee.amount).toBe(0);
     expect(loaded.result?.deliveryFee.amount).toBe(66_000);
+  });
+
+  it("round-trips provisionalMeasureType + agreedFeeWon (신규 필드) through save→load", () => {
+    // 감사 F1/F2 신규 필드가 .lcalc 왕복에서 유실되지 않는지 회귀 가드.
+    const input = {
+      stampDuty: {
+        caseValue: 50_000_000,
+        caseType: "provisionalMeasureCollegial" as const,
+        appealsLevel: "firstInstance" as const,
+        provisionalMeasureType: "provisionalStatus" as const,
+      },
+      deliveryFee: {
+        caseType: "provisionalMeasureCollegial" as const,
+        partyCount: 2,
+      },
+      lawyerFee: {
+        caseValue: 50_000_000,
+        caseType: "provisionalMeasureCollegial" as const,
+        discounts: [],
+        agreedFeeWon: 1_000_000,
+      },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-07-15T12:00:00.000Z" });
+    const litigationFile: LcalcFile = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": result.dataVersions["stamp-duty"]!,
+        delivery: result.dataVersions.delivery!,
+        "lawyer-fee": result.dataVersions["lawyer-fee"]!,
+      },
+      payload: {
+        appVersion: "0.10.0",
+        createdAt: "2026-07-15T12:00:00.000Z",
+        input,
+        result,
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    // JSON 직렬화→역직렬화까지 태워 실제 파일 왕복을 모사.
+    const roundTripped = JSON.parse(JSON.stringify(litigationFile)) as LcalcFile;
+    validateLcalcEnvelope(roundTripped);
+    const loaded = parseLoadedLitigationCostLcalcInput(roundTripped);
+    expect(loaded.input.stampDuty.provisionalMeasureType).toBe("provisionalStatus");
+    expect(loaded.input.lawyerFee.agreedFeeWon).toBe(1_000_000);
+    // 재계산이 아니라 저장된 result 를 그대로 복원한다. 임시지위 인지 230,000×0.5 = 115,000.
+    expect(loaded.result?.stampDuty.amount).toBe(115_000);
   });
 
   it("rejects a litigation-cost file missing a required dataVersion", () => {
