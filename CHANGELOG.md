@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-11
+
 ### Fixed
 
 - 가압류·가처분 신청서의 인지액을 「민사소송 등 인지법」 제9조 제2항대로 계산합니다. 일반 가압류·가처분은 소가와 상관없이 1만원이고, 임시의 지위를 정하는 가처분은 본안 인지액의 2분의 1에 상한 50만원입니다. 이전에는 보전처분에도 제2조 소장 산식을 적용해 소가 5,000만원 가압류 신청이 230,000원으로 나왔습니다(현재 10,000원).
@@ -355,7 +357,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.7.0...v0.8.0
