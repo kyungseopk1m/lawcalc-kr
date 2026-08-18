@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-08-18
+
 ### Fixed
 
 - macOS 에서 앱 아이콘이 다른 앱보다 크게 보이던 것을 고쳤습니다. macOS 아이콘은 캔버스를 꽉 채우지 않고 바깥 여백을 남기는데, 종전 아이콘은 여백이 거의 없어 Dock 과 Launchpad 에서 이웃 앱보다 가로 폭이 넓게 나왔습니다. 이제 표준 그리드대로 여백을 두고, 여백이 픽셀 낭비가 되는 16px 과 32px 은 종전처럼 꽉 채웁니다. Windows 아이콘과 화면 상단 마크는 그대로입니다.
@@ -428,7 +430,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.10.0...v0.11.0
