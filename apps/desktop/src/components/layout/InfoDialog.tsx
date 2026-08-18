@@ -9,6 +9,12 @@ import { Button } from "../ui/button";
 const REPO_URL = "https://github.com/kyungseopk1m/lawcalc-kr";
 const ISSUES_URL = `${REPO_URL}/issues`;
 const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
+// 이용자 대부분이 법률 실무자라 GitHub 계정을 요구하면 제보 자체가 막힌다. 메일을 1순위로
+// 두고 Issues 는 GitHub 를 쓰는 사람용 대안으로 남긴다.
+const CONTACT_EMAIL = "kks0919@kakao.com";
+const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
+  "[LawCalc Korea] 버그·기능 제보",
+)}`;
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -152,14 +158,26 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
                 </a>
               </li>
               <li>
-                버그·기능 제안:{" "}
+                버그·기능 제보:{" "}
                 <a
-                  href={ISSUES_URL}
-                  onClick={handleExternal(ISSUES_URL)}
+                  href={CONTACT_MAILTO}
+                  onClick={handleExternal(CONTACT_MAILTO)}
                   className="text-primary underline-offset-4 hover:underline"
                 >
-                  Issues
+                  {CONTACT_EMAIL}
                 </a>
+                <span className="block text-xs">
+                  계산이 이상하다고 느끼신 화면과 입력값을 함께 적어주시면 확인이 빠릅니다. GitHub
+                  를 쓰신다면{" "}
+                  <a
+                    href={ISSUES_URL}
+                    onClick={handleExternal(ISSUES_URL)}
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    Issues
+                  </a>
+                  에 남기셔도 됩니다.
+                </span>
               </li>
               <li>
                 라이선스 본문:{" "}
