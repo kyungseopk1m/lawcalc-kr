@@ -4,11 +4,11 @@
 
 ## 제공 데이터셋
 
-- `hoffman` — 호프만 단리연금현가율 표 (월 단위, 연 5%, 240 한도)
-- `leibniz` — 라이프니츠 복리연금현가율 표
-- `labor-rates` — 대한건설협회 시중노임 직종별 단가
-- `life-expectancy` — 통계청 KOSIS 생명표
-- `computeStaleBadge` — 외부 데이터셋 스냅샷 경과 등급 (6개월 이하 neutral / 6~12개월 amber / 12개월 초과 red)
+- `hoffman`: 호프만 단리연금현가율 표 (월 단위, 연 5%, 240 한도)
+- `leibniz`: 라이프니츠 복리연금현가율 표
+- `labor-rates`: 대한건설협회 시중노임 직종별 단가
+- `life-expectancy`: 통계청 KOSIS 생명표
+- `computeStaleBadge`: 외부 데이터셋 스냅샷 경과 등급 (6개월 이하 neutral / 6~12개월 amber / 12개월 초과 red)
 
 ## 데이터 관리
 

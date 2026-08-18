@@ -55,7 +55,7 @@ const result: InterestResult = calculateInterest(input);
 ```
 
 `result.segments[i].formula` 는 사람이 읽을 수 있는 적용 식이다 (예: `1,000,000원 × 5% × 100일 / 365`).
-원금에 `원`, 이율은 `%`, 일수는 `일` 접미사로 통일 — UI / PDF / CSV 가 그대로 노출해 계산 근거를 투명하게 보여준다.
+원금에 `원`, 이율은 `%`, 일수는 `일` 접미사로 통일한다. UI / PDF / CSV 가 그대로 노출해 계산 근거를 투명하게 보여준다.
 
 ## Dataset 주입 (`deps.dataset`, v0.2)
 
@@ -141,11 +141,11 @@ const result = calculateInheritance(input);
 | 필드              | 값                                                           | 의미                                                 |
 | ----------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
 | `mode`            | `"period"` \| `"totalDays"`                                  | 기간식 / 총일수식                                    |
-| `leapYear`        | `"fixed365"` \| `"actual"`                                   | 분모 결정 — 365 고정 vs 윤일/윤달 포함 시 366        |
+| `leapYear`        | `"fixed365"` \| `"actual"`                                   | 분모 결정 (365 고정, 윤일/윤달 포함 시 366)          |
 | `includeFirstDay` | `boolean`                                                    | 초일 산입 여부. 민법 제157조 원칙은 불산입 (`false`) |
-| `rounding`        | `"floor"` \| `"ceil"` \| `"round"` (선택, default `"floor"`) | 원 단위 끝수 처리 — 절사 / 절상 / 사사오입           |
+| `rounding`        | `"floor"` \| `"ceil"` \| `"round"` (선택, default `"floor"`) | 원 단위 끝수 처리 (절사 / 절상 / 사사오입)           |
 
-`rounding` 미지정 시 `"floor"` 가 적용되어 v1 호환을 유지한다 — `.lcalc` v1 파일,
+`rounding` 미지정 시 `"floor"` 가 적용되어 v1 호환을 유지한다. `.lcalc` v1 파일,
 기존 골든, 외부 호출자가 무변경 통과한다.
 
 ## 법정이율 프리셋 (`legalRatePreset`)
