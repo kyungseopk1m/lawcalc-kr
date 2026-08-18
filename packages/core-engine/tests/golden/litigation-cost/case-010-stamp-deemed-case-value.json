@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "2",
+  "id": "case-010-stamp-deemed-case-value",
+  "title": "인지액 — 비재산권 소송 간주 소가 5,000만원 = 230,000원",
+  "source": "statute-derivation",
+  "notes": "인지규칙 제18조의2: 소가를 산출할 수 없는 재산권상의 소와 비재산권 소송의 소가는 5천만원. caseValue 0 은 무시된다. 인지법 제2조 제1항 제2호로 50,000,000 × 45/10,000 + 5,000 = 230,000. 이 분기가 없던 동안 소가 0 이 그대로 흘러 하한 1,000원이 나왔다.",
+  "input": {
+    "caseValue": 0,
+    "caseValueBasis": "unascertainable",
+    "caseType": "civilFirstInstanceCollegial",
+    "appealsLevel": "firstInstance"
+  },
+  "expected": {
+    "amount": 230000,
+    "formulaText": "소가 산출 불가 또는 비재산권 소송 → 소가 50,000,000원 간주 (민사소송 등 인지규칙 제18조의2) + 1심 (×1): (소가 50,000,000 × 0.0045 + 5,000) × 1 = 230,000원 → 230,000원 (제2조 ②항 100원 절사)",
+    "dataVersion": "stamp-duty/v1.2.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-18",
+    "derivedBy": "golden-whitelist-2026-08-18 (인지법 제2조·제3조·제7조·제8조·제16조 + 인지규칙 제18조의2 정수 손계산)",
+    "noExternalCaptureReason": "KLAC 자동계산은 소가 금액 입력만 받아 간주 소가 분기를 재현할 수 없다."
+  }
+}

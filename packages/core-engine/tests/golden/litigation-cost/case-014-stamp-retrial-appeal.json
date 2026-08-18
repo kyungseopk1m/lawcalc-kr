@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "2",
+  "id": "case-014-stamp-retrial-appeal",
+  "title": "인지액 — 항소심 재심소장, 소가 5,000만원 = 345,000원",
+  "source": "statute-derivation",
+  "notes": "제8조 제1항: 재심소장에는 심급에 따라 제2조·제3조·제4조 제1항 금액의 인지를 붙인다. 즉 재심은 금액을 바꾸지 않고 산식 표기에만 남는다. 항소심이므로 제3조의 1.5배가 그대로 적용돼 345,000 으로 case-004 와 같다.",
+  "input": {
+    "caseValue": 50000000,
+    "caseType": "civilAppeal",
+    "appealsLevel": "appeal",
+    "isRetrial": true
+  },
+  "expected": {
+    "amount": 345000,
+    "formulaText": "재심소장 (제8조, 심급별 동일 적용) + 항소 (×1.5): (소가 50,000,000 × 0.0045 + 5,000) × 1.5 = 345,000원 → 345,000원 (제2조 ②항 100원 절사)",
+    "dataVersion": "stamp-duty/v1.2.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-18",
+    "derivedBy": "golden-whitelist-2026-08-18 (인지법 제2조·제3조·제7조·제8조·제16조 + 인지규칙 제18조의2 정수 손계산)",
+    "noExternalCaptureReason": "KLAC 자동계산은 재심 구분을 제공하지 않는다."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "2",
+  "id": "case-011-stamp-article2-floor",
+  "title": "인지액 — 소가 100,000원, 제2조 제2항 1,000원 하한 = 1,000원",
+  "source": "statute-derivation",
+  "notes": "인지법 제2조 제1항 제1호: 100,000 × 50/10,000 = 500. 제2조 제2항 전단으로 1천원 미만은 1천원. 하한은 배수 앞 제1항 금액에 건다 (제3조·제16조가 곱하는 것이 이미 하한을 지난 금액이라서다).",
+  "input": {
+    "caseValue": 100000,
+    "caseType": "civilFirstInstanceSingle",
+    "appealsLevel": "firstInstance"
+  },
+  "expected": {
+    "amount": 1000,
+    "formulaText": "1심 (×1): 소가 100,000 × 0.005 = 1,000원 (제2조 ②항 하한) × 1 = 1,000원 → 1,000원 (제2조 ②항 100원 절사)",
+    "dataVersion": "stamp-duty/v1.2.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-18",
+    "derivedBy": "golden-whitelist-2026-08-18 (인지법 제2조·제3조·제7조·제8조·제16조 + 인지규칙 제18조의2 정수 손계산)",
+    "noExternalCaptureReason": "하한 분기 자체가 대조 대상이라 외부 계산기의 결과를 정답으로 삼지 않는다."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "2",
+  "id": "case-012-stamp-payment-order-article7-floor",
+  "title": "인지액 — 지급명령, 소가 100,000원, 제7조 제4항 준용 하한 = 1,000원",
+  "source": "statute-derivation",
+  "notes": "제2조 제1항 제1호 500 → 제2조 제2항 하한 1,000 → 제7조 제2항 10분의 1 = 100 → 제7조 제4항이 제2조 제2항을 준용하므로 다시 1,000. 하한이 배수 앞뒤로 두 번 걸리는 유일한 경로다. 제3조에는 준용 문구가 없어 항소·상고는 앞에서 한 번으로 끝난다.",
+  "input": {
+    "caseValue": 100000,
+    "caseType": "paymentOrder",
+    "appealsLevel": "firstInstance"
+  },
+  "expected": {
+    "amount": 1000,
+    "formulaText": "1심 (×1) + 지급명령 (×0.1): 소가 100,000 × 0.005 = 1,000원 (제2조 ②항 하한) × 1 × 0.1 = 1,000원 (제7조 ④항 하한) = 1,000원 → 1,000원 (제2조 ②항 100원 절사)",
+    "dataVersion": "stamp-duty/v1.2.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-18",
+    "derivedBy": "golden-whitelist-2026-08-18 (인지법 제2조·제3조·제7조·제8조·제16조 + 인지규칙 제18조의2 정수 손계산)",
+    "noExternalCaptureReason": "하한 분기 자체가 대조 대상이라 외부 계산기의 결과를 정답으로 삼지 않는다."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "2",
+  "id": "case-013-stamp-electronic-before-effective",
+  "title": "인지액 — 제16조 시행 전 접수, 전자소송 감액 미적용 = 230,000원",
+  "source": "statute-derivation",
+  "notes": "제16조는 법률 제10860호로 신설돼 2011-10-19 시행이다. 접수일이 그 전이면 전자소송을 선택해도 10분의 9 감액이 없다. 산식에 미적용 사유가 남는지까지 본다.",
+  "input": {
+    "caseValue": 50000000,
+    "caseType": "civilFirstInstanceCollegial",
+    "appealsLevel": "firstInstance",
+    "isElectronicFiling": true,
+    "filingDate": "2011-10-18"
+  },
+  "expected": {
+    "amount": 230000,
+    "formulaText": "1심 (×1) + 전자소송 감액 미적용 (접수일 2011-10-18, 제16조 시행 2011-10-19 전): (소가 50,000,000 × 0.0045 + 5,000) × 1 = 230,000원 → 230,000원 (제2조 ②항 100원 절사)",
+    "dataVersion": "stamp-duty/v1.2.0"
+  },
+  "metadata": {
+    "oracle": "statute-derivation",
+    "derivedAt": "2026-08-18",
+    "derivedBy": "golden-whitelist-2026-08-18 (인지법 제2조·제3조·제7조·제8조·제16조 + 인지규칙 제18조의2 정수 손계산)",
+    "noExternalCaptureReason": "KLAC 자동계산은 현행 사건만 다뤄 접수일 기준 시행일 분기를 재현할 수 없다."
+  }
+}
