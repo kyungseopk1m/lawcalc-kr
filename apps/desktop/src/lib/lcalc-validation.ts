@@ -1,5 +1,7 @@
 import {
   appliedDomains,
+  CASE_VALUE_BASES,
+  PROVISIONAL_MEASURE_TYPES,
   validateAppropriationInput,
   validateDeliveryFeeInput,
   validateLawyerFeeInput,
@@ -171,6 +173,26 @@ function requireString(value: unknown, field: string) {
   }
 
   return value;
+}
+
+/**
+ * 열거값 검증. 엔진의 화이트리스트 상수를 그대로 받아 쓴다.
+ *
+ * 종전에는 `requireString` 뒤에 타입 캐스팅만 해서, 손으로 고친 파일의 엉뚱한 값이 계산
+ * 시점까지 흘러갔다. 파일은 신뢰 경계라 그 자리에서 막는다.
+ */
+function requireOneOf<T extends string>(
+  value: unknown,
+  allowed: ReadonlyArray<T>,
+  field: string,
+): T {
+  const text = requireString(value, field);
+  if (!(allowed as ReadonlyArray<string>).includes(text)) {
+    throw new Error(
+      `.lcalc 파일의 ${field} 필드는 ${allowed.join(", ")} 중 하나여야 합니다 (입력: ${text}).`,
+    );
+  }
+  return text as T;
 }
 
 function requirePositiveNumber(value: unknown, field: string) {
@@ -490,18 +512,20 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
     ...(stampDutyRecord.provisionalMeasureType === undefined
       ? {}
       : {
-          provisionalMeasureType: requireString(
+          provisionalMeasureType: requireOneOf(
             stampDutyRecord.provisionalMeasureType,
+            PROVISIONAL_MEASURE_TYPES,
             "payload.input.stampDuty.provisionalMeasureType",
-          ) as "general" | "provisionalStatus",
+          ),
         }),
     ...(stampDutyRecord.caseValueBasis === undefined
       ? {}
       : {
-          caseValueBasis: requireString(
+          caseValueBasis: requireOneOf(
             stampDutyRecord.caseValueBasis,
+            CASE_VALUE_BASES,
             "payload.input.stampDuty.caseValueBasis",
-          ) as NonNullable<LitigationCostInput["stampDuty"]["caseValueBasis"]>,
+          ),
         }),
     ...(stampDutyRecord.filingDate === undefined
       ? {}

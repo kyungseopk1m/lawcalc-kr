@@ -59,12 +59,21 @@ function assertCaseTypeAppliesDomain(
 
 // ===== Stamp Duty =====
 
-/** 소가 산정 기준 화이트리스트 (인지규칙 제18조의2). `StampDutyInput.caseValueBasis` 와 동기. */
-const CASE_VALUE_BASES: ReadonlyArray<NonNullable<StampDutyInput["caseValueBasis"]>> = [
+/**
+ * 소가 산정 기준 화이트리스트 (인지규칙 제18조의2). `StampDutyInput.caseValueBasis` 와 동기.
+ * `.lcalc` 파서도 이 상수를 쓴다. 목록을 두 벌 두면 새 값을 넣었을 때 앱이 스스로 쓴 파일을
+ * 못 여는 상태가 조용히 생긴다.
+ */
+export const CASE_VALUE_BASES: ReadonlyArray<NonNullable<StampDutyInput["caseValueBasis"]>> = [
   "amount",
   "unascertainable",
   "unascertainableHighTier",
 ];
+
+/** 보전처분 종류 화이트리스트 (인지법 제9조 제2항). `.lcalc` 파서와 공유한다. */
+export const PROVISIONAL_MEASURE_TYPES: ReadonlyArray<
+  NonNullable<StampDutyInput["provisionalMeasureType"]>
+> = ["general", "provisionalStatus"];
 
 export function validateStampDutyInput(input: StampDutyInput): void {
   const prefix = "인지대";
@@ -104,8 +113,7 @@ export function validateStampDutyInput(input: StampDutyInput): void {
   if (isProvisional) {
     if (
       input.provisionalMeasureType !== undefined &&
-      input.provisionalMeasureType !== "general" &&
-      input.provisionalMeasureType !== "provisionalStatus"
+      !PROVISIONAL_MEASURE_TYPES.includes(input.provisionalMeasureType)
     ) {
       fail(
         prefix,

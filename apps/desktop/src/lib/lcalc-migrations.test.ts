@@ -806,6 +806,58 @@ describe("validateLcalcEnvelope", () => {
     ).toBe(230_000);
   });
 
+  it("rejects a hand edited caseValueBasis or provisionalMeasureType", () => {
+    const input = {
+      stampDuty: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceSingle" as const,
+        appealsLevel: "firstInstance" as const,
+        caseValueBasis: "unascertainable" as const,
+      },
+      deliveryFee: { caseType: "civilFirstInstanceSingle" as const, partyCount: 2 },
+      lawyerFee: {
+        caseValue: 30_000_000,
+        caseType: "civilFirstInstanceSingle" as const,
+        discounts: [],
+      },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-08-18T12:00:00.000Z" });
+    const litigationFile: LcalcFile = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": result.dataVersions["stamp-duty"]!,
+        delivery: result.dataVersions.delivery!,
+        "lawyer-fee": result.dataVersions["lawyer-fee"]!,
+      },
+      payload: {
+        appVersion: "0.12.0",
+        createdAt: "2026-08-18T12:00:00.000Z",
+        input,
+        result,
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    // 파일은 손으로 고칠 수 있다. 목록에 없는 값은 봉투 검증 단계에서 막힌다 (계산까지 못 간다).
+    const stampDutyOf = (file: LcalcFile) =>
+      (file.payload as unknown as { input: { stampDuty: Record<string, unknown> } }).input
+        .stampDuty;
+
+    const badBasis = JSON.parse(JSON.stringify(litigationFile)) as LcalcFile;
+    stampDutyOf(badBasis).caseValueBasis = "unascertainableMidTier";
+    expect(() => validateLcalcEnvelope(badBasis)).toThrow(
+      /caseValueBasis 필드는 amount, unascertainable, unascertainableHighTier 중 하나여야 합니다/,
+    );
+
+    const badProvisional = JSON.parse(JSON.stringify(litigationFile)) as LcalcFile;
+    stampDutyOf(badProvisional).provisionalMeasureType = "provisionalStatusPlus";
+    expect(() => validateLcalcEnvelope(badProvisional)).toThrow(
+      /provisionalMeasureType 필드는 general, provisionalStatus 중 하나여야 합니다/,
+    );
+  });
+
   it("rejects a litigation-cost file missing a required dataVersion", () => {
     const input = {
       stampDuty: {

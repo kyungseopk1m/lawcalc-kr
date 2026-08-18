@@ -127,6 +127,8 @@ export {
   appliedDomains,
   applyStampDutyRounding,
   CASE_TYPE_META,
+  CASE_VALUE_BASES,
+  PROVISIONAL_MEASURE_TYPES,
   caseCode,
   caseNameKo,
   computeDeliveryFee,

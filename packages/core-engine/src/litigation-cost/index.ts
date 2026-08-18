@@ -44,6 +44,8 @@ export {
 } from "./helpers";
 
 export {
+  CASE_VALUE_BASES,
+  PROVISIONAL_MEASURE_TYPES,
   validateDeliveryFeeInput,
   validateKoreaLegalAidDiscountScope,
   validateLawyerFeeInput,
