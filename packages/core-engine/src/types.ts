@@ -108,6 +108,6 @@ export interface InterestResult {
   dataVersion: string;
   /** ISO 8601 datetime (예: "2026-05-09T12:34:56+09:00"). */
   computedAt: string;
-  /** STANDARD_DISCLAIMER 단일 source. 5 surface 매트릭스 정합 (CLAUDE.md L62-69). */
+  /** `STANDARD_DISCLAIMER` 단일 출처. 결과 화면과 `.lcalc` 에 저장되는 결과가 같은 문구를 쓴다. */
   disclaimer: string;
 }
