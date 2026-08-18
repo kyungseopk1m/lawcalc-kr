@@ -60,6 +60,32 @@ async function renderPng(srcPath, size, outPath) {
   return buf;
 }
 
+async function renderIcnsPng(size, outPath) {
+  const srcPath = selectSource(size);
+  if (srcPath === sources.small) {
+    return renderPng(srcPath, size, outPath);
+  }
+
+  const innerSize = Math.round((size * (824 / 1024)) / (496 / 512));
+  const inset = Math.floor((size - innerSize) / 2);
+  const inner = await renderPngBuffer(srcPath, innerSize);
+  const buf = await sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([{ input: inner, left: inset, top: inset }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+
+  writeFileSync(outPath, buf);
+  console.log(`  ${outPath.slice(repoRoot.length + 1)} - ${size}×${size} (${buf.length} bytes)`);
+  return buf;
+}
+
 async function main() {
   for (const srcPath of Object.values(sources)) {
     if (!existsSync(srcPath)) {
@@ -119,7 +145,7 @@ async function main() {
     { name: "icon_512x512@2x.png", size: 1024 },
   ];
   for (const { name, size } of icnsSpecs) {
-    await renderPng(selectSource(size), size, resolve(iconsetDir, name));
+    await renderIcnsPng(size, resolve(iconsetDir, name));
   }
   const icnsPath = resolve(iconsDir, "icon.icns");
   execSync(`iconutil -c icns -o "${icnsPath}" "${iconsetDir}"`, { stdio: "inherit" });
