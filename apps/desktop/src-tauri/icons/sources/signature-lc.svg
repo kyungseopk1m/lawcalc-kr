@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="plate" x1="78" y1="42" x2="442" y2="474" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172238"/>
+      <stop offset="0.58" stop-color="#0A101A"/>
+      <stop offset="1" stop-color="#060A11"/>
+    </linearGradient>
+    <linearGradient id="cobalt" x1="266" y1="156" x2="438" y2="375" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6C83FF"/>
+      <stop offset="1" stop-color="#4E6DF2"/>
+    </linearGradient>
+    <filter id="glyph-shadow" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#00040B" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="url(#plate)"/>
+  <g filter="url(#glyph-shadow)">
+    <path d="M66 146H118V340H233V383H66Z" fill="#F2F5FA"/>
+    <path d="M472 226H421C414 201 394 184 368 184C329 184 305 216 305 264C305 313 329 345 368 345C397 345 417 326 423 292H473C469 352 428 389 369 389C299 389 253 339 253 264C253 190 299 140 369 140C426 140 467 173 472 226Z" fill="url(#cobalt)"/>
+  </g>
+</svg>
