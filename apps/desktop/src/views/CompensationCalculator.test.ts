@@ -187,7 +187,9 @@ describe("computeStaleBadge wire (트랙 D + U 5-1 정원)", () => {
 });
 
 describe("validator 거부 path (UI 측 오류 노출 사슬)", () => {
-  it("가동연한 종료일이 사고일 이전이면 RangeError throw — UI 측 error 카드로 노출", () => {
+  // 가동연한이 사고일에 이미 지난 고령 피해자도 위자료·치료비·개호비는 인정되므로
+  // 계산을 거부하지 않는다. 일실수입만 0 이 되고 나머지 항목은 그대로 산출된다.
+  it("가동연한 경과 사건은 일실수입 0 으로 계산된다 (전체 거부 아님)", () => {
     const state = override({
       birthDate: "1900-01-01",
       accidentDate: "2026-01-01",
@@ -195,7 +197,20 @@ describe("validator 거부 path (UI 측 오류 노출 사슬)", () => {
       retirementAgeText: "65",
     });
     const input: CompensationInput = buildCompensationInput(state);
-    expect(() => computeCompensation(input)).toThrow(/가동연한 종료일/);
+    const result = computeCompensation(input);
+    expect(result.segments).toHaveLength(0);
+    expect(result.lostIncomeSubtotalWon).toBe(0);
+  });
+
+  it("생년월일이 사고일보다 늦으면 여전히 거부된다 (입력 오류)", () => {
+    const state = override({
+      birthDate: "2027-01-01",
+      accidentDate: "2026-01-01",
+      treatmentEndDate: "2026-01-01",
+      retirementAgeText: "65",
+    });
+    const input: CompensationInput = buildCompensationInput(state);
+    expect(() => computeCompensation(input)).toThrow(/birthDate/);
   });
 });
 

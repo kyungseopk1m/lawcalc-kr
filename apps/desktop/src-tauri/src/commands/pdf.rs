@@ -312,6 +312,7 @@ pub fn render_litigation_cost_pdf_bytes(view: &LitigationCostResultView) -> Resu
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_litigation_cost_summary(view);
     writer.draw_litigation_cost_distribution(view);
+    writer.draw_export_warnings(&view.export_warnings);
     writer.draw_litigation_cost_footer(view);
 
     let bytes = doc
@@ -340,6 +341,7 @@ pub fn render_compensation_pdf_bytes(view: &CompensationResultView) -> Result<Ve
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_compensation_summary(view);
     writer.draw_compensation_other_damages(view.other_damages.as_ref());
+    writer.draw_export_warnings(&view.export_warnings);
     writer.draw_compensation_segments_table(view);
     writer.draw_compensation_footer(view);
 
@@ -371,6 +373,7 @@ pub fn render_compensation_death_pdf_bytes(
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_compensation_death_summary(view);
     writer.draw_compensation_other_damages(view.other_damages.as_ref());
+    writer.draw_export_warnings(&view.export_warnings);
     writer.draw_compensation_death_segments_table(view);
     writer.draw_compensation_death_inheritance_table(view);
     writer.draw_compensation_death_footer(view);
@@ -846,6 +849,26 @@ impl<'a> PageWriter<'a> {
             self.text(label, 10.0, self.left(), self.y - 4.0);
             self.text(value, 10.0, self.left() + label_w, self.y - 4.0);
             self.advance(5.6);
+        }
+        self.advance(2.0);
+    }
+
+    /// 사용자 경고 문구 블록 (상한 적용·분할 의심·구조공단 적용 범위 등).
+    ///
+    /// 문구는 frontend 가 단일 출처에서 만들어 넘긴다. 여기서 다시 만들지 않으므로 경고가
+    /// 늘어도 화면·클립보드·PDF·CSV 가 저절로 같은 목록을 낸다. 실무에서 최종 산출물이 되는
+    /// PDF 산출근거에서 "금액이 잘렸다" 는 사실이 빠지지 않게 한다.
+    fn draw_export_warnings(&mut self, warnings: &[String]) {
+        if warnings.is_empty() {
+            return;
+        }
+        self.text("확인이 필요한 사항", 10.0, self.left(), self.y - 4.0);
+        self.advance(5.6);
+        for warning in warnings {
+            for line in wrap_text(warning, 72) {
+                self.text(&line, 8.5, self.left() + 3.0, self.y - 4.0);
+                self.advance(4.6);
+            }
         }
         self.advance(2.0);
     }
@@ -1353,6 +1376,7 @@ mod tests {
                 applied_hoffman: vec![219.610067],
                 capped_at_index: None,
             },
+            export_warnings: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1433,6 +1457,7 @@ mod tests {
                 applied_hoffman: vec![219.610067],
                 capped_at_index: None,
             },
+            export_warnings: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),

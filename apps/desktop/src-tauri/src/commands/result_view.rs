@@ -79,6 +79,10 @@ pub struct LitigationCostResultView {
     pub total_amount: f64,
     #[serde(default)]
     pub distribution: Option<LitigationCostDistributionView>,
+    /// 사용자 경고 문구 (대한법률구조공단 적용 사건 범위 등). frontend 가 단일 출처에서
+    /// 만들어 넘긴다 — 손해배상 export 와 같은 정책이다. 구 결과에는 없으므로 `default`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub export_warnings: Vec<String>,
     pub disclaimer: String,
     pub data_versions: std::collections::BTreeMap<String, String>,
     pub computed_at: String,
@@ -122,6 +126,11 @@ pub struct CompensationResultView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub other_damages: Option<CompensationOtherDamagesView>,
     pub hoffman240_cap: CompensationHoffman240CapView,
+    /// 사용자 경고 문구 (상한 적용·분할 의심 등). frontend 가 단일 출처에서 만들어 넘긴다 —
+    /// Rust 는 문구를 만들지 않고 그대로 출력한다. `.lcalc` 에 저장된 구 결과에는 없으므로
+    /// `default` 로 빈 목록이 된다 (회귀 0).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub export_warnings: Vec<String>,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,
@@ -223,6 +232,11 @@ pub struct CompensationDeathResultView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub other_damages: Option<CompensationOtherDamagesView>,
     pub hoffman240_cap: CompensationHoffman240CapView,
+    /// 사용자 경고 문구 (상한 적용·분할 의심 등). frontend 가 단일 출처에서 만들어 넘긴다 —
+    /// Rust 는 문구를 만들지 않고 그대로 출력한다. `.lcalc` 에 저장된 구 결과에는 없으므로
+    /// `default` 로 빈 목록이 된다 (회귀 0).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub export_warnings: Vec<String>,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,

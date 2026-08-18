@@ -340,6 +340,7 @@ pub fn render_litigation_cost_csv_bytes(view: &LitigationCostResultView) -> Resu
         .map(|(key, value)| format!("{key}: {value}"))
         .collect::<Vec<_>>()
         .join(" / ");
+    write_export_warnings(&mut wtr, &view.export_warnings)?;
     let versions_cell = escape_csv_cell(&versions).into_owned();
     wtr.write_record(["데이터 버전", versions_cell.as_str()])?;
     let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
@@ -362,6 +363,19 @@ fn format_inheritance_percent(numerator: i64, denominator: i64) -> String {
         return "-".to_string();
     }
     format!("{:.2}%", (numerator as f64 / denominator as f64) * 100.0)
+}
+
+/// 사용자 경고 문구 행 (상한 적용·분할 의심 등).
+///
+/// 문구는 frontend 가 단일 출처에서 만들어 넘긴다. 여기서 다시 만들지 않으므로 경고가 늘어도
+/// 화면·클립보드·PDF·CSV 가 저절로 같은 목록을 낸다. 종전에는 세 export 에 금액만 남아,
+/// **실제로 금액이 잘렸다는 사실**이 최종 산출물에서 사라졌다.
+fn write_export_warnings(wtr: &mut csv::Writer<Vec<u8>>, warnings: &[String]) -> Result<(), Error> {
+    for warning in warnings {
+        let cell = escape_csv_cell(warning).into_owned();
+        wtr.write_record(["확인 필요", cell.as_str()])?;
+    }
+    Ok(())
 }
 
 pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Vec<u8>, Error> {
@@ -455,6 +469,7 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         view.data_versions.hoffman,
         view.data_versions.leibniz
     );
+    write_export_warnings(&mut wtr, &view.export_warnings)?;
     let versions_cell = escape_csv_cell(&versions).into_owned();
     wtr.write_record(["데이터 버전", versions_cell.as_str()])?;
     let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
@@ -595,6 +610,7 @@ pub fn render_compensation_death_csv_bytes(
         view.data_versions.hoffman,
         view.data_versions.leibniz
     );
+    write_export_warnings(&mut wtr, &view.export_warnings)?;
     let versions_cell = escape_csv_cell(&versions).into_owned();
     wtr.write_record(["데이터 버전", versions_cell.as_str()])?;
     let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
@@ -824,6 +840,7 @@ mod tests {
                 applied_hoffman: vec![219.610067],
                 capped_at_index: None,
             },
+            export_warnings: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -851,6 +868,30 @@ mod tests {
         assert!(body.contains("leibniz/v1.0.0"));
         assert!(body.contains("면책 고지"));
         assert!(body.contains("검토용 계산"));
+    }
+
+    /// 화면에만 있던 경고가 export 에서 사라지던 결함의 회귀 가드. 문구는 frontend 가
+    /// 만들어 넘기므로 Rust 는 받은 문자열을 그대로 실어야 한다.
+    #[test]
+    fn compensation_csv_includes_export_warnings() {
+        let mut view = compensation_sample();
+        view.export_warnings = vec![
+            "치료비에 수치합계 20 한도가 적용돼 금액이 줄었습니다.".to_string(),
+            "보조구에 수치합계 20 한도가 적용돼 금액이 줄었습니다.".to_string(),
+        ];
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("확인 필요"));
+        assert!(body.contains("치료비에 수치합계 20 한도"));
+        assert!(body.contains("보조구에 수치합계 20 한도"));
+    }
+
+    /// 경고가 없으면 행 자체가 없어야 한다 (빈 "확인 필요" 행이 생기면 안 된다).
+    #[test]
+    fn compensation_csv_omits_warning_rows_when_empty() {
+        let bytes = render_compensation_csv_bytes(&compensation_sample()).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(!body.contains("확인 필요"));
     }
 
     #[test]
@@ -994,6 +1035,7 @@ mod tests {
                 applied_hoffman: vec![219.610067],
                 capped_at_index: None,
             },
+            export_warnings: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),

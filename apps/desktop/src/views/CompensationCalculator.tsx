@@ -60,6 +60,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import {
+  buildCompensationExportWarnings,
+  withCompensationExportWarnings,
+} from "../lib/compensation-warnings";
 import { formatWon, formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcCompensationPayload, type LcalcFile } from "../lib/ipc";
 import { useCaseSlot } from "../lib/case-file";
@@ -418,6 +422,13 @@ function buildIndustrialBenefitLines(
   ];
 }
 
+/** 클립보드용 경고 블록. 화면·PDF·CSV 와 같은 문구를 쓴다 (단일 출처). */
+function clipboardWarningLines(result: CompensationResult | CompensationAutoDeathResult): string[] {
+  const warnings = buildCompensationExportWarnings(result);
+  if (warnings.length === 0) return [];
+  return ["", "확인이 필요한 사항", ...warnings.map((w) => `- ${w}`)];
+}
+
 export function formatCompensationForClipboard(result: CompensationResult): string {
   const segmentRows = result.segments
     .map(
@@ -468,9 +479,9 @@ export function formatCompensationForClipboard(result: CompensationResult): stri
     "",
     "구간\t기간\t상실률\t단가\t호프만(적용)\t금액",
     segmentRows,
-    "",
-    STANDARD_DISCLAIMER,
   );
+  lines.push(...clipboardWarningLines(result));
+  lines.push("", STANDARD_DISCLAIMER);
   return lines.join("\n");
 }
 
@@ -764,6 +775,7 @@ export function formatCompensationDeathForClipboard(result: CompensationAutoDeat
     );
   }
 
+  lines.push(...clipboardWarningLines(result));
   lines.push("", STANDARD_DISCLAIMER);
   return lines.join("\n");
 }
@@ -989,14 +1001,14 @@ function InjuryCompensationView({
   const handleExportPdf = () =>
     runAction("pdf", async () => {
       if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
-      const path = await ipc.exportCompensationPdf(result);
+      const path = await ipc.exportCompensationPdf(withCompensationExportWarnings(result));
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
       if (!result) throw new Error("계산 후 CSV를 저장해 주세요.");
-      const path = await ipc.exportCompensationCsv(result);
+      const path = await ipc.exportCompensationCsv(withCompensationExportWarnings(result));
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
@@ -1669,14 +1681,14 @@ function DeathCompensationView({
   const handleExportPdf = () =>
     runAction("pdf", async () => {
       if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
-      const path = await ipc.exportCompensationDeathPdf(result);
+      const path = await ipc.exportCompensationDeathPdf(withCompensationExportWarnings(result));
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
       if (!result) throw new Error("계산 후 CSV를 저장해 주세요.");
-      const path = await ipc.exportCompensationDeathCsv(result);
+      const path = await ipc.exportCompensationDeathCsv(withCompensationExportWarnings(result));
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
@@ -2470,6 +2482,11 @@ function OtherDamagesResultRows({ otherDamages }: { otherDamages: OtherDamagesRe
     otherDamages.attendantCare?.hoffman240CappedAtIndex !== undefined;
   const treatment20Capped = otherDamages.treatment?.valueSum20Capped === true;
   const appliance20Capped = otherDamages.appliance?.valueSum20Capped === true;
+  // 수치합계 상한은 항목별로 걸린다. 같은 지출을 쪼개면 상한 여력이 늘어나므로, 쪼갠 것으로
+  // 의심되는 조합을 안내한다 (금액은 바꾸지 않는다).
+  const splitSuspected =
+    otherDamages.treatment?.splitSuspected === true ||
+    otherDamages.appliance?.splitSuspected === true;
   return (
     <>
       <span className="text-muted-foreground">개호비</span>
@@ -2497,6 +2514,22 @@ function OtherDamagesResultRows({ otherDamages }: { otherDamages: OtherDamagesRe
       <span className="text-right" data-testid="compensation-other-subtotal">
         {formatWon(otherDamages.subtotalWon)}
       </span>
+      {splitSuspected ? (
+        // 금액 신뢰도 경고다. 같은 화면의 다른 경고와 같은 테두리·배경·아이콘을 쓰고,
+        // `role="status"` 로 스크린리더에도 알린다 (종전에는 각주처럼 읽히는 한 줄이었다).
+        <span
+          className="col-span-2 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
+          role="status"
+          data-testid="compensation-other-split-warning"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="flex-1">
+            단가와 주기가 같고 기간이 겹치거나 이어지는 항목이 있습니다. 같은 지출을 나눠 입력하면
+            수치합계 상한이 항목마다 따로 걸려 합계가 커집니다. 하나의 지출이라면 한 항목으로 합쳐
+            주세요.
+          </span>
+        </span>
+      ) : null}
     </>
   );
 }
