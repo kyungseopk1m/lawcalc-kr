@@ -46,7 +46,7 @@ apps/*/src-tauri/.taurignore
 .vscode/
 *.swp
 
-# Local backlog / private design notes (mirrored in for-claude/)
+# Local backlog / private design notes (kept outside this repository)
 docs/plans/
 
 # Internal spec/plan docs (not part of OSS distribution)
