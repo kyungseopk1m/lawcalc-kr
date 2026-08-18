@@ -31,6 +31,8 @@ interface ExpectedTreatment {
   futureWon: number;
   subtotalWon: number;
   valueSum20Capped: boolean;
+  /** 분할 의심이 걸린 경우에만 결과에 붙는다. 안 걸리면 키 자체가 없다. */
+  splitSuspected?: boolean;
 }
 
 interface ExpectedShape {
@@ -141,6 +143,7 @@ const COVERAGE: GoldenCoverage = {
     "otherDamages.treatment.futureWon",
     "otherDamages.treatment.subtotalWon",
     "otherDamages.treatment.valueSum20Capped",
+    "otherDamages.treatment.splitSuspected",
     "otherDamages.appliance.pastWon",
     "otherDamages.appliance.futureWon",
     "otherDamages.appliance.subtotalWon",
@@ -156,8 +159,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴얼 derivation)", () => {
-  it("loads exactly 9 cases", () => {
-    expect(cases).toHaveLength(9);
+  it("loads exactly 10 cases", () => {
+    expect(cases).toHaveLength(10);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {

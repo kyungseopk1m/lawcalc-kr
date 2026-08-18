@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-017-treatment-split-suspicion",
+  "title": "auto/injury 기타손해 — 같은 지출을 두 항목으로 쪼갠 의심 조합 감지",
+  "source": "manual-derivation",
+  "notes": "향후 치료비 2건이 비용 2,400,000 과 주기 24개월이 같고, 앞 항목 종료(2030-01-01) 와 뒤 항목 시작(2031-01-01) 이 12개월 떨어져 한 주기 안에 든다. 수치합계 상한 20 이 항목별로 걸리는 탓에 한 건을 두 건으로 나누면 상한 여력이 두 배가 되므로, 계산은 그대로 두고 의심만 표시한다. 두 항목 모두 수치합계가 20 미만이라 상한은 발동하지 않아 splitSuspected 만 단독으로 검증된다. 일실수입은 case-001 baseline 재사용.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [
+        {
+          "department": "정형외과",
+          "ratio": 0.3
+        }
+      ],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    },
+    "otherDamages": {
+      "treatment": {
+        "future": [
+          {
+            "label": "보조기 교체 전반기",
+            "costWon": 2400000,
+            "kind": "recurring",
+            "firstDate": "2026-01-01",
+            "lastDate": "2030-01-01",
+            "lifespanMonths": 24,
+            "priorRatio": 0
+          },
+          {
+            "label": "보조기 교체 후반기",
+            "costWon": 2400000,
+            "kind": "recurring",
+            "firstDate": "2031-01-01",
+            "lastDate": "2033-01-01",
+            "lifespanMonths": 24,
+            "priorRatio": 0
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 360,
+        "lossRate": 0.30000000000000004,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 219.61006732,
+        "appliedHoffman": 219.61006732,
+        "amountFloorWon": 249399909
+      }
+    ],
+    "combinedLossRate": 0.30000000000000004,
+    "hoffman240CapAppliedHoffman": [219.61006732],
+    "lostIncomeSubtotalWon": 249399909,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 259679504,
+    "faultOffset": {
+      "ratio": 0,
+      "beforeWon": 259679504,
+      "afterWon": 259679504
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 259679504
+    },
+    "finalWon": 259679500,
+    "hoffman240CapCappedAtIndex": null,
+    "otherDamagesSubtotalWon": 10279595,
+    "otherDamages": {
+      "attendantCareWon": 0,
+      "treatmentWon": 10279595,
+      "applianceWon": 0,
+      "subtotalWon": 10279595,
+      "attendantCare": null,
+      "treatment": {
+        "pastWon": 0,
+        "futureWon": 10279595,
+        "subtotalWon": 10279595,
+        "valueSum20Capped": false,
+        "splitSuspected": true
+      },
+      "appliance": null
+    },
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.0.0",
+      "lifeExpectancy": "life-expectancy/v1.0.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-08-18",
+    "derivedBy": "golden-whitelist-2026-08-18 (s(m) = 1 / (1 + 0.05 x m / 12) 항별 손계산)"
+  }
+}
