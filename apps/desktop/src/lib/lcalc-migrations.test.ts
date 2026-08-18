@@ -24,7 +24,7 @@ import {
 const sampleV1: Extract<LoadableLcalcFile, { schemaVersion: "1" }> = {
   schemaVersion: "1",
   appVersion: "0.1.2",
-  dataVersion: "legal-rates/v1.0.0",
+  dataVersion: "legal-rates/v1.0.1",
   createdAt: "2026-05-09T12:00:00.000Z",
   input: {
     principal: 1_000_000,
@@ -56,7 +56,7 @@ const sampleV1: Extract<LoadableLcalcFile, { schemaVersion: "1" }> = {
       includeFirstDay: false,
       rounding: "floor",
     },
-    dataVersion: "legal-rates/v1.0.0",
+    dataVersion: "legal-rates/v1.0.1",
     computedAt: "2026-05-09T12:00:00.000Z",
     disclaimer: STANDARD_DISCLAIMER,
   },
@@ -68,7 +68,7 @@ const sampleV2: Extract<LoadableLcalcFile, { schemaVersion: "2" }> = {
   kind: "interest",
   payload: {
     appVersion: "0.1.2",
-    dataVersion: "legal-rates/v1.0.0",
+    dataVersion: "legal-rates/v1.0.1",
     createdAt: "2026-05-09T12:00:00.000Z",
     input: sampleV1.input,
     options: sampleV1.options,
@@ -82,7 +82,7 @@ const sampleV3: LcalcFile = {
   schemaVersion: "3",
   kind: "interest",
   envelopeFeatures: ["interest@1"],
-  dataVersions: { interest: "legal-rates/v1.0.0" },
+  dataVersions: { interest: "legal-rates/v1.0.1" },
   payload: sampleV2.payload,
 };
 
@@ -103,7 +103,7 @@ describe("migrateLcalcFile", () => {
     expect(migrated.payload.options).toEqual(sampleV1.options);
     expect(migrated.payload.note).toBe(sampleV1.note);
     expect(migrated.envelopeFeatures).toEqual(["interest@1"]);
-    expect(migrated.dataVersions).toEqual({ interest: "legal-rates/v1.0.0" });
+    expect(migrated.dataVersions).toEqual({ interest: "legal-rates/v1.0.1" });
   });
 
   it("hoists v2 interest payload.dataVersion into v3 envelope-level dataVersions", () => {
@@ -111,7 +111,7 @@ describe("migrateLcalcFile", () => {
 
     expect(migrated.schemaVersion).toBe("3");
     expect(migrated.envelopeFeatures).toEqual(["interest@1"]);
-    expect(migrated.dataVersions).toEqual({ interest: "legal-rates/v1.0.0" });
+    expect(migrated.dataVersions).toEqual({ interest: "legal-rates/v1.0.1" });
     expect(migrated.payload).toEqual(sampleV2.payload);
   });
 
@@ -273,7 +273,7 @@ describe("migrateLcalcFile", () => {
       kind: "litigation-cost",
       envelopeFeatures: ["litigation-cost@1"],
       dataVersions: {
-        "stamp-duty": "stamp-duty/v1.1.0",
+        "stamp-duty": "stamp-duty/v1.2.0",
         delivery: "delivery/v1.0.0",
         "lawyer-fee": "lawyer-fee/v1.2.0",
       },
@@ -310,7 +310,7 @@ describe("migrateLcalcFile", () => {
       kind: "litigation-cost",
       envelopeFeatures: ["litigation-cost@1"],
       dataVersions: {
-        "stamp-duty": "stamp-duty/v1.1.0",
+        "stamp-duty": "stamp-duty/v1.2.0",
         delivery: "delivery/v1.0.0",
         "lawyer-fee": "lawyer-fee/v1.2.0",
       },
@@ -412,7 +412,7 @@ describe("validateLcalcEnvelope", () => {
         schemaVersion: "3",
         kind: "interest",
         envelopeFeatures: ["interest"], // missing @{n}
-        dataVersions: { interest: "legal-rates/v1.0.0" },
+        dataVersions: { interest: "legal-rates/v1.0.1" },
         payload: sampleV3.payload,
       }),
     ).toThrow(
@@ -426,7 +426,7 @@ describe("validateLcalcEnvelope", () => {
         schemaVersion: "3",
         kind: "interest",
         envelopeFeatures: [],
-        dataVersions: { interest: "legal-rates/v1.0.0" },
+        dataVersions: { interest: "legal-rates/v1.0.1" },
         payload: sampleV3.payload,
       }),
     ).toThrow(".lcalc 파일의 envelopeFeatures 필드가 올바르지 않습니다.");
@@ -474,7 +474,7 @@ describe("validateLcalcEnvelope", () => {
         schemaVersion: "3",
         kind: "inheritance",
         envelopeFeatures: ["inheritance@1"],
-        dataVersions: { inheritance: "legal-rates/v1.0.0" },
+        dataVersions: { inheritance: "legal-rates/v1.0.1" },
         payload: sampleV3.payload,
       }),
     ).toThrow("payload.input.decedent");
@@ -660,7 +660,8 @@ describe("validateLcalcEnvelope", () => {
     validateLcalcEnvelope(litigationFile);
     const loaded = parseLoadedLitigationCostLcalcInput(litigationFile);
     expect(loaded.input.distribution?.mode).toBe("equal");
-    expect(loaded.result?.totalAmount).toBe(3_105_000);
+    // 왕복 충실도만 본다. 송달료 단가는 dataset 갱신마다 바뀌므로 리터럴을 두지 않는다.
+    expect(loaded.result?.totalAmount).toBe(result.totalAmount);
     expect(loaded.note).toBe("litigation note");
   });
 
@@ -708,7 +709,7 @@ describe("validateLcalcEnvelope", () => {
     expect(loaded.input.lawyerFee.caseType).toBe("paymentOrder");
     expect(loaded.input.lawyerFee.discounts).toEqual([]);
     expect(loaded.result?.lawyerFee.amount).toBe(0);
-    expect(loaded.result?.deliveryFee.amount).toBe(66_000);
+    expect(loaded.result?.deliveryFee.amount).toBe(result.deliveryFee.amount);
   });
 
   it("round-trips provisionalMeasureType + agreedFeeWon (신규 필드) through save→load", () => {
@@ -758,6 +759,51 @@ describe("validateLcalcEnvelope", () => {
     expect(loaded.input.lawyerFee.agreedFeeWon).toBe(1_000_000);
     // 재계산이 아니라 저장된 result 를 그대로 복원한다. 임시지위 인지 230,000×0.5 = 115,000.
     expect(loaded.result?.stampDuty.amount).toBe(115_000);
+  });
+
+  it("round-trips caseValueBasis (인지규칙 제18조의2 간주 소가) through save→load", () => {
+    const input = {
+      stampDuty: {
+        caseValue: 0,
+        caseType: "civilFirstInstanceSingle" as const,
+        appealsLevel: "firstInstance" as const,
+        caseValueBasis: "unascertainable" as const,
+      },
+      deliveryFee: { caseType: "civilFirstInstanceSingle" as const, partyCount: 2 },
+      lawyerFee: {
+        caseValue: 50_000_000,
+        caseType: "civilFirstInstanceSingle" as const,
+        discounts: [],
+      },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-08-18T12:00:00.000Z" });
+    const litigationFile: LcalcFile = {
+      schemaVersion: "3",
+      kind: "litigation-cost",
+      envelopeFeatures: ["litigation-cost@1"],
+      dataVersions: {
+        "stamp-duty": result.dataVersions["stamp-duty"]!,
+        delivery: result.dataVersions.delivery!,
+        "lawyer-fee": result.dataVersions["lawyer-fee"]!,
+      },
+      payload: {
+        appVersion: "0.11.0",
+        createdAt: "2026-08-18T12:00:00.000Z",
+        input,
+        result,
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+
+    const roundTripped = JSON.parse(JSON.stringify(litigationFile)) as LcalcFile;
+    validateLcalcEnvelope(roundTripped);
+    const loaded = parseLoadedLitigationCostLcalcInput(roundTripped);
+    expect(loaded.input.stampDuty.caseValueBasis).toBe("unascertainable");
+    // 필드가 유실되면 소가 0 으로 재계산되어 하한 1,000원이 나온다.
+    expect(
+      computeLitigationCost(loaded.input, { computedAt: "2026-08-18T12:00:00.000Z" }).stampDuty
+        .amount,
+    ).toBe(230_000);
   });
 
   it("rejects a litigation-cost file missing a required dataVersion", () => {

@@ -28,10 +28,10 @@ function buildInterestFile(): LcalcFile {
     schemaVersion: "3",
     kind: "interest",
     envelopeFeatures: ["interest@1"],
-    dataVersions: { interest: "legal-rates/v1.0.0" },
+    dataVersions: { interest: "legal-rates/v1.0.1" },
     payload: {
       appVersion: "0.8.0",
-      dataVersion: "legal-rates/v1.0.0",
+      dataVersion: "legal-rates/v1.0.1",
       createdAt: "2026-06-10T12:00:00.000Z",
       input: {
         principal: 1_000_000,
@@ -47,7 +47,7 @@ function buildInterestFile(): LcalcFile {
         totalInterest: 0,
         grandTotal: 1_000_000,
         options,
-        dataVersion: "legal-rates/v1.0.0",
+        dataVersion: "legal-rates/v1.0.1",
         computedAt: "2026-06-10T12:00:00.000Z",
         disclaimer: STANDARD_DISCLAIMER,
       },
@@ -85,7 +85,7 @@ describe("buildCaseLcalcFile", () => {
     expect(file.envelopeFeatures).toContain("interest@1");
     expect(file.envelopeFeatures).toContain("inheritance@1");
     expect(file.dataVersions).toEqual({
-      interest: "legal-rates/v1.0.0",
+      interest: "legal-rates/v1.0.1",
       inheritance: "inheritance/v1.0.0",
     });
     expect(() => validateLcalcEnvelope(file)).not.toThrow();

@@ -59,8 +59,11 @@ type UnknownLcalcEnvelope = {
 const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "interest@1",
   "inheritance@1",
+  "inheritance@2",
   "litigation-cost@1",
+  "litigation-cost@2",
   "appropriation@1",
+  "appropriation@2",
   "compensation@1",
   "compensation@2",
   "compensation@3",
@@ -255,6 +258,33 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
     }
     if (isSpouseOfRepresented) {
       node.isSpouseOfRepresented = true;
+    }
+  }
+
+  // 대습 원인 (제1003조 2항 2026-03-17 개정 분기). 파싱하지 않으면 결격·상실 파일이 사망으로
+  // 되돌아가 시행일 이후 상속에서 피대습자 배우자에게 없는 지분이 생긴다.
+  const representationCause = record.representationCause;
+  if (representationCause !== undefined) {
+    if (
+      representationCause !== "death" &&
+      representationCause !== "disqualified" &&
+      representationCause !== "forfeited"
+    ) {
+      throw new Error(
+        `.lcalc 파일의 ${field}.representationCause 필드는 "death" / "disqualified" / "forfeited" 중 하나여야 합니다.`,
+      );
+    }
+    node.representationCause = representationCause;
+  }
+
+  // 상속포기.
+  const renounced = record.renounced;
+  if (renounced !== undefined) {
+    if (typeof renounced !== "boolean") {
+      throw new Error(`.lcalc 파일의 ${field}.renounced 필드는 true 또는 false 여야 합니다.`);
+    }
+    if (renounced) {
+      node.renounced = true;
     }
   }
 
@@ -465,12 +495,40 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
             "payload.input.stampDuty.provisionalMeasureType",
           ) as "general" | "provisionalStatus",
         }),
+    ...(stampDutyRecord.caseValueBasis === undefined
+      ? {}
+      : {
+          caseValueBasis: requireString(
+            stampDutyRecord.caseValueBasis,
+            "payload.input.stampDuty.caseValueBasis",
+          ) as NonNullable<LitigationCostInput["stampDuty"]["caseValueBasis"]>,
+        }),
     ...(stampDutyRecord.filingDate === undefined
       ? {}
       : {
           filingDate: requireString(
             stampDutyRecord.filingDate,
             "payload.input.stampDuty.filingDate",
+          ),
+        }),
+    // 제11조 ①항 원신청서 인지액. 파싱하지 않으면 저장한 항고 인지액이 로드 때 사라져
+    // 제11조 ②항 정액 2,000원으로 되돌아간다.
+    ...(stampDutyRecord.underlyingApplicationStampDutyWon === undefined
+      ? {}
+      : {
+          underlyingApplicationStampDutyWon: requireNonNegativeNumber(
+            stampDutyRecord.underlyingApplicationStampDutyWon,
+            "payload.input.stampDuty.underlyingApplicationStampDutyWon",
+          ),
+        }),
+    // 상소심 파일의 보존용 전체 소가. 파싱하지 않으면 로드 때 버려져 소가란이 불복 범위로
+    // 덮인다 (이 필드를 만든 이유 자체가 그 유실이다).
+    ...(stampDutyRecord.fullCaseValue === undefined
+      ? {}
+      : {
+          fullCaseValue: requireNonNegativeNumber(
+            stampDutyRecord.fullCaseValue,
+            "payload.input.stampDuty.fullCaseValue",
           ),
         }),
   };
