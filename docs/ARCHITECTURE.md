@@ -5,7 +5,7 @@ lawcalc-kr 는 한국 법률 계산을 로컬에서 다루는 데스크톱 앱�
 ## 원칙
 
 - 사건 데이터는 내 컴퓨터 밖으로 나가지 않습니다.
-- 계산 단계를 검산할 수 있게 유지합니다 — 입력값, 중간 행, 산식 또는 지분, 합계, 데이터 버전이 항상 보여야 합니다.
+- 계산 단계를 검산할 수 있게 유지합니다. 입력값, 중간 행, 산식 또는 지분, 합계, 데이터 버전이 항상 보여야 합니다.
 - 법령·도메인 데이터는 UI 텍스트로 하드코딩하지 않고 버전 관리되는 원본 데이터로 다룹니다.
 - 계산 엔진은 순수 TypeScript 로 유지해 Tauri 와 독립적으로 테스트할 수 있게 합니다.
 - Tauri 명령은 파일 IO, PDF·export, 네이티브 다이얼로그, 데스크톱 패키징 같은 좁은 영역에만 둡니다.
@@ -40,7 +40,7 @@ lawcalc-kr/
 - `@lawcalc-kr/core-engine` 은 이자·상속·소송비용·변제충당의 입력/결과 타입과 계산 함수(`calculateInterest`, `calculateInheritance`, `computeLitigationCost`, `computeAppropriation`)를 공개합니다.
 - `@lawcalc-kr/compensation` 은 손해배상 엔진(`computeCompensation`)을, `@lawcalc-kr/datasets-compensation` 은 데이터셋 로더 4종과 `computeStaleBadge` 를 공개합니다.
 - `apps/desktop` 은 React 19 + Vite 셸이며, 다섯 도메인 계산기 뷰가 각각 분리되어 있습니다.
-- `apps/desktop/src/lib/ipc.ts` 가 UI 동작을 Tauri 명령으로 매핑합니다 — 도메인별 PDF·CSV export, `.lcalc` 저장/불러오기, 클립보드 복사.
+- `apps/desktop/src/lib/ipc.ts` 가 UI 동작을 Tauri 명령으로 매핑합니다. 도메인별 PDF·CSV export, `.lcalc` 저장/불러오기, 클립보드 복사입니다.
 - Rust 명령의 역할은 좁게 한정합니다. 로컬 파일 IO, 네이티브 다이얼로그, PDF·export 백엔드, 클립보드 통합에 집중하고 도메인 계산 정책은 두지 않습니다.
 
 ## 모듈 책임
@@ -122,7 +122,7 @@ UI 는 표시용으로 숫자·날짜를 포매팅할 수 있지만, 계산에 �
 
 ## PDF 엔진
 
-PDF export 는 [`printpdf`](https://crates.io/crates/printpdf) 0.7 을 사용합니다. `typst-as-library` 나 HTML-to-PDF 경로 대신 이 라이브러리를 선택한 이유는 보고서가 단일 페이지 표 형식이기 때문입니다 — typst 컴파일러는 우리가 쓰지 않을 레이아웃 기능 때문에 데스크톱 바이너리를 수십 MB 부풀리고, Chromium 기반 파이프라인은 로컬에서 도는 앱에 런타임 의존성을 더합니다. `printpdf` 는 순수 Rust 이며, 안정적인 수동 레이아웃 API 와 임베드된 TrueType 폰트 + subset 을 지원합니다. Pretendard Regular (SIL OFL 1.1) 는 `apps/desktop/src-tauri/assets/fonts/Pretendard-Regular.ttf` 로 함께 배포되며 `include_bytes!` 로 임베드되어 호스트 폰트 캐시에 의존하지 않고 한글 글리프가 렌더링됩니다. OFL 본문은 바이너리 옆에 `Pretendard-OFL.txt` 로 보존됩니다. exporter 는 제목, 요약 블록, 구간 표, 선택적 노트, 그리고 면책 고지 / `dataVersion` / `computedAt` 이 포함된 footer 를 작성합니다 — 모두 화면에 표시되는 것과 동일한 필드입니다.
+PDF export 는 [`printpdf`](https://crates.io/crates/printpdf) 0.7 을 사용합니다. `typst-as-library` 나 HTML-to-PDF 경로 대신 이 라이브러리를 선택한 이유는 보고서가 단일 페이지 표 형식이기 때문입니다. typst 컴파일러는 우리가 쓰지 않을 레이아웃 기능 때문에 데스크톱 바이너리를 수십 MB 부풀리고, Chromium 기반 파이프라인은 로컬에서 도는 앱에 런타임 의존성을 더합니다. `printpdf` 는 순수 Rust 이며, 안정적인 수동 레이아웃 API 와 임베드된 TrueType 폰트 + subset 을 지원합니다. Pretendard Regular (SIL OFL 1.1) 는 `apps/desktop/src-tauri/assets/fonts/Pretendard-Regular.ttf` 로 함께 배포되며 `include_bytes!` 로 임베드되어 호스트 폰트 캐시에 의존하지 않고 한글 글리프가 렌더링됩니다. OFL 본문은 바이너리 옆에 `Pretendard-OFL.txt` 로 보존됩니다. exporter 는 제목, 요약 블록, 구간 표, 선택적 노트, 그리고 면책 고지 / `dataVersion` / `computedAt` 이 포함된 footer 를 작성합니다. 모두 화면에 표시되는 것과 동일한 필드입니다.
 
 ## 비목표
 
