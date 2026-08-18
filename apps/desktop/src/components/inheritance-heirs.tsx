@@ -18,12 +18,23 @@ export interface RepInput {
   name: string;
   /** 피대습자의 배우자(며느리·사위)인지 — §1009② 5할 가산 대상. */
   isSpouseOfRepresented?: boolean;
+  /** 대습상속인 본인의 상속포기. */
+  renounced?: boolean;
 }
+
+export type RepresentationCause = "death" | "disqualified" | "forfeited";
 
 export interface HeirInput {
   id: string;
   name: string;
   deceasedBeforeOpening: boolean;
+  /**
+   * 대습 원인. 제1003조 2항이 2026-03-17 개정으로 대습 배우자를 "상속개시전에 사망한
+   * 사람의 배우자" 로 좁혀, 시행일 이후 개시 상속에서는 원인에 따라 금액이 갈린다.
+   */
+  representationCause?: RepresentationCause;
+  /** 상속포기 (§1041·§1042). 사망·결격과 별개 사유다 — 포기는 대습 원인이 아니다(§1001). */
+  renounced?: boolean;
   /** 촌수 — 직계존속·방계 4순위에서 최근친 우선 판정(§1000②). 그 외 그룹은 미사용. */
   degree?: number;
   representatives: RepInput[];
@@ -61,6 +72,12 @@ export function toHeirNode(h: HeirInput, allowRepresentation: boolean): HeirNode
   if (name) {
     node.name = name;
   }
+  if (h.renounced) {
+    node.renounced = true;
+  }
+  if (h.deceasedBeforeOpening && h.representationCause && h.representationCause !== "death") {
+    node.representationCause = h.representationCause;
+  }
   if (h.degree !== undefined) {
     node.degree = h.degree;
   }
@@ -74,10 +91,36 @@ export function toHeirNode(h: HeirInput, allowRepresentation: boolean): HeirNode
       if (r.isSpouseOfRepresented) {
         representative.isSpouseOfRepresented = true;
       }
+      if (r.renounced) {
+        representative.renounced = true;
+      }
       return representative;
     });
   }
   return node;
+}
+
+/**
+ * `inheritance@2` 로 올려야 하는 파일인지 — 새 의미 필드가 실제로 담겼는지 본다.
+ *
+ * optional 필드는 **구파일 → 신앱** 방향만 안전하다. 반대 방향에서 구앱이 이 필드를 버리면
+ * 포기자가 지분을 받고(배우자 3/5·자녀A 2/5 → 3/7·2/7·2/7), 결격 대습이 사망 대습으로
+ * 되돌아가 피대습자 배우자에게 없는 지분이 생긴다. 둘 다 경고 없는 금액 변경이다.
+ */
+export function hasInheritanceV2Fields(input: InheritanceInput): boolean {
+  const walk = (nodes: HeirNode[] | undefined): boolean =>
+    (nodes ?? []).some(
+      (n) =>
+        n.renounced === true ||
+        (n.representationCause !== undefined && n.representationCause !== "death") ||
+        walk(n.representatives),
+    );
+  return [
+    input.linealDescendants,
+    input.linealAscendants,
+    input.siblings,
+    input.collateralFourth,
+  ].some(walk);
 }
 
 export function fromHeirNode(h: HeirNode): HeirInput {
@@ -85,12 +128,15 @@ export function fromHeirNode(h: HeirNode): HeirInput {
     id: newHeirId(),
     name: h.name ?? "",
     deceasedBeforeOpening: h.deceasedBeforeOpening,
+    ...(h.representationCause ? { representationCause: h.representationCause } : {}),
+    ...(h.renounced ? { renounced: true } : {}),
     ...(h.degree !== undefined ? { degree: h.degree } : {}),
     representatives:
       h.representatives?.map((representative) => ({
         id: newHeirId(),
         name: representative.name ?? "",
         ...(representative.isSpouseOfRepresented ? { isSpouseOfRepresented: true } : {}),
+        ...(representative.renounced ? { renounced: true } : {}),
       })) ?? [],
   };
 }
@@ -157,10 +203,12 @@ export function heirsForDirtySnapshot(heirs: HeirInput[]) {
   return heirs.map((heir) => ({
     name: heir.name,
     deceasedBeforeOpening: heir.deceasedBeforeOpening,
+    renounced: heir.renounced ?? false,
     degree: heir.degree,
     representatives: heir.representatives.map((representative) => ({
       name: representative.name,
       isSpouseOfRepresented: representative.isSpouseOfRepresented ?? false,
+      renounced: representative.renounced ?? false,
     })),
   }));
 }
@@ -265,7 +313,7 @@ export function HeirGroupCard({
                     </option>
                   ))}
                 </select>
-                <span className="text-[11px]">최근친만 상속 (§1000②)</span>
+                <span className="text-[11px]">최근친만 상속 (제1000조 2항)</span>
               </label>
             ) : null}
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -276,11 +324,53 @@ export function HeirGroupCard({
                   update(idx, {
                     deceasedBeforeOpening: e.target.checked,
                     representatives: e.target.checked ? h.representatives : [],
+                    // 포기와 배타 — 상속개시 전에 사망한 사람은 포기할 수 없고, 결격자는
+                    // 포기할 지분이 없다. 엔진도 이 조합을 거부한다.
+                    ...(e.target.checked ? { renounced: false } : {}),
                   })
                 }
               />
-              상속개시 전 사망 (또는 결격)
+              상속개시 전 사망·결격·상속권 상실
             </label>
+            {h.deceasedBeforeOpening ? (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>대습 원인</span>
+                <select
+                  className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+                  value={h.representationCause ?? "death"}
+                  onChange={(e) =>
+                    update(idx, { representationCause: e.target.value as RepresentationCause })
+                  }
+                >
+                  <option value="death">상속개시 전 사망</option>
+                  <option value="disqualified">상속결격 (제1004조)</option>
+                  <option value="forfeited">상속권 상실선고 (제1004조의2)</option>
+                </select>
+              </label>
+            ) : null}
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={h.renounced ?? false}
+                onChange={(e) =>
+                  update(idx, {
+                    renounced: e.target.checked,
+                    // 포기를 고르면 대습 입력을 비운다. 남겨 두면 화면에는 대습상속인이
+                    // 보이는데 결과표에서만 사라진다.
+                    ...(e.target.checked
+                      ? { deceasedBeforeOpening: false, representatives: [] }
+                      : {}),
+                  })
+                }
+              />
+              상속포기 (제1041조)
+            </label>
+            {h.renounced ? (
+              <p className="text-[11px] text-muted-foreground">
+                포기자는 상속개시시부터 상속인이 아니었던 것으로 봅니다(제1042조). 포기는 대습
+                원인이 아니므로(제1001조) 대습상속인이 생기지 않습니다.
+              </p>
+            ) : null}
             {allowRepresentation && h.deceasedBeforeOpening ? (
               <div className="grid gap-2 border-t border-border pt-2">
                 <p className="text-xs font-medium text-foreground">대습상속인 (1차)</p>
@@ -310,7 +400,15 @@ export function HeirGroupCard({
                           updateRep(idx, repIdx, { isSpouseOfRepresented: e.target.checked })
                         }
                       />
-                      피대습자(사망한 상속인)의 배우자 — 5할 가산 (§1009②)
+                      피대습자의 배우자 — 5할 가산 (제1009조 2항)
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={r.renounced ?? false}
+                        onChange={(e) => updateRep(idx, repIdx, { renounced: e.target.checked })}
+                      />
+                      이 대습상속인의 상속포기 (제1041조)
                     </label>
                   </div>
                 ))}

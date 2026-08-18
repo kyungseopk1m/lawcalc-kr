@@ -23,6 +23,7 @@ import {
   HeirGroupCard,
   applyInheritanceInput,
   buildInheritanceInput,
+  hasInheritanceV2Fields,
   heirsForDirtySnapshot,
   type DecedentInput,
   type HeirInput,
@@ -52,11 +53,13 @@ function heirsFromNodesForDirtySnapshot(heirs: HeirNode[] | undefined, defaultDe
     heirs?.map((heir) => ({
       name: heir.name ?? "",
       deceasedBeforeOpening: heir.deceasedBeforeOpening,
+      renounced: heir.renounced ?? false,
       degree: heir.degree ?? defaultDegree,
       representatives:
         heir.representatives?.map((representative) => ({
           name: representative.name ?? "",
           isSpouseOfRepresented: representative.isSpouseOfRepresented ?? false,
+          renounced: representative.renounced ?? false,
         })) ?? [],
     })) ?? []
   );
@@ -215,7 +218,9 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     return {
       schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
       kind: "inheritance",
-      envelopeFeatures: ["inheritance@1"],
+      // 새 의미 필드(포기·대습 원인)가 실제로 담긴 파일만 @2 로 올린다. 구앱이 이 필드를
+      // 버리면 포기자가 지분을 받거나 대습 배우자 슬롯이 되살아나 금액이 조용히 달라진다.
+      envelopeFeatures: [hasInheritanceV2Fields(input) ? "inheritance@2" : "inheritance@1"],
       dataVersions: { inheritance: calculated.dataVersion },
       payload,
     };
