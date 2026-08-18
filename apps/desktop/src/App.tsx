@@ -14,6 +14,9 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -21,6 +24,8 @@ import {
   addDays,
   buildInterestClaimText,
   calculateInterest,
+  loadLegalRates,
+  rateHistoryFor,
   type CalcOptions,
   type ClaimTextEnding,
   type InterestInput,
@@ -57,7 +62,11 @@ import {
   type LcalcInterestPayload,
 } from "./lib/ipc";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "./lib/lcalc-migrations";
-import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "./lib/lcalc-dirty-state";
+import {
+  createLcalcDirtySnapshot,
+  useHasUnsavedLcalcChanges,
+  useLcalcDirtyTracker,
+} from "./lib/lcalc-dirty-state";
 import {
   parseLoadedCaseLcalcInput,
   parseLoadedLcalcInput,
@@ -98,6 +107,18 @@ type ActionName = "pdf" | "csv" | "copy" | "claim" | "save" | "load" | "caseSave
 
 type TabId = "interest" | "inheritance" | "litigationCost" | "appropriation" | "compensation";
 
+/**
+ * 상단 탭. 종전에는 `<Button>` 다섯 개라 스크린리더가 탭으로 인식하지 못했고, 활성 탭이
+ * 배경색으로만 구분돼 색을 구분하기 어려운 사용자에게는 표시가 없었다.
+ */
+const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
+  { id: "interest", label: "이자 계산" },
+  { id: "inheritance", label: "상속분 간이 계산" },
+  { id: "litigationCost", label: "소송비용" },
+  { id: "appropriation", label: "변제충당" },
+  { id: "compensation", label: "손해배상" },
+];
+
 const TAB_BY_CALCULATION: Record<LcalcCaseCalculationKey, TabId> = {
   interest: "interest",
   inheritance: "inheritance",
@@ -122,10 +143,35 @@ function toLegalRatePreset(
   return customRate > 0 ? { customRate } : undefined;
 }
 
+/**
+ * 프리셋이 계산 기간 전체를 덮는지 미리 본다.
+ *
+ * 덮지 못하면 `resolveSegments` 가 함수명과 영어 지시문이 든 RangeError 를 던지고, 그 문구가
+ * 결과 영역 빨간 박스에 그대로 노출된다 ("supply an explicit segment" 가 이 앱의 "이자율 구간
+ * 직접 입력" 을 가리킨다는 걸 알아볼 방법이 없다). 계산 자체를 막고 한국어로 안내한다.
+ *
+ * 경계일은 하드코딩하지 않고 데이터셋에서 읽는다 — 데이터가 바뀌면 문구도 따라간다.
+ */
+export function validatePresetCoverage(
+  input: Pick<InterestInput, "startDate" | "endDate"> & { segments?: RateSegment[] },
+  preset: LegalRatePresetOption,
+): string {
+  if (preset === "custom") return "";
+  if ((input.segments ?? []).length > 0) return "";
+  if (!input.startDate || !input.endDate || input.endDate < input.startDate) return "";
+  const history = rateHistoryFor(loadLegalRates(), preset);
+  const earliest = history[0]?.from;
+  if (earliest === undefined || input.startDate >= earliest) return "";
+  const label = legalRateOptions[preset].label;
+  return `${label} 이율은 ${earliest} 부터 적용됩니다. 그 이전 기간은 아래 "이자율 구간 직접 입력" 으로 지정해 주세요.`;
+}
+
 function validateInput(input: InterestInput, preset: LegalRatePresetOption, customRate: number) {
   const segmentError = validateSegments(input.startDate, input.endDate, input.segments ?? []);
+  const presetError = validatePresetCoverage(input, preset);
 
   return {
+    preset: presetError,
     principal: input.principal > 0 ? "" : "원금은 0보다 큰 정수여야 합니다.",
     dateRange:
       input.startDate.length > 0 && input.endDate.length > 0 && input.endDate >= input.startDate
@@ -303,6 +349,43 @@ export function App() {
     [customRate, endDate, note, options, preset, principal, segments, startDate],
   );
   const markInterestClean = useLcalcDirtyTracker("interest", dirtySnapshot);
+  const hasUnsavedLcalcChanges = useHasUnsavedLcalcChanges();
+  // 최신 값을 리스너에서 읽는다. 값이 바뀔 때마다 리스너를 다시 붙이면 그 사이에 닫기
+  // 이벤트가 오면 놓친다.
+  const hasUnsavedRef = useRef(hasUnsavedLcalcChanges);
+  hasUnsavedRef.current = hasUnsavedLcalcChanges;
+
+  /**
+   * 창을 닫을 때 미저장 경고.
+   *
+   * Tauri 는 네이티브 창 닫기를 `CloseRequested` 로 가로채므로 `beforeunload` 가 뜨지 않는다.
+   * 탭 이동은 패널을 `hidden` 으로만 숨겨 상태가 살아 있으므로 창 닫기만 해당한다.
+   * dev 서버(브라우저)에서는 Tauri API 가 없으므로 등록하지 않는다.
+   *
+   * 확인 창은 **웹뷰의 `window.confirm` 이 아니라 플러그인의 네이티브 다이얼로그**를 쓴다.
+   * wry 의 `WryWebViewUIDelegate` 는 파일 업로드 패널·미디어 권한·새 창만 구현하고
+   * `runJavaScriptConfirmPanel` 이 없어서, macOS WKWebView 에서 `window.confirm()` 은
+   * 아무것도 띄우지 않고 즉시 false 를 반환한다. 그러면 미저장 상태에서 항상 취소로 읽혀
+   * **창이 영영 닫히지 않는다.**
+   */
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unlisten = getCurrentWindow().onCloseRequested(async (event) => {
+      if (!hasUnsavedRef.current) return;
+      const proceed = await ask("저장하지 않은 계산 내용이 있습니다. 창을 닫으면 사라집니다.", {
+        title: "LawCalc Korea",
+        kind: "warning",
+        okLabel: "닫기",
+        cancelLabel: "취소",
+      });
+      if (!proceed) {
+        event.preventDefault();
+      }
+    });
+    return () => {
+      void unlisten.then((stop) => stop());
+    };
+  }, []);
 
   const input = useMemo<InterestInput>(() => {
     const legalRatePreset = toLegalRatePreset(preset, customRate);
@@ -319,7 +402,7 @@ export function App() {
   }, [customRate, endDate, note, options, preset, principal, segments, startDate]);
   const errors = validateInput(input, preset, customRate);
   const hasErrors = Boolean(
-    errors.principal || errors.dateRange || errors.customRate || errors.segments,
+    errors.principal || errors.dateRange || errors.customRate || errors.segments || errors.preset,
   );
   const [calculationError, setCalculationError] = useState("");
   const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
@@ -603,47 +686,24 @@ export function App() {
       <Header />
 
       <nav className="border-b border-border bg-background">
-        <div className="mx-auto flex w-full max-w-6xl gap-1 px-4 py-2 sm:px-6">
-          <Button
-            variant={activeTab === "interest" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("interest")}
-            type="button"
-          >
-            이자 계산
-          </Button>
-          <Button
-            variant={activeTab === "inheritance" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("inheritance")}
-            type="button"
-          >
-            상속분 간이 계산
-          </Button>
-          <Button
-            variant={activeTab === "litigationCost" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("litigationCost")}
-            type="button"
-          >
-            소송비용
-          </Button>
-          <Button
-            variant={activeTab === "appropriation" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("appropriation")}
-            type="button"
-          >
-            변제충당
-          </Button>
-          <Button
-            variant={activeTab === "compensation" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setActiveTab("compensation")}
-            type="button"
-          >
-            손해배상
-          </Button>
+        <div className="mx-auto flex w-full max-w-6xl gap-1 px-4 py-2 sm:px-6" role="tablist">
+          {TABS.map((tab) => (
+            <Button
+              key={tab.id}
+              id={`tab-${tab.id}`}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`tabpanel-${tab.id}`}
+              variant={activeTab === tab.id ? "default" : "ghost"}
+              size="sm"
+              // 색 외의 표시 — 활성 탭에 밑줄과 굵기를 준다.
+              className={activeTab === tab.id ? "font-semibold underline underline-offset-4" : ""}
+              onClick={() => setActiveTab(tab.id)}
+              type="button"
+            >
+              {tab.label}
+            </Button>
+          ))}
           <div className="ml-auto flex items-center gap-2">
             <input
               aria-label="사건번호·사건명"
@@ -686,22 +746,46 @@ export function App() {
         </div>
       ) : null}
 
-      <div className={activeTab === "inheritance" ? "contents" : "hidden"}>
+      <div
+        className={activeTab === "inheritance" ? "contents" : "hidden"}
+        role="tabpanel"
+        id="tabpanel-inheritance"
+        aria-labelledby="tab-inheritance"
+      >
         <InheritanceCalculator active={activeTab === "inheritance"} />
       </div>
-      <div className={activeTab === "litigationCost" ? "contents" : "hidden"}>
+      <div
+        className={activeTab === "litigationCost" ? "contents" : "hidden"}
+        role="tabpanel"
+        id="tabpanel-litigationCost"
+        aria-labelledby="tab-litigationCost"
+      >
         <LitigationCostCalculator active={activeTab === "litigationCost"} />
       </div>
-      <div className={activeTab === "appropriation" ? "contents" : "hidden"}>
+      <div
+        className={activeTab === "appropriation" ? "contents" : "hidden"}
+        role="tabpanel"
+        id="tabpanel-appropriation"
+        aria-labelledby="tab-appropriation"
+      >
         <AppropriationCalculator active={activeTab === "appropriation"} />
       </div>
-      <div className={activeTab === "compensation" ? "contents" : "hidden"}>
+      <div
+        className={activeTab === "compensation" ? "contents" : "hidden"}
+        role="tabpanel"
+        id="tabpanel-compensation"
+        aria-labelledby="tab-compensation"
+      >
         <CompensationCalculator active={activeTab === "compensation"} />
       </div>
+      {/* 이자 탭의 패널은 이 `main` 자체다. `role="tabpanel"` 을 씌우면 main 랜드마크가
+          사라지므로 id 와 라벨만 연결한다 (탭의 `aria-controls` 는 그대로 가리킨다). */}
       <main
         className={`mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)] ${
           activeTab === "interest" ? "" : "hidden"
         }`}
+        id="tabpanel-interest"
+        aria-labelledby="tab-interest"
       >
         <section className="space-y-4" aria-labelledby="input-title">
           <Card>
@@ -723,7 +807,9 @@ export function App() {
               <LegalRatePreset
                 value={preset}
                 customRate={customRate}
-                error={errors.customRate}
+                error={errors.customRate || errors.preset}
+                startDate={startDate}
+                endDate={endDate}
                 onValueChange={setPreset}
                 onCustomRateChange={setCustomRate}
               />
