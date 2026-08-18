@@ -249,6 +249,122 @@ describe("computeAppropriation — 다수 채권 + 법정충당 (477조)", () =>
     expect(c2.statutoryRank?.proportionalShare).toEqual({ numerator: 3000, denominator: 4000 });
   });
 
+  /**
+   * 민법 제477조 제4호 비례 안분의 불변식.
+   *
+   * 직전 구현은 마지막 채권에 절사 잔여를 몰아주면서 그 채권이 자기 잔액에 걸리면
+   * 차액을 어느 채권에도 충당하지 않고 버렸다. 순위가 이미 매겨진 채권은 다음
+   * 라운드의 `open` 필터에서 제외되어 재분배도 되지 않았다.
+   */
+  describe("동순위 안분 불변식", () => {
+    const legal = (balances: Array<[string, number]>, amount: number): AppropriationInput => ({
+      claims: balances.map(([id, principalBalance]) => ({
+        id,
+        principalBalance,
+        dueAt: "2025-01-01",
+      })),
+      payment: { amount, allocation: { type: "legal" } },
+      computedAt: "2026-05-15",
+    });
+
+    it("변제액이 총채무 이하이면 전액 충당된다 (잔여 0)", () => {
+      const cases: Array<[Array<[string, number]>, number]> = [
+        [
+          [
+            ["a", 3],
+            ["b", 1],
+            ["c", 2],
+          ],
+          5,
+        ],
+        [
+          [
+            ["a", 20],
+            ["b", 20],
+            ["c", 19],
+            ["d", 7],
+            ["e", 9],
+          ],
+          74,
+        ],
+        [
+          [
+            ["a", 1000],
+            ["b", 1000],
+            ["c", 1000],
+          ],
+          1,
+        ],
+        [
+          [
+            ["a", 7],
+            ["b", 11],
+            ["c", 13],
+          ],
+          17,
+        ],
+      ];
+      for (const [balances, amount] of cases) {
+        const result = computeAppropriation(legal(balances, amount));
+        expect(result.payment.appliedAmount).toBe(amount);
+        expect(result.payment.unappliedAmount).toBe(0);
+        const sum = result.claims.reduce((acc, c) => acc + c.totalApplied, 0);
+        expect(sum).toBe(amount);
+      }
+    });
+
+    it("변제액이 총채무를 넘으면 초과분만 잔여로 남는다", () => {
+      const result = computeAppropriation(
+        legal(
+          [
+            ["a", 3],
+            ["b", 1],
+            ["c", 2],
+          ],
+          10,
+        ),
+      );
+      expect(result.payment.appliedAmount).toBe(6);
+      expect(result.payment.unappliedAmount).toBe(4);
+    });
+
+    it("채권 입력 순서를 바꿔도 같은 채권이 같은 금액을 받는다", () => {
+      const balances: Array<[string, number]> = [
+        ["a", 3],
+        ["b", 1],
+        ["c", 2],
+      ];
+      const normalize = (input: AppropriationInput) =>
+        computeAppropriation(input)
+          .claims.map((c) => [c.claimId, c.totalApplied] as const)
+          .sort((x, y) => x[0].localeCompare(y[0]));
+
+      const forward = normalize(legal(balances, 5));
+      const reversed = normalize(legal([...balances].reverse(), 5));
+      const rotated = normalize(legal([balances[1]!, balances[2]!, balances[0]!], 5));
+
+      expect(reversed).toEqual(forward);
+      expect(rotated).toEqual(forward);
+    });
+
+    it("배분액이 각 채권 잔액을 넘지 않는다", () => {
+      const result = computeAppropriation(
+        legal(
+          [
+            ["a", 1],
+            ["b", 100],
+          ],
+          50,
+        ),
+      );
+      const a = result.claims.find((c) => c.claimId === "a")!;
+      const b = result.claims.find((c) => c.claimId === "b")!;
+      expect(a.totalApplied).toBeLessThanOrEqual(1);
+      expect(b.totalApplied).toBeLessThanOrEqual(100);
+      expect(a.totalApplied + b.totalApplied).toBe(50);
+    });
+  });
+
   it("모든 채권 변제기 미도래 — 미도래 tier 안에서 정렬 후 분배", () => {
     const input: AppropriationInput = {
       claims: [
@@ -353,5 +469,119 @@ describe("computeAppropriation — 메타 필드", () => {
     expect(result.totals.remainingInterest).toBe(50);
     expect(result.totals.remainingPrincipal).toBe(1500);
     expect(result.totals.remainingGrandTotal).toBe(1550);
+  });
+});
+
+/**
+ * APP-3 — 변제기 도래 판정은 **변제 시점** 기준이다 (민법 제477조 1호).
+ *
+ * 종전엔 `computedAt ?? 오늘` 로 판정해서 (1) 과거 변제의 충당 순서를 재현할 수 없었고
+ * (2) `.lcalc` 를 저장했다 나중에 열면 그 사이 `dueAt` 이 지나 같은 파일이 다른 결과를 냈다.
+ * `payment.paidAt` 미지정 시에는 종전 동작 그대로다 (회귀 0).
+ */
+describe("computeAppropriation — 변제일 (payment.paidAt) [APP-3]", () => {
+  // 변제이익이 높은 `benefit`(rank 0)의 변제기가 `late`(rank 1)보다 늦다. 두 채권이 모두
+  // 도래한 시점에서는 변제이익이 앞서지만(제477조 2호), 아직 도래 전이면 도래한 채권이
+  // 먼저 충당된다(1호). 기준일이 바뀌면 결과가 실제로 뒤집히는 조합이다.
+  const twoClaims = (paidAt?: string): AppropriationInput => ({
+    claims: [
+      { id: "benefit", principalBalance: 100_000, dueAt: "2026-01-01", debtorBenefitRank: 0 },
+      { id: "late", principalBalance: 100_000, dueAt: "2024-01-01", debtorBenefitRank: 1 },
+    ],
+    payment: {
+      amount: 50_000,
+      allocation: { type: "legal" },
+      ...(paidAt === undefined ? {} : { paidAt }),
+    },
+    computedAt: "2026-05-15",
+  });
+
+  const appliedTo = (input: AppropriationInput) =>
+    Object.fromEntries(computeAppropriation(input).claims.map((c) => [c.claimId, c.totalApplied]));
+
+  it("paidAt 미지정 시 computedAt 기준 — 둘 다 도래해 변제이익이 앞선다 (기존 동작)", () => {
+    expect(appliedTo(twoClaims())).toEqual({ benefit: 50_000, late: 0 });
+  });
+
+  it("paidAt 을 과거로 주면 그 시점 기준으로 도래를 판정한다 (결과가 뒤집힌다)", () => {
+    // 2025-06-01 시점엔 benefit(2026-01-01)이 미도래 → 도래한 late 가 먼저 충당된다.
+    expect(appliedTo(twoClaims("2025-06-01"))).toEqual({ benefit: 0, late: 50_000 });
+  });
+
+  it("도래 채권이 하나도 없으면 미도래 채권에 충당한다 (제477조 2호 이하)", () => {
+    const input: AppropriationInput = {
+      claims: [{ id: "future", principalBalance: 100_000, dueAt: "2026-01-01" }],
+      payment: { amount: 50_000, allocation: { type: "legal" }, paidAt: "2020-01-01" },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    expect(result.claims[0]?.totalApplied).toBe(50_000);
+    expect(result.claims[0]?.statutoryRank?.dueReached).toBe(false);
+  });
+
+  it("dueAt === paidAt 경계는 도래로 본다", () => {
+    const input: AppropriationInput = {
+      claims: [
+        { id: "boundary", principalBalance: 100_000, dueAt: "2025-06-01" },
+        { id: "later", principalBalance: 100_000, dueAt: "2025-12-01" },
+      ],
+      payment: { amount: 50_000, allocation: { type: "legal" }, paidAt: "2025-06-01" },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    expect(result.claims[0]?.statutoryRank?.dueReached).toBe(true);
+    expect(result.claims[0]?.totalApplied).toBe(50_000);
+    expect(result.claims[1]?.totalApplied).toBe(0);
+  });
+
+  it("dueAt 하루 뒤 paidAt 은 미도래", () => {
+    const input: AppropriationInput = {
+      claims: [
+        { id: "a", principalBalance: 100_000, dueAt: "2025-06-01" },
+        { id: "b", principalBalance: 100_000, dueAt: "2025-06-02" },
+      ],
+      payment: { amount: 200_000, allocation: { type: "legal" }, paidAt: "2025-06-01" },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    expect(result.claims[0]?.statutoryRank?.dueReached).toBe(true);
+    expect(result.claims[1]?.statutoryRank?.dueReached).toBe(false);
+  });
+
+  it("paidAt 이 computedAt 을 덮어써도 result.computedAt 은 계산 시각 그대로다", () => {
+    const result = computeAppropriation(twoClaims("2025-06-01"));
+    expect(result.computedAt).toBe("2026-05-15");
+  });
+
+  it("지정충당 잉여의 법정충당 cascade 도 paidAt 을 기준으로 한다", () => {
+    const input: AppropriationInput = {
+      claims: [
+        { id: "target", principalBalance: 30_000, dueAt: "2024-01-01" },
+        { id: "future", principalBalance: 100_000, dueAt: "2026-01-01" },
+        { id: "past", principalBalance: 100_000, dueAt: "2024-06-01" },
+      ],
+      payment: {
+        amount: 80_000,
+        allocation: { type: "agreement", targets: [{ claimId: "target", amount: 30_000 }] },
+        paidAt: "2025-06-01",
+      },
+      computedAt: "2026-05-15",
+    };
+    const result = computeAppropriation(input);
+    // 잉여 50,000 은 2025-06-01 기준 도래한 past 로 간다. future 는 아직 미도래.
+    expect(Object.fromEntries(result.claims.map((c) => [c.claimId, c.totalApplied]))).toEqual({
+      target: 30_000,
+      past: 50_000,
+      future: 0,
+    });
+  });
+
+  it("paidAt 형식이 ISO 가 아니면 거부한다", () => {
+    expect(() =>
+      computeAppropriation({
+        claims: [{ id: "c1", principalBalance: 100_000, dueAt: "2025-01-01" }],
+        payment: { amount: 1_000, allocation: { type: "legal" }, paidAt: "2025/06/01" },
+      }),
+    ).toThrow(/paidAt 은 YYYY-MM-DD 형식이어야 합니다/);
   });
 });

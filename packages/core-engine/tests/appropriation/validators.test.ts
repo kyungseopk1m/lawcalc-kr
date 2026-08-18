@@ -51,7 +51,7 @@ describe("validateAppropriationInput — Korean RangeError 분기", () => {
       ...base(),
       claims: [{ id: "c1", principalBalance: -100, dueAt: "2025-01-01" }],
     };
-    expect(() => validateAppropriationInput(input)).toThrow(/principalBalance.+0 이상 정수/);
+    expect(() => validateAppropriationInput(input)).toThrow(/principalBalance.+0 이상 안전 정수/);
   });
 
   it("costBalance 가 정수 아니면 reject", () => {
@@ -66,7 +66,22 @@ describe("validateAppropriationInput — Korean RangeError 분기", () => {
         },
       ],
     };
-    expect(() => validateAppropriationInput(input)).toThrow(/costBalance.+0 이상 정수/);
+    expect(() => validateAppropriationInput(input)).toThrow(/costBalance.+0 이상 안전 정수/);
+  });
+
+  /**
+   * 잔액은 안분에서 `pool × 잔액` 곱에 들어가므로 2^53 을 넘으면 정확도가 깨진다.
+   * `payment.amount` 는 이미 `Number.isSafeInteger` 를 요구하는데 잔액만 빠져 있어
+   * `1e300` 같은 값이 통과했다.
+   */
+  it("잔액이 안전 정수를 넘으면 reject (payment.amount 와 같은 기준)", () => {
+    for (const field of ["principalBalance", "interestBalance", "costBalance"] as const) {
+      const input = {
+        ...base(),
+        claims: [{ id: "c1", principalBalance: 1000, dueAt: "2025-01-01", [field]: 1e300 }],
+      };
+      expect(() => validateAppropriationInput(input)).toThrow(/안전 정수/);
+    }
   });
 
   it("dueAt 형식 잘못되면 reject", () => {

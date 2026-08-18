@@ -64,6 +64,8 @@ export interface TargetInputState {
 export interface PaymentInputState {
   amountText: string;
   allocationType: AppropriationAllocationType;
+  /** 변제일. 민법 제477조 1호의 변제기 도래 판정 기준일 (미지정이면 계산 시점 기준). */
+  paidAt?: string;
   targets: TargetInputState[];
 }
 
@@ -126,7 +128,11 @@ export function buildAppropriationInput(
 
   const input: AppropriationInput = {
     claims: claimInputs,
-    payment: { amount, allocation },
+    payment: {
+      amount,
+      allocation,
+      ...(payment.paidAt ? { paidAt: payment.paidAt } : {}),
+    },
   };
   if (computedAt) input.computedAt = computedAt;
   return input;
@@ -150,6 +156,7 @@ export function applyLoadedAppropriationInput(input: AppropriationInput): {
   const payment: PaymentInputState = {
     amountText: String(input.payment.amount),
     allocationType: input.payment.allocation.type,
+    paidAt: input.payment.paidAt ?? "",
     targets:
       input.payment.allocation.type === "legal"
         ? []
@@ -166,7 +173,9 @@ export function formatAppropriationForClipboard(result: AppropriationResult): st
   const claimRows = result.claims
     .map(
       (claim) =>
-        `${claim.name ?? claim.claimId}\t차감 ${formatWon(claim.totalApplied)}\t잔액 ${formatWon(
+        `${claim.name ?? claim.claimId}\t${claim.statutoryRank?.priorityLabel ?? "-"}\t차감 ${formatWon(
+          claim.totalApplied,
+        )}\t잔액 ${formatWon(
           claim.principalBalanceAfter + claim.interestBalanceAfter + claim.costBalanceAfter,
         )}`,
     )
@@ -180,7 +189,7 @@ export function formatAppropriationForClipboard(result: AppropriationResult): st
     `데이터 버전: ${result.dataVersion}`,
     `계산 시각: ${result.computedAt}`,
     "",
-    "채권\t차감액\t잔액",
+    "채권\t충당 순위\t차감액\t잔액",
     claimRows,
     "",
     STANDARD_DISCLAIMER,
@@ -203,7 +212,9 @@ export function buildAppropriationLcalcFile(
   return {
     schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     kind: "appropriation",
-    envelopeFeatures: ["appropriation@1"],
+    // 변제일이 실제로 담긴 파일만 @2 로 올린다. optional 은 구파일 → 신앱 방향만 안전하고,
+    // 반대로 구앱이 이 필드를 버리면 변제기 판정이 저장 당시와 달라져 충당 순서가 뒤집힌다.
+    envelopeFeatures: [input.payment.paidAt ? "appropriation@2" : "appropriation@1"],
     dataVersions: { appropriation: result.dataVersion },
     payload,
   };
@@ -251,6 +262,7 @@ function buildAppropriationDirtySnapshot({
     payment: {
       amountText: payment.amountText,
       allocationType: payment.allocationType,
+      paidAt: payment.paidAt,
       targets: targetsForDirtySnapshot(payment.targets),
     },
     note,
@@ -266,6 +278,7 @@ function buildLoadedAppropriationDirtySnapshot(
     payment: {
       amountText: applied.payment.amountText,
       allocationType: applied.payment.allocationType,
+      paidAt: applied.payment.paidAt,
       targets: targetsForDirtySnapshot(applied.payment.targets),
     },
     note,
@@ -279,6 +292,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
   const [payment, setPayment] = useState<PaymentInputState>(() => ({
     amountText: "500000",
     allocationType: "legal",
+    paidAt: "",
     targets: [],
   }));
   const [note, setNote] = useState("");
@@ -312,7 +326,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
     setClaims([
       { ...emptyClaim(), id: "loan-1", name: "대여금A", principalBalanceText: "1000000" },
     ]);
-    setPayment({ amountText: "500000", allocationType: "legal", targets: [] });
+    setPayment({ amountText: "500000", allocationType: "legal", paidAt: "", targets: [] });
     setNote("");
     setResult(null);
     setError(null);
@@ -548,6 +562,19 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
               />
             </label>
             <label className="grid gap-2 text-sm font-medium">
+              변제일
+              <Input
+                type="date"
+                value={payment.paidAt}
+                onChange={(e) => updatePayment({ paidAt: e.target.value })}
+              />
+              <span className="text-xs font-normal text-muted-foreground">
+                법정충당의 변제기 도래 여부(제477조 1호)를 판정하는 기준일입니다. 비워 두면 오늘
+                날짜로 판정하므로, 과거 변제를 재현하거나 저장한 파일을 나중에 다시 열 때는 실제
+                변제일을 입력하세요.
+              </span>
+            </label>
+            <label className="grid gap-2 text-sm font-medium">
               충당 방식
               <Select
                 value={payment.allocationType}
@@ -666,6 +693,9 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                   <thead>
                     <tr className="border-b border-border text-left text-xs text-muted-foreground">
                       <th className="py-2 font-medium">채권</th>
+                      {/* 변제일을 바꿔도 숫자만 움직이고 이유가 안 보이던 것을 드러낸다.
+                          엔진이 이미 채권마다 statutoryRank 를 돌려주고 있었다. */}
+                      <th className="py-2 font-medium">충당 순위</th>
                       <th className="py-2 text-right font-medium">차감 (비용/이자/원본)</th>
                       <th className="py-2 text-right font-medium">잔액 (원본)</th>
                     </tr>
@@ -674,6 +704,9 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                     {result.claims.map((claim) => (
                       <tr key={claim.claimId} className="border-b border-border last:border-b-0">
                         <td className="py-2">{claim.name ?? claim.claimId}</td>
+                        <td className="py-2 text-xs text-muted-foreground">
+                          {claim.statutoryRank?.priorityLabel ?? "-"}
+                        </td>
                         <td className="py-2 text-right text-xs">
                           {formatWon(claim.costApplied)} / {formatWon(claim.interestApplied)} /{" "}
                           {formatWon(claim.principalApplied)}

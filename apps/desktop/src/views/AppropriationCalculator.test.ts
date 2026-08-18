@@ -175,3 +175,84 @@ describe("formatAppropriationForClipboard + buildAppropriationLcalcFile", () => 
     expect(file.payload.note).toBe("비고 메모");
   });
 });
+
+/**
+ * APP-3 — 변제일(`paidAt`)의 UI 모델 ↔ 도메인 입력 ↔ `.lcalc` 왕복.
+ *
+ * 어느 한 구간에서 유실되면 저장한 파일을 나중에 열었을 때 오늘 기준으로 변제기가 재판정돼
+ * 같은 파일이 다른 결과를 낸다.
+ */
+describe("변제일 (paidAt) 왕복 [APP-3]", () => {
+  it("입력한 변제일이 도메인 입력으로 넘어간다", () => {
+    const payment: PaymentInputState = {
+      amountText: "500000",
+      allocationType: "legal",
+      paidAt: "2025-06-01",
+      targets: [],
+    };
+    expect(buildAppropriationInput([claim()], payment).payment.paidAt).toBe("2025-06-01");
+  });
+
+  it("변제일이 비어 있으면 필드를 만들지 않는다 (구파일과 같은 모양)", () => {
+    const omitted: PaymentInputState = {
+      amountText: "500000",
+      allocationType: "legal",
+      targets: [],
+    };
+    const empty: PaymentInputState = { ...omitted, paidAt: "" };
+    expect(buildAppropriationInput([claim()], omitted).payment).not.toHaveProperty("paidAt");
+    expect(buildAppropriationInput([claim()], empty).payment).not.toHaveProperty("paidAt");
+  });
+
+  it("불러오기에서 변제일이 복원된다", () => {
+    const payment: PaymentInputState = {
+      amountText: "500000",
+      allocationType: "legal",
+      paidAt: "2025-06-01",
+      targets: [],
+    };
+    const input = buildAppropriationInput([claim()], payment, "2026-05-15");
+    expect(applyLoadedAppropriationInput(input).payment.paidAt).toBe("2025-06-01");
+  });
+
+  it("변제일 없는 구파일을 불러오면 빈 값이 된다", () => {
+    const input = buildAppropriationInput([claim()], {
+      amountText: "500000",
+      allocationType: "legal",
+      targets: [],
+    });
+    expect(applyLoadedAppropriationInput(input).payment.paidAt).toBe("");
+  });
+
+  it("저장 → 불러오기 왕복에서 계산 결과가 유지된다", () => {
+    const claims = [
+      claim({ uid: "u1", id: "benefit", principalBalanceText: "100000", dueAt: "2026-01-01" }),
+      claim({
+        uid: "u2",
+        id: "late",
+        principalBalanceText: "100000",
+        dueAt: "2024-01-01",
+        debtorBenefitRankText: "1",
+      }),
+    ];
+    const payment: PaymentInputState = {
+      amountText: "50000",
+      allocationType: "legal",
+      paidAt: "2025-06-01",
+      targets: [],
+    };
+    const input = buildAppropriationInput(claims, payment, "2026-05-15");
+    const before = computeAppropriation(input);
+
+    const reloaded = applyLoadedAppropriationInput(input);
+    const after = computeAppropriation(
+      buildAppropriationInput(reloaded.claims, reloaded.payment, "2030-01-01"),
+    );
+
+    // 계산 시각이 2030 으로 바뀌어도 변제일이 살아 있으면 충당 결과는 동일하다.
+    expect(after.claims.map((c) => c.totalApplied)).toEqual(
+      before.claims.map((c) => c.totalApplied),
+    );
+    expect(after.claims.find((c) => c.claimId === "late")?.totalApplied).toBe(50000);
+  });
+});

@@ -97,6 +97,9 @@ function validatePayment(payment: AppropriationPaymentInput, claimIds: Set<strin
   ) {
     throw new RangeError(`${PREFIX}: payment.amount 는 1 이상 정수여야 합니다.`);
   }
+  if (payment.paidAt !== undefined && !ISO_DATE_PATTERN.test(payment.paidAt)) {
+    throw new RangeError(`${PREFIX}: payment.paidAt 은 YYYY-MM-DD 형식이어야 합니다.`);
+  }
   validateAllocationDirective(payment.allocation, payment.amount, claimIds);
 }
 
@@ -156,13 +159,14 @@ function validateAllocationTarget(target: AllocationTarget, claimIds: Set<string
   }
 }
 
+/**
+ * 채권 잔액 검증. `payment.amount` 와 같은 기준(`Number.isSafeInteger`)을 쓴다.
+ *
+ * 직전 구현은 `Number.isInteger` + `isFinite` 만 봐서 `1e300` 같은 값이 통과했다.
+ * 잔액은 안분에서 `pool × 잔액` 곱에 들어가므로 2^53 을 넘으면 정확도가 깨진다.
+ */
 function assertNonNegativeInteger(value: number, label: string): void {
-  if (
-    typeof value !== "number" ||
-    !Number.isInteger(value) ||
-    value < 0 ||
-    !Number.isFinite(value)
-  ) {
-    throw new RangeError(`${label} 는 0 이상 정수여야 합니다.`);
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${label} 는 0 이상 안전 정수(2^53 미만)여야 합니다.`);
   }
 }

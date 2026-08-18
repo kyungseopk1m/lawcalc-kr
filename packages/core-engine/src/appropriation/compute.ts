@@ -1,4 +1,7 @@
 import { STANDARD_DISCLAIMER } from "../disclaimers";
+// 원 단위 잔여 배분 규칙(최대잉여법)의 단일 출처. 도메인 지식이 없는 순수 산술
+// 헬퍼라 소송비용 쪽 구현을 그대로 쓴다 — 복제하면 한쪽만 고쳐지는 결함이 생긴다.
+import { divideProportionally } from "../litigation-cost/distribute";
 
 import type {
   AllocationTarget,
@@ -37,6 +40,9 @@ export function computeAppropriation(input: AppropriationInput): AppropriationRe
   validateAppropriationInput(input);
 
   const computedAt = input.computedAt ?? todayIso();
+  // 변제기 도래 판정 기준일. 민법 제477조 1호는 **변제 시점** 을 본다 — 계산을 언제 돌렸는지가
+  // 아니다. `computedAt` 은 계산 시각 메타로만 남기고 의미를 겸용하지 않는다.
+  const dueAsOf = input.payment.paidAt ?? computedAt;
   const works: ClaimWork[] = input.claims.map((claim) => ({
     input: claim,
     balance: {
@@ -52,13 +58,13 @@ export function computeAppropriation(input: AppropriationInput): AppropriationRe
 
   let remaining: number;
   if (input.payment.allocation.type === "legal") {
-    remaining = applyLegalAllocation(works, input.payment.amount, computedAt);
+    remaining = applyLegalAllocation(works, input.payment.amount, dueAsOf);
   } else {
     remaining = applyExplicitDirective(input.payment.allocation, input.payment.amount, workMap);
     // 지정(합의·채무자·채권자) 대상 합계보다 변제액이 크면, 잉여는 민법 제477조 법정충당
     // 순서로 잔여 채권 (지정 대상의 잔액 포함) 에 cascade 한다 (통설).
     if (remaining > 0) {
-      remaining = applyLegalAllocation(works, remaining, computedAt, "잉여 ");
+      remaining = applyLegalAllocation(works, remaining, dueAsOf, "잉여 ");
     }
   }
 
@@ -129,24 +135,27 @@ function applyLegalAllocation(
       const used = absorbIntoClaim(w, pool);
       pool -= used;
     } else {
-      const denominator = topGroup.reduce((sum, w) => sum + totalRemaining(w), 0);
+      // 민법 제477조 제4호 비례 안분. 소송비용 분배와 같은 최대잉여법을 쓴다
+      // (`divideProportionally` = BigInt 정확 나머지 + 결정적 tie-break).
+      // 직접 floor + 마지막 채권에 잔여 몰아주기를 하면 (a) 그 채권이 자기 잔액에
+      // 걸릴 때 차액이 어느 채권에도 충당되지 않고 사라지고 (b) 채권 입력 순서에
+      // 따라 결과가 달라진다.
+      const claimTotals = topGroup.map((w) => totalRemaining(w));
+      const denominator = claimTotals.reduce((sum, value) => sum + value, 0);
+      // 안분 대상 총액은 잔액 합을 넘지 않는다. 각 배분액이 해당 채권 잔액을
+      // 초과하지 않음이 보장되므로 (배분액 ≤ ceil(pool × 잔액 / 합) ≤ 잔액),
+      // 전액이 그대로 흡수되고 재분배 루프가 필요 없다.
+      const groupPool = Math.min(pool, denominator);
+      const { perParty } = divideProportionally(groupPool, claimTotals);
+
       let allocatedSum = 0;
-      for (let i = 0; i < topGroup.length; i++) {
-        const w = topGroup[i]!;
-        const claimTotal = totalRemaining(w);
-        const proposed =
-          i === topGroup.length - 1
-            ? pool - allocatedSum
-            : Math.floor((pool * claimTotal) / denominator);
-        const cap = Math.min(proposed, claimTotal);
-        const allocated = cap > 0 ? cap : 0;
-        const used = absorbIntoClaim(w, allocated);
-        allocatedSum += used;
+      for (const [i, w] of topGroup.entries()) {
+        allocatedSum += absorbIntoClaim(w, perParty[i]!);
         w.statutoryRank = {
           dueReached,
           debtorBenefitRank: w.input.debtorBenefitRank ?? 0,
           dueAt: w.input.dueAt,
-          proportionalShare: { numerator: claimTotal, denominator },
+          proportionalShare: { numerator: claimTotals[i]!, denominator },
           priorityLabel,
         };
       }
@@ -181,11 +190,17 @@ function rankLegal(tier: ClaimWork[]): ClaimWork[][] {
   return groups;
 }
 
+/**
+ * 충당 순위 라벨. 결과 표에 그대로 노출되므로 사용자 문구로 쓴다 (영어 식별자·기호 금지).
+ */
 function formatPriorityLabel(index: number, dueReached: boolean, group: ClaimWork[]): string {
   const tier = dueReached ? "변제기 도래" : "변제기 미도래";
   const rank = group[0]!.input.debtorBenefitRank ?? 0;
-  const proportional = group.length > 1 ? " (비례 안분)" : "";
-  return `법정충당 ${index + 1}순위 — ${tier}, 변제이익 rank ${rank}${proportional}`;
+  const parts = [tier, `변제이익 순위 ${rank}`];
+  if (group.length > 1) {
+    parts.push("비례 안분");
+  }
+  return `법정충당 ${index + 1}순위 (${parts.join(", ")})`;
 }
 
 function absorbIntoClaim(work: ClaimWork, available: number): number {
