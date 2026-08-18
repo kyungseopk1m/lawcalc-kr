@@ -26,25 +26,29 @@
     "@lawcalc-kr/compensation": "workspace:*",
     "@lawcalc-kr/core-engine": "workspace:*",
     "@lawcalc-kr/datasets-compensation": "workspace:*",
-    "@tailwindcss/vite": "^4.0.0",
-    "@tauri-apps/api": "^2.1.1",
-    "@tauri-apps/plugin-process": "^2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-shell": "^2.3.5",
-    "@tauri-apps/plugin-updater": "^2",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@tauri-apps/plugin-updater": "^2.10.1",
+    "@vitejs/plugin-react": "^5.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.6.0",
-    "tailwindcss": "^4.0.0",
-    "vite": "^6.0.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^2.6.1",
+    "tailwindcss": "^4.3.3",
+    "vite": "^6.4.3"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.1.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "vitest": "^4.1.5"
+    "@tauri-apps/cli": "^2.11.4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.10"
   }
 }

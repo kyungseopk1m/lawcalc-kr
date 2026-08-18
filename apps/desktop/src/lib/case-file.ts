@@ -19,9 +19,7 @@ export const CASE_CALCULATION_KEYS = Object.keys(
 ) as LcalcCaseCalculationKey[];
 
 export type CaseCollectOutcome =
-  | { status: "ok"; file: LcalcFile }
-  | { status: "pristine" }
-  | { status: "invalid" };
+  { status: "ok"; file: LcalcFile } | { status: "pristine" } | { status: "invalid" };
 
 /**
  * 각 calculator 탭이 사건 파일 저장/열기에 참여하기 위해 등록하는 인터페이스.

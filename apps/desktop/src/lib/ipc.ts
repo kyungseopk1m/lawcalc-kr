@@ -132,11 +132,7 @@ export interface LcalcCaseInfo {
 
 /** 사건 파일이 담을 수 있는 계산 슬롯 키 (도메인 kind 와 1:1). */
 export type LcalcCaseCalculationKey =
-  | "interest"
-  | "inheritance"
-  | "litigation-cost"
-  | "appropriation"
-  | "compensation";
+  "interest" | "inheritance" | "litigation-cost" | "appropriation" | "compensation";
 
 /**
  * 사건 파일(case@1) payload.

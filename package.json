@@ -2,7 +2,7 @@
   "name": "lawcalc-kr",
   "version": "0.0.0",
   "private": true,
-  "description": "한국 법률 계산 데스크톱 워크벤치 (Tauri + React + Rust). 판결금·지연손해금 이자 계산 MVP.",
+  "description": "한국 법률 계산 데스크톱 워크벤치 (Tauri + React + Rust). 이자·상속분·소송비용·변제충당·손해배상을 공개 법령과 공식 매뉴얼 근거로 계산합니다.",
   "type": "module",
   "packageManager": "pnpm@10.0.0",
   "engines": {
@@ -25,6 +25,9 @@
     "legal-calculator",
     "interest-calculator",
     "judgment-interest",
+    "inheritance-share",
+    "litigation-cost",
+    "damages-calculator",
     "tauri",
     "lawcalc"
   ],
@@ -39,14 +42,14 @@
     "url": "https://github.com/kyungseopk1m/lawcalc-kr/issues"
   },
   "devDependencies": {
-    "@eslint/js": "^9.26.0",
-    "eslint": "^9.26.0",
-    "playwright": "^1.60.0",
-    "png-to-ico": "^3.0.1",
-    "prettier": "^3.5.3",
-    "sharp": "^0.34.5",
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "playwright": "^1.62.1",
+    "png-to-ico": "^3.0.2",
+    "prettier": "^3.9.6",
+    "sharp": "^0.35.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.32.0"
+    "typescript-eslint": "^8.67.0"
   },
   "pnpm": {
     "overrides": {
