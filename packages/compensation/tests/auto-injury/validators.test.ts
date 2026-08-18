@@ -84,6 +84,25 @@ describe("validateCompensationInput — boundary 거부", () => {
     expect(() => validateCompensationInput(input)).toThrow(/years/);
   });
 
+  /**
+   * segment 분해가 한시기간을 개월(반올림)로 환산하므로, 반달 미만은 0개월이 되어
+   * 경계 목록에서 걸러지고 항목 자체가 아무 경고 없이 사라졌다.
+   * (실측: `temporary: [{ ratio: 0.5, years: 0.01 }]` 단독 → combinedLossRate 0, finalWon 0)
+   */
+  it("rejects temporary entries shorter than one month", () => {
+    const input = baseInput();
+    for (const years of [0.01, 1 / 30, 0.04]) {
+      input.lossRate.temporary = [{ ratio: 0.5, years }];
+      expect(() => validateCompensationInput(input)).toThrow(/한 달 이상/);
+    }
+  });
+
+  it("accepts a temporary entry of exactly one month", () => {
+    const input = baseInput();
+    input.lossRate.temporary = [{ ratio: 0.5, years: 1 / 12 }];
+    expect(() => validateCompensationInput(input)).not.toThrow();
+  });
+
   it("rejects missing occupation and directWageWon both", () => {
     const input = baseInput();
     input.lostIncome = { discountMethod: "hoffman" };

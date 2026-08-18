@@ -2,12 +2,10 @@ import {
   STANDARD_DISCLAIMER,
   addYears,
   calculateInheritance,
-  type IsoDate,
   type InheritanceShare,
 } from "@lawcalc-kr/core-engine";
 import {
   applyHoffman240Cap,
-  getHoffmanAt,
   getLaborRateAt,
   hoffmanDatasetVersionTag,
   laborRatesDatasetVersionTag,
@@ -17,7 +15,6 @@ import {
   loadLaborRatesTable,
   loadLeibnizTable,
   loadLifeExpectancyTable,
-  type HoffmanDataset,
 } from "@lawcalc-kr/datasets-compensation";
 import type { CompensationSegment } from "../auto-injury/types";
 import type { ComputeCompensationDeps } from "../auto-injury/compute";
@@ -35,20 +32,7 @@ const DEFAULT_LIVING_COST_DEDUCTION_RATIO = 1 / 3;
 const DEFAULT_FUNERAL_EXPENSE_WON = 5_000_000;
 const FINAL_FLOOR_UNIT = 100;
 
-/** `H[0] = 0` 정원 보강 (자×부상 compute 와 동일 정원). */
-function getCumulativeHoffman(dataset: HoffmanDataset, month: number): number {
-  if (month === 0) return 0;
-  return getHoffmanAt(dataset, month);
-}
-
-/** 두 ISO 날짜 사이의 calendar month floor 차이 (자×부상 compute 와 동일 정원). */
-function monthsBetween(from: IsoDate, to: IsoDate): number {
-  const [fy, fm, fd] = from.split("-").map(Number) as [number, number, number];
-  const [ty, tm, td] = to.split("-").map(Number) as [number, number, number];
-  let months = (ty - fy) * 12 + (tm - fm);
-  if (td < fd) months -= 1;
-  return months;
-}
+import { getCumulativeHoffmanClamped, monthsBetween } from "../internal";
 
 /**
  * 최종액을 상속분으로 분배한다.
@@ -101,14 +85,19 @@ export function computeCompensationDeath(
   // 1. 단일 segment (노동능력 100% 상실 전제)
   const retirementAge = input.base.retirementAge ?? DEFAULT_RETIREMENT_AGE;
   const retirementEndDate = addYears(input.base.birthDate, retirementAge);
-  const totalMonths = monthsBetween(input.base.accidentDate, retirementEndDate);
-  if (totalMonths <= 0) {
-    throw new RangeError("사망 손해배상 계산 실패: 가동연한 종료일이 사고일 이전이거나 같습니다.");
-  }
+  // 사고일에 가동연한이 이미 지난 고령 피해자도 위자료·장례비는 당연히 인정된다.
+  // 일실수입 기간만 0 으로 두고 나머지는 그대로 계산한다 (자×부상과 동일 정원).
+  // `accidentDate >= birthDate` 는 validator 가 이미 강제하므로 음수 월수가 생년월일
+  // 오타를 가리는 경우는 없다.
+  const totalMonths = Math.max(0, monthsBetween(input.base.accidentDate, retirementEndDate));
 
   // 2. segment 단가
+  // 일실수입 기간이 없으면 단가는 결과에 쓰이지 않는다. 위자료·장례비만 청구하는 고령
+  // 사건에서 직종 단가 조회 실패로 계산이 막히지 않도록 이 경우에만 조회를 건너뛴다.
   let dailyWageWon: number;
-  if (input.lostIncome.directWageWon !== undefined) {
+  if (totalMonths === 0 && input.lostIncome.directWageWon === undefined) {
+    dailyWageWon = 0;
+  } else if (input.lostIncome.directWageWon !== undefined) {
     dailyWageWon = input.lostIncome.directWageWon;
   } else {
     const occupation = input.lostIncome.occupation;
@@ -128,7 +117,9 @@ export function computeCompensationDeath(
   const monthlyWageWon = dailyWageWon * workingDays;
 
   // 3. 호프만 + 240 cap
-  const rawHoffman = getCumulativeHoffman(hoffman, totalMonths) - getCumulativeHoffman(hoffman, 0);
+  // coverage clamp — 만 25세 미만 사망 사건은 가동연한까지 480개월을 넘는다 (`../internal` 참조).
+  const rawHoffman =
+    getCumulativeHoffmanClamped(hoffman, totalMonths) - getCumulativeHoffmanClamped(hoffman, 0);
   const capResult = applyHoffman240Cap([rawHoffman]);
   const appliedHoffman = capResult.appliedHoffman[0] as number;
 

@@ -1,32 +1,16 @@
 /**
  * 기타손해 compute 내부 공유 헬퍼.
  *
- * `monthsBetween` / `getCumulativeHoffman` 는 auto-injury·auto-death compute 와 동일 정원을
- * 재구현한다 (모듈 자급, 동일 산식 보장 — 부상·사망 일실수입과 같은 월수/현가율 기준).
+ * `monthsBetween` / `getCumulativeHoffman` 는 패키지 공용 `../internal` 의 단일 출처를
+ * 그대로 재수출한다. 과거에는 여기에 복제본을 두어 부상·사망 compute 와 세 벌이 됐고,
+ * coverage clamp 가 이 파일에만 적용되는 비대칭을 낳았다.
  */
 
-import {
-  getHoffmanAt,
-  getLaborRateAt,
-  type HoffmanDataset,
-  type LaborRatesDataset,
-} from "@lawcalc-kr/datasets-compensation";
+import { getLaborRateAt, type LaborRatesDataset } from "@lawcalc-kr/datasets-compensation";
+import type { HoffmanDataset } from "@lawcalc-kr/datasets-compensation";
 import type { IsoDate } from "@lawcalc-kr/core-engine";
 
-/** `H[0] = 0` 정원 보강 (일실수입 compute 와 동일). */
-export function getCumulativeHoffman(dataset: HoffmanDataset, month: number): number {
-  if (month === 0) return 0;
-  return getHoffmanAt(dataset, month);
-}
-
-/** 두 ISO 날짜 사이의 calendar month floor 차이 (일실수입 compute 와 동일 정원). */
-export function monthsBetween(from: IsoDate, to: IsoDate): number {
-  const [fy, fm, fd] = from.split("-").map(Number) as [number, number, number];
-  const [ty, tm, td] = to.split("-").map(Number) as [number, number, number];
-  let months = (ty - fy) * 12 + (tm - fm);
-  if (td < fd) months -= 1;
-  return months;
-}
+export { getCumulativeHoffman, monthsBetween } from "../internal";
 
 /** 기타손해 계산 컨텍스트 — 호출자(injury/death compute)가 로드한 dataset + 사고일 주입. */
 export interface OtherDamagesContext {

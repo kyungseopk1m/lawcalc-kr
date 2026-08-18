@@ -124,6 +124,14 @@ function validateTemporary(items: TemporaryDisabilityInput[]): void {
       );
     }
     assertPositiveNumber(`lossRate.temporary[${i}].years`, item.years);
+    // segment 분해는 한시기간을 개월(반올림)로 환산한다. 0개월로 떨어지면 그 항목이
+    // 경계 목록에서 걸러져 아무 경고 없이 사라진다. 계산 결과에 반영될 수 없는 입력은
+    // 조용히 무시하지 말고 거부한다.
+    if (Math.round(item.years * 12) < 1) {
+      throw new RangeError(
+        `${PREFIX}: lossRate.temporary[${i}].years 는 한 달 이상이어야 합니다 (입력: ${item.years}년 = 약 ${(item.years * 12).toFixed(2)}개월).`,
+      );
+    }
   }
 }
 

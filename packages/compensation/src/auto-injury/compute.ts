@@ -1,7 +1,6 @@
-import { STANDARD_DISCLAIMER, addYears, type IsoDate } from "@lawcalc-kr/core-engine";
+import { STANDARD_DISCLAIMER, addYears } from "@lawcalc-kr/core-engine";
 import {
   applyHoffman240Cap,
-  getHoffmanAt,
   getLaborRateAt,
   hoffmanDatasetVersionTag,
   laborRatesDatasetVersionTag,
@@ -33,25 +32,7 @@ const DEFAULT_WORKING_DAYS_PER_MONTH = 22;
 const DEFAULT_RETIREMENT_AGE = 65;
 const FINAL_FLOOR_UNIT = 100;
 
-/** `H[0] = 0` 정원 보강 (dataset 의 1-based index 와 segment boundary 통합). */
-function getCumulativeHoffman(dataset: HoffmanDataset, month: number): number {
-  if (month === 0) return 0;
-  return getHoffmanAt(dataset, month);
-}
-
-/**
- * 두 ISO 날짜 사이의 calendar month floor 차이.
- *
- * - `to.day` 가 `from.day` 보다 작으면 -1 (월 미충족 분 제거).
- * - 사고일 ~ (생년 + retirementAge 년) 정원에서는 day 가 정확 동일하므로 -1 발생 안 함.
- */
-function monthsBetween(from: IsoDate, to: IsoDate): number {
-  const [fy, fm, fd] = from.split("-").map(Number) as [number, number, number];
-  const [ty, tm, td] = to.split("-").map(Number) as [number, number, number];
-  let months = (ty - fy) * 12 + (tm - fm);
-  if (td < fd) months -= 1;
-  return months;
-}
+import { getCumulativeHoffmanClamped, monthsBetween } from "../internal";
 
 /**
  * 자×부상 손해배상 계산. 10 단계 순서 (plan v2 §6 트랙 4 A):
@@ -98,13 +79,25 @@ export function computeCompensation(
     permFactor *= 1 - item.ratio;
   }
 
+  // 1.5. 기왕증 기여도 공제.
+  // 사고와 무관한 기왕증이 현재 장해에 기여한 비율만큼 배상 대상 상실률에서 뺀다.
+  // 같은 앱의 기타손해(개호비·치료비)가 이미 `× (1 - priorRatio)` 로 처리하므로
+  // 일실수입도 같은 산식을 쓴다 (`other-damages/attendant.ts`).
+  // 미입력·0 이면 계수가 1 이라 기존 결과와 완전히 동일하다 (회귀 0).
+  const priorImpairmentRatio = input.lossRate.priorImpairmentRatio ?? 0;
+  const priorImpairmentFactor = 1 - priorImpairmentRatio;
+
   // 2. segment 분해 (Option B 기간식 — 한시장해는 실제 한시기간 [0, 종료월) 에만 적용)
   const retirementAge = input.base.retirementAge ?? DEFAULT_RETIREMENT_AGE;
   const retirementEndDate = addYears(input.base.birthDate, retirementAge);
-  const totalMonths = monthsBetween(input.base.accidentDate, retirementEndDate);
-  if (totalMonths <= 0) {
-    throw new RangeError("손해배상 계산 실패: 가동연한 종료일이 사고일 이전이거나 같습니다.");
-  }
+  const rawTotalMonths = monthsBetween(input.base.accidentDate, retirementEndDate);
+  // 사고일에 가동연한이 이미 지난 고령 피해자도 위자료·치료비·개호비는 당연히 인정된다.
+  // 일실수입 기간만 0 으로 두고 나머지 항목은 그대로 계산한다 — 계산 자체를 거부하면
+  // 위자료만 청구하는 사건을 이 도구로 다룰 수 없다.
+  // `accidentDate >= birthDate` 는 validator 가 이미 강제하므로(validators.ts) 음수 월수가
+  // 생년월일 오타를 가리는 경우는 없다.
+  const totalMonths = Math.max(0, rawTotalMonths);
+  const retirementAgeReached = totalMonths === 0;
 
   interface SegmentPlan {
     startMonth: number;
@@ -117,6 +110,7 @@ export function computeCompensation(
     ratio: item.ratio,
   }));
   // segment 경계 = distinct 한시 종료월(0 초과 ~ totalMonths) + 가동연한 종료월.
+  // 가동연한 경과 시 경계가 모두 걸러져 segmentPlans 가 빈 배열이 되고 일실수입은 0 이 된다.
   const boundaries = Array.from(new Set([...temporaries.map((t) => t.endMonth), totalMonths]))
     .filter((m) => m > 0 && m <= totalMonths)
     .sort((a, b) => a - b);
@@ -129,15 +123,25 @@ export function computeCompensation(
     for (const t of temporaries) {
       if (t.endMonth >= boundary) factor *= 1 - t.ratio;
     }
-    segmentPlans.push({ startMonth: cursorMonth, endMonth: boundary, lossRate: 1 - factor });
+    segmentPlans.push({
+      startMonth: cursorMonth,
+      endMonth: boundary,
+      lossRate: (1 - factor) * priorImpairmentFactor,
+    });
     cursorMonth = boundary;
   }
   // combinedLossRate = 첫 segment(한시기간 포함 최고율). 영구만일 때 = permanentTotal.
-  const combinedLossRate = (segmentPlans[0] as SegmentPlan).lossRate;
+  // 가동연한 경과로 segment 가 없으면 영구장해 병합률을 그대로 표시한다 (일실수입은 0 이지만
+  // 상실률 자체는 위자료 산정 참고치로 의미가 있다).
+  const combinedLossRate = segmentPlans[0]?.lossRate ?? (1 - permFactor) * priorImpairmentFactor;
 
   // 3. segment 단가
+  // 일실수입 기간이 없으면 단가는 결과에 쓰이지 않는다. 위자료만 청구하는 고령 사건에서
+  // 직종 단가 조회 실패로 계산이 막히지 않도록 이 경우에만 조회를 건너뛴다.
   let dailyWageWon: number;
-  if (input.lostIncome.directWageWon !== undefined) {
+  if (retirementAgeReached && input.lostIncome.directWageWon === undefined) {
+    dailyWageWon = 0;
+  } else if (input.lostIncome.directWageWon !== undefined) {
     dailyWageWon = input.lostIncome.directWageWon;
   } else {
     const occupation = input.lostIncome.occupation;
@@ -157,10 +161,16 @@ export function computeCompensation(
   const monthlyWageWon = dailyWageWon * workingDays;
 
   // 4. segment 호프만 + 240 cap
+  // coverage clamp — 만 25세 미만이면 가동연한까지 480개월을 넘는다.
+  // 240 한도가 414개월에서 이미 걸리므로 clamp 는 금액에 영향이 없다 (`../internal` 주석 참조).
   const rawHoffmanList: number[] = [];
   for (const plan of segmentPlans) {
     rawHoffmanList.push(
-      getCumulativeHoffman(hoffman, plan.endMonth) - getCumulativeHoffman(hoffman, plan.startMonth),
+      Math.max(
+        0,
+        getCumulativeHoffmanClamped(hoffman, plan.endMonth) -
+          getCumulativeHoffmanClamped(hoffman, plan.startMonth),
+      ),
     );
   }
   const capResult = applyHoffman240Cap(rawHoffmanList);

@@ -127,12 +127,115 @@ describe("computeCompensation — 10 단계 path", () => {
     expect(() => computeCompensation(input, { now: FIXED_NOW })).toThrow(/존재하지않는직종/);
   });
 
-  it("retirementAge ≤ accident age → RangeError (가동연한 종료가 사고일 이전)", () => {
+  /**
+   * 기왕증 기여도.
+   *
+   * UI 입력란과 validator 는 있는데 compute 가 이 값을 읽지 않아, 값을 넣어도 결과가
+   * 그대로였다. 같은 앱의 기타손해는 `× (1 - priorRatio)` 로 반영하고 있었으므로
+   * 사용자는 "기왕증은 반영된다"고 학습한 상태에서 조용히 과대한 금액을 받았다.
+   */
+  describe("기왕증 기여도", () => {
+    const withPrior = (ratio: number) => {
+      const input = baseInput();
+      input.lossRate.priorImpairmentRatio = ratio;
+      return computeCompensation(input, { now: FIXED_NOW });
+    };
+
+    it("기여도만큼 상실률에서 공제된다", () => {
+      const base = withPrior(0);
+      const prior40 = withPrior(0.4);
+      expect(prior40.combinedLossRate).toBeCloseTo(0.3 * 0.6, 6);
+      expect(prior40.finalWon).toBeLessThan(base.finalWon);
+    });
+
+    it("일실수입이 (1 - 기여도) 에 비례한다", () => {
+      // 영구 30% 단일 segment 라 일실수입은 상실률에 정비례한다.
+      const base = withPrior(0).lostIncomeSubtotalWon;
+      const prior40 = withPrior(0.4).lostIncomeSubtotalWon;
+      expect(prior40).toBeCloseTo(base * 0.6, -1);
+    });
+
+    it("미입력·0 이면 결과가 완전히 동일하다 (회귀 0)", () => {
+      const omitted = computeCompensation(baseInput(), { now: FIXED_NOW });
+      expect(withPrior(0).finalWon).toBe(omitted.finalWon);
+      expect(withPrior(0).combinedLossRate).toBe(omitted.combinedLossRate);
+    });
+
+    it("기여도 100% 면 일실수입이 0 이 된다", () => {
+      expect(withPrior(1).lostIncomeSubtotalWon).toBe(0);
+    });
+  });
+
+  /**
+   * 호프만표 coverage(480개월) 초과.
+   *
+   * 사고 당시 만 25세 미만이거나 가동연한을 65세보다 높게 잡으면 조회 월수가 480 을
+   * 넘어 `getHoffmanAt` 이 RangeError 를 던졌다. 미성년자·영유아 사건이 전부 계산
+   * 불능이었다. 단리 현가율은 414개월에서 이미 240 한도에 걸리므로(대법원 1992. 7. 10.
+   * 선고 92다15871) coverage clamp 는 금액을 바꾸지 않는다.
+   */
+  describe("호프만표 coverage 초과 (만 25세 미만)", () => {
+    const cases: Array<[string, string, number]> = [
+      ["만 25세 정확 — 480개월 경계", "2001-01-01", 65],
+      ["만 24세 — 492개월", "2002-01-01", 65],
+      ["만 10세 — 660개월", "2016-01-01", 65],
+      ["사고일 출생 — 780개월", "2026-01-01", 65],
+      ["만 40세 + 가동연한 85세 — 540개월", "1986-01-01", 85],
+    ];
+
+    for (const [label, birthDate, retirementAge] of cases) {
+      it(`${label} → 계산되고 적용 현가율은 240 한도`, () => {
+        const input = baseInput();
+        input.base.birthDate = birthDate;
+        input.base.retirementAge = retirementAge;
+        input.lossRate.permanent = [{ department: "정형외과", ratio: 1 }];
+        const result = computeCompensation(input, { now: FIXED_NOW });
+        const applied = result.hoffman240Cap.appliedHoffman.reduce((a, v) => a + v, 0);
+        expect(applied).toBeLessThanOrEqual(240);
+        expect(result.finalWon).toBeGreaterThan(0);
+      });
+    }
+
+    it("480개월 초과 사건의 금액은 240 한도에서 수렴한다 (24세와 10세가 같은 금액)", () => {
+      const at = (birthDate: string) => {
+        const input = baseInput();
+        input.base.birthDate = birthDate;
+        input.base.retirementAge = 65;
+        input.lossRate.permanent = [{ department: "정형외과", ratio: 1 }];
+        return computeCompensation(input, { now: FIXED_NOW }).finalWon;
+      };
+      // 둘 다 240 한도에 걸리므로 월급여가 같으면 일실수입도 같다.
+      expect(at("2002-01-01")).toBe(at("2016-01-01"));
+    });
+  });
+
+  // 사고일에 가동연한이 이미 지난 사건도 위자료·치료비·개호비는 인정되므로 계산을
+  // 거부하지 않는다. 일실수입만 0 이 된다 (이전에는 전체가 RangeError 였다).
+  it("가동연한 경과 → 일실수입 0, 나머지 항목은 정상 계산", () => {
     const input = baseInput();
     input.base.birthDate = "1990-01-01";
     input.base.accidentDate = "2026-01-01";
     input.base.retirementAge = 30;
-    expect(() => computeCompensation(input, { now: FIXED_NOW })).toThrow(/가동연한 종료일/);
+    input.solatiumWon = 50_000_000;
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.segments).toHaveLength(0);
+    expect(result.lostIncomeSubtotalWon).toBe(0);
+    // 영구장해 30% 는 일실수입이 없어도 상실률 자체로는 유지된다.
+    expect(result.combinedLossRate).toBeCloseTo(0.3, 6);
+    expect(result.finalWon).toBe(50_000_000);
+  });
+
+  // 일실수입 기간이 없으면 단가는 결과에 쓰이지 않으므로, 노임단가 dataset 이 덮지 않는
+  // 과거 사고일이어도 위자료만으로 계산이 진행되어야 한다.
+  it("가동연한 경과 + 노임단가 조회 불가 사고일이어도 위자료만으로 계산된다", () => {
+    const input = baseInput();
+    input.base.birthDate = "1900-01-01";
+    input.base.accidentDate = "1990-01-01";
+    input.solatiumWon = 30_000_000;
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.segments).toHaveLength(0);
+    expect(result.lostIncomeSubtotalWon).toBe(0);
+    expect(result.finalWon).toBe(30_000_000);
   });
 
   it("dataVersions emits 4 dataset tags", () => {
