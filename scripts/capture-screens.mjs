@@ -22,6 +22,13 @@ const captures = [
     tab: "상속분 간이 계산",
     file: "readme-inheritance.png",
     assertDisclaimer: true,
+    // 상속인을 채워야 상속포기·대습 원인 입력이 화면에 드러난다. 비워 두고 찍으면 README 가
+    // 소개하는 기능이 스크린샷에 하나도 보이지 않는다.
+    setup: async (page) => {
+      await page.getByRole("button", { name: "자녀 추가" }).click();
+      await page.getByLabel("상속개시 전 사망·결격·상속권 상실").first().check();
+      await page.getByRole("button", { name: "대습 추가" }).first().click();
+    },
   },
   {
     tab: "소송비용",
@@ -161,7 +168,8 @@ async function main() {
       console.log(
         `Capturing ${capture.tab}${capture.subTab ? ` / ${capture.subTab}` : ""} -> ${capture.file}`,
       );
-      await page.getByRole("button", { name: capture.tab }).click();
+      // 상단 탭은 `role="tab"` 이다 (시맨틱 탭 전환 후 암묵 button role 이 덮였다).
+      await page.getByRole("tab", { name: capture.tab }).click();
       if (capture.subTab) {
         await page.getByRole("button", { name: capture.subTab }).click();
       }
