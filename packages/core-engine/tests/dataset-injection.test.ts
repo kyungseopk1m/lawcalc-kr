@@ -55,7 +55,7 @@ describe("B9: calculateInterest dataset injection 결정성", () => {
   it("default 호출 (deps 미지정) — bundled dataset, dataVersion = v1.0.0", () => {
     const result = calculateInterest(case001);
     expect(result.totalInterest).toBe(50_000);
-    expect(result.dataVersion).toBe("legal-rates/v1.0.0");
+    expect(result.dataVersion).toBe("legal-rates/v1.0.1");
   });
 
   it("custom dataset 주입 — civil 7% → totalInterest 70,000, dataVersion 변경", () => {

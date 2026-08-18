@@ -116,6 +116,32 @@ describe("resolveSegments — legalRatePreset auto-split (소촉법)", () => {
     expect(() => resolveSegments(input)).toThrow(/no rate covering 2002-01-01/);
   });
 
+  // INT-B: 소촉법의 2003-06-01 이전 공백은 "데이터 누락" 이 아니라 위헌결정에 따른 실효다.
+  // 사유가 없으면 데이터셋을 채우면 되는 문제로 읽혀 사용자가 잘못된 대응을 한다.
+  it("promotion 프리셋의 커버리지 에러는 위헌결정 사유를 밝힌다 [INT-B]", () => {
+    const input: InterestInput = {
+      principal: 1_000_000,
+      startDate: "2002-01-01",
+      endDate: "2004-12-31",
+      legalRatePreset: "promotion",
+      options: opts,
+    };
+    expect(() => resolveSegments(input)).toThrow(/2002헌가15/);
+    expect(() => resolveSegments(input)).toThrow(/실효/);
+  });
+
+  it("promotion 이 아닌 프리셋의 에러 문구에는 위헌결정 사유를 붙이지 않는다 [INT-B]", () => {
+    const input: InterestInput = {
+      principal: 1_000_000,
+      startDate: "1959-01-01",
+      endDate: "1961-12-31",
+      legalRatePreset: "civil",
+      options: opts,
+    };
+    expect(() => resolveSegments(input)).toThrow(/no rate covering 1959-01-01/);
+    expect(() => resolveSegments(input)).not.toThrow(/2002헌가15/);
+  });
+
   it("still throws when the range is entirely before any slice (out.length === 0) [INT-1]", () => {
     const input: InterestInput = {
       principal: 1_000_000,

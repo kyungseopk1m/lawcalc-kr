@@ -10,9 +10,7 @@ import type { IsoDate } from "./types";
  * - "loanBusinessUnregistered"  → 대부업법 (미등록)
  */
 export type InterestLimitLaw =
-  | "interestLimitAct"
-  | "loanBusinessRegistered"
-  | "loanBusinessUnregistered";
+  "interestLimitAct" | "loanBusinessRegistered" | "loanBusinessUnregistered";
 
 /**
  * `data/interest-limits/v{N}.json` 의 한 slice.

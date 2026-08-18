@@ -60,8 +60,12 @@ export function resolveSegments(input: InterestInput, deps?: ResolveSegmentsDeps
   }
 
   if (isCustomRate(legalRatePreset)) {
-    if (legalRatePreset.customRate < 0) {
-      throw new RangeError("resolveSegments: customRate must be >= 0");
+    // NaN < 0 은 false 라 부등호만으로는 통과한다. 원금은 이미 Number.isFinite 로
+    // 막혀 있으므로(interest.ts) 이율도 같은 기준을 적용해 NaN 결과 유입을 차단한다.
+    if (!Number.isFinite(legalRatePreset.customRate) || legalRatePreset.customRate < 0) {
+      throw new RangeError(
+        `resolveSegments: customRate must be a finite number >= 0 (got ${String(legalRatePreset.customRate)})`,
+      );
     }
     return [{ from: startDate, to: endDate, rate: legalRatePreset.customRate }];
   }
@@ -90,9 +94,17 @@ export function resolveSegments(input: InterestInput, deps?: ResolveSegmentsDeps
   // 이전)이 입력되면 종전엔 그 구간이 "조용히" 누락된 채 과소계산된 결과가 정상처럼
   // 반환됐다. 법률 계산기에서 침묵 과소계산은 가장 위험한 결함이므로 loud error 를 택한다.
   if (out[0]!.from !== startDate) {
+    // 소촉법의 최초 시행일 2003-06-01 은 데이터 누락이 아니라 실효(失效)다. 헌재 2003. 4. 24.
+    // 선고 2002헌가15 위헌결정으로 구 규정(연 25%)이 효력을 잃었고, 그 뒤 대통령령으로
+    // 다시 정해진 이율이 2003-06-01 부터 적용된다. 사유를 밝히지 않으면 "데이터셋을
+    // 채우면 되는 문제" 로 읽혀 사용자가 잘못된 대응을 한다.
+    const reason =
+      legalRatePreset === "promotion"
+        ? " (소촉법 이율은 헌재 2003. 4. 24. 선고 2002헌가15 위헌결정으로 구 규정이 실효되어 그 이전 기간에는 존재하지 않는다)"
+        : "";
     throw new RangeError(
       `resolveSegments: legalRatePreset "${legalRatePreset}" has no rate covering ${startDate} ` +
-        `(earliest available rate starts ${out[0]!.from}); supply an explicit segment for the period before ${out[0]!.from}`,
+        `(earliest available rate starts ${out[0]!.from})${reason}; supply an explicit segment for the period before ${out[0]!.from}`,
     );
   }
   for (let i = 1; i < out.length; i++) {
@@ -120,8 +132,8 @@ function validateExplicitSegments(
     if (parseIsoDateUtc(seg.from) > parseIsoDateUtc(seg.to)) {
       throw new RangeError(`segment from(${seg.from}) > to(${seg.to})`);
     }
-    if (seg.rate < 0) {
-      throw new RangeError(`segment rate must be >= 0 (got ${seg.rate})`);
+    if (!Number.isFinite(seg.rate) || seg.rate < 0) {
+      throw new RangeError(`segment rate must be a finite number >= 0 (got ${String(seg.rate)})`);
     }
     if (seg.from < startDate || seg.to > endDate) {
       throw new RangeError(`segment ${seg.from}..${seg.to} is outside [${startDate}, ${endDate}]`);

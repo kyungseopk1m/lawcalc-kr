@@ -187,15 +187,22 @@ describe("edge: explicit segments + period mode 조합", () => {
     expect(result.segments[0]!.interest).toBe(74_657);
 
     // segment[1] 2022-07-01..2024-12-31
-    //   효과 시작 2022-07-02 → 풀 1년 2회(2022-07-02..2023-07-01, 2023-07-02..2024-07-01)
-    //                         + partial 2024-07-02..2024-12-31 = 183일
-    //   raw = 2×60_000 + 60_000×183/365 = 120_000 + 30_082.1917… = 150_082.1917…
-    //   floor 150_082
-    expect(result.segments[1]!.interest).toBe(150_082);
+    //   초일 불산입은 기간 전체의 기산일(2021-01-01)에만 적용하므로 두 번째 구간은
+    //   첫날부터 산입한다. 효과 시작 2022-07-01
+    //     → 풀 1년 2회(2022-07-01..2023-06-30, 2023-07-01..2024-06-30)
+    //       + partial 2024-07-01..2024-12-31 = 184일
+    //   raw = 2×60_000 + 60_000×184/365 = 120_000 + 30_246.5753… = 150_246.5753…
+    //   floor 150_246
+    expect(result.segments[1]!.interest).toBe(150_246);
 
-    // raw 합 224_739.7260… → totalInterest floor 224_739 (segment floor 합과 동치)
-    expect(result.totalInterest).toBe(224_739);
-    expect(result.grandTotal).toBe(1_224_739);
+    // raw 합 224_904.1095… → totalInterest floor 224_904
+    expect(result.totalInterest).toBe(224_904);
+    expect(result.grandTotal).toBe(1_224_904);
+
+    // 구간 일수 합 = 전체 기간 일수 (초일 불산입 1회만 반영)
+    expect(result.segments[0]!.days + result.segments[1]!.days).toBe(
+      countDays("2021-01-01", "2024-12-31", input.options),
+    );
   });
 });
 

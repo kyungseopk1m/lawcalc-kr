@@ -2,8 +2,8 @@
   "schemaVersion": "1",
   "id": "case-003",
   "title": "소촉법 자동 분할: 2019년 (15% → 12%)",
-  "source": "engine-internal-w2",
-  "notes": "2019-06-01 변경일을 경계로 두 segment 자동 생성. 각 segment는 표시용 floor, totalInterest는 raw 합계 floor (1원 차이 가능).",
+  "source": "manual-derivation",
+  "notes": "2019-06-01 변경일을 경계로 두 segment 자동 생성. 초일 불산입(민법 제157조)은 기간 전체의 기산일 2019-01-01 에만 적용하므로 두 번째 구간은 2019-06-01 부터 산입한다. 구간 일수 합 150+214=364 = countDays(2019-01-01, 2019-12-31, 초일불산입). 손계산: 10,000,000 × (0.15×150 + 0.12×214) / 365 = 481,800,000 / 365 = 1,320,000 (정확히 나누어떨어짐). 각 segment는 표시용 floor, totalInterest는 raw 합계 floor (1원 차이 가능).",
   "input": {
     "principal": 10000000,
     "startDate": "2019-01-01",
@@ -16,9 +16,9 @@
     }
   },
   "expected": {
-    "totalInterest": 1316712,
-    "grandTotal": 11316712,
-    "dataVersion": "legal-rates/v1.0.0",
+    "totalInterest": 1320000,
+    "grandTotal": 11320000,
+    "dataVersion": "legal-rates/v1.0.1",
     "segments": [
       {
         "from": "2019-01-01",
@@ -30,9 +30,9 @@
       {
         "from": "2019-06-01",
         "to": "2019-12-31",
-        "days": 213,
+        "days": 214,
         "rate": 0.12,
-        "interest": 700273
+        "interest": 703561
       }
     ]
   }

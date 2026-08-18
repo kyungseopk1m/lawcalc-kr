@@ -44,12 +44,16 @@ export function calculateInterest(
   const rounding: RoundingMode = input.options.rounding ?? "floor";
 
   let rawTotal = 0;
-  const out: InterestSegment[] = segments.map((seg) => {
+  const out: InterestSegment[] = segments.map((seg, i) => {
+    // 초일 불산입(민법 제157조)은 기간 전체의 기산일에 한 번만 적용한다.
+    // 이율 변경으로 구간이 분할되어도 두 번째 구간부터는 첫날을 산입해야
+    // Σ segments[].days 가 countDays(startDate, endDate, options) 와 일치한다.
+    const segOptions = i === 0 ? input.options : { ...input.options, includeFirstDay: true };
     const { days, interestRaw, formula } = computeSegmentInterest(
       input.principal,
       seg.rate,
       seg,
-      input.options,
+      segOptions,
     );
     rawTotal += interestRaw;
     return {

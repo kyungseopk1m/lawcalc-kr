@@ -5,21 +5,21 @@
 import type { LegalRateDataset } from "./legal-rates";
 
 export const DEFAULT_LEGAL_RATES_DATASET: LegalRateDataset = {
-  "version": "1.0.0",
-  "updatedAt": "2026-05-09",
+  "version": "1.0.1",
+  "updatedAt": "2026-08-18",
   "rates": [
     {
       "code": "civil",
       "label_ko": "민법 제379조 (법정이율)",
       "annualRate": 0.05,
-      "validFrom": "1958-02-22",
+      "validFrom": "1960-01-01",
       "validTo": null
     },
     {
       "code": "commercial",
       "label_ko": "상법 제54조 (상사법정이율)",
       "annualRate": 0.06,
-      "validFrom": "1962-01-20",
+      "validFrom": "1963-01-01",
       "validTo": null
     },
     {

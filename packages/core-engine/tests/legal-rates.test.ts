@@ -6,7 +6,7 @@ import { loadLegalRates } from "../src/legal-rates";
 describe("loadLegalRates default dataset", () => {
   it("loads inline default and validates", () => {
     const ds = loadLegalRates();
-    expect(ds.version).toBe("1.0.0");
+    expect(ds.version).toBe("1.0.1");
     expect(ds.rates).toHaveLength(3);
     const codes = ds.rates.map((r) => r.code).sort();
     expect(codes).toEqual(["civil", "commercial", "promotion"]);
@@ -14,7 +14,7 @@ describe("loadLegalRates default dataset", () => {
 
   it("emits dataset version tag for InterestResult.dataVersion", () => {
     const ds = loadLegalRates();
-    expect(datasetVersionTag(ds)).toBe("legal-rates/v1.0.0");
+    expect(datasetVersionTag(ds)).toBe("legal-rates/v1.0.1");
   });
 
   it("returns the same shape for an override (validation only)", () => {

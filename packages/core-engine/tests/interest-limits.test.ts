@@ -11,14 +11,14 @@ import {
 describe("loadInterestLimits 기본 데이터셋", () => {
   it("inline default 데이터셋을 검증 후 로드한다", () => {
     const ds = loadInterestLimits();
-    expect(ds.version).toBe("1.0.0");
+    expect(ds.version).toBe("1.0.1");
     expect(ds.slices).toHaveLength(4);
     expect(ds.slices.every((s) => s.law === "interestLimitAct")).toBe(true);
   });
 
   it("InterestLimitDataset 식별자 태그를 반환한다", () => {
     const ds = loadInterestLimits();
-    expect(interestLimitsVersionTag(ds)).toBe("interest-limits/v1.0.0");
+    expect(interestLimitsVersionTag(ds)).toBe("interest-limits/v1.0.1");
   });
 
   it("override 도 동일하게 검증한다", () => {

@@ -18,7 +18,7 @@
   "expected": {
     "totalInterest": 113698,
     "grandTotal": 1113698,
-    "dataVersion": "legal-rates/v1.0.0",
+    "dataVersion": "legal-rates/v1.0.1",
     "segments": [
       {
         "from": "2021-01-01",

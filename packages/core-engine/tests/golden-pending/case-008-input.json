@@ -40,7 +40,7 @@
   "engineExpected": {
     "totalInterest": 2500000,
     "grandTotal": 52500000,
-    "dataVersion": "legal-rates/v1.0.0",
+    "dataVersion": "legal-rates/v1.0.1",
     "segments": [
       {
         "from": "2024-01-01",
