@@ -9,7 +9,7 @@
 import { applyHoffman240Cap } from "@lawcalc-kr/datasets-compensation";
 import type { AttendantCareInput, AttendantCareResult } from "./types";
 import {
-  getCumulativeHoffman,
+  getCumulativeHoffmanClamped,
   monthsBetween,
   resolveDailyWage,
   type OtherDamagesContext,
@@ -47,14 +47,13 @@ export function computeAttendantCare(
   // 2. 향후개호비 — 연금형, 240 cap 을 향후 segment 전체에서 누적.
   // 종신 개호(예: 젊은 피해자 평생 개호)는 개호기간이 호프만표 coverage(480개월)를 넘을 수 있다.
   // coverage 로 clamp 한다 — 240 cap 이 이미 그 이전에 적용되므로 결과 영향 없음 + RangeError 방지.
-  const maxMonth = ctx.hoffman.monthsCovered;
-  const clampMonth = (m: number) => Math.max(0, Math.min(m, maxMonth));
+  // clamp 는 일실수입과 같은 `getCumulativeHoffmanClamped` 를 쓴다. 여기에 로컬 clamp 를 두면
+  // 같은 규칙이 두 벌이 되고, `internal.ts` 가 스스로를 단일 진입점이라 적은 것과도 어긋난다.
   const rawHoffmanList: number[] = [];
   for (const seg of futureItems) {
-    const startMonth = clampMonth(monthsBetween(ctx.accidentDate, seg.startDate));
-    const endMonth = clampMonth(monthsBetween(ctx.accidentDate, seg.endDate));
     const raw =
-      getCumulativeHoffman(ctx.hoffman, endMonth) - getCumulativeHoffman(ctx.hoffman, startMonth);
+      getCumulativeHoffmanClamped(ctx.hoffman, monthsBetween(ctx.accidentDate, seg.endDate)) -
+      getCumulativeHoffmanClamped(ctx.hoffman, monthsBetween(ctx.accidentDate, seg.startDate));
     rawHoffmanList.push(Math.max(0, raw));
   }
   const capResult = applyHoffman240Cap(rawHoffmanList);

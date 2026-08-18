@@ -10,7 +10,7 @@ import { getLaborRateAt, type LaborRatesDataset } from "@lawcalc-kr/datasets-com
 import type { HoffmanDataset } from "@lawcalc-kr/datasets-compensation";
 import type { IsoDate } from "@lawcalc-kr/core-engine";
 
-export { getCumulativeHoffman, monthsBetween } from "../internal";
+export { getCumulativeHoffman, getCumulativeHoffmanClamped, monthsBetween } from "../internal";
 
 /** 기타손해 계산 컨텍스트 — 호출자(injury/death compute)가 로드한 dataset + 사고일 주입. */
 export interface OtherDamagesContext {
