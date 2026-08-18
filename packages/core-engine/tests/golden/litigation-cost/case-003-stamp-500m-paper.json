@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-003-stamp-500m-paper",
   "title": "인지액 — 소장, 소가 5억원 = 2,055,000원",
   "source": "statute-derivation + external-web-capture(KLAC)",
@@ -11,6 +11,7 @@
   },
   "expected": {
     "amount": 2055000,
+    "formulaText": "1심 (×1): (소가 500,000,000 × 0.004 + 55,000) × 1 = 2,055,000원 → 2,055,000원 (제2조 ②항 100원 절사)",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {

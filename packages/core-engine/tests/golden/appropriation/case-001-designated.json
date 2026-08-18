@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-001-designated",
   "title": "지정충당 (debtorDesignation) — 단일 채권 + 479조 cost→interest→principal 순",
   "source": "민법 제476조 (지정충당) + 제479조 (비용·이자·원본 순)",
@@ -18,7 +18,12 @@
       "amount": 5000,
       "allocation": {
         "type": "debtorDesignation",
-        "targets": [{ "claimId": "loan-1", "amount": 5000 }]
+        "targets": [
+          {
+            "claimId": "loan-1",
+            "amount": 5000
+          }
+        ]
       }
     },
     "computedAt": "2026-05-15"
@@ -49,7 +54,9 @@
         "costBalanceAfter": 0,
         "interestBalanceAfter": 0,
         "principalBalanceAfter": 8000,
-        "totalApplied": 5000
+        "totalApplied": 5000,
+        "name": "대여금 원본",
+        "statutoryRank": null
       }
     ]
   }

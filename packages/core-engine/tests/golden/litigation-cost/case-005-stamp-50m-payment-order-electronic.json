@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-005-stamp-50m-payment-order-electronic",
   "title": "인지액 — 지급명령 + 전자소송, 소가 5,000만원 = 20,700원",
   "source": "statute-derivation + external-web-capture(KLAC)",
@@ -13,6 +13,7 @@
   },
   "expected": {
     "amount": 20700,
+    "formulaText": "1심 (×1) + 지급명령 (×0.1) + 전자소송 (×0.9): (소가 50,000,000 × 0.0045 + 5,000) × 1 × 0.1 × 0.9 = 20,700원 → 20,700원 (제2조 ②항 100원 절사)",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {

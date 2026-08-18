@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-009-stamp-provisional-status-no-truncation",
   "title": "인지액 — 임시지위 가처분, 소가 1,100만원 = 27,250원 (제9조 경로 절사 없음)",
   "source": "statute-derivation",
@@ -12,6 +12,7 @@
   },
   "expected": {
     "amount": 27250,
+    "formulaText": "임시지위 가처분 (제9조 ②항 후단): 본안 인지액 54,500 × 0.5 = 27,250원",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {

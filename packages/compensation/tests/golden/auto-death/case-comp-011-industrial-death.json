@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-comp-011-industrial-death",
   "title": "industrial/death — 산재 사망, 유족급여 1억 선공제(일실수입 한도) 후 과실 10% + 상속분배",
   "source": "manual-derivation",
@@ -42,8 +42,6 @@
   },
   "expected": {
     "accidentType": "industrial",
-    "segmentCount": 1,
-    "segmentEndMonths": [420],
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 605679360,
     "solatiumWon": 0,
@@ -55,7 +53,8 @@
     "pecuniaryDamagesSubtotalWon": 510679360,
     "faultOffset": {
       "ratio": 0.1,
-      "afterWon": 459611424
+      "afterWon": 459611424,
+      "beforeWon": 510679360
     },
     "funeralExpenseWon": 5000000,
     "deductions": {
@@ -84,7 +83,37 @@
       "lifeExpectancy": "life-expectancy/v1.0.0",
       "hoffman": "hoffman/v1.0.0",
       "leibniz": "leibniz/v1.0.0"
-    }
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 420,
+        "lossRate": 1,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 242.46633829,
+        "appliedHoffman": 240,
+        "amountFloorWon": 605679360
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [240],
+    "mode": "death",
+    "rawInheritanceShares": [
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 5,
+        "rawNumerator": 3,
+        "rawDenominator": 5
+      },
+      {
+        "name": "자녀1",
+        "numerator": 2,
+        "denominator": 5,
+        "rawNumerator": 2,
+        "rawDenominator": 5
+      }
+    ]
   },
   "metadata": {
     "oracle": "manual-derivation",

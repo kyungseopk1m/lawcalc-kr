@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-006-stamp-provisional-general-50m",
   "title": "인지액 — 일반 가압류 신청, 소가 5,000만원 = 10,000원 (정액)",
   "source": "statute-derivation",
@@ -11,6 +11,7 @@
   },
   "expected": {
     "amount": 10000,
+    "formulaText": "가압류·가처분 신청 (제9조 ②항 전단): 정액 1만원 = 10,000원",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {

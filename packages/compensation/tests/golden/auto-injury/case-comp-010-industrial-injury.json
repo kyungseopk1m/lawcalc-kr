@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-comp-010-industrial-injury",
   "title": "industrial/injury — 산재 부상, 장해급여 5천만 선공제(일실수입 한도) 후 과실 20%",
   "source": "manual-derivation",
@@ -40,8 +40,6 @@
   },
   "expected": {
     "accidentType": "industrial",
-    "segmentCount": 1,
-    "segmentEndMonths": [360],
     "lostIncomeSubtotalWon": 249399909,
     "solatiumWon": 0,
     "industrialBenefit": {
@@ -52,7 +50,8 @@
     "pecuniaryDamagesSubtotalWon": 199399909,
     "faultOffset": {
       "ratio": 0.2,
-      "afterWon": 159519927
+      "afterWon": 159519927,
+      "beforeWon": 199399909
     },
     "deductions": {
       "ratioSubtotalWon": 0,
@@ -66,7 +65,21 @@
       "lifeExpectancy": "life-expectancy/v1.0.0",
       "hoffman": "hoffman/v1.0.0",
       "leibniz": "leibniz/v1.0.0"
-    }
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 360,
+        "lossRate": 0.30000000000000004,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 219.61006732,
+        "appliedHoffman": 219.61006732,
+        "amountFloorWon": 249399909
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [219.61006732],
+    "combinedLossRate": 0.30000000000000004
   },
   "metadata": {
     "oracle": "manual-derivation",

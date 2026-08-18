@@ -5,7 +5,8 @@
     "noEmit": true,
     "paths": {
       "@lawcalc-kr/core-engine": ["../core-engine/src/index.ts"],
-      "@lawcalc-kr/datasets-compensation": ["../datasets-compensation/src/index.ts"]
+      "@lawcalc-kr/datasets-compensation": ["../datasets-compensation/src/index.ts"],
+      "@golden-coverage": ["../core-engine/tests/golden-coverage.ts"]
     },
     "types": []
   },

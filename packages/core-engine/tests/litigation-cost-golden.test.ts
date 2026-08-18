@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { computeStampDuty, type StampDutyInput } from "../src";
+import { findCoverageViolations, type GoldenCoverage } from "./golden-coverage";
 
-const GOLDEN_FIXTURE_SCHEMA = "1";
+const GOLDEN_FIXTURE_SCHEMA = "2";
 const FROZEN_AT = "2026-07-02T00:00:00.000Z";
 
 interface ExpectedShape {
   amount: number;
+  /**
+   * 사용자에게 그대로 보이는 산식. 구간·배수·하한·절사·간주 소가가 전부 여기로 드러나므로
+   * 전문을 고정한다. 문구를 바꾸면 골든이 깨지는 것이 의도다.
+   */
+  formulaText: string;
   dataVersion: string;
 }
 
@@ -50,9 +56,21 @@ const cases: GoldenCase[] = Object.entries(modules)
  * 본 세트가 v0.10.0 에서 인지대 구간식 오적용(소가 전체 × 요율 + 보정상수를 구간별
  * 누진식으로 계산, 1천만원 이상 전 구간 과소)을 잡아냈다.
  */
+const COVERAGE: GoldenCoverage = {
+  pinned: ["amount", "formulaText", "dataVersion"],
+  unpinned: {
+    computedAt: "하네스가 FROZEN_AT 을 주입한다. 값 자체는 계산 결과가 아니다.",
+  },
+};
+
 describe("litigation-cost golden cases (v0.10.0 — 인지법 손계산 + KLAC 외부 대조)", () => {
   it("loads at least 5 cases", () => {
     expect(cases.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("결과의 모든 필드가 골든 선언에 잡힌다 (미검사 필드 0)", () => {
+    const results = cases.map((c) => computeStampDuty(c.input, { computedAt: FROZEN_AT }));
+    expect(findCoverageViolations(results, COVERAGE)).toEqual([]);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use statute-derivation oracle", () => {
@@ -75,6 +93,7 @@ describe("litigation-cost golden cases (v0.10.0 — 인지법 손계산 + KLAC �
     it(`${c.id}: ${c.title}`, () => {
       const result = computeStampDuty(c.input, { computedAt: FROZEN_AT });
       expect(result.amount, `${c.id} amount`).toBe(c.expected.amount);
+      expect(result.formulaText, `${c.id} formulaText`).toBe(c.expected.formulaText);
       expect(result.dataVersion, `${c.id} dataVersion`).toBe(c.expected.dataVersion);
     });
   }

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-comp-002-multi-disability",
   "title": "한시 5y×20% + 영구 58% → [0,60) 0.664 + [60,360) 0.58 (Option B 기간식, 2 segment)",
   "source": "manual-derivation",
@@ -14,8 +14,19 @@
       "legalRatePreset": "civil"
     },
     "lossRate": {
-      "permanent": [{ "department": "신장내과", "ratio": 0.58 }],
-      "temporary": [{ "department": "정형외과", "ratio": 0.2, "years": 5 }],
+      "permanent": [
+        {
+          "department": "신장내과",
+          "ratio": 0.58
+        }
+      ],
+      "temporary": [
+        {
+          "department": "정형외과",
+          "ratio": 0.2,
+          "years": 5
+        }
+      ],
       "priorImpairmentRatio": 0
     },
     "lostIncome": {
@@ -24,15 +35,20 @@
     },
     "solatiumWon": 0,
     "faultRatio": 0,
-    "deductions": { "ratio": [], "absolute": [] }
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    }
   },
   "expected": {
-    "segmentCount": 2,
-    "segmentEndMonths": [60, 360],
     "lostIncomeSubtotalWon": 499170732,
     "solatiumWon": 0,
     "pecuniaryDamagesSubtotalWon": 499170732,
-    "faultOffset": { "ratio": 0, "afterWon": 499170732 },
+    "faultOffset": {
+      "ratio": 0,
+      "afterWon": 499170732,
+      "beforeWon": 499170732
+    },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
@@ -45,7 +61,31 @@
       "lifeExpectancy": "life-expectancy/v1.0.0",
       "hoffman": "hoffman/v1.0.0",
       "leibniz": "leibniz/v1.0.0"
-    }
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 60,
+        "lossRate": 0.6639999999999999,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 53.45457732,
+        "appliedHoffman": 53.45457732,
+        "amountFloorWon": 134361786
+      },
+      {
+        "startMonth": 60,
+        "endMonth": 360,
+        "lossRate": 0.58,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 166.15549000000001,
+        "appliedHoffman": 166.15549000000001,
+        "amountFloorWon": 364808946
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [53.45457732, 166.15549000000001],
+    "combinedLossRate": 0.6639999999999999
   },
   "metadata": {
     "oracle": "manual-derivation",

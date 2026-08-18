@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-comp-014-other-damages-death",
   "title": "auto/death 기타손해 — 개호비+치료비 + 생계비 1/3 + 장례비 + 과실 10% + 상속분배",
   "source": "manual-derivation",
@@ -34,26 +34,45 @@
         ]
       },
       "treatment": {
-        "past": [{ "label": "기왕치료비", "costWon": 10000000, "priorRatio": 0 }]
+        "past": [
+          {
+            "label": "기왕치료비",
+            "costWon": 10000000,
+            "priorRatio": 0
+          }
+        ]
       }
     },
     "heirs": {
-      "decedent": { "deceasedAt": "2026-01-01" },
-      "spouse": { "name": "배우자", "alive": true },
+      "decedent": {
+        "deceasedAt": "2026-01-01"
+      },
+      "spouse": {
+        "name": "배우자",
+        "alive": true
+      },
       "linealDescendants": [
-        { "name": "자녀1", "deceasedBeforeOpening": false },
-        { "name": "자녀2", "deceasedBeforeOpening": false }
+        {
+          "name": "자녀1",
+          "deceasedBeforeOpening": false
+        },
+        {
+          "name": "자녀2",
+          "deceasedBeforeOpening": false
+        }
       ]
     }
   },
   "expected": {
-    "segmentCount": 1,
-    "segmentEndMonths": [420],
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 605679360,
     "solatiumWon": 50000000,
     "pecuniaryDamagesSubtotalWon": 1172146521,
-    "faultOffset": { "ratio": 0.1, "afterWon": 1054931868 },
+    "faultOffset": {
+      "ratio": 0.1,
+      "afterWon": 1054931868,
+      "beforeWon": 1172146521
+    },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
@@ -66,19 +85,85 @@
     "otherDamages": {
       "attendantCareWon": 501467161,
       "treatmentWon": 10000000,
-      "applianceWon": 0
+      "applianceWon": 0,
+      "subtotalWon": 511467161,
+      "attendantCare": {
+        "pastWon": 0,
+        "futureWon": 501467161,
+        "subtotalWon": 501467161,
+        "hoffman240CappedAtIndex": null
+      },
+      "treatment": {
+        "pastWon": 10000000,
+        "futureWon": 0,
+        "subtotalWon": 10000000,
+        "valueSum20Capped": false
+      },
+      "appliance": null
     },
     "inheritanceShares": [
-      { "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 452113629 },
-      { "name": "자녀1", "numerator": 2, "denominator": 7, "amountWon": 301409086 },
-      { "name": "자녀2", "numerator": 2, "denominator": 7, "amountWon": 301409085 }
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 7,
+        "amountWon": 452113629
+      },
+      {
+        "name": "자녀1",
+        "numerator": 2,
+        "denominator": 7,
+        "amountWon": 301409086
+      },
+      {
+        "name": "자녀2",
+        "numerator": 2,
+        "denominator": 7,
+        "amountWon": 301409085
+      }
     ],
     "dataVersions": {
       "laborRates": "labor-rates/v1.0.0",
       "lifeExpectancy": "life-expectancy/v1.0.0",
       "hoffman": "hoffman/v1.0.0",
       "leibniz": "leibniz/v1.0.0"
-    }
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 420,
+        "lossRate": 1,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 242.46633829,
+        "appliedHoffman": 240,
+        "amountFloorWon": 605679360
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [240],
+    "mode": "death",
+    "rawInheritanceShares": [
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 7,
+        "rawNumerator": 3,
+        "rawDenominator": 7
+      },
+      {
+        "name": "자녀1",
+        "numerator": 2,
+        "denominator": 7,
+        "rawNumerator": 2,
+        "rawDenominator": 7
+      },
+      {
+        "name": "자녀2",
+        "numerator": 2,
+        "denominator": 7,
+        "rawNumerator": 2,
+        "rawDenominator": 7
+      }
+    ]
   },
   "metadata": {
     "oracle": "manual-derivation",

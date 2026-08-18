@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-comp-008-auto-death-basic",
   "title": "auto/death basic — 30세男 사망, 생계비 1/3 + 장례비 500만, 상속 없음",
   "source": "manual-derivation",
@@ -22,13 +22,15 @@
     "faultRatio": 0
   },
   "expected": {
-    "segmentCount": 1,
-    "segmentEndMonths": [420],
     "livingCostDeductionRatio": 0.3333333333333333,
     "lostIncomeSubtotalWon": 605679360,
     "solatiumWon": 0,
     "pecuniaryDamagesSubtotalWon": 610679360,
-    "faultOffset": { "ratio": 0, "afterWon": 610679360 },
+    "faultOffset": {
+      "ratio": 0,
+      "afterWon": 610679360,
+      "beforeWon": 610679360
+    },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
@@ -43,7 +45,22 @@
       "lifeExpectancy": "life-expectancy/v1.0.0",
       "hoffman": "hoffman/v1.0.0",
       "leibniz": "leibniz/v1.0.0"
-    }
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 420,
+        "lossRate": 1,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 242.46633829,
+        "appliedHoffman": 240,
+        "amountFloorWon": 605679360
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [240],
+    "mode": "death",
+    "rawInheritanceShares": null
   },
   "metadata": {
     "oracle": "manual-derivation",

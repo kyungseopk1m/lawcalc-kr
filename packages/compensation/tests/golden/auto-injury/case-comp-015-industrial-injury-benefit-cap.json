@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-comp-015-industrial-injury-benefit-cap",
   "title": "industrial/injury — 장해급여가 일실수입을 초과: 일실수입 한도 공제, 위자료 보존",
   "source": "manual-derivation",
@@ -40,8 +40,6 @@
   },
   "expected": {
     "accidentType": "industrial",
-    "segmentCount": 1,
-    "segmentEndMonths": [360],
     "lostIncomeSubtotalWon": 249399909,
     "solatiumWon": 5000000,
     "industrialBenefit": {
@@ -52,7 +50,8 @@
     "pecuniaryDamagesSubtotalWon": 5000000,
     "faultOffset": {
       "ratio": 0.2,
-      "afterWon": 4000000
+      "afterWon": 4000000,
+      "beforeWon": 5000000
     },
     "deductions": {
       "ratioSubtotalWon": 0,
@@ -66,7 +65,21 @@
       "lifeExpectancy": "life-expectancy/v1.0.0",
       "hoffman": "hoffman/v1.0.0",
       "leibniz": "leibniz/v1.0.0"
-    }
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 360,
+        "lossRate": 0.30000000000000004,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 219.61006732,
+        "appliedHoffman": 219.61006732,
+        "amountFloorWon": 249399909
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [219.61006732],
+    "combinedLossRate": 0.30000000000000004
   },
   "metadata": {
     "oracle": "manual-derivation",

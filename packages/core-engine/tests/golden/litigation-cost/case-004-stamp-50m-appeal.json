@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-004-stamp-50m-appeal",
   "title": "인지액 — 항소장, 소가 5,000만원 = 345,000원",
   "source": "statute-derivation + external-web-capture(KLAC)",
@@ -11,6 +11,7 @@
   },
   "expected": {
     "amount": 345000,
+    "formulaText": "항소 (×1.5): (소가 50,000,000 × 0.0045 + 5,000) × 1.5 = 345,000원 → 345,000원 (제2조 ②항 100원 절사)",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {

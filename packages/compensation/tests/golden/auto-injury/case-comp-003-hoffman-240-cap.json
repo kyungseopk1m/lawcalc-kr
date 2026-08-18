@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-comp-003-hoffman-240-cap",
   "title": "영구 30% 가동 65세 480개월 → H[480]=263.33 > 240 → cap 적용",
   "source": "manual-derivation",
@@ -14,7 +14,12 @@
       "legalRatePreset": "civil"
     },
     "lossRate": {
-      "permanent": [{ "department": "정형외과", "ratio": 0.3 }],
+      "permanent": [
+        {
+          "department": "정형외과",
+          "ratio": 0.3
+        }
+      ],
       "temporary": [],
       "priorImpairmentRatio": 0
     },
@@ -24,15 +29,20 @@
     },
     "solatiumWon": 0,
     "faultRatio": 0,
-    "deductions": { "ratio": [], "absolute": [] }
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    }
   },
   "expected": {
-    "segmentCount": 1,
-    "segmentEndMonths": [480],
     "lostIncomeSubtotalWon": 272555712,
     "solatiumWon": 0,
     "pecuniaryDamagesSubtotalWon": 272555712,
-    "faultOffset": { "ratio": 0, "afterWon": 272555712 },
+    "faultOffset": {
+      "ratio": 0,
+      "afterWon": 272555712,
+      "beforeWon": 272555712
+    },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
@@ -45,7 +55,21 @@
       "lifeExpectancy": "life-expectancy/v1.0.0",
       "hoffman": "hoffman/v1.0.0",
       "leibniz": "leibniz/v1.0.0"
-    }
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 480,
+        "lossRate": 0.30000000000000004,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3785496,
+        "rawHoffman": 263.33392459,
+        "appliedHoffman": 240,
+        "amountFloorWon": 272555712
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [240],
+    "combinedLossRate": 0.30000000000000004
   },
   "metadata": {
     "oracle": "manual-derivation",

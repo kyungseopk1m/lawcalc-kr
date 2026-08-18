@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateInterest, type InterestInput } from "../src";
+import { calculateInterest, STANDARD_DISCLAIMER, type InterestInput } from "../src";
+import { findCoverageViolations, type GoldenCoverage } from "./golden-coverage";
 
 /**
  * 골든 fixture 의 schema 버전. v1 = W2 도입 시점.
@@ -56,9 +57,38 @@ const cases: GoldenCase[] = Object.entries(modules)
  *
  * 주의: tests/golden.test.ts는 vitest.golden.config.ts 로 격리 실행한다 (`pnpm test:golden`).
  */
+const COVERAGE: GoldenCoverage = {
+  pinned: [
+    "principal",
+    "totalInterest",
+    "grandTotal",
+    "dataVersion",
+    "disclaimer",
+    "segments[].from",
+    "segments[].to",
+    "segments[].days",
+    "segments[].rate",
+    "segments[].interest",
+  ],
+  unpinned: {
+    computedAt: "실행 시각이라 비결정이다.",
+    "options.mode":
+      "입력 그대로의 패스스루. rounding.test.ts 의 result.options 패스스루 절이 덮는다.",
+    "options.includeFirstDay":
+      "입력 그대로의 패스스루. 초일산입 자체의 일수 단언은 days.test.ts 가 덮는다.",
+    "options.leapYear": "입력 그대로의 패스스루. 윤년 분모 단언은 edge.test.ts 가 덮는다.",
+    "segments[].formula": "사람이 읽는 표시 문자열. 분모 표기 단언은 edge.test.ts 가 덮는다.",
+  },
+};
+
 describe("golden cases (회귀 + 외부 기준 일치)", () => {
   it("loads at least 5 cases (W2 minimum)", () => {
     expect(cases.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("결과의 모든 필드가 골든 선언에 잡힌다 (미검사 필드 0)", () => {
+    const results = cases.map((c) => calculateInterest(c.input));
+    expect(findCoverageViolations(results, COVERAGE)).toEqual([]);
   });
 
   it("all cases match GOLDEN_FIXTURE_SCHEMA (v2 옵션 도입 대비 schema gate)", () => {
@@ -72,6 +102,8 @@ describe("golden cases (회귀 + 외부 기준 일치)", () => {
       const result = calculateInterest(c.input);
 
       expect(result.dataVersion).toBe(c.expected.dataVersion);
+      expect(result.principal, `${c.id} principal`).toBe(c.input.principal);
+      expect(result.disclaimer, `${c.id} disclaimer`).toBe(STANDARD_DISCLAIMER);
       expect(result.totalInterest).toBe(c.expected.totalInterest);
       expect(result.grandTotal).toBe(c.expected.grandTotal);
       expect(result.segments).toHaveLength(c.expected.segments.length);

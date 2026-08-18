@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-002-stamp-10m-boundary",
   "title": "인지액 — 소장, 소가 1,000만원 (2구간 경계) = 50,000원",
   "source": "statute-derivation + external-web-capture(KLAC)",
@@ -11,6 +11,7 @@
   },
   "expected": {
     "amount": 50000,
+    "formulaText": "1심 (×1): (소가 10,000,000 × 0.0045 + 5,000) × 1 = 50,000원 → 50,000원 (제2조 ②항 100원 절사)",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {

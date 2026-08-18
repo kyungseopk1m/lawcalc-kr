@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-006-designation-surplus-cascade",
   "title": "지정충당 잉여 — 제477조 법정충당 cascade (지정 대상 잔액 → 후순위 채권 순)",
   "source": "민법 제476조 (지정충당) + 제477조 (법정충당) + 제479조 (비용·이자·원본 순)",
@@ -26,7 +26,12 @@
       "amount": 130000,
       "allocation": {
         "type": "debtorDesignation",
-        "targets": [{ "claimId": "loan-a", "amount": 60000 }]
+        "targets": [
+          {
+            "claimId": "loan-a",
+            "amount": 60000
+          }
+        ]
       }
     },
     "computedAt": "2026-05-15"
@@ -57,7 +62,14 @@
         "costBalanceAfter": 0,
         "interestBalanceAfter": 0,
         "principalBalanceAfter": 0,
-        "totalApplied": 110000
+        "totalApplied": 110000,
+        "name": "대여금 A",
+        "statutoryRank": {
+          "dueReached": true,
+          "debtorBenefitRank": 0,
+          "dueAt": "2025-01-10",
+          "priorityLabel": "잉여 법정충당 1순위 (변제기 도래, 변제이익 순위 0)"
+        }
       },
       {
         "claimId": "loan-b",
@@ -67,7 +79,14 @@
         "costBalanceAfter": 0,
         "interestBalanceAfter": 0,
         "principalBalanceAfter": 35000,
-        "totalApplied": 20000
+        "totalApplied": 20000,
+        "name": "대여금 B",
+        "statutoryRank": {
+          "dueReached": true,
+          "debtorBenefitRank": 0,
+          "dueAt": "2025-03-01",
+          "priorityLabel": "잉여 법정충당 2순위 (변제기 도래, 변제이익 순위 0)"
+        }
       }
     ]
   }

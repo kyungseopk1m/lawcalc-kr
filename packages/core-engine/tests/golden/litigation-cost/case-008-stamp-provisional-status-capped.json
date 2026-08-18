@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "id": "case-008-stamp-provisional-status-capped",
   "title": "인지액 — 임시지위 가처분, 소가 10억원 = 500,000원 (상한 적용)",
   "source": "statute-derivation",
@@ -12,6 +12,7 @@
   },
   "expected": {
     "amount": 500000,
+    "formulaText": "임시지위 가처분 (제9조 ②항 후단): 본안 인지액 4,055,000 × 0.5 → 상한 500,000원 적용 = 500,000원",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {
