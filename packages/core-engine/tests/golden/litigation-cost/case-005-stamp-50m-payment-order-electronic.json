@@ -3,7 +3,7 @@
   "id": "case-005-stamp-50m-payment-order-electronic",
   "title": "인지액 — 지급명령 + 전자소송, 소가 5,000만원 = 20,700원",
   "source": "statute-derivation + external-web-capture(KLAC)",
-  "notes": "인지법 §7②(지급명령 1/10) + §16(전자 9/10): 230,000 × 0.1 = 23,000 → × 0.9 = 20,700. KLAC 캡처 = 20,600 — 동일 float 오차 파생. 법령 기준 정답 20,700.",
+  "notes": "인지법 제7조 제2항(지급명령 1/10) + 제16조(전자 9/10): 230,000 × 0.1 = 23,000 → × 0.9 = 20,700. KLAC 캡처 = 20,600 — 동일 float 오차 파생. 법령 기준 정답 20,700.",
   "input": {
     "caseValue": 50000000,
     "caseType": "paymentOrder",
@@ -13,13 +13,13 @@
   },
   "expected": {
     "amount": 20700,
-    "formulaText": "1심 (×1) + 지급명령 (×0.1) + 전자소송 (×0.9): (소가 50,000,000 × 0.0045 + 5,000) × 1 × 0.1 × 0.9 = 20,700원 → 20,700원 (제2조 ②항 100원 절사)",
+    "formulaText": "1심 (×1) + 지급명령 (×0.1) + 전자소송 (×0.9): (소가 50,000,000 × 0.0045 + 5,000) × 1 × 0.1 × 0.9 = 20,700원 → 20,700원 (제2조 제2항 100원 절사)",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {
     "oracle": "statute-derivation",
     "derivedAt": "2026-07-02",
-    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md §G (인지법 제2조·제3조·제7조·제16조 정수 손계산)",
+    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md G절 (인지법 제2조·제3조·제7조·제16조 정수 손계산)",
     "externalCapture": {
       "source": "대한법률구조공단 소송비용 자동계산 (본안사건 인지 및 송달료 계산)",
       "sourceUrl": "https://www.klac.or.kr/legalstruct/autoCostCalculation.do",

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/kyungseopk1m/lawcalc-kr/blob/main/data/interest-limits/v1.schema.json",
   "title": "lawcalc-kr Interest Limits Dataset (v1)",
-  "description": "이자제한법 / 대부업법 시기별 최고이자율 cap dataset v1. 워크스페이스 single source. packages/core-engine/scripts/sync-interest-limits.mjs 가 빌드 타임에 src/interest-limits.dataset.generated.ts 로 인라인. 검증은 InterestLimitDataset validate() 와 동등. v1.0.0 = 이자제한법 only — 대부업법 (등록/미등록) 은 G3 게이트 (사용자 시행령 캡처) 충족 후 v1.1+ 추가.",
+  "description": "이자제한법 / 대부업법 시기별 최고이자율 cap dataset v1. 워크스페이스 single source. packages/core-engine/scripts/sync-interest-limits.mjs 가 빌드 타임에 src/interest-limits.dataset.generated.ts 로 인라인. 검증은 InterestLimitDataset validate() 와 동등. v1.0.0 = 이자제한법 only. 대부업법 (등록/미등록) 은 G3 게이트 (사용자 시행령 캡처) 충족 후 v1.1+ 추가.",
   "type": "object",
   "required": ["version", "updatedAt", "slices"],
   "additionalProperties": false,

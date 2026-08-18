@@ -7,10 +7,10 @@ import type { LawyerFeeAppealsRule, LawyerFeeBracket, NoOralHearingReason } from
  * 가 빌드 타임에 본 모듈의 `lawyer-fee-dataset.generated.ts` 로 인라인.
  *
  * 적용 조문 (G2 + G5 final 확정):
- *   - 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①·③항 (별표 적용 + 항소심 불복 범위 = 소가)
- *   - 동 규칙 제3조 ②항 (가압류·가처분 ×1/2, 변론·심문기일 시 ×1.0)
+ *   - 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항·제3항 (별표 적용 + 항소심 불복 범위 = 소가)
+ *   - 동 규칙 제3조 제2항 (가압류·가처분 ×1/2, 변론·심문기일 시 ×1.0)
  *   - 동 규칙 제5조 (무변론·자백·이행권고결정 ×1/2)
- *   - 동 규칙 제6조 ①항·②항 (재량 감액 무한 / 증액 ×1.5 cap)
+ *   - 동 규칙 제6조 제1항·②항 (재량 감액 무한 / 증액 ×1.5 cap)
  *   - Korea Legal Aid Corporation (KLAC) 보수 기준 (대한법률구조공단 × 0.42)
  *
  * `previousVersions` 패턴 (legal-rates) 대신 본 v1.1.0 은 현행 단일 슬라이스 (2018-04-01
@@ -167,8 +167,8 @@ function assertMultiplierInRange(value: number, max: number, context: string): v
  *   - brackets.length === 8 (별표 8구간 고정) + sortOrder 1..8 유니크 + scopeStart 오름차순.
  *   - 각 bracket: baseAmount/rate ≥ 0 + rate ≤ 1 + scopeEnd === next.scopeStart 정합 +
  *     마지막 row 의 scopeEnd === null.
- *   - appealsRule.policy === "perInstanceIndependent" 강제 (G2 §2.4).
- *   - modifiers.*.multiplier ∈ (0, 1.5] (제6조 ②항 cap 정합).
+ *   - appealsRule.policy === "perInstanceIndependent" 강제 (G2 제2조.4).
+ *   - modifiers.*.multiplier ∈ (0, 1.5] (제6조 제2항 cap 정합).
  *   - stackingPolicy.maxMultiplierCap === 1.5 + minMultiplierCap === 0.0 (PR 1 의
  *     LAWYER_FEE_MULTIPLIER_MAX/MIN 와 정합).
  */

@@ -283,7 +283,7 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
     }
   }
 
-  // 대습 원인 (제1003조 2항 2026-03-17 개정 분기). 파싱하지 않으면 결격·상실 파일이 사망으로
+  // 대습 원인 (제1003조 제2항 2026-03-17 개정 분기). 파싱하지 않으면 결격·상실 파일이 사망으로
   // 되돌아가 시행일 이후 상속에서 피대습자 배우자에게 없는 지분이 생긴다.
   const representationCause = record.representationCause;
   if (representationCause !== undefined) {
@@ -535,8 +535,8 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
             "payload.input.stampDuty.filingDate",
           ),
         }),
-    // 제11조 ①항 원신청서 인지액. 파싱하지 않으면 저장한 항고 인지액이 로드 때 사라져
-    // 제11조 ②항 정액 2,000원으로 되돌아간다.
+    // 제11조 제1항 원신청서 인지액. 파싱하지 않으면 저장한 항고 인지액이 로드 때 사라져
+    // 제11조 제2항 정액 2,000원으로 되돌아간다.
     ...(stampDutyRecord.underlyingApplicationStampDutyWon === undefined
       ? {}
       : {

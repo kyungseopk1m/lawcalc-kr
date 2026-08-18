@@ -3,7 +3,7 @@
   "id": "case-comp-009-auto-death-inheritance",
   "title": "auto/death inheritance — 40세男 사망, 배우자+자녀2 분배 (3:2:2), 잔여원 선순위",
   "source": "manual-derivation",
-  "notes": "compensation-death-golden-derivation-2026-06-02.md § 3. 가동연한 65세(300개월), rawHoffman H[300]=194.34575275 < 240 → cap 미적용, 일실수입 490,463,379 + 위자료 8천만 + 장례비 500만(적극손해 → 과실상계 대상) = 소계 575,463,379, 과실 20% → 460,370,703, 절대공제 12,345,678원 → 448,025,025 → 100원 절사 448,025,000. 상속 배우자 3/7 자녀 2/7 × 2, floor 후 잔여 2원 배우자·자녀1 배정.",
+  "notes": "compensation-death-golden-derivation-2026-06-02.md 3절. 가동연한 65세(300개월), rawHoffman H[300]=194.34575275 < 240 → cap 미적용, 일실수입 490,463,379 + 위자료 8천만 + 장례비 500만(적극손해 → 과실상계 대상) = 소계 575,463,379, 과실 20% → 460,370,703, 절대공제 12,345,678원 → 448,025,025 → 100원 절사 448,025,000. 상속 배우자 3/7 자녀 2/7 × 2, floor 후 잔여 2원 배우자·자녀1 배정.",
   "input": {
     "mode": "death",
     "base": {
@@ -134,6 +134,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-06-02",
-    "derivedBy": "compensation-death-golden-derivation-2026-06-02.md § 3"
+    "derivedBy": "compensation-death-golden-derivation-2026-06-02.md 3절"
   }
 }

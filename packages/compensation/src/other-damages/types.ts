@@ -1,10 +1,10 @@
 /**
  * Public domain types for the lawcalc-kr compensation 기타손해 (개호비·치료비·보조구) engine.
  *
- * 근거: 외부 reference 매뉴얼 (private) §6-가·나·다. 적용 조항을 직접 명시한다.
+ * 근거: 외부 reference 매뉴얼 (private) 제6조-가·나·다. 적용 조항을 직접 명시한다.
  * 적용 조항: 민법 제393조 (손해배상의 범위) / 제763조 (불법행위 책임).
  *
- * 적용 범위: v0.8.0 기타손해 (capability id `compensation@4`). 일실퇴직금(§6-라)은 deferred.
+ * 적용 범위: v0.8.0 기타손해 (capability id `compensation@4`). 일실퇴직금(제6조-라)은 deferred.
  * 부상·사망 양 경로 공통. 사건종류(자/산)·사건유형(부상/사망)과 독립한 손해 풀이다.
  *
  * 두 cap 의 자연 구분:
@@ -22,7 +22,7 @@ export interface AttendantPastInput {
   directDailyWageWon?: number;
   /** 총 개호일수 (양수). */
   totalDays: number;
-  /** 실제지출 개호비 (원, ≥ 0 정수). 입력 시 `min(계산값, 실지출)` 적용 (매뉴얼 §6-가-(1)). */
+  /** 실제지출 개호비 (원, ≥ 0 정수). 입력 시 `min(계산값, 실지출)` 적용 (매뉴얼 제6조-가-(1)). */
   actualSpentWon?: number;
   /** 기왕증 기여도 (0~1). default 0. `(1 - priorRatio)` 곱. */
   priorRatio?: number;

@@ -2,7 +2,7 @@
   "schemaVersion": "2",
   "id": "case-004-multi-debt-equal-priority",
   "title": "법정충당 (477조) — 동순위 (rank·dueAt 동일) 시 잔액 비례 안분",
-  "source": "민법 제477조 4호 (이상 모두 동등 시 채무액 비례 충당)",
+  "source": "민법 제477조 제4호 (이상 모두 동등 시 채무액 비례 충당)",
   "input": {
     "claims": [
       {

@@ -16,7 +16,7 @@ import { Input } from "./ui/input";
 export interface RepInput {
   id: string;
   name: string;
-  /** 피대습자의 배우자(며느리·사위)인지 — §1009② 5할 가산 대상. */
+  /** 피대습자의 배우자(며느리·사위)인지 — 제1009조 제2항 5할 가산 대상. */
   isSpouseOfRepresented?: boolean;
   /** 대습상속인 본인의 상속포기. */
   renounced?: boolean;
@@ -29,13 +29,13 @@ export interface HeirInput {
   name: string;
   deceasedBeforeOpening: boolean;
   /**
-   * 대습 원인. 제1003조 2항이 2026-03-17 개정으로 대습 배우자를 "상속개시전에 사망한
+   * 대습 원인. 제1003조 제2항이 2026-03-17 개정으로 대습 배우자를 "상속개시전에 사망한
    * 사람의 배우자" 로 좁혀, 시행일 이후 개시 상속에서는 원인에 따라 금액이 갈린다.
    */
   representationCause?: RepresentationCause;
-  /** 상속포기 (§1041·§1042). 사망·결격과 별개 사유다 — 포기는 대습 원인이 아니다(§1001). */
+  /** 상속포기 (제1041조·제1042조). 사망·결격과 별개 사유다 — 포기는 대습 원인이 아니다(제1001조). */
   renounced?: boolean;
-  /** 촌수 — 직계존속·방계 4순위에서 최근친 우선 판정(§1000②). 그 외 그룹은 미사용. */
+  /** 촌수 — 직계존속·방계 4순위에서 최근친 우선 판정(제1000조 제2항). 그 외 그룹은 미사용. */
   degree?: number;
   representatives: RepInput[];
 }
@@ -313,7 +313,7 @@ export function HeirGroupCard({
                     </option>
                   ))}
                 </select>
-                <span className="text-[11px]">최근친만 상속 (제1000조 2항)</span>
+                <span className="text-[11px]">최근친만 상속 (제1000조 제2항)</span>
               </label>
             ) : null}
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -400,7 +400,7 @@ export function HeirGroupCard({
                           updateRep(idx, repIdx, { isSpouseOfRepresented: e.target.checked })
                         }
                       />
-                      피대습자의 배우자 — 5할 가산 (제1009조 2항)
+                      피대습자의 배우자, 5할 가산 (제1009조 제2항)
                     </label>
                     <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <input

@@ -265,7 +265,7 @@ describe("migrateLcalcFile", () => {
     expect(loaded.input.stampDuty.caseValue).toBe(50_000_000);
   });
 
-  it("drops a 제3조 ②항 discount misapplied to a 본안 사건구분 in a legacy file", () => {
+  it("drops a 제3조 제2항 discount misapplied to a 본안 사건구분 in a legacy file", () => {
     // v0.10.0 이하는 본안 사건구분에도 이 감액을 붙일 수 있었다. 이제 validator 가 거부하므로
     // 정규화하지 않으면 구파일이 열리지 않는다.
     const legacy = {
@@ -304,7 +304,7 @@ describe("migrateLcalcFile", () => {
     expect(loaded.input.lawyerFee.discounts).toEqual([{ kind: "customPercent", rate: 0.5 }]);
   });
 
-  it("keeps a 제3조 ②항 discount on a 보전 사건구분", () => {
+  it("keeps a 제3조 제2항 discount on a 보전 사건구분", () => {
     const legacy = {
       schemaVersion: "3",
       kind: "litigation-cost",

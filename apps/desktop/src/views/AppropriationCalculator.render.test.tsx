@@ -16,7 +16,7 @@ describe("충당 순위 노출", () => {
   it("변제일 입력이 있고, 계산하면 결과 표에 충당 순위가 나온다", () => {
     render(<AppropriationCalculator />);
 
-    // 변제일은 제477조 1호 변제기 도래 판정의 기준일이다.
+    // 변제일은 제477조 제1호 변제기 도래 판정의 기준일이다.
     expect(screen.getByLabelText(/변제일/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "계산" }));

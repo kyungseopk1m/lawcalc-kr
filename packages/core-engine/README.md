@@ -82,10 +82,10 @@ const input: InterestInput = {
   } satisfies CalcOptions,
 };
 
-// (1) 기본 호출 — bundled dataset, dataVersion = "legal-rates/v1.0.0"
+// (1) 기본 호출: bundled dataset, dataVersion = "legal-rates/v1.0.0"
 const def = calculateInterest(input);
 
-// (2) 주입 — 미래 시점 데이터셋 시뮬레이션, 단위 테스트 결정성
+// (2) 주입: 미래 시점 데이터셋 시뮬레이션, 단위 테스트 결정성
 const future: LegalRateDataset = {
   version: "9.9.9-test",
   updatedAt: "2030-01-01",
@@ -190,11 +190,11 @@ packages/core-engine/
 ├── src/
 │   ├── types.ts                       # 공개 타입 (InterestInput / CalcOptions / InterestResult …)
 │   ├── days.ts                        # 일수 계산 (countDays / addDays / addYears / containsLeapDay …)
-│   ├── segments.ts                    # resolveSegments — 명시/프리셋/customRate 구간 확정 (deps?: { dataset })
+│   ├── segments.ts                    # resolveSegments: 명시/프리셋/customRate 구간 확정 (deps?: { dataset })
 │   ├── legal-rates.ts                 # 데이터셋 검증 + rateHistoryFor / datasetVersionTag
-│   ├── legal-rates.dataset.generated.ts  # 자동 생성 — 수동 편집 금지
-│   ├── interest.ts                    # calculateInterest(input, deps?) — 메인 엔트리, applyRounding (v2)
-│   ├── inheritance/                    # calculateInheritance(input) — 상속분 간이 계산
+│   ├── legal-rates.dataset.generated.ts  # 자동 생성: 수동 편집 금지
+│   ├── interest.ts                    # calculateInterest(input, deps?): 메인 엔트리, applyRounding (v2)
+│   ├── inheritance/                    # calculateInheritance(input): 상속분 간이 계산
 │   │   ├── calculate.ts
 │   │   ├── fraction.ts
 │   │   ├── index.ts

@@ -60,11 +60,11 @@ const PROVISIONAL_CASE_TYPES = ["provisionalMeasureCollegial", "provisionalMeasu
 
 /**
  * v0.10.0 이하는 보전처분(카합/카단)에 심급이나 특별절차 제한이 없어서, 항소심이나 화해·
- * 지급명령 감액이 같이 저장된 파일이 있다. 보전처분 인지를 제9조 ②항 체계로 옮긴 뒤로는
+ * 지급명령 감액이 같이 저장된 파일이 있다. 보전처분 인지를 제9조 제2항 체계로 옮긴 뒤로는
  * `validateStampDutyInput` 이 그 조합을 거부하는데, 이 검증이 파싱 단계에 있어서 손대지
  * 않으면 파일이 열리지도 않는다.
  *
- * 입력만 제9조 ②항에 맞게 낮추고 저장된 `result` 는 그대로 둔다. 화면에는 저장 당시 값이
+ * 입력만 제9조 제2항에 맞게 낮추고 저장된 `result` 는 그대로 둔다. 화면에는 저장 당시 값이
  * 뜨고, 다시 계산하면 현행 산식으로 나온다.
  */
 function normalizeLegacyProvisionalStampDuty(
@@ -92,7 +92,7 @@ function normalizeLegacyProvisionalStampDuty(
 }
 
 /**
- * v0.10.0 이하는 본안 사건구분에도 제3조 ②항 감액(`provisionalCase`)을 붙일 수 있었다. 이제
+ * v0.10.0 이하는 본안 사건구분에도 제3조 제2항 감액(`provisionalCase`)을 붙일 수 있었다. 이제
  * 그 감액은 가압류·가처분 전용이라 `validateLawyerFeeInput` 이 거부한다. 잘못 붙은 감액을
  * 떼어내지 않으면 구파일이 열리지 않는다.
  */

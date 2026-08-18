@@ -3,7 +3,7 @@
   "id": "case-comp-001-auto-injury-basic",
   "title": "auto/injury basic — 영구장해 30% 단독, 가동 60세 30년",
   "source": "manual-derivation",
-  "notes": "compensation-golden-capture-result-2026-05-18.md § 2. 단일 segment 360개월, H[360]=219.610067, 100원 절사.",
+  "notes": "compensation-golden-capture-result-2026-05-18.md 2절. 단일 segment 360개월, H[360]=219.610067, 100원 절사.",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -74,6 +74,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-05-18",
-    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 2"
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md 2절"
   }
 }

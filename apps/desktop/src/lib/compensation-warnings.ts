@@ -29,7 +29,7 @@ export function buildCompensationExportWarnings(result: AnyCompensationResult): 
   const cappedAt = result.hoffman240Cap.cappedAtIndex;
   if (cappedAt !== null && cappedAt !== undefined) {
     warnings.push(
-      `일실수입에 호프만 240 한도가 적용됐습니다 — ${cappedAt + 1}번째 구간부터 누적 현가율을 240으로 제한해 금액이 줄었습니다.`,
+      `일실수입에 호프만 240 한도가 적용됐습니다. ${cappedAt + 1}번째 구간부터 누적 현가율을 240으로 제한해 금액이 줄었습니다.`,
     );
   }
 
@@ -38,7 +38,7 @@ export function buildCompensationExportWarnings(result: AnyCompensationResult): 
     const attendantCappedAt = other.attendantCare?.hoffman240CappedAtIndex;
     if (attendantCappedAt !== null && attendantCappedAt !== undefined) {
       warnings.push(
-        `개호비에 호프만 240 한도가 적용됐습니다 — ${attendantCappedAt + 1}번째 구간부터 제한돼 금액이 줄었습니다.`,
+        `개호비에 호프만 240 한도가 적용됐습니다. ${attendantCappedAt + 1}번째 구간부터 제한돼 금액이 줄었습니다.`,
       );
     }
     if (other.treatment?.valueSum20Capped === true) {

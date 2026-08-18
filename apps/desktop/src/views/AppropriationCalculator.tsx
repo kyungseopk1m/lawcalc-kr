@@ -64,7 +64,7 @@ export interface TargetInputState {
 export interface PaymentInputState {
   amountText: string;
   allocationType: AppropriationAllocationType;
-  /** 변제일. 민법 제477조 1호의 변제기 도래 판정 기준일 (미지정이면 계산 시점 기준). */
+  /** 변제일. 민법 제477조 제1호의 변제기 도래 판정 기준일 (미지정이면 계산 시점 기준). */
   paidAt?: string;
   targets: TargetInputState[];
 }
@@ -569,7 +569,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 onChange={(e) => updatePayment({ paidAt: e.target.value })}
               />
               <span className="text-xs font-normal text-muted-foreground">
-                법정충당의 변제기 도래 여부(제477조 1호)를 판정하는 기준일입니다. 비워 두면 오늘
+                법정충당의 변제기 도래 여부(제477조 제1호)를 판정하는 기준일입니다. 비워 두면 오늘
                 날짜로 판정하므로, 과거 변제를 재현하거나 저장한 파일을 나중에 다시 열 때는 실제
                 변제일을 입력하세요.
               </span>
@@ -587,8 +587,10 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
               >
                 <option value="legal">법정충당 (제477조)</option>
                 <option value="agreement">합의 (1순위)</option>
-                <option value="debtorDesignation">채무자(변제자) 지정 (제476조①)</option>
-                <option value="creditorDesignation">채권자(변제받는 자) 지정 (제476조②)</option>
+                <option value="debtorDesignation">채무자(변제자) 지정 (제476조 제1항)</option>
+                <option value="creditorDesignation">
+                  채권자(변제받는 자) 지정 (제476조 제2항)
+                </option>
               </Select>
               <span className="text-xs font-normal text-muted-foreground">
                 충당 방법은 합의 → 지정(채무자·채권자) → 법정 순으로 우선합니다. 충당 대상보다

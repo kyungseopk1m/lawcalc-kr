@@ -3,7 +3,7 @@
   "id": "case-comp-010-industrial-injury",
   "title": "industrial/injury — 산재 부상, 장해급여 5천만 선공제(일실수입 한도) 후 과실 20%",
   "source": "manual-derivation",
-  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 2 (2026-07-02 COMP-6 재도출). case-001 baseline(보통인부 360개월 영구장해 30%, 일실수입 249,399,909) 위에 사건종류 산재 + 과실 20% + 장해급여 50,000,000. 대법원 2022. 3. 24. 선고 2021다241618 전원합의체 — 산재급여는 같은 성질(일실수입) 한도에서 먼저 공제 후 과실상계: (249,399,909 − 50,000,000) × 0.8 = floor(159,519,927.2) = 159,519,927 → 100원 절사 159,519,900.",
+  "notes": "compensation-industrial-golden-derivation-2026-06-02.md 2절 (2026-07-02 COMP-6 재도출). case-001 baseline(보통인부 360개월 영구장해 30%, 일실수입 249,399,909) 위에 사건종류 산재 + 과실 20% + 장해급여 50,000,000. 대법원 2022. 3. 24. 선고 2021다241618 전원합의체 — 산재급여는 같은 성질(일실수입) 한도에서 먼저 공제 후 과실상계: (249,399,909 − 50,000,000) × 0.8 = floor(159,519,927.2) = 159,519,927 → 100원 절사 159,519,900.",
   "input": {
     "accidentType": "industrial",
     "base": {
@@ -84,6 +84,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-07-02",
-    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md § 2 (COMP-6 공제 후 과실상계 재도출)"
+    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md 2절 (COMP-6 공제 후 과실상계 재도출)"
   }
 }

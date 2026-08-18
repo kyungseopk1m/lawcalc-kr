@@ -125,11 +125,11 @@
   <img src="docs/assets/readme-info-dialog.png" alt="정보 다이얼로그 화면" width="520">
 </p>
 
-- **법정이율 데이터셋** — 민법 5%, 상법 6%, 소촉법 등 이율 변경 이력을 버전으로 관리합니다.
-- **계산 옵션** — 초일 산입 여부, 윤년 처리, 원 단위 절사·절상·반올림을 고를 수 있습니다.
-- **로컬 저장 (`.lcalc`)** — 입력값·옵션·결과·데이터 버전을 한 파일에 담아 같은 계산을 다시 엽니다.
-- **사건 파일** — 사건번호·사건명을 적고 '사건 저장'을 누르면 입력해 둔 탭들의 계산이 한 파일로 묶이고, '사건 열기'로 각 탭이 그대로 복원됩니다. 탭을 옮겨 다녀도 입력값은 유지됩니다.
-- **내보내기** — PDF, CSV, 클립보드 텍스트.
+- **법정이율 데이터셋**: 민법 5%, 상법 6%, 소촉법 등 이율 변경 이력을 버전으로 관리합니다.
+- **계산 옵션**: 초일 산입 여부, 윤년 처리, 원 단위 절사·절상·반올림을 고를 수 있습니다.
+- **로컬 저장 (`.lcalc`)**: 입력값·옵션·결과·데이터 버전을 한 파일에 담아 같은 계산을 다시 엽니다.
+- **사건 파일**: 사건번호·사건명을 적고 '사건 저장'을 누르면 입력해 둔 탭들의 계산이 한 파일로 묶이고, '사건 열기'로 각 탭이 그대로 복원됩니다. 탭을 옮겨 다녀도 입력값은 유지됩니다.
+- **내보내기**: PDF, CSV, 클립보드 텍스트.
 
 ## 다운로드
 
@@ -196,8 +196,8 @@ GNU Affero General Public License v3.0 이상으로 배포합니다. 누구나 �
 
 ## English
 
-LawCalc Korea is a local desktop app for Korean legal calculations: judgment interest and delay damages, simplified inheritance shares, litigation costs, payment appropriation, and accident compensation — auto accidents and industrial accidents, in injury and death modes.
+LawCalc Korea is a local desktop app for Korean legal calculations: judgment interest and delay damages, simplified inheritance shares, litigation costs, payment appropriation, and accident compensation for auto accidents and industrial accidents, in injury and death modes.
 
 It runs on macOS and Windows, keeps case data on the user's computer, shows how every result was derived, and saves reproducible `.lcalc` files with versioned data.
 
-Distributed under the GNU Affero General Public License v3.0 or later. Any modified version made available to users over a network — or redistributed as a derivative work — must be released under the same license with source code available. See [LICENSE](LICENSE) for the full text. For commercial licensing inquiries, please contact the Licensor (kyungseopk1m).
+Distributed under the GNU Affero General Public License v3.0 or later. Any modified version made available to users over a network, or redistributed as a derivative work, must be released under the same license with source code available. See [LICENSE](LICENSE) for the full text. For commercial licensing inquiries, please contact the Licensor (kyungseopk1m).

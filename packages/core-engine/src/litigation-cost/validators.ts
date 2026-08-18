@@ -6,7 +6,7 @@
  *   - `"송달료 입력 검증 실패: <inner>"` — validateDeliveryFeeInput
  *   - `"변호사보수 입력 검증 실패: <inner>"` — validateLawyerFeeInput
  *
- * 대한법률구조공단 적용 사건 범위 검증은 RangeError 비차단 — `KoreaLegalAidScopeWarning[]` 반환 (G5 §3.3).
+ * 대한법률구조공단 적용 사건 범위 검증은 RangeError 비차단 — `KoreaLegalAidScopeWarning[]` 반환 (G5 제3조.3).
  */
 
 import {
@@ -87,7 +87,7 @@ export function validateStampDutyInput(input: StampDutyInput): void {
   if (!APPEALS_LEVELS.includes(input.appealsLevel)) {
     fail(prefix, `심급이 유효하지 않습니다 (입력: ${String(input.appealsLevel)})`);
   }
-  // 지급명령(독촉)은 caseType paymentOrder 자체가 제7조 ②항 대상이라, flag 없이 사건구분만으로도
+  // 지급명령(독촉)은 caseType paymentOrder 자체가 제7조 제2항 대상이라, flag 없이 사건구분만으로도
   // 특별절차로 취급한다 (엔진 파생과 일치). 소장식 인지가 새던 UI 결함(감사 F3) 차단.
   const isPaymentOrder = input.isPaymentOrder === true || input.caseType === "paymentOrder";
   // 지급명령·화해는 1심에서만 적용된다 (인지법 제7조). 항소·상고와 동시 지정은 거부한다.
@@ -106,7 +106,7 @@ export function validateStampDutyInput(input: StampDutyInput): void {
   if (isPaymentOrder && input.isSettlement) {
     fail(prefix, "지급명령과 화해는 동시에 적용할 수 없습니다");
   }
-  // 보전처분(가압류·가처분)은 제9조 ②항 별도 체계라 심급 배수나 지급명령·화해와 무관하다.
+  // 보전처분(가압류·가처분)은 제9조 제2항 별도 체계라 심급 배수나 지급명령·화해와 무관하다.
   const isProvisional =
     input.caseType === "provisionalMeasureCollegial" ||
     input.caseType === "provisionalMeasureSingle";
@@ -123,7 +123,7 @@ export function validateStampDutyInput(input: StampDutyInput): void {
     if (isPaymentOrder || input.isSettlement) {
       fail(
         prefix,
-        "보전처분 인지에는 지급명령·화해 감액을 적용할 수 없습니다 (제9조 ②항 별도 체계)",
+        "보전처분 인지에는 지급명령·화해 감액을 적용할 수 없습니다 (제9조 제2항 별도 체계)",
       );
     }
     if (input.appealsLevel !== "firstInstance") {
@@ -145,7 +145,7 @@ export function validateStampDutyInput(input: StampDutyInput): void {
   if (input.fullCaseValue !== undefined && !isFiniteNonNegative(input.fullCaseValue)) {
     fail(prefix, `전체 소가가 유효하지 않습니다 (입력: ${String(input.fullCaseValue)})`);
   }
-  // 제11조 ①항 원신청서 인지액. 검증이 없으면 음수·NaN·Infinity 가 그대로 2배가 되어
+  // 제11조 제1항 원신청서 인지액. 검증이 없으면 음수·NaN·Infinity 가 그대로 2배가 되어
   // 음수 인지액이나 NaN 이 결과에 실린다 (`-1` → -2원, `NaN` → NaN, `Infinity` → Infinity).
   // 인지액은 원 단위 양의 정수다.
   if (
@@ -281,7 +281,7 @@ export function validateLawyerFeeInput(input: LawyerFeeInput): void {
   for (const d of input.discounts) {
     validateLawyerFeeDiscount(d, prefix);
   }
-  // 제3조 ②항은 가압류·가처분 사건에만 적용된다. 본안 사건구분에 이 감액이 붙으면 오적용이다.
+  // 제3조 제2항은 가압류·가처분 사건에만 적용된다. 본안 사건구분에 이 감액이 붙으면 오적용이다.
   if (
     input.caseType !== "provisionalMeasureCollegial" &&
     input.caseType !== "provisionalMeasureSingle" &&
@@ -289,7 +289,7 @@ export function validateLawyerFeeInput(input: LawyerFeeInput): void {
   ) {
     fail(
       prefix,
-      "제3조 ②항 감액은 가압류·가처분 사건구분에만 적용됩니다 (현재 사건구분: " +
+      "제3조 제2항 감액은 가압류·가처분 사건구분에만 적용됩니다 (현재 사건구분: " +
         `${input.caseType})`,
     );
   }
@@ -313,7 +313,7 @@ export function validateLawyerFeeInput(input: LawyerFeeInput): void {
 // ===== 대한법률구조공단 scope (non-throwing) =====
 
 /**
- * 대한법률구조공단 적용 사건 범위 검증. G5 §3.3 권고 — RangeError 비차단, UI 측 경고 채널.
+ * 대한법률구조공단 적용 사건 범위 검증. G5 제3조.3 권고 — RangeError 비차단, UI 측 경고 채널.
  *
  *   - `koreaLegalAidScopeNotCivilOrFamily`: 행정·보전·지급명령에 대한법률구조공단 variant 적용 시
  *   - `koreaLegalAidScopeOverridden`: 대한법률구조공단 + 다른 multiplier 누적 시 이중 감액 risk

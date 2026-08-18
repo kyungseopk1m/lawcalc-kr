@@ -12,7 +12,7 @@
   },
   "expected": {
     "amount": 27250,
-    "formulaText": "임시지위 가처분 (제9조 ②항 후단): 본안 인지액 54,500 × 0.5 = 27,250원",
+    "formulaText": "임시지위 가처분 (제9조 제2항 후단): 본안 인지액 54,500 × 0.5 = 27,250원",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {

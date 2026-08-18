@@ -78,7 +78,7 @@ describe("loadLawyerFeeDataset / 기본 dataset", () => {
     expect(() => loadLawyerFeeDataset(bad)).toThrow(/perInstanceIndependent/);
   });
 
-  it("modifier multiplier > 1.5 거부 (제6조 ②항 cap)", () => {
+  it("modifier multiplier > 1.5 거부 (제6조 제2항 cap)", () => {
     const ds = loadLawyerFeeDataset();
     const bad: LawyerFeeDataset = {
       ...ds,
@@ -155,7 +155,7 @@ describe("getLawyerFeeBracket / 8구간 경계값", () => {
     expect(getLawyerFeeBracket(ds, 499_999_999).sortOrder).toBe(7);
   });
 
-  it("500,000,000 → 8구간 (G2 §4 spec 누락 정정 검증)", () => {
+  it("500,000,000 → 8구간 (G2 제4조 spec 누락 정정 검증)", () => {
     expect(getLawyerFeeBracket(ds, 500_000_000).sortOrder).toBe(8);
   });
 
@@ -200,7 +200,7 @@ describe("computeLawyerFee / bracket 산식", () => {
     expect(r.amount).toBe(7_400_000);
   });
 
-  it("소가 500,000,000 (8구간 진입, base 만, G2 §4 누락 정정) = 13,400,000원", () => {
+  it("소가 500,000,000 (8구간 진입, base 만, G2 제4조 누락 정정) = 13,400,000원", () => {
     const r = computeLawyerFee(input({ caseValue: 500_000_000 }), { computedAt: FROZEN_AT });
     expect(r.amount).toBe(13_400_000);
   });
@@ -283,7 +283,7 @@ describe("computeLawyerFee / 5 discount variant", () => {
     expect(r.amount).toBe(2_800_000 * 0.5);
   });
 
-  it("provisionalCase hasOralHearing=false → 제3조 ②항 단서, 산입 불가 (×0)", () => {
+  it("provisionalCase hasOralHearing=false → 제3조 제2항 단서, 산입 불가 (×0)", () => {
     // 단서: 신청사건은 변론 또는 심문을 거친 경우에 한한다 → 미거침이면 산입 대상이 아니다.
     const r = computeLawyerFee(
       input({
@@ -346,7 +346,7 @@ describe("computeLawyerFee / 5 discount variant", () => {
     expect(r.multiplier).toBe(0);
   });
 
-  it("보전 사건구분이면 discount 미지정이라도 제3조 ②항 본문 1/2 자동 적용", () => {
+  it("보전 사건구분이면 discount 미지정이라도 제3조 제2항 본문 1/2 자동 적용", () => {
     // 사건구분이 authoritative. 호출자가 flag 를 놓쳐 별표 전액이 나오던 결함 차단.
     const r = computeLawyerFee(
       input({
@@ -360,7 +360,7 @@ describe("computeLawyerFee / 5 discount variant", () => {
     expect(r.amount).toBe(1_400_000);
     expect(r.appliedDiscounts).toEqual([{ kind: "provisionalCase" }]);
     // 단서는 사실관계라 입력 없이 판정할 수 없다. 그래서 따로 고지한다.
-    expect(r.formulaText).toContain("제3조 ②항 단서 미반영");
+    expect(r.formulaText).toContain("제3조 제2항 단서 미반영");
   });
 
   it("자동 적용은 명시 discount 가 있으면 중복되지 않는다 (1/4 방지)", () => {
@@ -376,7 +376,7 @@ describe("computeLawyerFee / 5 discount variant", () => {
     expect(r.appliedDiscounts).toHaveLength(1);
   });
 
-  it("본안 사건구분에 제3조 ②항 감액이 붙으면 거부한다", () => {
+  it("본안 사건구분에 제3조 제2항 감액이 붙으면 거부한다", () => {
     expect(() =>
       computeLawyerFee(
         input({
@@ -425,7 +425,7 @@ describe("computeLawyerFee / 5 discount variant", () => {
     expect(r.amount).toBe(840_000); // floor(2,800,000 × 0.3), 부동소수 보정 포함
   });
 
-  it("courtDiscretion 1.5 (증액 상한, 제6조 ②항)", () => {
+  it("courtDiscretion 1.5 (증액 상한, 제6조 제2항)", () => {
     const r = computeLawyerFee(
       input({
         caseValue: 30_000_000,
@@ -671,7 +671,7 @@ describe("computeLawyerFee / formulaText 회귀", () => {
   });
 });
 
-describe("computeLawyerFee / per_instance_independent (G2 §2.4 정정 검증)", () => {
+describe("computeLawyerFee / per_instance_independent (G2 제2조.4 정정 검증)", () => {
   it("1심·항소심 동일 소가 → 동일 산출 (engine 은 심급 multiplier 미적용)", () => {
     // 본 engine 은 caller 가 항소심 소가 (불복 범위) 를 input.caseValue 로 명시 입력하는 것을 전제.
     // input 자체에 심급 정보 없음 — appealsLevel 은 stamp-duty 에만 존재 (인지법 ×1.5/×2).
@@ -693,7 +693,7 @@ describe("computeLawyerFee / per_instance_independent (G2 §2.4 정정 검증)",
   });
 });
 
-describe("computeLawyerFee / 지급보수액 cap (제3조 ①항, 감사 F2)", () => {
+describe("computeLawyerFee / 지급보수액 cap (제3조 제1항, 감사 F2)", () => {
   it("지급보수액이 별표 산정액보다 작으면 cap: 별표 2,800,000 vs 지급 1,000,000 → 1,000,000원", () => {
     const r = computeLawyerFee(input({ caseValue: 30_000_000, agreedFeeWon: 1_000_000 }), {
       computedAt: FROZEN_AT,

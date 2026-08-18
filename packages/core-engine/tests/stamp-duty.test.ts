@@ -42,7 +42,7 @@ describe("loadStampDutyDataset / 기본 dataset", () => {
    * 사건구분 selector 에는 조정사건이 노출돼 있는데 엔진에 분기가 없어 소장 누진식이
    * 그대로 적용됐다. 소가 3,000만원 기준 140,000원(정답 14,000원) — 10배 과대.
    */
-  describe("조정신청 인지 (민사조정규칙 제3조 ①)", () => {
+  describe("조정신청 인지 (민사조정규칙 제3조 제1항)", () => {
     const mediation = (caseValue: number, extra: Record<string, unknown> = {}) =>
       computeStampDuty(
         {
@@ -127,7 +127,7 @@ describe("loadStampDutyDataset / 기본 dataset", () => {
     });
 
     it("회사관계·특허·무체재산권 등 → 1억원 간주 = 455,000원", () => {
-      // 1억 × 40/10,000 + 55,000 = 455,000 (제2조 ①항 3호). 형제 테스트와 같이 금액을
+      // 1억 × 40/10,000 + 55,000 = 455,000 (제2조 제1항 3호). 형제 테스트와 같이 금액을
       // 직접 고정한다 — 엔진 자기 출력과 비교하면 누진표가 틀어져도 양변이 함께 움직인다.
       expect(basis("unascertainableHighTier").amount).toBe(455_000);
     });
@@ -194,21 +194,21 @@ describe("loadStampDutyDataset / 기본 dataset", () => {
         { computedAt: FROZEN_AT },
       );
 
-    it("제11조 ②항 — 그 외 항고장은 2,000원 정액 (소가 무관)", () => {
+    it("제11조 제2항 — 그 외 항고장은 2,000원 정액 (소가 무관)", () => {
       for (const caseValue of [0, 30_000_000, 500_000_000, 10_000_000_000]) {
         expect(appeal(caseValue).amount).toBe(2_000);
       }
     });
 
-    it("제11조 ①항 — 원신청서 인지액을 넘기면 그 2배", () => {
-      // 일반 가압류 신청(제9조 ②항 정액 1만원)에 대한 항고 = 20,000원.
+    it("제11조 제1항 — 원신청서 인지액을 넘기면 그 2배", () => {
+      // 일반 가압류 신청(제9조 제2항 정액 1만원)에 대한 항고 = 20,000원.
       expect(appeal(50_000_000, { underlyingApplicationStampDutyWon: 10_000 }).amount).toBe(20_000);
       expect(appeal(50_000_000, { underlyingApplicationStampDutyWon: 115_000 }).amount).toBe(
         230_000,
       );
     });
 
-    it("전자소송 감액을 준용하지 않는다 (제16조 ②항 준용 범위는 제3조~제10조)", () => {
+    it("전자소송 감액을 준용하지 않는다 (제16조 제2항 준용 범위는 제3조~제10조)", () => {
       expect(appeal(30_000_000, { isElectronicFiling: true }).amount).toBe(2_000);
     });
 
@@ -227,10 +227,10 @@ describe("loadStampDutyDataset / 기본 dataset", () => {
     });
 
     it("산식에 근거 조문이 드러난다", () => {
-      expect(appeal(30_000_000).formulaText).toContain("제11조 ②항");
+      expect(appeal(30_000_000).formulaText).toContain("제11조 제2항");
       expect(
         appeal(30_000_000, { underlyingApplicationStampDutyWon: 10_000 }).formulaText,
-      ).toContain("제11조 ①항");
+      ).toContain("제11조 제1항");
     });
   });
 
@@ -360,7 +360,7 @@ describe("getAppealsMultiplier", () => {
   });
 });
 
-describe("applyStampDutyRounding (제2조 ②항)", () => {
+describe("applyStampDutyRounding (제2조 제2항)", () => {
   const ds = loadStampDutyDataset();
   const policy = ds.roundingPolicy;
 
@@ -403,7 +403,7 @@ describe("applyStampDutyRounding (제2조 ②항)", () => {
 
 describe("computeStampDuty / 누진 산식 + 심급 + 반올림", () => {
   // 소가 1,000만원 1심: 2구간 진입 (scopeStart <= caseValue < scopeEnd 규칙).
-  // 인지법 §2① 2호 — 소가 전체 × 0.0045 + 5,000 = 45,000 + 5,000 = 50,000.
+  // 인지법 제2조 제1항 2호 — 소가 전체 × 0.0045 + 5,000 = 45,000 + 5,000 = 50,000.
   // (1구간 상한 9,999,999 × 0.005 ≈ 49,999 와 이어지는 연속 보정식.)
   it("소가 10,000,000 1심 = 50,000원 (2구간 경계, 연속)", () => {
     const r = computeStampDuty(input({ caseValue: 10_000_000 }), { computedAt: FROZEN_AT });
@@ -430,7 +430,7 @@ describe("computeStampDuty / 누진 산식 + 심급 + 반올림", () => {
   });
 
   it("소가 50,000,000 1심 = 230,000원 (2구간 중간)", () => {
-    // 50,000,000 × 0.0045 + 5,000 = 225,000 + 5,000 = 230,000 (인지법 §2① 2호, 소가 전체).
+    // 50,000,000 × 0.0045 + 5,000 = 225,000 + 5,000 = 230,000 (인지법 제2조 제1항 2호, 소가 전체).
     const r = computeStampDuty(input({ caseValue: 50_000_000 }), { computedAt: FROZEN_AT });
     expect(r.amount).toBe(230_000);
   });
@@ -566,10 +566,10 @@ describe("computeStampDuty / 전자소송 감액 filingDate 게이트 (제16조 
 });
 
 /**
- * 제16조 ①항의 감액 대상은 "제2조에 따른 인지액"이다. 제2조 ②항("제1항에 따라 계산한
+ * 제16조 제1항의 감액 대상은 "제2조에 따른 인지액"이다. 제2조 제2항("제1항에 따라 계산한
  * 인지액이 1천원 미만이면 그 인지액은 1천원으로 하고, 1천원 이상이면 100원 미만은 계산하지
  * 아니한다")이 적용된 뒤의 금액이라는 뜻이고, 감액 후 다시 1천원 하한을 걸라는 문언은
- * 제16조에 없다. 민사조정규칙 제3조 ②항이 같은 구조를 명문화한다 — "제1항 본문에 따른
+ * 제16조에 없다. 민사조정규칙 제3조 제2항이 같은 구조를 명문화한다 — "제1항 본문에 따른
  * 수수료가 1천원 미만이면 1천원으로 하고, 제1항 본문 또는 단서에 따른 수수료 중 100원
  * 미만은 계산하지 아니한다" (하한은 감액 전 본문 금액에만, 절사는 감액 전후 양쪽에).
  *
@@ -585,17 +585,17 @@ describe("computeStampDuty / 전자소송 감액 filingDate 게이트 (제16조 
  * 손편집된 `.lcalc` 이나 신버전이 추가한 기준값을 구버전 앱이 여는 경우에 실제로 도달한다.
  */
 /**
- * 제2조 ②항 1,000원 하한은 배수를 곱하기 **전** 금액에 건다.
+ * 제2조 제2항 1,000원 하한은 배수를 곱하기 **전** 금액에 건다.
  *
- * 제2조 ②항 문언이 "**제1항에 따라 계산한** 인지액이 1천원 미만이면" 이고, 제3조가 곱하는
+ * 제2조 제2항 문언이 "**제1항에 따라 계산한** 인지액이 1천원 미만이면" 이고, 제3조가 곱하는
  * "제2조에 따른 금액" 은 그 하한이 적용된 뒤의 금액이다. 하한을 배수 뒤에 걸면 배수가
- * 하한에 통째로 먹혀, 소가 약 222,222원 이하(= 제2조 ①항 금액이 1,000원 미만인 구간)에서
+ * 하한에 통째로 먹혀, 소가 약 222,222원 이하(= 제2조 제1항 금액이 1,000원 미만인 구간)에서
  * 항소가 최대 33%, 상고가 최대 50% 과소계산된다.
  *
- * 화해·지급명령만 예외다 — 제7조 ④항이 "제1항과 제2항에 따른 인지액에 관하여는
+ * 화해·지급명령만 예외다 — 제7조 제4항이 "제1항과 제2항에 따른 인지액에 관하여는
  * 제2조제2항을 준용한다" 며 배수 뒤에 다시 걸라고 명문화했다.
  */
-describe("computeStampDuty / 제2조 ②항 하한과 배수의 순서", () => {
+describe("computeStampDuty / 제2조 제2항 하한과 배수의 순서", () => {
   const at = (caseValue: number, appealsLevel: StampDutyInput["appealsLevel"]) =>
     computeStampDuty(input({ caseValue, appealsLevel }), { computedAt: FROZEN_AT }).amount;
 
@@ -605,12 +605,12 @@ describe("computeStampDuty / 제2조 ②항 하한과 배수의 순서", () => {
     expect(at(10_000, "supreme")).toBe(2_000);
   });
 
-  it("소가 150,000: 제2조 ①항 750 → 하한 1,000 → 항소 1,500 / 상고 2,000", () => {
+  it("소가 150,000: 제2조 제1항 750 → 하한 1,000 → 항소 1,500 / 상고 2,000", () => {
     expect(at(150_000, "appeal")).toBe(1_500);
     expect(at(150_000, "supreme")).toBe(2_000);
   });
 
-  it("소가 200,000: 하한 경계 (제2조 ①항 = 정확히 1,000) — 배수만 붙는다", () => {
+  it("소가 200,000: 하한 경계 (제2조 제1항 = 정확히 1,000) — 배수만 붙는다", () => {
     expect(at(200_000, "firstInstance")).toBe(1_000);
     expect(at(200_000, "appeal")).toBe(1_500);
     expect(at(200_000, "supreme")).toBe(2_000);
@@ -636,8 +636,8 @@ describe("computeStampDuty / 제2조 ②항 하한과 배수의 순서", () => {
     expect(r.amount).toBe(1_300);
   });
 
-  it("화해·지급명령은 제7조 ④항 준용으로 배수 뒤에 하한을 다시 건다", () => {
-    // 소가 10,000 지급명령: 하한 1,000 → × 0.1 = 100 → 제7조 ④항 하한 = 1,000.
+  it("화해·지급명령은 제7조 제4항 준용으로 배수 뒤에 하한을 다시 건다", () => {
+    // 소가 10,000 지급명령: 하한 1,000 → × 0.1 = 100 → 제7조 제4항 하한 = 1,000.
     expect(
       computeStampDuty(input({ caseValue: 10_000, caseType: "paymentOrder" }), {
         computedAt: FROZEN_AT,
@@ -651,12 +651,12 @@ describe("computeStampDuty / 제2조 ②항 하한과 배수의 순서", () => {
     ).toBe(1_000);
   });
 
-  it("제7조 ④항 하한이 걸리면 formulaText 에 그 단계가 남는다", () => {
+  it("제7조 제4항 하한이 걸리면 formulaText 에 그 단계가 남는다", () => {
     const r = computeStampDuty(input({ caseValue: 10_000, caseType: "paymentOrder" }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.formulaText).toContain("= 1,000원 (제2조 ②항 하한)");
-    expect(r.formulaText).toContain("= 1,000원 (제7조 ④항 하한)");
+    expect(r.formulaText).toContain("= 1,000원 (제2조 제2항 하한)");
+    expect(r.formulaText).toContain("= 1,000원 (제7조 제4항 하한)");
   });
 });
 
@@ -697,7 +697,7 @@ describe("computeStampDuty / caseValueBasis 화이트리스트", () => {
   });
 });
 
-describe("computeStampDuty / 전자소송 감액 × 1,000원 하한 순서 (제16조 ①항)", () => {
+describe("computeStampDuty / 전자소송 감액 × 1,000원 하한 순서 (제16조 제1항)", () => {
   it("소가 10,000 전자 = 900원 (하한 1,000 → × 0.9)", () => {
     const r = computeStampDuty(input({ caseValue: 10_000, isElectronicFiling: true }), {
       computedAt: FROZEN_AT,
@@ -733,7 +733,7 @@ describe("computeStampDuty / 전자소송 감액 × 1,000원 하한 순서 (제1
     const r = computeStampDuty(input({ caseValue: 10_000, isElectronicFiling: true }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.formulaText).toContain("= 1,000원 (제2조 ②항 하한)");
+    expect(r.formulaText).toContain("= 1,000원 (제2조 제2항 하한)");
     expect(r.formulaText).toContain("전자소송 (×0.9)");
   });
 
@@ -741,11 +741,11 @@ describe("computeStampDuty / 전자소송 감액 × 1,000원 하한 순서 (제1
     const r = computeStampDuty(input({ caseValue: 50_000_000, isElectronicFiling: true }), {
       computedAt: FROZEN_AT,
     });
-    expect(r.formulaText).not.toContain("제2조 ②항 하한");
+    expect(r.formulaText).not.toContain("제2조 제2항 하한");
   });
 
   it("지급명령 + 전자, 소가 10,000 = 900원 (특별절차 배수 뒤에 하한)", () => {
-    // 50 × 0.1 = 5 → 하한 1,000 → × 0.9 = 900. 민사조정규칙 제3조 ②항과 같은 순서.
+    // 50 × 0.1 = 5 → 하한 1,000 → × 0.9 = 900. 민사조정규칙 제3조 제2항과 같은 순서.
     const r = computeStampDuty(
       input({ caseValue: 10_000, caseType: "paymentOrder", isElectronicFiling: true }),
       { computedAt: FROZEN_AT },
@@ -865,7 +865,7 @@ describe("computeStampDuty / formulaText 회귀", () => {
     expect(r.formulaText).toContain("재심소장 (제8조, 심급별 동일 적용)");
     expect(r.formulaText).toContain("항소 (×1.5)");
     expect(r.formulaText).toContain("전자소송 (×0.9)");
-    expect(r.formulaText).toContain("제2조 ②항 100원 절사");
+    expect(r.formulaText).toContain("제2조 제2항 100원 절사");
   });
 
   it("소가 0 1심 formulaText 는 (소가 × rate) 형태", () => {
@@ -891,7 +891,7 @@ describe("computeStampDuty / 지급명령 caseType 자동적용 (감사 F3)", ()
   });
 });
 
-describe("computeStampDuty / 보전처분 제9조 ②항 (감사 F1)", () => {
+describe("computeStampDuty / 보전처분 제9조 제2항 (감사 F1)", () => {
   it("일반 가압류·가처분 (기본): 소가 무관 정액 10,000원", () => {
     // 소가 5천만 카단. 제2조 소장식(230,000)이 아니라 제9조 정액이다.
     const r = computeStampDuty(
@@ -899,7 +899,7 @@ describe("computeStampDuty / 보전처분 제9조 ②항 (감사 F1)", () => {
       { computedAt: FROZEN_AT },
     );
     expect(r.amount).toBe(10_000);
-    expect(r.formulaText).toContain("제9조 ②항 전단");
+    expect(r.formulaText).toContain("제9조 제2항 전단");
   });
 
   it("임시지위 가처분: 본안 인지액의 1/2, 소가 50,000,000 이면 115,000원", () => {
@@ -913,7 +913,7 @@ describe("computeStampDuty / 보전처분 제9조 ②항 (감사 F1)", () => {
       { computedAt: FROZEN_AT },
     );
     expect(r.amount).toBe(115_000);
-    expect(r.formulaText).toContain("제9조 ②항 후단");
+    expect(r.formulaText).toContain("제9조 제2항 후단");
   });
 
   it("임시지위 가처분 상한 정확 경계: 본안 1,000,000 (소가 236,250,000) × 0.5 = 500,000원", () => {
@@ -954,9 +954,9 @@ describe("computeStampDuty / 보전처분 제9조 ②항 (감사 F1)", () => {
     expect(r.amount).toBe(9_000);
   });
 
-  it("제9조 경로는 100원 절사를 적용하지 않는다 (제2조 ②항 준용 없음)", () => {
-    // 본안 54,500(제2조 ②항 절사 적용 완료) × 0.5 = 27,250. 제7조 ④항과 달리 제9조에는
-    // 제2조 ②항 준용 규정이 없으므로 여기서 다시 100원 절사할 근거가 없다.
+  it("제9조 경로는 100원 절사를 적용하지 않는다 (제2조 제2항 준용 없음)", () => {
+    // 본안 54,500(제2조 제2항 절사 적용 완료) × 0.5 = 27,250. 제7조 제4항과 달리 제9조에는
+    // 제2조 제2항 준용 규정이 없으므로 여기서 다시 100원 절사할 근거가 없다.
     const r = computeStampDuty(
       input({
         caseValue: 11_000_000,
@@ -971,8 +971,8 @@ describe("computeStampDuty / 보전처분 제9조 ②항 (감사 F1)", () => {
     expect(r.formulaText).not.toContain("제2조");
   });
 
-  it("본안 인지액 자체에는 제2조 ②항 절사가 적용된다", () => {
-    // 소가 9,999,999 → 49,999.995 → 제2조 ②항으로 49,900. 그 1/2 = 24,950.
+  it("본안 인지액 자체에는 제2조 제2항 절사가 적용된다", () => {
+    // 소가 9,999,999 → 49,999.995 → 제2조 제2항으로 49,900. 그 1/2 = 24,950.
     const r = computeStampDuty(
       input({
         caseValue: 9_999_999,

@@ -3,7 +3,7 @@
   "id": "case-comp-012-attendant-care",
   "title": "auto/injury 기타손해 — 개호비(기왕 실지출 + 향후 인원 1→0.5, 호프만 240 cap)",
   "source": "manual-derivation",
-  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md § 2. 일실수입 baseline = case-001(보통인부 일당 172,068, 가동 60세 360개월, 영구 30%, H[360]=219.610067 → 249,399,909). 개호비 기왕 = min(172068×21, 800000)=800,000. 향후 seg1[0,48] 인원1 + seg2[48,420] 인원0.5, 월개호 일당×30×인원, 누적 호프만 H[420]=242.466>240 → seg2 cap(240-H[48]=196.326054, cappedAtIndex 1).",
+  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md 2절. 일실수입 baseline = case-001(보통인부 일당 172,068, 가동 60세 360개월, 영구 30%, H[360]=219.610067 → 249,399,909). 개호비 기왕 = min(172068×21, 800000)=800,000. 향후 seg1[0,48] 인원1 + seg2[48,420] 인원0.5, 월개호 일당×30×인원, 누적 호프만 H[420]=242.466>240 → seg2 cap(240-H[48]=196.326054, cappedAtIndex 1).",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -120,6 +120,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-06-03",
-    "derivedBy": "compensation-other-damages-golden-derivation-2026-06-03.md § 2"
+    "derivedBy": "compensation-other-damages-golden-derivation-2026-06-03.md 2절"
   }
 }

@@ -857,7 +857,7 @@ type CompensationMode = "injury" | "death";
 
 /**
  * 손해배상 탭. 자×부상(`compensation@1`) / 자×사망(`compensation@2`) 하위 탭으로 분기한다.
- * 전체 5탭 구조는 유지하며, 6번째 탭을 만들지 않는다 (plan §4 결정 3).
+ * 전체 5탭 구조는 유지하며, 6번째 탭을 만들지 않는다 (plan 4절 결정 3).
  */
 /** 사건 파일에서 꺼낸 compensation envelope 가 사망 모드인지 판별한다. */
 function isDeathCompensationLcalcFile(file: LcalcFile): boolean {
@@ -1380,7 +1380,7 @@ function InjuryCompensationView({
               </div>
               {state.accidentType === "industrial" ? (
                 <label className="grid gap-2 text-sm font-medium">
-                  장해급여 (원) — 과실상계 후 공제
+                  장해급여 (원, 과실상계 후 공제)
                   <Input
                     inputMode="numeric"
                     placeholder="예: 50,000,000"
@@ -1950,7 +1950,7 @@ function DeathCompensationView({
               </div>
               {state.accidentType === "industrial" ? (
                 <label className="grid gap-2 text-sm font-medium">
-                  유족급여 (원) — 과실상계 후 공제
+                  유족급여 (원, 과실상계 후 공제)
                   <Input
                     inputMode="numeric"
                     placeholder="예: 100,000,000"
@@ -2132,7 +2132,7 @@ function DeathCompensationView({
                   </label>
                 ) : null}
                 <HeirGroupCard
-                  title="1순위 — 직계비속"
+                  title="1순위 직계비속"
                   hint="자녀·손자녀 등. 사망 시 그 직계비속 (망인의 손자녀) 이 1차 대습."
                   heirs={state.linealDescendants}
                   onChange={(heirs) => update({ linealDescendants: heirs })}
@@ -2140,8 +2140,8 @@ function DeathCompensationView({
                   defaultLabel="자녀"
                 />
                 <HeirGroupCard
-                  title="2순위 — 직계존속"
-                  hint="각 직계존속의 촌수를 고르세요. 부모(1촌)·조부모(2촌) 중 최근친만 상속합니다 — 부모가 있으면 조부모는 자동 제외 (제1000조②). 1순위 부재 시에만 참여."
+                  title="2순위 직계존속"
+                  hint="각 직계존속의 촌수를 고르세요. 부모(1촌)·조부모(2촌) 중 최근친만 상속합니다. 부모가 있으면 조부모는 자동 제외 (제1000조 제2항). 1순위 부재 시에만 참여."
                   heirs={state.linealAscendants}
                   onChange={(heirs) => update({ linealAscendants: heirs })}
                   allowRepresentation={false}
@@ -2153,7 +2153,7 @@ function DeathCompensationView({
                   ]}
                 />
                 <HeirGroupCard
-                  title="3순위 — 형제자매"
+                  title="3순위 형제자매"
                   hint="1·2순위·배우자 모두 부재 시에만. 사망 시 조카가 1차 대습 가능."
                   heirs={state.siblings}
                   onChange={(heirs) => update({ siblings: heirs })}
@@ -2161,8 +2161,8 @@ function DeathCompensationView({
                   defaultLabel="형제자매"
                 />
                 <HeirGroupCard
-                  title="4순위 — 4촌 이내 방계혈족"
-                  hint="1·2·3순위·배우자 모두 부재 시에만. 각 방계혈족의 촌수를 고르세요. 3촌(예: 삼촌)이 4촌(예: 사촌)에 우선해 최근친만 상속합니다 (제1000조②). 대습상속 대상 아님."
+                  title="4순위 4촌 이내 방계혈족"
+                  hint="1·2·3순위·배우자 모두 부재 시에만. 각 방계혈족의 촌수를 고르세요. 3촌(예: 삼촌)이 4촌(예: 사촌)에 우선해 최근친만 상속합니다 (제1000조 제2항). 대습상속 대상 아님."
                   heirs={state.collateralFourth}
                   onChange={(heirs) => update({ collateralFourth: heirs })}
                   allowRepresentation={false}
@@ -2375,7 +2375,7 @@ function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
           </table>
           {result.hoffman240Cap.cappedAtIndex !== null ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              호프만 240 한도 적용 — {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
+              호프만 240 한도 적용. {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
               240을 초과해 한도를 적용했습니다.
             </p>
           ) : null}
@@ -2465,7 +2465,7 @@ function StaleBadge({
       <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="flex-1">
         기준 데이터셋 {version} · 최근 적용일 {effectiveFrom} · 경과 {stale.monthsElapsed}개월
-        {stale.message ? ` — ${stale.message}` : ""}
+        {stale.message ? ` (${stale.message})` : ""}
       </span>
     </div>
   );
@@ -2653,7 +2653,7 @@ function ResultCards({ result }: { result: CompensationResult }) {
           </table>
           {result.hoffman240Cap.cappedAtIndex !== null ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              호프만 240 한도 적용 — {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
+              호프만 240 한도 적용. {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
               240을 초과해 한도를 적용했습니다.
             </p>
           ) : null}

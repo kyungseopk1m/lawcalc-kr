@@ -3,7 +3,7 @@
   "id": "case-comp-003-hoffman-240-cap",
   "title": "영구 30% 가동 65세 480개월 → H[480]=263.33 > 240 → cap 적용",
   "source": "manual-derivation",
-  "notes": "compensation-golden-capture-result-2026-05-18.md § 4. applyHoffman240Cap 의 cumulative clip path. cappedAtIndex = 0.",
+  "notes": "compensation-golden-capture-result-2026-05-18.md 4절. applyHoffman240Cap 의 cumulative clip path. cappedAtIndex = 0.",
   "input": {
     "base": {
       "birthDate": "2001-01-01",
@@ -74,6 +74,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-05-18",
-    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 4"
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md 4절"
   }
 }

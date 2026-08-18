@@ -32,7 +32,7 @@ import {
 type CaseValueBasis = NonNullable<StampDutyInput["caseValueBasis"]>;
 
 /**
- * 보전사건의 사건 성격 (변호사보수규칙 제3조 ②항).
+ * 보전사건의 사건 성격 (변호사보수규칙 제3조 제2항).
  *
  * 단서는 "가압류, 가처분 명령의 신청사건에 있어서는 변론 또는 심문을 거친 경우에 한한다"라
  * 신청사건 전용이다. 이의·취소 신청사건은 단서 대상이 아니므로 변론·심문 여부와 무관하게
@@ -105,7 +105,7 @@ export function parseProportionalValues(value: string): number[] {
 
 /**
  * v0.10.0 이하는 지급명령 감액 체크박스 값을 사건구분과 별개로 `stampDuty.isPaymentOrder` 에
- * 저장했다. 체크박스를 없앤 뒤로 이 값을 흘려보내지 않으면 구파일을 다시 계산할 때 제7조 ②항
+ * 저장했다. 체크박스를 없앤 뒤로 이 값을 흘려보내지 않으면 구파일을 다시 계산할 때 제7조 제2항
  * 1/10 이 소리 없이 풀린다.
  *
  * 사건구분을 `paymentOrder` 로 바꾸는 방법은 쓰지 않았다. 그 사건구분은 변호사보수 산입
@@ -132,8 +132,8 @@ export function buildStampDutyInput(state: {
   isElectronicFiling: boolean;
   provisionalMeasureType: "general" | "provisionalStatus";
   /**
-   * 항고·재항고(라/마) 에서 인지법 제11조 ①항 대상일 때 원신청서에 붙인 인지액.
-   * 미지정이면 제11조 ②항 정액 2,000원이 적용된다.
+   * 항고·재항고(라/마) 에서 인지법 제11조 제1항 대상일 때 원신청서에 붙인 인지액.
+   * 미지정이면 제11조 제2항 정액 2,000원이 적용된다.
    */
   underlyingApplicationStampDutyWon?: number;
   filingDate: string;
@@ -141,7 +141,7 @@ export function buildStampDutyInput(state: {
   const isProvisional =
     state.caseType === "provisionalMeasureCollegial" ||
     state.caseType === "provisionalMeasureSingle";
-  // 보전처분은 제9조 ②항 별도 체계라 지급명령 감액 자체가 성립하지 않는다 (validator 도 거부).
+  // 보전처분은 제9조 제2항 별도 체계라 지급명령 감액 자체가 성립하지 않는다 (validator 도 거부).
   const isPaymentOrder =
     !isProvisional && (state.caseType === "paymentOrder" || state.legacyPaymentOrder);
   // 조정신청(머)은 「민사조정규칙」제3조의 신청 수수료라 심급 배수를 탈 자리가 없다
@@ -171,7 +171,7 @@ export function buildStampDutyInput(state: {
     ...(state.isSettlement && !isProvisional && !isPaymentOrder ? { isSettlement: true } : {}),
     ...(state.isElectronicFiling ? { isElectronicFiling: true } : {}),
     ...(state.filingDate ? { filingDate: state.filingDate } : {}),
-    // 제11조 ①항은 항고 사건에서만 의미가 있다. 다른 사건구분에 흘려보내면 엔진이 무시하지만
+    // 제11조 제1항은 항고 사건에서만 의미가 있다. 다른 사건구분에 흘려보내면 엔진이 무시하지만
     // `.lcalc` 에는 남아 파일을 읽는 쪽을 헷갈리게 한다.
     ...(state.caseType === "civilInterlocutoryAppeal" &&
     state.underlyingApplicationStampDutyWon !== undefined
@@ -186,7 +186,7 @@ export function buildStampDutyInput(state: {
 }
 
 /**
- * 보전사건 변호사보수 discount 조립 (변호사보수규칙 제3조 ②항).
+ * 보전사건 변호사보수 discount 조립 (변호사보수규칙 제3조 제2항).
  *
  * 본문 1/2 은 엔진이 사건구분만으로 자동 적용하므로 여기서는 단서 판정에 필요한
  * 사건 성격만 전달한다. 단서("가압류, 가처분 명령의 신청사건에 있어서는 변론 또는
@@ -324,7 +324,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   // 비워 두면 빌더가 소가를 그대로 쓴다. 초기값을 넣어 두면 소가만 고쳤을 때 불복 범위가
   // 옛 값에 남아 인지대가 조용히 틀린다 (인지 부족은 보정명령 사유다).
   const [appealValueText, setAppealValueText] = useState("");
-  // 항고 사건의 원신청서 인지액 (인지법 제11조 ①항). 비우면 제11조 ②항 정액 2,000원.
+  // 항고 사건의 원신청서 인지액 (인지법 제11조 제1항). 비우면 제11조 제2항 정액 2,000원.
   const [underlyingStampDutyText, setUnderlyingStampDutyText] = useState("");
   const [partyCountText, setPartyCountText] = useState("2");
   const [filingDate, setFilingDate] = useState(todayIso());
@@ -794,7 +794,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
             ) : null}
             {isProvisionalCase ? (
               <label className="grid gap-2 text-sm font-medium">
-                보전처분 종류 (인지법 제9조 ②항)
+                보전처분 종류 (인지법 제9조 제2항)
                 <Select
                   value={provisionalMeasureType}
                   onChange={(e) =>
@@ -827,13 +827,13 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               </label>
               {isPaymentOrderCase ? (
                 <p className="text-xs text-muted-foreground">
-                  독촉사건(지급명령)은 인지법 제7조 ②항에 따라 소장 인지의 1/10이 자동 적용됩니다.
+                  독촉사건(지급명령)은 인지법 제7조 제2항에 따라 소장 인지의 1/10이 자동 적용됩니다.
                 </p>
               ) : null}
               {legacyPaymentOrder && !isProvisionalCase ? (
                 <div className="flex items-start justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
                   <span>
-                    이전 버전에서 지급명령 인지대 감액(제7조 ②항 1/10)이 적용된 상태로 저장된
+                    이전 버전에서 지급명령 인지대 감액(제7조 제2항 1/10)이 적용된 상태로 저장된
                     파일입니다. 감액을 유지한 채 계산합니다. 사건구분을 바꾸면 해제됩니다.
                   </span>
                   <button
@@ -869,13 +869,13 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
           <CardContent className="grid gap-3 p-4 pt-0 text-sm">
             {!lawyerFeeApplies ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                선택한 사건구분은 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①항 본안 사건에
+                선택한 사건구분은 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항 본안 사건에
                 해당하지 않아 변호사보수가 산입되지 않습니다. 인지대·송달료만 계산됩니다.
               </div>
             ) : null}
             <fieldset disabled={!lawyerFeeApplies} className="grid gap-3 disabled:opacity-60">
               <label className="grid gap-2 font-medium">
-                지급보수액 (실제 약정보수, 제3조 ①항)
+                지급보수액 (실제 약정보수, 제3조 제1항)
                 <Input
                   aria-label="지급보수액"
                   placeholder="예: 3,000,000 (미입력 시 별표 상한액)"
@@ -901,10 +901,11 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               {isProvisionalCase ? (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    가압류·가처분 사건은 제3조 ②항 본문에 따라 별표 산정액의 1/2이 자동 적용됩니다.
+                    가압류·가처분 사건은 제3조 제2항 본문에 따라 별표 산정액의 1/2이 자동
+                    적용됩니다.
                   </p>
                   <label className="grid gap-2 text-sm font-medium">
-                    사건 성격 (제3조 ②항 단서)
+                    사건 성격 (제3조 제2항 단서)
                     <Select
                       value={provisionalApplicationKind}
                       onChange={(e) =>
@@ -924,8 +925,8 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                     </Select>
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    제3조 ②항 단서는 가압류·가처분 명령의 <strong>신청사건</strong>에만 적용됩니다.
-                    이의·취소 신청사건은 변론·심문 여부와 무관하게 1/2이 산입됩니다.
+                    제3조 제2항 단서는 가압류·가처분 명령의 <strong>신청사건</strong>에만
+                    적용됩니다. 이의·취소 신청사건은 변론·심문 여부와 무관하게 1/2이 산입됩니다.
                   </p>
                 </>
               ) : null}

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "LawCalc Korea 기본 권한 — 사용자 선택 경로 dialog open/save + 결과 표 클립보드 쓰기 + 정보 다이얼로그의 GitHub repo/Issues/LICENSE 외부 링크 open + 인앱 업데이트 확인/설치/재시작 + 미저장 경고 후 창 닫기. fs scope 별도 권한 없음 (dialog가 반환한 절대 경로만 std::fs로 직접 사용). core:window:allow-destroy 는 onCloseRequested 가 preventDefault 가 아닐 때 destroy() 를 호출하기 때문에 필요하다. 없으면 창이 닫히지 않는다. dialog:allow-ask 는 미저장 확인 창용이다 — wry 가 runJavaScriptConfirmPanel 을 구현하지 않아 웹뷰 window.confirm 은 macOS 에서 즉시 false 를 반환한다.",
+  "description": "LawCalc Korea 기본 권한: 사용자 선택 경로 dialog open/save + 결과 표 클립보드 쓰기 + 정보 다이얼로그의 GitHub repo/Issues/LICENSE 외부 링크 open + 인앱 업데이트 확인/설치/재시작 + 미저장 경고 후 창 닫기. fs scope 별도 권한 없음 (dialog가 반환한 절대 경로만 std::fs로 직접 사용). core:window:allow-destroy 는 onCloseRequested 가 preventDefault 가 아닐 때 destroy() 를 호출하기 때문에 필요하다. 없으면 창이 닫히지 않는다. dialog:allow-ask 는 미저장 확인 창용이다: wry 가 runJavaScriptConfirmPanel 을 구현하지 않아 웹뷰 window.confirm 은 macOS 에서 즉시 false 를 반환한다.",
   "windows": ["main"],
   "permissions": [
     "core:default",

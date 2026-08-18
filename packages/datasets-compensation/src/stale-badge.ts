@@ -62,7 +62,7 @@ function monthsBetween(from: Date, to: Date): number {
 /**
  * `snapshotDate` 기준일과 `currentDate` 사이의 경과 개월 수로 안내 상태를 산출한다.
  *
- * 임계 (plan v2 §6 트랙 3 정원):
+ * 임계 (plan v2 6절 트랙 3 정원):
  * - ≤ 6 개월: neutral (자동입력 신뢰)
  * - 6 ~ 12 개월: amber (대한건설협회 최신 시중노임 확인 권장)
  * - > 12 개월: red (데이터셋 갱신 및 최신 시중노임 직접 입력 권장)

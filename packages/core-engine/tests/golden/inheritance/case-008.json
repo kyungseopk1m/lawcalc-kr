@@ -3,7 +3,7 @@
   "id": "case-008",
   "title": "2차 대습 → 거부 (v0.2 첫 PR 1차 대습만 지원)",
   "source": "engine-internal-v0.2",
-  "notes": "v0.2 첫 PR scope 결정 — inheritance-input-model-spike §4 + source-extraction-spike §8.2 #2. 2차 대습은 v0.3+ 일반화 후 지원. 한국어 toast 거부 메시지 출처 = source-extraction-spike §8.3.",
+  "notes": "v0.2 첫 PR scope 결정 — inheritance-input-model-spike 4절 + source-extraction-spike 8.2절 #2. 2차 대습은 v0.3+ 일반화 후 지원. 한국어 toast 거부 메시지 출처 = source-extraction-spike 8.3절.",
   "input": {
     "decedent": {
       "deceasedAt": "2025-01-01"

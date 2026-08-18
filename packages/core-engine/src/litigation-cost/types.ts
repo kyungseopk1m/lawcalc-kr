@@ -3,10 +3,10 @@
  *
  * 근거: G1~G5 research notes 의 cross-validation 결과를 본 PR 1 의 type 으로 정합.
  * 적용 조항:
- *   - §1 Stamp Duty: 「민사소송 등 인지법」 제2조 (누진표) · 제3조 (항소 1.5, 상고 2) · 제7조 (지급명령 1/10, 화해 1/5) · 제16조 (전자소송 9/10)
- *   - §2 Delivery Fee: 「송달료규칙」 + 「송달료규칙의 시행에 따른 업무처리요령 (재일 87-4)」 별표 1
- *   - §3 Lawyer Fee: 「변호사보수의 소송비용 산입에 관한 규칙」 별표 + 제3조 · 제5조 · 제6조
- *   - §4 Case Types: 「사건별 부호문자의 부여에 관한 예규」 (재판예규 제1677호, 2017-12-21)
+ *   - 제1조 Stamp Duty: 「민사소송 등 인지법」 제2조 (누진표) · 제3조 (항소 1.5, 상고 2) · 제7조 (지급명령 1/10, 화해 1/5) · 제16조 (전자소송 9/10)
+ *   - 제2조 Delivery Fee: 「송달료규칙」 + 「송달료규칙의 시행에 따른 업무처리요령 (재일 87-4)」 별표 1
+ *   - 제3조 Lawyer Fee: 「변호사보수의 소송비용 산입에 관한 규칙」 별표 + 제3조 · 제5조 · 제6조
+ *   - 제4조 Case Types: 「사건별 부호문자의 부여에 관한 예규」 (재판예규 제1677호, 2017-12-21)
  *
  * 적용 시점: v0.3.0 = 현행 단일 슬라이스 (시기별 슬라이스는 PR 2/3/4 의 dataset history_note 로).
  */
@@ -20,7 +20,7 @@ import type { IsoDate } from "../types";
  */
 export type Domain = "stampDuty" | "deliveryFee" | "lawyerFee";
 
-// ===== Stamp Duty (§1) =====
+// ===== Stamp Duty (제1조) =====
 // 「민사소송 등 인지법」 + 「민사소송 등 인지규칙」
 
 /**
@@ -29,7 +29,7 @@ export type Domain = "stampDuty" | "deliveryFee" | "lawyerFee";
 export type AppealsLevel = "firstInstance" | "appeal" | "supreme";
 
 /**
- * 인지대 구간 (인지법 제2조 ①). 산식: amount = caseValue × rate + baseAmount —
+ * 인지대 구간 (인지법 제2조 제1항). 산식: amount = caseValue × rate + baseAmount —
  * **소가 전체**에 구간 요율을 곱하고 보정 상수를 더하는 연속 보정식이다 (변호사보수
  * 별표의 "…까지 부분" 구간별 누진식과 다름). scopeStart/scopeEnd 는 구간 매칭 전용.
  * scopeEnd null = 무한대 (마지막 구간, 인지법 제2조 제4호 "10억원 이상").
@@ -45,7 +45,7 @@ export interface StampDutyBracket {
 }
 
 /**
- * 인지대 반올림 정책. 인지법 제2조 ②항 — 1,000원 미만은 1,000원 (floor), 1,000원 이상이면 100원 미만 절사.
+ * 인지대 반올림 정책. 인지법 제2조 제2항 — 1,000원 미만은 1,000원 (floor), 1,000원 이상이면 100원 미만 절사.
  */
 export interface StampDutyRoundingPolicy {
   floorMinimumWon: number;
@@ -67,7 +67,7 @@ export interface StampDutyInput {
   isElectronicFiling?: boolean;
   isRetrial?: boolean;
   /**
-   * 보전처분(가압류·가처분, caseType `provisionalMeasure*`) 인지 분기. 근거는 인지법 제9조 ②항.
+   * 보전처분(가압류·가처분, caseType `provisionalMeasure*`) 인지 분기. 근거는 인지법 제9조 제2항.
    *   - `general` (기본): 가압류·다툼대상 가처분 = 정액 1만원.
    *   - `provisionalStatus`: 임시의 지위를 정하기 위한 가처분 = 본안 인지액의 1/2 (상한 50만원).
    * 보전 사건구분이 아닌 경우 무시된다. 미지정 시 `general` 로 간주.
@@ -79,7 +79,7 @@ export interface StampDutyInput {
    *   - `"amount"` (기본): `caseValue` 를 그대로 소가로 쓴다.
    *   - `"unascertainable"`: 소가를 산출할 수 없는 재산권상의 소 / 비재산권을 목적으로 하는
    *     소송 → 소가 5천만원으로 간주. 이때 `caseValue` 는 무시된다.
-   *   - `"unascertainableHighTier"`: 위 중 규칙 제15조①~③·제15조의2·제17조의2·제18조에
+   *   - `"unascertainableHighTier"`: 위 중 규칙 제15조 제1항부터 제3항까지·제15조의2·제17조의2·제18조에
    *     정한 소송(회사관계·특허·무체재산권 등) → 1억원으로 간주.
    *
    * 이 필드가 없던 동안 비재산권 소송에 소가 0 을 넣으면 인지액이 1,000원(하한)으로
@@ -87,10 +87,10 @@ export interface StampDutyInput {
    */
   caseValueBasis?: "amount" | "unascertainable" | "unascertainableHighTier";
   /**
-   * 항고·재항고(라/마) 전용. 인지법 제11조 ①항 대상일 때 원신청서에 붙인 인지액.
+   * 항고·재항고(라/마) 전용. 인지법 제11조 제1항 대상일 때 원신청서에 붙인 인지액.
    *
    * 제9조·제10조 신청에 관한 재판에 대한 항고는 "해당 신청서에 붙인 인지액의 2배"라
-   * 원신청서 금액을 알아야 한다. 미지정 시 제11조 ②항의 2천원 정액을 적용한다.
+   * 원신청서 금액을 알아야 한다. 미지정 시 제11조 제2항의 2천원 정액을 적용한다.
    * 다른 사건구분에서는 무시된다.
    */
   underlyingApplicationStampDutyWon?: number;
@@ -118,11 +118,11 @@ export interface StampDutyResult {
   computedAt: string;
 }
 
-// ===== Delivery Fee (§2) =====
+// ===== Delivery Fee (제2조) =====
 // 「송달료규칙」 + 「재일 87-4」 별표 1
 
 /**
- * 송달 횟수 산식. 사건구분별 4 종 분기 (G3 §2.4).
+ * 송달 횟수 산식. 사건구분별 4 종 분기 (G3 제2조.4).
  *
  *   - `simplePerParty`: 민사 1심 합의/단독/소액/항소/상고, 가사 1심, 행정 1심, 조정 등.
  *     count = countPerParty × partyCount.
@@ -184,7 +184,7 @@ export interface DeliveryFeeResult {
   computedAt: string;
 }
 
-// ===== Lawyer Fee (§3) =====
+// ===== Lawyer Fee (제3조) =====
 // 「변호사보수의 소송비용 산입에 관한 규칙」
 
 /**
@@ -203,10 +203,10 @@ export interface LawyerFeeBracket {
 }
 
 /**
- * 심급별 적용 정책. 본 규칙 제3조 ①·③항 — 각 심급마다 별표 호출 (소가만 다르게).
- * 항소심/상고심 소가 = 상소로써 불복하는 범위 (제3조 ③항).
+ * 심급별 적용 정책. 본 규칙 제3조 제1항·제3항 — 각 심급마다 별표 호출 (소가만 다르게).
+ * 항소심/상고심 소가 = 상소로써 불복하는 범위 (제3조 제3항).
  *
- * G2 §4 cross-validation 결과 spec §3 의 "1심 보수 × 0.5 가산" 표현은 오류로 확정.
+ * G2 제4조 cross-validation 결과 spec 제3조 의 "1심 보수 × 0.5 가산" 표현은 오류로 확정.
  * 본 type 으로 정책 명시.
  */
 export type LawyerFeeAppealsRule = "perInstanceIndependent";
@@ -226,18 +226,18 @@ export type NoOralHearingReason =
  * 변호사보수 감액/조정 옵션. G5 final 5 variant.
  *
  *   - `noOralHearingOrAdmission`: 제5조 (×0.5)
- *   - `provisionalCase`: 제3조 ②항 (본문 ×0.5 / 신청사건 변론·심문 미거침이면 단서로 산입 불가 ×0)
+ *   - `provisionalCase`: 제3조 제2항 (본문 ×0.5 / 신청사건 변론·심문 미거침이면 단서로 산입 불가 ×0)
  *   - `koreaLegalAid`: 대한법률구조공단 약정보수액 cap (별표 × 0.42 default, 민·가사 한정)
  *   - `courtDiscretion`: 제6조 (감액 0.0~1.0, 증액 1.0~1.5)
  *   - `customPercent`: 본 규칙 외 합의/특약
  *
  * 누적 (compound) 적용 정책 — 본 규칙 본문 구조 (사건구분 × 종결 사유 의 직교 조합) 에서 도출.
- * 최종 multiplier 는 clamp 0.0 ~ 1.5 (제6조 ②항 cap).
+ * 최종 multiplier 는 clamp 0.0 ~ 1.5 (제6조 제2항 cap).
  */
 export type LawyerFeeDiscount =
   | { kind: "noOralHearingOrAdmission"; reason: NoOralHearingReason }
   /**
-   * 제3조 ②항. 본문은 보전 사건에 별표 산정액의 1/2 을 적용하고, 단서는 신청사건에 한해
+   * 제3조 제2항. 본문은 보전 사건에 별표 산정액의 1/2 을 적용하고, 단서는 신청사건에 한해
    * 변론이나 심문을 거친 경우에만 산입하도록 제한한다. 이의·취소 신청사건은 단서 대상이 아니다.
    *
    * `applicationKind` 미지정은 신청사건으로 본다. `hasOralHearing` 미지정은 단서를 확인하지
@@ -264,7 +264,7 @@ export interface LawyerFeeInput {
    */
   koreaLegalAidAgreedFeeWon?: number;
   /**
-   * 지급보수액. 당사자가 보수계약으로 지급하였거나 지급할 실제 보수액이다 (본 규칙 제3조 ①항).
+   * 지급보수액. 당사자가 보수계약으로 지급하였거나 지급할 실제 보수액이다 (본 규칙 제3조 제1항).
    * 소송비용에 산입되는 보수는 지급보수액의 범위 내에서 별표 기준으로 산정하므로, 지정 시
    * 최종 산입액 = min(별표 산정액, agreedFeeWon) 으로 cap 한다. 미지정 시 결과는 별표 상한액이며
    * 실제 산입액이 아니다. formulaText 로 그 사실을 따로 고지한다 (감사 F2).
@@ -296,7 +296,7 @@ export interface LawyerFeeResult {
  *   - `koreaLegalAidScopeNotCivilOrFamily`: 대한법률구조공단 variant 가 민·가사 외 사건구분에 적용됨
  *   - `koreaLegalAidScopeOverridden`: 대한법률구조공단 variant 와 다른 multiplier 가 누적되어 이중 감액 risk
  *
- * G5 §3.3 권고 — UI 측 경고로 노출, 차단 X.
+ * G5 제3조.3 권고 — UI 측 경고로 노출, 차단 X.
  */
 export interface KoreaLegalAidScopeWarning {
   caseType: CaseType;
@@ -304,7 +304,7 @@ export interface KoreaLegalAidScopeWarning {
   messageKo: string;
 }
 
-// ===== Case Types (§4) =====
+// ===== Case Types (제4조) =====
 // 「사건별 부호문자의 부여에 관한 예규」 (재판예규 제1677호, 2017-12-21)
 
 /**
@@ -346,7 +346,7 @@ export interface CaseTypeMeta {
  *   - 본안 사건 (민사 1심·항소·상고, 가사 1심, 행정 1심): 3종 모두
  *   - 조정 (`civilMediation`): 3종 모두 — 보수는 제5조 modifier 영역
  *   - 항고/재항고 (`civilInterlocutoryAppeal`): 3종 모두 — 인지대 산식 별도 분기 (PR 2 engine 에서)
- *   - 보전 (카합/카단): 3종 모두 — 보수는 제3조 ②항 1/2 적용
+ *   - 보전 (카합/카단): 3종 모두 — 보수는 제3조 제2항 1/2 적용
  *   - 지급명령 (차): 인지 + 송달만 (실무상 보수 산입 외)
  *
  * `isCivilOrFamily` 결정 근거: 대한법률구조공단 정본 source ("민·가사 사건 등") — 행정·보전·지급명령 default 미적용.

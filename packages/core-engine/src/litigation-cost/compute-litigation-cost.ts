@@ -51,7 +51,7 @@ function buildLawyerFeeDeps(deps: ComputeLitigationCostDeps | undefined): Comput
 /**
  * 변호사보수 산입 외 사건구분 (현재 `paymentOrder` 만 해당) 의 결과 zero-fill.
  *
- * 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①항 본안 사건 한정 — 지급명령(독촉)은 산입 외.
+ * 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항 본안 사건 한정 — 지급명령(독촉)은 산입 외.
  * `LitigationCostResult` 의 shape 일관성을 위해 0원 결과를 합성하고 dataset 버전 tag 는 유지한다.
  * 인지대/송달료는 정상 계산되므로 caller (UI/PDF/CSV) 는 변호사보수 0 + 안내 formulaText 만 노출.
  */
@@ -70,7 +70,7 @@ function buildExcludedLawyerFeeResult(
     appliedDiscounts: [],
     koreaLegalAidWarnings: [],
     formulaText:
-      "변호사보수 산입 외 사건구분 — 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①항 본안 사건 한정",
+      "변호사보수 산입 외 사건구분입니다. 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항은 본안 사건에만 적용합니다.",
     dataVersion: lawyerFeeDatasetVersionTag(dataset),
     computedAt,
   };

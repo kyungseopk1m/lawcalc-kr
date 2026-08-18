@@ -94,14 +94,14 @@ export const DEFAULT_LAWYER_FEE_DATASET: LawyerFeeDataset = {
   ],
   "appealsRule": {
     "policy": "perInstanceIndependent",
-    "note": "각 심급마다 별표 그대로 적용. 항소심·상고심의 소가는 상소로써 불복하는 범위 (제3조 ③항).",
-    "sourceArticle": "제3조 ①·③항"
+    "note": "각 심급마다 별표 그대로 적용. 항소심·상고심의 소가는 상소로써 불복하는 범위 (제3조 제3항).",
+    "sourceArticle": "제3조 제1항·제3항"
   },
   "modifiers": {
     "provisionalSeizureOrInjunction": {
       "multiplier": 0.5,
       "exception": "본문의 1/2 은 보전 사건 전반에 적용된다. 단서는 신청사건에만 걸리며, 변론 또는 심문을 거친 경우에 한하여 산입한다 (미거침 시 산입 불가). 이의·취소 신청사건은 단서 대상이 아니므로 변론 여부와 무관하게 1/2.",
-      "sourceArticle": "제3조 ②항",
+      "sourceArticle": "제3조 제2항",
       "enumVariant": "provisionalCase"
     },
     "noOralHearingOrAdmission": {
@@ -174,14 +174,14 @@ export const DEFAULT_LAWYER_FEE_DATASET: LawyerFeeDataset = {
     "default": "compound",
     "minMultiplierCap": 0,
     "maxMultiplierCap": 1.5,
-    "note": "제3조 ②항(사건구분) × 제5조(종결 사유)의 직교 조합입니다. 누적 적용이 본 규칙 구조와 정합하며, 제6조 ②항 상한은 ×1.5입니다.",
+    "note": "제3조 제2항(사건구분) × 제5조(종결 사유)의 직교 조합입니다. 누적 적용이 본 규칙 구조와 정합하며, 제6조 제2항 상한은 ×1.5입니다.",
     "sourceBasis": "본 규칙 본문 구조 + 대법원 2017마6274 종합 고려 7요소"
   },
   "interpretiveCases": {
     "scopeOfAgreedFee": {
       "caseNumber": "대법원 2021마7301 결정 (2022-04-08 자)",
       "url": "https://casenote.kr/대법원/2021마7301",
-      "note": "제3조 ①항 '지급보수액 범위 내' 해석 — 특정금액 지급의무 발생 여부만 따짐, 실제 지급 방식·여부 무관."
+      "note": "제3조 제1항 '지급보수액 범위 내' 해석: 특정금액 지급의무 발생 여부만 따짐, 실제 지급 방식·여부 무관."
     }
   },
   "historyNote": {
@@ -204,7 +204,7 @@ export const DEFAULT_LAWYER_FEE_DATASET: LawyerFeeDataset = {
       {
         "effectiveFrom": "1990-09-01",
         "ruleNumber": "대법원규칙 제1123호",
-        "summary": "가압류·가처분 1/2 적용 신설 (제3조 ②항)"
+        "summary": "가압류·가처분 1/2 적용 신설 (제3조 제2항)"
       }
     ],
     "modifierChanges": [

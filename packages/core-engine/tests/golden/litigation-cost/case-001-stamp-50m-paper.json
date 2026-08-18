@@ -3,7 +3,7 @@
   "id": "case-001-stamp-50m-paper",
   "title": "인지액 — 소장, 소가 5,000만원, 종이소송 = 230,000원",
   "source": "statute-derivation + external-web-capture(KLAC)",
-  "notes": "인지법 §2① 2호: 50,000,000 × 45/10,000 + 5,000 = 230,000 (정수 손계산). KLAC 자동계산 캡처 = 229,900 — KLAC 클라이언트 JS 의 float 곱셈(((0.0045×10000)×price)/10000)이 224,999.99…로 떨어져 100원 절사가 한 단계 새는 자체 오차. 법령 문언 기준 정답은 230,000.",
+  "notes": "인지법 제2조 제1항 2호: 50,000,000 × 45/10,000 + 5,000 = 230,000 (정수 손계산). KLAC 자동계산 캡처 = 229,900 — KLAC 클라이언트 JS 의 float 곱셈(((0.0045×10000)×price)/10000)이 224,999.99…로 떨어져 100원 절사가 한 단계 새는 자체 오차. 법령 문언 기준 정답은 230,000.",
   "input": {
     "caseValue": 50000000,
     "caseType": "civilFirstInstanceCollegial",
@@ -11,13 +11,13 @@
   },
   "expected": {
     "amount": 230000,
-    "formulaText": "1심 (×1): (소가 50,000,000 × 0.0045 + 5,000) × 1 = 230,000원 → 230,000원 (제2조 ②항 100원 절사)",
+    "formulaText": "1심 (×1): (소가 50,000,000 × 0.0045 + 5,000) × 1 = 230,000원 → 230,000원 (제2조 제2항 100원 절사)",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {
     "oracle": "statute-derivation",
     "derivedAt": "2026-07-02",
-    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md §G (인지법 제2조·제3조·제7조·제16조 정수 손계산)",
+    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md G절 (인지법 제2조·제3조·제7조·제16조 정수 손계산)",
     "externalCapture": {
       "source": "대한법률구조공단 소송비용 자동계산 (본안사건 인지 및 송달료 계산)",
       "sourceUrl": "https://www.klac.or.kr/legalstruct/autoCostCalculation.do",

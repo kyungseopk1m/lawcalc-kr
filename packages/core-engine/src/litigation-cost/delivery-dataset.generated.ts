@@ -210,7 +210,7 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
         "countPerParty": 6
       },
       "verifiedBy": [
-        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) — 독촉사건(차) 6회, 채권자·채무자",
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01): 독촉사건(차) 6회, 채권자·채무자",
         "portal.scourt.go.kr jisCntntsSrno=2026000031884"
       ]
     }
@@ -221,7 +221,7 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
       {
         "effectiveFrom": "2026-03-01",
         "ruleNumber": "재판예규 제1950호",
-        "summary": "별표 1(적용대상사건 및 당사자 1인당 송달료납부기준) 개정 — 본 데이터셋 countMatrix의 정본 출처 구간"
+        "summary": "별표 1(적용대상사건 및 당사자 1인당 송달료납부기준) 개정. 본 데이터셋 countMatrix의 정본 출처 구간"
       },
       {
         "effectiveFrom": "2020-11-26",

@@ -3,7 +3,7 @@
   "id": "case-comp-007-fault-offset",
   "title": "case-comp-001 + 과실 30% + 전액공제 8M (치료비 5M + 선급금 3M)",
   "source": "manual-derivation",
-  "notes": "compensation-golden-capture-result-2026-05-18.md § 6. compute.ts 단계 8 (과실상계) + 단계 9 (공제) + 단계 10 (100원 절사) 정원 검증.",
+  "notes": "compensation-golden-capture-result-2026-05-18.md 6절. compute.ts 단계 8 (과실상계) + 단계 9 (공제) + 단계 10 (100원 절사) 정원 검증.",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -83,6 +83,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-05-18",
-    "derivedBy": "compensation-golden-capture-result-2026-05-18.md § 6"
+    "derivedBy": "compensation-golden-capture-result-2026-05-18.md 6절"
   }
 }

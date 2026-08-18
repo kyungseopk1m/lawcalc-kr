@@ -16,7 +16,7 @@ import {
  * - 매우 긴 기간 (50년 period mode 풀 1년 누적)
  * - 매우 큰 원금 (Number.MAX_SAFE_INTEGER 안에서의 정수 정밀도)
  * - 단일 일자 (same-day) totalDays / period 둘 다
- * - 다년 + 명시 segments + period 모드 조합 (`INTEREST_FORMULAS.md §8` 미해결 항목 확정)
+ * - 다년 + 명시 segments + period 모드 조합 (`INTEREST_FORMULAS.md 8절` 미해결 항목 확정)
  * - customRate = 0 (이자 없음)
  * - includeFirstDay=true 의 1년 boundary 동작
  * - addYears / addDays 50년 단위 헬퍼

@@ -2,12 +2,12 @@
  * 상속분 간이 계산 — 6 step 알고리즘.
  *
  * 1. 입력 검증 (1991-01-01 cutoff, 2차 대습 거부, 직계존속·방계 대습 거부, 촌수 양의정수)
- * 2. fall-through 그룹 결정 (1·2·배우자단·3·4 순서). 2·4 순위는 최근친(최소 촌수)만 (§1000②).
+ * 2. fall-through 그룹 결정 (1·2·배우자단·3·4 순서). 2·4 순위는 최근친(최소 촌수)만 (제1000조 제2항).
  *    상속포기(`renounced`)한 자는 이 단계에서 빠진다 — 대습 사유가 아니라서 슬롯도 남기지
- *    않는다 (§1001). 한 촌수 전원이 포기하면 배우자가 있을 때는 배우자 단독(§1043), 없을
+ *    않는다 (제1001조). 한 촌수 전원이 포기하면 배우자가 있을 때는 배우자 단독(제1043조), 없을
  *    때는 다음 촌수가 본위상속한다.
  * 3. 1차 분배 — 1·2 순위 + 배우자 동순위, 또는 3·4 순위 단독
- * 4. 대습 split — 1·3 순위만. 피대습자의 배우자(며느리·사위)는 §1009② 준용 5할 가산
+ * 4. 대습 split — 1·3 순위만. 피대습자의 배우자(며느리·사위)는 제1009조 제2항 준용 5할 가산
  * 5. GCD 약분
  * 6. InheritanceResult 출력
  *
@@ -16,7 +16,7 @@
  * - 직계비속/직계존속 unit = 2 (1 × 2)
  * - 형제자매·방계 unit = 1 (균분만)
  *
- * 한국어 toast 메시지 출처: source-extraction-spike-2026-05-09.md §8.3 (UI strings verbatim).
+ * 한국어 toast 메시지 출처: source-extraction-spike-2026-05-09.md 8.3절 (UI strings verbatim).
  */
 
 import { STANDARD_DISCLAIMER } from "../disclaimers";
@@ -59,7 +59,7 @@ function slotted(heirs: HeirNode[]): HeirNode[] {
 }
 
 /**
- * 같은 순위 안에서 촌수가 다르면 최근친(최소 촌수)만 남긴다 (민법 §1000② — 부모 우선 조부모,
+ * 같은 순위 안에서 촌수가 다르면 최근친(최소 촌수)만 남긴다 (민법 제1000조 제2항 — 부모 우선 조부모,
  * 삼촌 우선 사촌). 한 명이라도 `degree` 미지정이면 정보가 불완전하므로 필터하지 않고
  * 전원 동순위로 균분한다 (하위호환 — 기존 입력·골든·`.lcalc` 무영향).
  */
@@ -72,7 +72,7 @@ function closestByDegree(heirs: HeirNode[]): HeirNode[] {
 /**
  * 대습 slot 을 생존 대습상속인에게 분할한다.
  *
- * 피대습자의 배우자(`isSpouseOfRepresented`)가 있으면 §1009② 를 준용해 5할 가산한다
+ * 피대습자의 배우자(`isSpouseOfRepresented`)가 있으면 제1009조 제2항 를 준용해 5할 가산한다
  * (배우자 unit 3 : 직계비속 unit 2). 배우자 표시가 없으면 전원 균분으로, 종전과
  * 완전히 동일한 raw 분수를 만든다 (배우자 없는 기존 골든 byte-identical).
  */
@@ -115,16 +115,16 @@ type GroupOutcome =
 /**
  * 한 순위 그룹에서 실제로 상속하는 집합을 고른다.
  *
- * 최근친(§1000②)을 먼저 정하고 **그 안에서** 포기자를 뺀다. 순서가 중요하다.
+ * 최근친(제1000조 제2항)을 먼저 정하고 **그 안에서** 포기자를 뺀다. 순서가 중요하다.
  * 그 촌수 전원이 포기했다면:
  *
- *   - 배우자가 있으면 §1043("상속인이 수인인 경우에 어느 상속인이 상속을 포기한 때에는 그
+ *   - 배우자가 있으면 제1043조("상속인이 수인인 경우에 어느 상속인이 상속을 포기한 때에는 그
  *     상속분은 다른 상속인의 상속분의 비율로 그 상속인에게 귀속된다")의 "다른 상속인" 이
  *     배우자뿐이므로 배우자가 단독상속한다. 다음 촌수로 내려가지 않는다.
  *     판시는 자녀 전원이 포기한 직계비속 사안이다 (대법원 2023. 3. 23.자 2020그42 전합 —
  *     종전 2013다48852 변경). 이 함수는 직계존속에도 쓰이는데(`ascOutcome`), 존속 사안을
- *     직접 판시한 판례는 확인하지 못했다. 존속 적용은 §1003① 이 §1000①1호와 2호를 나란히
- *     두고 결정문 논증이 §1043 일반론이라는 점에서 나온 확장이다.
+ *     직접 판시한 판례는 확인하지 못했다. 존속 적용은 제1003조 제1항 이 제1000조 제1항1호와 2호를 나란히
+ *     두고 결정문 논증이 제1043조 일반론이라는 점에서 나온 확장이다.
  *   - 배우자가 없으면 "다른 상속인" 이 없으므로 다음 촌수가 **본위상속** 한다
  *     (대법원 1995. 9. 26. 선고 95다27769). 대습이 아니라 본위상속이므로 대습 슬롯을
  *     만들지 않는다.
@@ -149,7 +149,7 @@ function resolveGroup(group: HeirNode[], spouseAlive: boolean): GroupOutcome {
 }
 
 /**
- * 민법 제1003조 2항 개정 시행일 (법률 제21454호, 공포한 날부터 시행).
+ * 민법 제1003조 제2항 개정 시행일 (법률 제21454호, 공포한 날부터 시행).
  *
  * 개정 전: "사망 또는 결격된 자의 배우자" / 개정 후: "상속개시전에 사망한 사람의 배우자".
  * 부칙 제2조의 적용례는 제1008조 단서·제1004조의2·제1001조 중 제1004조의2 관련 부분만
@@ -159,7 +159,7 @@ function resolveGroup(group: HeirNode[], spouseAlive: boolean): GroupOutcome {
 const SPOUSE_REPRESENTATION_NARROWED_FROM = "2026-03-17";
 
 /**
- * 개정 제1003조 2항 적용 — 결격·상속권 상실이 원인이면 피대습자의 배우자를 대습에서 뺀다.
+ * 개정 제1003조 제2항 적용 — 결격·상속권 상실이 원인이면 피대습자의 배우자를 대습에서 뺀다.
  *
  * 제1001조의 직계비속 대습은 그대로 유지되므로 손자녀 등은 남는다. 배우자 대습자만 사라진다.
  *
@@ -182,7 +182,7 @@ function defaultName(prefix: string, idx: number, h: HeirNode): string {
 }
 
 /**
- * 촌수(degree)는 HeirNode 공통 필드라 모든 순위·대습 노드에서 검증한다 (§1000② 최근친 우선
+ * 촌수(degree)는 HeirNode 공통 필드라 모든 순위·대습 노드에서 검증한다 (제1000조 제2항 최근친 우선
  * 판정에 쓰이며, 지정 시 1 이상의 정수). 직계비속·직계존속·방계 4순위는 계산에 실제로
  * 반영하고, 형제자매·대습 노드에서는 쓰이지 않더라도 잘못된 값을 public API 경계에서
  * 거부한다 (`.lcalc` 검증과 동일 정책).
@@ -330,7 +330,7 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
   const spouseAlive = !!input.spouse?.alive;
   const spouseName = input.spouse?.name ?? "배우자";
 
-  // 개정 제1003조 2항은 시행일 이후 개시된 상속에만 적용한다. 대습이 가능한 1·3순위만 대상.
+  // 개정 제1003조 제2항은 시행일 이후 개시된 상속에만 적용한다. 대습이 가능한 1·3순위만 대상.
   const narrowSpouseReps = input.decedent.deceasedAt >= SPOUSE_REPRESENTATION_NARROWED_FROM;
   const desc =
     (narrowSpouseReps
@@ -343,12 +343,12 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
 
   const spouseSole: RawShare[] = [{ name: spouseName, raw: { num: 1n, den: 1n } }];
 
-  // 직계비속도 최근친 우선(§1000②) 대상이다. 자(1촌)와 손(2촌)을 함께 넣으면 자만
+  // 직계비속도 최근친 우선(제1000조 제2항) 대상이다. 자(1촌)와 손(2촌)을 함께 넣으면 자만
   // 상속하고, 손자녀는 사망한 자의 대습(representatives)으로만 들어온다.
   // 촌수를 한 명이라도 지정하지 않으면 `closestByDegree` 가 원본을 그대로 돌려주므로
   // 기존 입력·골든·`.lcalc` 결과는 무변경이다 (존속·방계와 동일 정책).
   const descOutcome = resolveGroup(desc, spouseAlive);
-  // 직계존속은 대습 X (validator 가 거부) — 최근친(부모 우선 조부모, §1000②)만 분배
+  // 직계존속은 대습 X (validator 가 거부) — 최근친(부모 우선 조부모, 제1000조 제2항)만 분배
   const ascOutcome = resolveGroup(asc, spouseAlive);
   // 3·4순위는 배우자가 있으면 애초에 상속하지 않으므로 spouseAlive=false 로 푼다.
   // 형제자매는 종전대로 촌수 필터를 타지 않는다 (전원 2촌이라 최근친 판정이 무의미하고,

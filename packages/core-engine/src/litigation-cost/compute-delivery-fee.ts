@@ -11,7 +11,7 @@ import { validateDeliveryFeeInput } from "./validators";
 /**
  * 송달료 engine. 「송달료규칙」 (회당 단가 수권) + 「재일 87-4」 별표 1 (사건구분 매트릭스) wire-up.
  *
- * 산식 (PR 1 정정 spec §2 정합):
+ * 산식 (PR 1 정정 spec 제2조 정합):
  *
  *   1. validateDeliveryFeeInput(input)  — 음수 partyCount / 무효 caseType / 도메인 mismatch 등 거부.
  *   2. countEntry = getDeliveryCount(dataset, caseType)  — 매트릭스 lookup.
@@ -25,7 +25,7 @@ import { validateDeliveryFeeInput } from "./validators";
  *        - input.perDeliveryUnitPriceWon override (가장 우선).
  *        - getDeliveryUnitPriceAt(dataset, input.filingDate) — filingDate 기준 시기별 슬라이스.
  *        - filingDate 미지정 시 dataset 의 현행 단가 (5,500원).
- *   5. amount = count × perDeliveryUnitPriceWon (정수, floor/truncate 정책 부재 — G3 §4).
+ *   5. amount = count × perDeliveryUnitPriceWon (정수, floor/truncate 정책 부재 — G3 제4조).
  *   6. formulaText 생성 (사건구분 라벨 + 산식 kind + 회수 + 단가 + 합산).
  */
 

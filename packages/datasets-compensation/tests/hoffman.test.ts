@@ -32,7 +32,7 @@ describe("hoffman dataset (loader + version tag)", () => {
     expect(getHoffmanAt(ds, 480)).toBeGreaterThan(getHoffmanAt(ds, 240));
   });
 
-  it("crosses the 240 cumulative threshold around month 414 (Compensation §5-마 정원)", () => {
+  it("crosses the 240 cumulative threshold around month 414 (Compensation 제5조-마 정원)", () => {
     const ds = loadHoffmanTable();
     expect(getHoffmanAt(ds, 413)).toBeLessThan(240);
     expect(getHoffmanAt(ds, 414)).toBeGreaterThan(240);

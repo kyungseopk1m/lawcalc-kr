@@ -260,7 +260,7 @@ describe("calculateInheritance — 분배 정원", () => {
   });
 });
 
-describe("calculateInheritance — 최근친 우선 + 배우자 대습 (§1000②·§1003②·§1009②)", () => {
+describe("calculateInheritance — 최근친 우선 + 배우자 대습 (제1000조 제2항·제1003조 제2항·제1009조 제2항)", () => {
   const frac = (s: { name: string; numerator: number; denominator: number }) =>
     `${s.name}=${s.numerator}/${s.denominator}`;
 
@@ -276,7 +276,7 @@ describe("calculateInheritance — 최근친 우선 + 배우자 대습 (§1000�
   });
 
   /**
-   * 직계비속(1순위)도 §1000② 최근친 우선 대상이다. 직전 구현은 2·4순위에만 필터를 걸고
+   * 직계비속(1순위)도 제1000조 제2항 최근친 우선 대상이다. 직전 구현은 2·4순위에만 필터를 걸고
    * 1순위는 통과시켜, 자와 손을 함께 넣으면 균등 분할됐다 (자 1/2, 손 1/2).
    * `degree` 는 validator 가 받아 검증까지 하면서 계산에서는 버려지고 있었다.
    */
@@ -332,13 +332,13 @@ describe("calculateInheritance — 최근친 우선 + 배우자 대습 (§1000�
   });
 
   /**
-   * 민법 제1003조 ①: 배우자는 1·2순위와 공동상속하고, 그들이 없으면 단독상속인이 된다.
+   * 민법 제1003조 제1항: 배우자는 1·2순위와 공동상속하고, 그들이 없으면 단독상속인이 된다.
    * 형제자매(3순위)·4촌 이내 방계(4순위)는 배우자가 있으면 상속인이 되지 않는다.
    *
    * 이 조합을 검증하는 테스트가 한 건도 없어, 순위 분기를 뒤집어 배우자를 완전히 배제하는
    * 뮤테이션이 전 테스트를 통과했다.
    */
-  it("INH-3 배우자 + 형제자매 → 배우자 단독 (제1003조 ①)", () => {
+  it("INH-3 배우자 + 형제자매 → 배우자 단독 (제1003조 제1항)", () => {
     const r = calculateInheritance({
       decedent: { deceasedAt: "2025-01-01" },
       spouse: { alive: true, name: "배우자" },
@@ -470,7 +470,7 @@ describe("calculateInheritance — 최근친 우선 + 배우자 대습 (§1000�
     expect(r.shares.map(frac)).toEqual(["부=1/2", "모=1/2"]);
   });
 
-  it("형제자매 대습도 배우자 5할 가산: 조카 1/5, 형수 3/10 (§1001·§1003②·§1009②)", () => {
+  it("형제자매 대습도 배우자 5할 가산: 조카 1/5, 형수 3/10 (제1001조·제1003조 제2항·제1009조 제2항)", () => {
     const r = calculateInheritance({
       decedent: { deceasedAt: "2025-01-01" },
       siblings: [
@@ -597,7 +597,7 @@ describe("calculateInheritance / 상속포기 (renounced) [INH-2]", () => {
     expect(asMap(died)).toEqual({ 배우자: "3/5", 손주: "2/5" });
   });
 
-  it("자녀 일부 포기 = 남은 자녀와 배우자가 공동상속 (§1043 재분배와 같은 값)", () => {
+  it("자녀 일부 포기 = 남은 자녀와 배우자가 공동상속 (제1043조 재분배와 같은 값)", () => {
     // 배우자 3 : 자녀A 2 : 자녀B 2 에서 자녀B 포기 → 배우자 3/5, 자녀A 2/5.
     const r = calculateInheritance({
       decedent,
@@ -626,7 +626,7 @@ describe("calculateInheritance / 상속포기 (renounced) [INH-2]", () => {
     expect(asMap(r)).toEqual({ 자녀A: "1/1" });
   });
 
-  it("배우자 없이 자녀 전원 포기 + 손자녀 = 손자녀 본위상속 (§1000②)", () => {
+  it("배우자 없이 자녀 전원 포기 + 손자녀 = 손자녀 본위상속 (제1000조 제2항)", () => {
     const r = calculateInheritance({
       decedent,
       linealDescendants: [
@@ -669,7 +669,7 @@ describe("calculateInheritance / 상속포기 (renounced) [INH-2]", () => {
     expect(asMap(r)).toEqual({ 부: "1/1" });
   });
 
-  it("직계존속 전원 포기 + 배우자 = 배우자 단독 (§1043 동일 구조)", () => {
+  it("직계존속 전원 포기 + 배우자 = 배우자 단독 (제1043조 동일 구조)", () => {
     const r = calculateInheritance({
       decedent,
       spouse: { name: "배우자", alive: true },
@@ -778,13 +778,13 @@ const shareText = (s: { name: string; numerator: number; denominator: number }) 
   `${s.name}=${s.numerator}/${s.denominator}`;
 
 /**
- * 민법 제1003조 2항 (법률 제21454호, 2026. 3. 17. 공포·시행).
+ * 민법 제1003조 제2항 (법률 제21454호, 2026. 3. 17. 공포·시행).
  *
  * 개정 전 "사망 또는 결격된 자의 배우자" → 개정 후 "상속개시전에 사망한 사람의 배우자".
  * 제1001조의 직계비속 대습은 결격·상속권 상실에서도 그대로 유지되므로 손주는 남고
  * 피대습자의 배우자만 빠진다. 부칙 제2조 적용례에 제1003조가 없어 시행일로 갈린다.
  */
-describe("대습 배우자 범위 축소 (제1003조 2항, 2026-03-17)", () => {
+describe("대습 배우자 범위 축소 (제1003조 제2항, 2026-03-17)", () => {
   const heirs = (cause?: "death" | "disqualified" | "forfeited") => ({
     linealDescendants: [
       {

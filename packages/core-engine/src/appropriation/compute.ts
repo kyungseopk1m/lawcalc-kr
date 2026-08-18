@@ -40,7 +40,7 @@ export function computeAppropriation(input: AppropriationInput): AppropriationRe
   validateAppropriationInput(input);
 
   const computedAt = input.computedAt ?? todayIso();
-  // 변제기 도래 판정 기준일. 민법 제477조 1호는 **변제 시점** 을 본다 — 계산을 언제 돌렸는지가
+  // 변제기 도래 판정 기준일. 민법 제477조 제1호는 **변제 시점** 을 본다 — 계산을 언제 돌렸는지가
   // 아니다. `computedAt` 은 계산 시각 메타로만 남기고 의미를 겸용하지 않는다.
   const dueAsOf = input.payment.paidAt ?? computedAt;
   const works: ClaimWork[] = input.claims.map((claim) => ({

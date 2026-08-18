@@ -3,7 +3,7 @@
   "id": "case-004-stamp-50m-appeal",
   "title": "인지액 — 항소장, 소가 5,000만원 = 345,000원",
   "source": "statute-derivation + external-web-capture(KLAC)",
-  "notes": "인지법 §3: 소장 인지액 230,000 × 1.5 = 345,000. KLAC 캡처 = 344,800 — case-001 과 동일한 KLAC float 오차(229,9xx × 1.5) 파생. 법령 기준 정답 345,000.",
+  "notes": "인지법 제3조: 소장 인지액 230,000 × 1.5 = 345,000. KLAC 캡처 = 344,800 — case-001 과 동일한 KLAC float 오차(229,9xx × 1.5) 파생. 법령 기준 정답 345,000.",
   "input": {
     "caseValue": 50000000,
     "caseType": "civilAppeal",
@@ -11,13 +11,13 @@
   },
   "expected": {
     "amount": 345000,
-    "formulaText": "항소 (×1.5): (소가 50,000,000 × 0.0045 + 5,000) × 1.5 = 345,000원 → 345,000원 (제2조 ②항 100원 절사)",
+    "formulaText": "항소 (×1.5): (소가 50,000,000 × 0.0045 + 5,000) × 1.5 = 345,000원 → 345,000원 (제2조 제2항 100원 절사)",
     "dataVersion": "stamp-duty/v1.2.0"
   },
   "metadata": {
     "oracle": "statute-derivation",
     "derivedAt": "2026-07-02",
-    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md §G (인지법 제2조·제3조·제7조·제16조 정수 손계산)",
+    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md G절 (인지법 제2조·제3조·제7조·제16조 정수 손계산)",
     "externalCapture": {
       "source": "대한법률구조공단 소송비용 자동계산 (본안사건 인지 및 송달료 계산)",
       "sourceUrl": "https://www.klac.or.kr/legalstruct/autoCostCalculation.do",

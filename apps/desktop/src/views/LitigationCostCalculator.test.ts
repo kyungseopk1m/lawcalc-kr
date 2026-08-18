@@ -15,7 +15,7 @@ import {
 } from "./LitigationCostCalculator";
 
 /**
- * 「변호사보수의 소송비용 산입에 관한 규칙」제3조 ②항.
+ * 「변호사보수의 소송비용 산입에 관한 규칙」제3조 제2항.
  *
  * 단서 "다만, 가압류, 가처분 명령의 신청사건에 있어서는 변론 또는 심문을 거친 경우에
  * 한한다" 는 신청사건 전용이다. 이의·취소 신청사건은 단서 대상이 아니므로 변론·심문
@@ -25,7 +25,7 @@ import {
  * 산입 불가(0원)로 강제했다. 엔진에는 `applicationKind` 분기가 이미 있었는데 UI 에서
  * 그 분기에 도달할 방법이 없었다.
  */
-describe("buildProvisionalDiscount (변호사보수규칙 제3조 ②항)", () => {
+describe("buildProvisionalDiscount (변호사보수규칙 제3조 제2항)", () => {
   const provisional = "provisionalMeasureCollegial" as const;
 
   it("이의·취소 신청사건은 hasOralHearing 을 붙이지 않는다", () => {
@@ -138,7 +138,7 @@ describe("parseProportionalValues", () => {
 
 /**
  * v0.10.0 이하가 저장한 `.lcalc` 에는 `stampDuty.isPaymentOrder` 가 사건구분과 따로 들어 있다.
- * 체크박스를 없앤 뒤 UI 가 이 값을 넘기지 않아서, 파일을 열고 다시 계산하면 제7조 ②항 1/10 이
+ * 체크박스를 없앤 뒤 UI 가 이 값을 넘기지 않아서, 파일을 열고 다시 계산하면 제7조 제2항 1/10 이
  * 풀리고 소가 5천만 기준 23,000 이 230,000 으로 뛰었다. 그 회귀를 여기서 잡는다.
  */
 describe("legacy payment-order flag", () => {
@@ -336,7 +336,7 @@ describe("legacy payment-order flag", () => {
     expect(withAppeal.appealsLevel).toBe("firstInstance");
     expect(withAppeal.isSettlement).toBeUndefined();
 
-    // 보전처분은 제9조 ②항 별도 체계라 구파일 플래그가 따라붙으면 안 된다.
+    // 보전처분은 제9조 제2항 별도 체계라 구파일 플래그가 따라붙으면 안 된다.
     const provisional = buildStampDutyInput({
       ...uiState,
       caseType: "provisionalMeasureSingle",
@@ -474,11 +474,11 @@ describe("민사조정 심급 정규화", () => {
 });
 
 /**
- * 인지법 제11조 ①항 — "제9조 또는 제10조의 신청에 관한 재판에 대한 항고장 및 상소장에는
+ * 인지법 제11조 제1항 — "제9조 또는 제10조의 신청에 관한 재판에 대한 항고장 및 상소장에는
  * 해당 신청서에 붙인 인지액의 2배에 해당하는 인지를 붙여야 한다."
  *
  * 엔진에는 있었지만 UI·빌더·`.lcalc` 어디에도 배선돼 있지 않아, 화면에서 만들 수 있는 항고
- * 입력은 항상 제11조 ②항 정액 2,000원이었다.
+ * 입력은 항상 제11조 제2항 정액 2,000원이었다.
  */
 describe("항고 원신청서 인지액 (제11조 제1항)", () => {
   const state = {

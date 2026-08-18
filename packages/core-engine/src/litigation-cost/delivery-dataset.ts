@@ -275,7 +275,7 @@ export function getDeliveryCount(
   if (unverified) {
     throw new RangeError(
       `getDeliveryCount: caseType "${caseType}" (${unverified.labelKo}) 의 송달 횟수 매트릭스가 ` +
-        `정본 출처 확보 대기 상태입니다 — ${unverified.verificationPending}`,
+        `정본 출처 확보 대기 상태입니다 (${unverified.verificationPending})`,
     );
   }
   throw new RangeError(

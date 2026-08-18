@@ -3,7 +3,7 @@
   "id": "case-comp-011-industrial-death",
   "title": "industrial/death — 산재 사망, 유족급여 1억 선공제(일실수입 한도) 후 과실 10% + 상속분배",
   "source": "manual-derivation",
-  "notes": "compensation-industrial-golden-derivation-2026-06-02.md § 3 (2026-07-02 COMP-6 재도출). 2021다241618 전합 — 유족급여는 생계비 공제 후 일실수입 한도에서 먼저 공제 후 과실상계: (605,679,360 − 100,000,000 + 장례비 5,000,000) × 0.9 = 459,611,424 → 절사 459,611,400. 상속: 배우자 3/5 = 275,766,840 / 자녀1 2/5 = 183,844,560 (합계 보존).",
+  "notes": "compensation-industrial-golden-derivation-2026-06-02.md 3절 (2026-07-02 COMP-6 재도출). 2021다241618 전합 — 유족급여는 생계비 공제 후 일실수입 한도에서 먼저 공제 후 과실상계: (605,679,360 − 100,000,000 + 장례비 5,000,000) × 0.9 = 459,611,424 → 절사 459,611,400. 상속: 배우자 3/5 = 275,766,840 / 자녀1 2/5 = 183,844,560 (합계 보존).",
   "input": {
     "mode": "death",
     "accidentType": "industrial",
@@ -118,6 +118,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-07-02",
-    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md § 3 (COMP-6 공제 후 과실상계 재도출)"
+    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md 3절 (COMP-6 공제 후 과실상계 재도출)"
   }
 }

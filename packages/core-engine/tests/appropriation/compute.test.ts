@@ -473,7 +473,7 @@ describe("computeAppropriation — 메타 필드", () => {
 });
 
 /**
- * APP-3 — 변제기 도래 판정은 **변제 시점** 기준이다 (민법 제477조 1호).
+ * APP-3 — 변제기 도래 판정은 **변제 시점** 기준이다 (민법 제477조 제1호).
  *
  * 종전엔 `computedAt ?? 오늘` 로 판정해서 (1) 과거 변제의 충당 순서를 재현할 수 없었고
  * (2) `.lcalc` 를 저장했다 나중에 열면 그 사이 `dueAt` 이 지나 같은 파일이 다른 결과를 냈다.
@@ -481,7 +481,7 @@ describe("computeAppropriation — 메타 필드", () => {
  */
 describe("computeAppropriation — 변제일 (payment.paidAt) [APP-3]", () => {
   // 변제이익이 높은 `benefit`(rank 0)의 변제기가 `late`(rank 1)보다 늦다. 두 채권이 모두
-  // 도래한 시점에서는 변제이익이 앞서지만(제477조 2호), 아직 도래 전이면 도래한 채권이
+  // 도래한 시점에서는 변제이익이 앞서지만(제477조 제2호), 아직 도래 전이면 도래한 채권이
   // 먼저 충당된다(1호). 기준일이 바뀌면 결과가 실제로 뒤집히는 조합이다.
   const twoClaims = (paidAt?: string): AppropriationInput => ({
     claims: [
@@ -508,7 +508,7 @@ describe("computeAppropriation — 변제일 (payment.paidAt) [APP-3]", () => {
     expect(appliedTo(twoClaims("2025-06-01"))).toEqual({ benefit: 0, late: 50_000 });
   });
 
-  it("도래 채권이 하나도 없으면 미도래 채권에 충당한다 (제477조 2호 이하)", () => {
+  it("도래 채권이 하나도 없으면 미도래 채권에 충당한다 (제477조 제2호 이하)", () => {
     const input: AppropriationInput = {
       claims: [{ id: "future", principalBalance: 100_000, dueAt: "2026-01-01" }],
       payment: { amount: 50_000, allocation: { type: "legal" }, paidAt: "2020-01-01" },

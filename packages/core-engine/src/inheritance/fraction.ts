@@ -2,7 +2,7 @@
  * BigInt 기반 분수. JS `number` 부동소수점 누적 오차 회피
  * (예: 1.5 / (1.5 + 2) = 0.4285714285714286... 무한소수).
  *
- * 약분: Euclidean GCD. 분수 출력 정원은 source-extraction-spike-2026-05-09.md §8.2 #3
+ * 약분: Euclidean GCD. 분수 출력 정원은 source-extraction-spike-2026-05-09.md 8.2절 #3
  * (UI strings `1/1`, `[배우자] (1X1)` verbatim) 참조.
  */
 

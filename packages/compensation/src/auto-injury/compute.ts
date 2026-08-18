@@ -35,7 +35,7 @@ const FINAL_FLOOR_UNIT = 100;
 import { getCumulativeHoffmanClamped, monthsBetween } from "../internal";
 
 /**
- * 자×부상 손해배상 계산. 10 단계 순서 (plan v2 §6 트랙 4 A):
+ * 자×부상 손해배상 계산. 10 단계 순서 (plan v2 6절 트랙 4 A):
  *
  * 1. 노동능력상실률 factor:
  *    - 영구 중복 = `1 - Π(1 - perm_i.ratio)`.

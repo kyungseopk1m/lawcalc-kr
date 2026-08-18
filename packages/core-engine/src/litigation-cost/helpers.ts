@@ -76,7 +76,7 @@ export function isCaseType(value: unknown): value is CaseType {
 export const KOREA_LEGAL_AID_DEFAULT_RATE = 0.42;
 
 /**
- * 변호사보수 multiplier clamp range. 제6조 ②항 cap = 1/2 한도 증액 → ×1.5 상한.
+ * 변호사보수 multiplier clamp range. 제6조 제2항 cap = 1/2 한도 증액 → ×1.5 상한.
  * 감액은 본 규칙상 명시 cap 없음 — 안전망으로 0.0 floor.
  */
 export const LAWYER_FEE_MULTIPLIER_MIN = 0.0;
@@ -98,7 +98,7 @@ export function lawyerFeeDiscountMultiplier(
   switch (discount.kind) {
     case "noOralHearingOrAdmission":
       return 0.5;
-    // 제3조 ②항 본문은 보전 사건 전반에 별표액의 1/2 을 적용한다. 단서는 신청사건에만
+    // 제3조 제2항 본문은 보전 사건 전반에 별표액의 1/2 을 적용한다. 단서는 신청사건에만
     // 걸리고, 변론이나 심문을 거친 경우에만 산입하므로 안 거쳤으면 산입할 수 없다.
     // 이의·취소 신청사건은 단서 대상이 아니라 변론 여부와 상관없이 1/2 이다.
     case "provisionalCase":
@@ -162,12 +162,12 @@ export function decimalToFraction(x: number): { num: bigint; den: bigint } {
 /**
  * LawyerFeeDiscount 누적 (compound) 적용.
  *
- * 정책 (G5 §5):
+ * 정책 (G5 제5조):
  *   - default = compound (`final = base × ∏ multiplier`)
- *   - 제6조 ②항 cap = 증액 1/2 한도 (×1.5 상한)
+ *   - 제6조 제2항 cap = 증액 1/2 한도 (×1.5 상한)
  *   - 안전망: clamp 0.0 ~ 1.5
  *
- * 본 규칙 본문 구조 (사건구분 × 종결 사유 의 직교 조합) 가 누적 적용을 전제 — G5 research note §5.1.
+ * 본 규칙 본문 구조 (사건구분 × 종결 사유 의 직교 조합) 가 누적 적용을 전제 — G5 research note 5.1절.
  */
 export function applyLawyerFeeDiscounts(
   baseFeeWon: number,

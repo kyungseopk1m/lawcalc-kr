@@ -88,13 +88,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 전자소송 인지 감액(인지법 제16조)을 접수일이 시행일(2011-10-19) 이후일 때만 적용합니다. 그 이전 접수일을 입력하면 감액을 건너뛰고 산식에 사유를 표시합니다. 접수일을 넣지 않으면 현행 사건으로 보아 기존과 같이 감액합니다.
 - 손해배상 부상 탭의 안내 문구가 산재·기타손해를 "후속 버전"이라고 안내하던 것을 바로잡았습니다. 두 기능 모두 이미 지원됩니다.
 - 자동차 부상 손해배상에서 **한시장해**를 입력한 기간 동안에만 노동능력상실률로 반영하도록 바로잡았습니다. 이전에는 한시장해를 가동연한 전체 기간에 나눠 환산해(년수/10), 한시장해만 있는 사건은 일실수입이 실제의 절반으로 적게, 영구장해와 함께 있는 사건은 많게 계산됐습니다. 이제 한시장해는 그 기간에 상실률을 그대로 적용하고, 기간이 끝난 뒤에는 영구장해분만 남깁니다. 영구장해만 입력한 사건의 결과는 그대로입니다.
-- 상속분 계산에서 **최근친 우선**(민법 제1000조②)을 반영했습니다. 각 상속인의 촌수를 고르면, 직계존속은 부모(1촌)가 조부모(2촌)에, 4촌 이내 방계는 3촌이 4촌에 우선해 가까운 촌수만 상속합니다. 이전에는 촌수가 다른 분을 함께 넣으면 모두 균등하게 나눠 실제와 다른 지분이 나왔습니다.
-- 대습상속에서 사망한 상속인의 **배우자(며느리·사위)**가 함께 대습할 때 직계비속보다 5할을 더 받도록(민법 제1003조②·제1009조②) 바로잡았습니다. 이전에는 손주와 배우자를 똑같은 비율로 나눴습니다.
+- 상속분 계산에서 **최근친 우선**(민법 제1000조 제2항)을 반영했습니다. 각 상속인의 촌수를 고르면, 직계존속은 부모(1촌)가 조부모(2촌)에, 4촌 이내 방계는 3촌이 4촌에 우선해 가까운 촌수만 상속합니다. 이전에는 촌수가 다른 분을 함께 넣으면 모두 균등하게 나눠 실제와 다른 지분이 나왔습니다.
+- 대습상속에서 사망한 상속인의 **배우자(며느리·사위)**가 함께 대습할 때 직계비속보다 5할을 더 받도록(민법 제1003조 제2항·제1009조 제2항) 바로잡았습니다. 이전에는 손주와 배우자를 똑같은 비율로 나눴습니다.
 - 결과 표시에서 비정상 값(계산 불가·표시 범위 초과)이 들어와도 엉뚱한 금액·비율 대신 "-"로 표시하도록 방어 처리를 보강했습니다. 정상 계산 결과는 그대로입니다.
 
 ### Changed
 
-- 이자 계산에서 소촉법 프리셋을 고르면 적용 시점 안내를 보여줍니다 — 소촉법 이율은 2003-06-01부터 지원하고, 그 이전 기간은 위헌결정(헌법재판소 2003. 4. 24. 2002헌가15)에 따라 민법·상법 법정이율로 계산해야 하며, 위헌결정 전 확정판결의 연 25%는 판결문 기재 이율을 직접 입력합니다.
+- 이자 계산에서 소촉법 프리셋을 고르면 적용 시점 안내를 보여줍니다: 소촉법 이율은 2003-06-01부터 지원하고, 그 이전 기간은 위헌결정(헌법재판소 2003. 4. 24. 2002헌가15)에 따라 민법·상법 법정이율로 계산해야 하며, 위헌결정 전 확정판결의 연 25%는 판결문 기재 이율을 직접 입력합니다.
 - 변제충당의 충당 방식 안내에 잉여 처리(제477조 법정충당 순서로 잔여 채권에 충당)를 덧붙였습니다.
 - 쓰지 않는 코드와 중복된 의존성·설정을 정리했습니다. 화면과 계산 동작은 그대로입니다.
 
@@ -114,12 +114,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - 변제충당의 비용·이자·원본 충당 순서 근거 조문을 민법 제478조에서 **제479조**로 바로잡았습니다. 제478조는 부족변제의 충당에 관한 별개 조문입니다. 도움말·결과 문구와 골든 케이스 메타를 함께 정정했습니다.
-- 화면에 남아 있던 영어 표기를 한국어로 정리했습니다 — "이행기 (dueAt)" → "이행기", "(default 30)" → "(기본 30일)", 소송비용 결과 산식의 multiplier/clamp/offset/override 표기.
+- 화면에 남아 있던 영어 표기를 한국어로 정리했습니다: "이행기 (dueAt)" → "이행기", "(default 30)" → "(기본 30일)", 소송비용 결과 산식의 multiplier/clamp/offset/override 표기.
 - 손해배상의 "노동력상실률" 표기를 판례·실무 표준 용어인 **"노동능력상실률"**로 바로잡았습니다.
-- 변제충당 충당 방식 선택의 표기를 정리했습니다 — 채무자·채권자 지정을 하나의 지정충당 단계로 보아 "채무자(변제자) 지정 (제476조①)", "채권자(변제받는 자) 지정 (제476조②)"로 바꾸고, 법정충당을 "(제477조)"로 표기했습니다.
+- 변제충당 충당 방식 선택의 표기를 정리했습니다: 채무자·채권자 지정을 하나의 지정충당 단계로 보아 "채무자(변제자) 지정 (제476조 제1항)", "채권자(변제받는 자) 지정 (제476조 제2항)"로 바꾸고, 법정충당을 "(제477조)"로 표기했습니다.
 - 조문 인용에서 빠져 있던 "제"를 채웠습니다(민법 제396조·제763조·제1000조·제1003조 등). 상속 4순위 안내의 "4촌이내"를 "4촌 이내"로 띄어 썼습니다.
 - 손해배상 결과의 "재산상 손해 소계" 라벨을 **"과실상계 대상 소계"**로 바로잡았습니다. 위자료가 함께 더해지는 합계라 "재산상 손해"라는 이름이 맞지 않았습니다. 계산 결과는 그대로입니다.
-- 상속 2·4순위 안내에 최근친 우선 설명을 더했습니다 — 직계존속은 부모가 조부모에, 4순위는 3촌이 4촌에 우선합니다(민법 제1000조②). 같은 촌수만 입력하면 정확합니다.
+- 상속 2·4순위 안내에 최근친 우선 설명을 더했습니다: 직계존속은 부모가 조부모에, 4순위는 3촌이 4촌에 우선합니다(민법 제1000조 제2항). 같은 촌수만 입력하면 정확합니다.
 
 ## [0.8.0] - 2026-06-03
 
@@ -245,7 +245,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- 「재일 87-4」 별표 1 (재판예규 제1950호, 시행 2026-03-01) 의 독촉사건(차) 행을 송달료 매트릭스에 정본 인용으로 추가했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 ①항이 본안 사건에 한정되므로 독촉사건은 인지대·송달료만 계산하고 변호사보수는 0원으로 표시합니다. `data/delivery/v1.json` 의 `unverifiedMatrix` 가 비워지고 `countMatrix` 가 13건으로 확장되며, dataset 버전이 `delivery/v1.0.0` 에서 `delivery/v1.1.0` 으로 patch bump 됩니다.
+- 「재일 87-4」 별표 1 (재판예규 제1950호, 시행 2026-03-01) 의 독촉사건(차) 행을 송달료 매트릭스에 정본 인용으로 추가했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항이 본안 사건에 한정되므로 독촉사건은 인지대·송달료만 계산하고 변호사보수는 0원으로 표시합니다. `data/delivery/v1.json` 의 `unverifiedMatrix` 가 비워지고 `countMatrix` 가 13건으로 확장되며, dataset 버전이 `delivery/v1.0.0` 에서 `delivery/v1.1.0` 으로 patch bump 됩니다.
 - `computeLitigationCost` 가 변호사보수 산입 외 사건구분에 대해 lawyer-fee 결과를 zero-fill 로 합성하고 안내 산식을 노출합니다. 인지대·송달료는 정상 계산됩니다.
 
 ### Changed
@@ -255,7 +255,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - 소송비용 입력 카드의 `소가`, `항소·상고 불복 범위`, `KLAC 약정보수액` 입력에서 천 단위 구분 기호(콤마)가 표시되지 않던 결함을 수정했습니다. 이자 탭 `PrincipalInput` 과 동일한 `Intl.NumberFormat("ko-KR")` display + 입력 시 콤마 strip 패턴을 적용해 자릿수 검토를 쉽게 했습니다. parsing 동작은 기존과 동일합니다.
-- 소송비용 입력의 `사건구분 — 독촉사건 (지급명령) (차)` 옵션을 변호사보수 산입 외 라는 이유로 선택 자체가 막혀 인지대·송달료 계산까지 차단되던 결함을 수정했습니다. 옵션을 활성화하고, 선택 시 변호사보수 옵션 카드를 비활성화하면서 결과의 변호사보수만 0원으로 표시합니다. 인지대·송달료는 정상 계산됩니다.
+- 소송비용 입력의 `사건구분: 독촉사건 (지급명령) (차)` 옵션을 변호사보수 산입 외 라는 이유로 선택 자체가 막혀 인지대·송달료 계산까지 차단되던 결함을 수정했습니다. 옵션을 활성화하고, 선택 시 변호사보수 옵션 카드를 비활성화하면서 결과의 변호사보수만 0원으로 표시합니다. 인지대·송달료는 정상 계산됩니다.
 - 독촉사건 등 변호사보수 산입 외 사건구분의 `.lcalc` 파일을 다시 불러올 때 `validateLawyerFeeInput` 의 도메인 검증이 던지는 오류로 로드가 실패하던 round-trip 결함을 수정했습니다. `lcalc-validation` 이 도메인 적용 여부를 먼저 확인하고 산입 외 사건구분에서는 변호사보수 검증을 건너뛰도록 정리했습니다.
 - 변호사보수 옵션을 켠 상태에서 사건구분만 독촉사건 등 산입 외 케이스로 전환할 때 `discounts` 와 `klacAgreedFeeWon` 값이 그대로 payload 에 잔존해 round-trip 시 검증 충돌과 dirty-state noise 를 일으키던 결함을 수정했습니다. 입력 useMemo 가 산입 외 사건구분에서는 두 필드를 자동으로 빈 값으로 정규화합니다.
 
@@ -268,7 +268,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `computeLitigationCost(input, deps?)` 통합 engine 을 추가했습니다. `computeStampDuty` / `computeDeliveryFee` / `computeLawyerFee` 를 같은 `computedAt` 으로 호출하고 `dataVersions["stamp-duty" | "delivery" | "lawyer-fee"]`, `STANDARD_DISCLAIMER`, 선택 분배표를 포함한 `LitigationCostResult` 를 반환합니다.
 - `.lcalc` v3 envelope 에 `litigation-cost@1` capability 를 추가했습니다. 소송비용 파일은 세 sub-domain dataVersion 을 envelope-level 로 저장하고 renderer/Rust shell 모두 면책 고지를 강제합니다.
 - `docs/LEGAL_REFERENCES.md` 에 소송비용 v0.3.0 근거를 추가했습니다. 「민사소송 등 인지법」, 「송달료규칙」, 「재일 87-4」 별표 1, 「변호사보수의 소송비용 산입에 관한 규칙」, 「사건별 부호문자의 부여에 관한 예규」, 대법원 2017마6274 / 2021마7301, KLAC 보수 기준을 현재 지원 범위와 연결했습니다.
-- 변호사보수 (`lawyer-fee`) 엔진과 데이터셋을 도입했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 별표 8 구간 (300만/2,000만/5,000만/1억/1.5억/2억/5억 + 5억 초과) · 제3조 ②항 (가압류·가처분 ×0.5, 변론·심문기일 시 ×1.0) · 제5조 (무변론·자백·이행권고결정 ×0.5) · 제6조 (재량 감액 무한 / 증액 ×1.5 cap) 와 KLAC (대한법률구조공단 ×0.42) 을 wire-up 했습니다. 데이터셋은 `data/lawyer-fee/v1.json` 을 single source 로 사용하고 `loadLawyerFeeDataset` / `lawyerFeeDatasetVersionTag` / `getLawyerFeeBracket` / `computeLawyerFee(input, deps?)` 를 공개하며, 누적 (compound) 적용 + clamp [0.0, 1.5] (제6조 ②항 cap) 와 KLAC 적용 사건 범위 비차단 경고를 포함합니다. 항소심·상고심은 제3조 ①·③항에 맞춘 `perInstanceIndependent` 패턴으로, caller 가 불복 범위를 `caseValue` 로 명시 입력합니다.
+- 변호사보수 (`lawyer-fee`) 엔진과 데이터셋을 도입했습니다. 「변호사보수의 소송비용 산입에 관한 규칙」 별표 8 구간 (300만/2,000만/5,000만/1억/1.5억/2억/5억 + 5억 초과) · 제3조 제2항 (가압류·가처분 ×0.5, 변론·심문기일 시 ×1.0) · 제5조 (무변론·자백·이행권고결정 ×0.5) · 제6조 (재량 감액 무한 / 증액 ×1.5 cap) 와 KLAC (대한법률구조공단 ×0.42) 을 wire-up 했습니다. 데이터셋은 `data/lawyer-fee/v1.json` 을 single source 로 사용하고 `loadLawyerFeeDataset` / `lawyerFeeDatasetVersionTag` / `getLawyerFeeBracket` / `computeLawyerFee(input, deps?)` 를 공개하며, 누적 (compound) 적용 + clamp [0.0, 1.5] (제6조 제2항 cap) 와 KLAC 적용 사건 범위 비차단 경고를 포함합니다. 항소심·상고심은 제3조 제1항·제3항에 맞춘 `perInstanceIndependent` 패턴으로, caller 가 불복 범위를 `caseValue` 로 명시 입력합니다.
 - 송달료 (`delivery`) 엔진과 데이터셋을 도입했습니다. 「송달료규칙」 (대법원규칙 제2921호) 의 회당 단가 + 「송달료규칙의 시행에 따른 업무처리요령 (재일 87-4)」 별표 1 의 사건구분별 송달 횟수 매트릭스를 wire-up 했으며, 시기별 단가 4 슬라이스 (2019-05-01 / 2020-07-01 / 2021-09-01 / 2025-06-01) 와 사건구분 12 종 verified 매트릭스 + 지급명령 unverified entry 를 보존합니다. 데이터셋은 `data/delivery/v1.json` 을 single source 로 사용하고 `loadDeliveryDataset` / `deliveryDatasetVersionTag` / `getDeliveryCount` / `getDeliveryUnitPriceAt` / `computeDeliveryFee(input, deps?)` 를 공개하며, `filingDate` 기준 시기별 단가 lookup 과 입력 override 모두 지원합니다.
 - 인지대 (`stamp-duty`) 엔진과 데이터셋을 도입했습니다. 「민사소송 등 인지법」 제2조 (4 구간 누진표 + 1,000원 floor + 100원 절사) · 제3조 (항소 ×1.5 / 상고 ×2.0) · 제7조 (지급명령 ×0.1 / 화해 ×0.2) · 제16조 (전자소송 ×0.9) 를 wire-up 했으며, 재심 (제8조) 은 심급별 동일 산식으로 처리합니다. 데이터셋은 `data/stamp-duty/v1.json` 을 single source 로 사용하고 `loadStampDutyDataset` / `stampDutyVersionTag` / `getStampDutyBracket` / `applyStampDutyRounding` / `computeStampDuty(input, deps?)` 를 공개하며, deps 를 통한 외부 데이터셋 주입으로 시기별 슬라이스 확장과 결정성을 보장합니다.
 - 소송비용 산정 도메인 (`litigation-cost`) 의 입력·결과 타입과 검증기를 도입했습니다. 인지대·송달료·변호사보수 3 sub-domain 의 input/result 인터페이스, 사건구분 13 종 enum (민사·가사·행정·보전·지급명령), 변호사보수 감액 옵션 5 variant (`LawyerFeeDiscount`), 감액 누적 적용 helper (`applyLawyerFeeDiscounts`, ×1.5 상한 clamp), KLAC 적용 사건 범위 비차단 경고 (`validateKlacDiscountScope`) 가 포함되며 도메인별 한국어 prefix RangeError 검증기를 제공합니다.
@@ -330,7 +330,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- 앱 아이콘과 Header 브랜드 마크를 `Lc` 모노그램 (deep navy `#0D1B2A` + 흰색 L + 골드 C `#D4AF37` + amber baseline) 디자인으로 교체했습니다. 기존 Pillow placeholder (~19KB total) 와 lucide `Scale` 아이콘 (저울 emblem — 법원 공식 프로그램 클론 회피 정책 위반) 을 모두 제거하고 시안 raster 한 장에서 9-platform 자산을 일괄 생성합니다. `globals.css` `@theme` 에 `--color-brand-navy` / `--color-brand-gold` 토큰을 추가했습니다.
+- 앱 아이콘과 Header 브랜드 마크를 `Lc` 모노그램 (deep navy `#0D1B2A` + 흰색 L + 골드 C `#D4AF37` + amber baseline) 디자인으로 교체했습니다. 기존 Pillow placeholder (~19KB total) 와 lucide `Scale` 아이콘 (저울 emblem: 법원 공식 프로그램 클론 회피 정책 위반) 을 모두 제거하고 시안 raster 한 장에서 9-platform 자산을 일괄 생성합니다. `globals.css` `@theme` 에 `--color-brand-navy` / `--color-brand-gold` 토큰을 추가했습니다.
 - InfoDialog 와 README 첫 단락에 소개 카피를 추가했습니다.
 
 ## [0.2.0] - 2026-05-10
@@ -381,7 +381,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - macOS/Windows 데스크톱 앱이 시작 직후 panic 으로 즉시 종료되던 결함을 수정했습니다. `tauri.conf.json` 의 `plugins.dialog` / `plugins.clipboard-manager` 빈 객체가 Tauri 2.x deserialize 단계에서 실패해 v0.1.0 release artifact 가 실행 자체 불가했습니다. plugin 등록은 `lib.rs` 의 `.plugin(tauri_plugin_dialog::init())` / `.plugin(tauri_plugin_clipboard_manager::init())` 으로 이미 되어 있어, `tauri.conf.json` 의 `plugins` 섹션을 제거했습니다 (functional change 0).
-- period 모드의 `segment.days` 가 `formula` 분자 일수 합과 어긋나던 비대칭을 정정했습니다. `addYears` 의 02-29 → 02-28 clip 케이스 등에서 결과 표 days 컬럼이 formula 와 일치하지 않아 사용자 검산 시 신뢰성 문제가 있었습니다. interest / totalInterest 계산 결과 변경 0 — days 정의만 재정의 (`packages/core-engine/src/interest.ts` `periodDaysSum` helper).
+- period 모드의 `segment.days` 가 `formula` 분자 일수 합과 어긋나던 비대칭을 정정했습니다. `addYears` 의 02-29 → 02-28 clip 케이스 등에서 결과 표 days 컬럼이 formula 와 일치하지 않아 사용자 검산 시 신뢰성 문제가 있었습니다. interest / totalInterest 계산 결과 변경 0: days 정의만 재정의 (`packages/core-engine/src/interest.ts` `periodDaysSum` helper).
 
 ## [0.1.0] - 2026-05-09
 
