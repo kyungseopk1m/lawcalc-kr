@@ -12,6 +12,17 @@ import {
 
 const FROZEN_AT = "2026-05-11T00:00:00.000Z";
 
+/**
+ * 현행 단가·dataset 태그는 dataset 단일 출처에서 읽는다.
+ *
+ * 송달료 단가는 우편요금 인상마다 바뀌는데, 회수 매트릭스를 검증하는 아래 테스트들이
+ * 단가 리터럴을 각자 들고 있으면 인상 한 번에 십수 건이 함께 깨진다. 그 테스트들이
+ * 실제로 지키려는 것은 사건구분별 회수와 산식이지 단가 값이 아니다.
+ * 단가 값과 시행일 자체는 바로 아래 "기본 dataset" 블록이 리터럴로 고정한다.
+ */
+const CURRENT_UNIT_WON = getDeliveryUnitPriceAt(loadDeliveryDataset()).unitPriceWon;
+const CURRENT_TAG = deliveryDatasetVersionTag(loadDeliveryDataset());
+
 function input(overrides: Partial<DeliveryFeeInput> = {}): DeliveryFeeInput {
   return {
     caseType: "civilFirstInstanceCollegial",
@@ -23,15 +34,24 @@ function input(overrides: Partial<DeliveryFeeInput> = {}): DeliveryFeeInput {
 describe("loadDeliveryDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadDeliveryDataset();
-    expect(ds.version).toBe("1.1.0");
-    expect(ds.unitPriceHistory).toHaveLength(4);
-    expect(ds.unitPriceHistory[0]!.unitPriceWon).toBe(5500);
+    expect(ds.version).toBe("1.2.0");
+    expect(ds.unitPriceHistory).toHaveLength(5);
+    // 현행 단가 5,640원, 2026-07-01 시행. 법제처 생활법령정보 '인지액 및 송달료' +
+    // 대한법률구조공단 자동계산기 고지("2026. 7. 1. 송달료 5,640원으로 인상")로 대조.
+    expect(ds.unitPriceHistory[0]!.unitPriceWon).toBe(5640);
+    expect(ds.unitPriceHistory[0]!.effectiveFrom).toBe("2026-07-01");
     expect(ds.countMatrix).toHaveLength(13);
     expect(ds.unverifiedMatrix).toHaveLength(0);
   });
 
-  it("deliveryDatasetVersionTag 는 delivery/v1.1.0", () => {
-    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.1.0");
+  it("단가 이력은 시행일 내림차순이고 중복이 없다", () => {
+    const dates = loadDeliveryDataset().unitPriceHistory.map((e) => e.effectiveFrom);
+    expect(dates).toEqual([...dates].sort().reverse());
+    expect(new Set(dates).size).toBe(dates.length);
+  });
+
+  it("deliveryDatasetVersionTag 는 delivery/v1.2.0", () => {
+    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.2.0");
   });
 
   it("음수 unitPriceWon 거부", () => {
@@ -106,13 +126,13 @@ describe("loadDeliveryDataset / 기본 dataset", () => {
   });
 });
 
-describe("getDeliveryUnitPriceAt / 시기별 단가 (4 슬라이스)", () => {
+describe("getDeliveryUnitPriceAt / 시기별 단가 (5 슬라이스)", () => {
   const ds = loadDeliveryDataset();
 
-  it("filingDate 미지정 → 현행 단가 (5,500원, 2025-06-01)", () => {
+  it("filingDate 미지정 → 현행 단가 (이력 첫 슬라이스)", () => {
     const entry = getDeliveryUnitPriceAt(ds);
-    expect(entry.unitPriceWon).toBe(5500);
-    expect(entry.effectiveFrom).toBe("2025-06-01");
+    expect(entry.unitPriceWon).toBe(CURRENT_UNIT_WON);
+    expect(entry.effectiveFrom).toBe(ds.unitPriceHistory[0]!.effectiveFrom);
   });
 
   it('"2025-06-01" → 5,500원 (경계 진입)', () => {
@@ -187,7 +207,7 @@ describe("getDeliveryCount / 매트릭스 lookup", () => {
 });
 
 describe("computeDeliveryFee / 산식 분기 + 시기별 단가", () => {
-  it("민사 제1심 합의 (가합), 당사자 2명, 현행 단가 = 2 × 15 × 5,500 = 165,000원", () => {
+  it("민사 제1심 합의 (가합), 당사자 2명, 현행 단가 = 2 × 15 × 회당 단가", () => {
     const r = computeDeliveryFee(
       input({ caseType: "civilFirstInstanceCollegial", partyCount: 2 }),
       {
@@ -195,29 +215,29 @@ describe("computeDeliveryFee / 산식 분기 + 시기별 단가", () => {
       },
     );
     expect(r.deliveryCount).toBe(30);
-    expect(r.perDeliveryUnitPriceWon).toBe(5500);
-    expect(r.amount).toBe(165_000);
-    expect(r.dataVersion).toBe("delivery/v1.1.0");
+    expect(r.perDeliveryUnitPriceWon).toBe(CURRENT_UNIT_WON);
+    expect(r.amount).toBe(2 * 15 * CURRENT_UNIT_WON);
+    expect(r.dataVersion).toBe(CURRENT_TAG);
     expect(r.computedAt).toBe(FROZEN_AT);
   });
 
-  it("민사 항소 (나), 당사자 3명, 현행 = 3 × 12 × 5,500 = 198,000원", () => {
+  it("민사 항소 (나), 당사자 3명, 현행 = 3 × 12 × 회당 단가", () => {
     const r = computeDeliveryFee(input({ caseType: "civilAppeal", partyCount: 3 }), {
       computedAt: FROZEN_AT,
     });
     expect(r.deliveryCount).toBe(36);
-    expect(r.amount).toBe(198_000);
+    expect(r.amount).toBe(3 * 12 * CURRENT_UNIT_WON);
   });
 
-  it("민사 (재)항고 (라/마), 당사자 1명 = 1 × 5 × 5,500 = 27,500원", () => {
+  it("민사 (재)항고 (라/마), 당사자 1명 = 1 × 5 × 회당 단가", () => {
     const r = computeDeliveryFee(input({ caseType: "civilInterlocutoryAppeal", partyCount: 1 }), {
       computedAt: FROZEN_AT,
     });
     expect(r.deliveryCount).toBe(5);
-    expect(r.amount).toBe(27_500);
+    expect(r.amount).toBe(1 * 5 * CURRENT_UNIT_WON);
   });
 
-  it("민사가압류 합의 (카합), 당사자 2명 = 2 × 3 × 5,500 = 33,000원", () => {
+  it("민사가압류 합의 (카합), 당사자 2명 = 2 × 3 × 회당 단가", () => {
     const r = computeDeliveryFee(
       input({ caseType: "provisionalMeasureCollegial", partyCount: 2 }),
       {
@@ -225,10 +245,10 @@ describe("computeDeliveryFee / 산식 분기 + 시기별 단가", () => {
       },
     );
     expect(r.deliveryCount).toBe(6);
-    expect(r.amount).toBe(33_000);
+    expect(r.amount).toBe(2 * 3 * CURRENT_UNIT_WON);
   });
 
-  it("행정 제1심 (구), 당사자 2명 = 2 × 10 × 5,500 = 110,000원", () => {
+  it("행정 제1심 (구), 당사자 2명 = 2 × 10 × 회당 단가", () => {
     const r = computeDeliveryFee(
       input({ caseType: "administrativeFirstInstance", partyCount: 2 }),
       {
@@ -236,17 +256,17 @@ describe("computeDeliveryFee / 산식 분기 + 시기별 단가", () => {
       },
     );
     expect(r.deliveryCount).toBe(20);
-    expect(r.amount).toBe(110_000);
+    expect(r.amount).toBe(2 * 10 * CURRENT_UNIT_WON);
   });
 
-  it("paymentOrder (차), 당사자 2명 (채권자·채무자) = 2 × 6 × 5,500 = 66,000원", () => {
+  it("paymentOrder (차), 당사자 2명 (채권자·채무자) = 2 × 6 × 회당 단가", () => {
     const r = computeDeliveryFee(input({ caseType: "paymentOrder", partyCount: 2 }), {
       computedAt: FROZEN_AT,
     });
     expect(r.deliveryCount).toBe(12);
-    expect(r.perDeliveryUnitPriceWon).toBe(5500);
-    expect(r.amount).toBe(66_000);
-    expect(r.dataVersion).toBe("delivery/v1.1.0");
+    expect(r.perDeliveryUnitPriceWon).toBe(CURRENT_UNIT_WON);
+    expect(r.amount).toBe(2 * 6 * CURRENT_UNIT_WON);
+    expect(r.dataVersion).toBe(CURRENT_TAG);
   });
 
   it("filingDate=2020-06-30 → 4,800원 적용 (2019-05-01 슬라이스)", () => {
@@ -315,7 +335,7 @@ describe("computeDeliveryFee / 4 kind 분기 (custom dataset)", () => {
       computedAt: FROZEN_AT,
     });
     expect(r.deliveryCount).toBe((2 + 3) * 10);
-    expect(r.amount).toBe(50 * 5500);
+    expect(r.amount).toBe(50 * CURRENT_UNIT_WON);
   });
 
   it("baseCountPlusCreditorMultiple: base + creditorCount × creditorMultiple", () => {
@@ -405,10 +425,10 @@ describe("computeDeliveryFee / validator integration", () => {
 });
 
 describe("computeDeliveryFee / dataset injection 결정성", () => {
-  it("default 호출 → bundled dataset 사용 (5,500원)", () => {
+  it("default 호출 → bundled dataset 사용 (현행 단가)", () => {
     const r = computeDeliveryFee(input({ partyCount: 1 }), { computedAt: FROZEN_AT });
-    expect(r.perDeliveryUnitPriceWon).toBe(5500);
-    expect(r.dataVersion).toBe("delivery/v1.1.0");
+    expect(r.perDeliveryUnitPriceWon).toBe(CURRENT_UNIT_WON);
+    expect(r.dataVersion).toBe(CURRENT_TAG);
   });
 
   it("custom dataset 주입 → dataVersion 변경", () => {
@@ -452,8 +472,8 @@ describe("computeDeliveryFee / formulaText 회귀", () => {
     expect(r.formulaText).toContain("민사 제1심 합의 (가합)");
     expect(r.formulaText).toContain("당사자수 2 × 15회");
     expect(r.formulaText).toContain("30회 송달");
-    expect(r.formulaText).toContain("회당 단가 5,500원");
-    expect(r.formulaText).toContain("165,000원");
+    expect(r.formulaText).toContain(`회당 단가 ${CURRENT_UNIT_WON.toLocaleString("ko-KR")}원`);
+    expect(r.formulaText).toContain(`${(30 * CURRENT_UNIT_WON).toLocaleString("ko-KR")}원`);
   });
 
   it("filingDate 지정 시 formulaText 에 시기별 메타 포함", () => {

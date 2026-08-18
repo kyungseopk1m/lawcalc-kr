@@ -33,6 +33,42 @@ export interface StampDutySpecialProcedureEntry {
 export interface StampDutySpecialProcedures {
   paymentOrder: StampDutySpecialProcedureEntry;
   settlement: StampDutySpecialProcedureEntry;
+  /**
+   * 조정신청(머). 근거는 인지법이 아니라 「민사조정규칙」제3조 제1항이다 —
+   * "조정신청의 수수료는 「민사소송 등 인지법」 제2조에 따라 산출한 금액의 10분의 1로 한다."
+   */
+  mediation: StampDutySpecialProcedureEntry;
+  /**
+   * 항고·재항고(라/마). 제2조 소장 누진표와 무관한 별도 체계다.
+   *
+   *   - 제11조 ②항: 아래 ①항 대상이 아닌 항고장은 2천원 정액.
+   *   - 제11조 ①항: 제9조·제10조 신청에 관한 재판(항고법원 재판 포함)에 대한 항고장·상소장은
+   *     "해당 신청서에 붙인 인지액의 2배". 원신청서 인지액을 알아야 하므로 호출자가
+   *     `underlyingApplicationStampDutyWon` 으로 넘길 때만 이 경로를 탄다.
+   */
+  interlocutoryAppeal: StampDutyInterlocutoryAppeal;
+  /**
+   * 소가를 산출할 수 없는 소송의 간주 소가 (「민사소송 등 인지규칙」제18조의2).
+   * 기본 5천만원, 회사관계·특허·무체재산권 등 열거 소송은 1억원.
+   */
+  deemedCaseValues: StampDutyDeemedCaseValues;
+}
+
+export interface StampDutyDeemedCaseValues {
+  standardWon: number;
+  highTierWon: number;
+  sourceArticle: string;
+  sourceText: string;
+  highTierNote: string;
+}
+
+export interface StampDutyInterlocutoryAppeal {
+  flatWon: number;
+  rateText: string;
+  sourceArticle: string;
+  underlyingMultiplier: number;
+  underlyingRateText: string;
+  underlyingSourceArticle: string;
 }
 
 /**
@@ -224,6 +260,41 @@ function validate(dataset: StampDutyDataset): void {
     specialProcedures.settlement.multiplier,
     "specialProcedures.settlement.multiplier",
   );
+  if (!specialProcedures.mediation) {
+    throw new Error("StampDutyDataset: specialProcedures.mediation is required");
+  }
+  assertMultiplierInOpenUnit(
+    specialProcedures.mediation.multiplier,
+    "specialProcedures.mediation.multiplier",
+  );
+  const ia = specialProcedures.interlocutoryAppeal;
+  if (!ia) {
+    throw new Error("StampDutyDataset: specialProcedures.interlocutoryAppeal is required");
+  }
+  if (!Number.isFinite(ia.flatWon) || ia.flatWon <= 0) {
+    throw new RangeError(
+      `specialProcedures.interlocutoryAppeal.flatWon: must be > 0 (got ${ia.flatWon})`,
+    );
+  }
+  if (!Number.isFinite(ia.underlyingMultiplier) || ia.underlyingMultiplier <= 0) {
+    throw new RangeError(
+      `specialProcedures.interlocutoryAppeal.underlyingMultiplier: must be > 0 (got ${ia.underlyingMultiplier})`,
+    );
+  }
+  const deemed = specialProcedures.deemedCaseValues;
+  if (!deemed) {
+    throw new Error("StampDutyDataset: specialProcedures.deemedCaseValues is required");
+  }
+  for (const key of ["standardWon", "highTierWon"] as const) {
+    if (!Number.isSafeInteger(deemed[key]) || deemed[key] <= 0) {
+      throw new RangeError(
+        `specialProcedures.deemedCaseValues.${key}: must be a positive safe integer (got ${deemed[key]})`,
+      );
+    }
+  }
+  if (deemed.highTierWon < deemed.standardWon) {
+    throw new RangeError("specialProcedures.deemedCaseValues: highTierWon must be >= standardWon");
+  }
 
   const { provisionalMeasures } = dataset;
   if (!provisionalMeasures) {

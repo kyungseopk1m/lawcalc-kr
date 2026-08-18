@@ -5,8 +5,8 @@
 import type { StampDutyDataset } from "./stamp-duty-dataset";
 
 export const DEFAULT_STAMP_DUTY_DATASET: StampDutyDataset = {
-  "version": "1.1.0",
-  "updatedAt": "2026-08-03",
+  "version": "1.2.0",
+  "updatedAt": "2026-08-18",
   "sourceLaw": {
     "name": "민사소송 등 인지법",
     "lsId": "001195",
@@ -74,6 +74,26 @@ export const DEFAULT_STAMP_DUTY_DATASET: StampDutyDataset = {
       "multiplier": 0.2,
       "rateText": "5분의 1",
       "sourceArticle": "제7조 ①항"
+    },
+    "mediation": {
+      "multiplier": 0.1,
+      "rateText": "10분의 1",
+      "sourceArticle": "민사조정규칙 제3조 ①항"
+    },
+    "deemedCaseValues": {
+      "standardWon": 50000000,
+      "highTierWon": 100000000,
+      "sourceArticle": "민사소송 등 인지규칙 제18조의2",
+      "sourceText": "재산권상의 소로서 그 소가를 산출할 수 없는 것과 비재산권을 목적으로 하는 소송의 소가는 5천만 원으로 한다. 다만, 제15조제1항 내지 제3항, 제15조의2, 제17조의2, 제18조에 정한 소송의 소가는 1억 원으로 한다.",
+      "highTierNote": "회사관계소송·단체소송·특허소송·무체재산권 소송 등 규칙 제15조①~③·제15조의2·제17조의2·제18조에 정한 소송"
+    },
+    "interlocutoryAppeal": {
+      "flatWon": 2000,
+      "rateText": "2천원 정액",
+      "sourceArticle": "제11조 ②항",
+      "underlyingMultiplier": 2,
+      "underlyingRateText": "해당 신청서 인지액의 2배",
+      "underlyingSourceArticle": "제11조 ①항"
     }
   },
   "provisionalMeasures": {

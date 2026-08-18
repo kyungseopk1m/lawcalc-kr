@@ -59,6 +59,13 @@ function assertCaseTypeAppliesDomain(
 
 // ===== Stamp Duty =====
 
+/** 소가 산정 기준 화이트리스트 (인지규칙 제18조의2). `StampDutyInput.caseValueBasis` 와 동기. */
+const CASE_VALUE_BASES: ReadonlyArray<NonNullable<StampDutyInput["caseValueBasis"]>> = [
+  "amount",
+  "unascertainable",
+  "unascertainableHighTier",
+];
+
 export function validateStampDutyInput(input: StampDutyInput): void {
   const prefix = "인지대";
   if (!isFiniteNonNegative(input.caseValue)) {
@@ -77,6 +84,14 @@ export function validateStampDutyInput(input: StampDutyInput): void {
   // 지급명령·화해는 1심에서만 적용된다 (인지법 제7조). 항소·상고와 동시 지정은 거부한다.
   if ((isPaymentOrder || input.isSettlement) && input.appealsLevel !== "firstInstance") {
     fail(prefix, `지급명령·화해는 1심에서만 적용됩니다 (현재 심급: ${input.appealsLevel})`);
+  }
+  // 조정신청(머)은 「민사조정규칙」제3조의 **신청** 수수료라 심급 배수를 탈 자리가 없다.
+  // 민사조정법 제34조·제36조는 이의 후 소송으로 이행하는 구조이지 조정신청의 항소·상고가
+  // 아니고, 같은 법 제6조의 항소심 조정은 법원의 회부라 신청 수수료를 새로 붙이지 않는다.
+  // 이 가드가 없던 동안 소가 30,000,000원 조정신청이 항소 21,000원 / 상고 28,000원이라는
+  // 존재하지 않는 수수료를 냈다.
+  if (input.caseType === "civilMediation" && input.appealsLevel !== "firstInstance") {
+    fail(prefix, `조정신청은 1심에서만 적용됩니다 (현재 심급: ${input.appealsLevel})`);
   }
   // 지급명령 + 화해 동시 지정 거부 — 상호 배타.
   if (isPaymentOrder && input.isSettlement) {
@@ -109,6 +124,33 @@ export function validateStampDutyInput(input: StampDutyInput): void {
         `보전처분 인지는 심급 배수를 적용하지 않습니다 (현재 심급: ${input.appealsLevel})`,
       );
     }
+  }
+  // 소가 산정 기준(인지규칙 제18조의2). `resolveEffectiveCaseValue` 는 "amount" 가 아닌
+  // **모든** 값을 간주 소가로 취급하므로, 오타 하나가 소가를 통째로 갈아치운다
+  // (소가 10억 + "unascertainableHigh" 오타 → 인지 4,055,000원이 230,000원이 된다).
+  // 손편집된 `.lcalc` 이나 신버전이 추가한 기준값을 구버전이 여는 경우에 실제로 도달한다.
+  // 형제 필드 provisionalMeasureType 과 같은 화이트리스트 검증을 건다.
+  if (input.caseValueBasis !== undefined && !CASE_VALUE_BASES.includes(input.caseValueBasis)) {
+    fail(prefix, `소가 산정 기준이 유효하지 않습니다 (입력: ${String(input.caseValueBasis)})`);
+  }
+  // 보존용 전체 소가 (계산 무영향). 손편집된 파일이 소가란에 NaN 을 실어 오지 않게 막는다.
+  if (input.fullCaseValue !== undefined && !isFiniteNonNegative(input.fullCaseValue)) {
+    fail(prefix, `전체 소가가 유효하지 않습니다 (입력: ${String(input.fullCaseValue)})`);
+  }
+  // 제11조 ①항 원신청서 인지액. 검증이 없으면 음수·NaN·Infinity 가 그대로 2배가 되어
+  // 음수 인지액이나 NaN 이 결과에 실린다 (`-1` → -2원, `NaN` → NaN, `Infinity` → Infinity).
+  // 인지액은 원 단위 양의 정수다.
+  if (
+    input.underlyingApplicationStampDutyWon !== undefined &&
+    !(
+      Number.isSafeInteger(input.underlyingApplicationStampDutyWon) &&
+      input.underlyingApplicationStampDutyWon >= 1
+    )
+  ) {
+    fail(
+      prefix,
+      `원신청서 인지액이 유효하지 않습니다 (입력: ${String(input.underlyingApplicationStampDutyWon)})`,
+    );
   }
   if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);

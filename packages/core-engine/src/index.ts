@@ -23,7 +23,7 @@ export { calculateInterest } from "./interest";
 export { buildInterestClaimText, formatCourtDate } from "./interest-claim-text";
 export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "./days";
 export { resolveSegments } from "./segments";
-export { datasetVersionTag, rateHistoryFor } from "./legal-rates";
+export { datasetVersionTag, loadLegalRates, rateHistoryFor } from "./legal-rates";
 export {
   capHistoryFor,
   getCapAt,
@@ -133,6 +133,7 @@ export {
   computeLitigationCost,
   computeLawyerFee,
   computeStampDuty,
+  resolveEffectiveCaseValue,
   deliveryDatasetVersionTag,
   divideEqually,
   divideProportionally,

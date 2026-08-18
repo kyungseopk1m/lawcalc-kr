@@ -34,7 +34,19 @@ import { validateStampDutyInput } from "./validators";
  *   5. × specialProcedure (지급명령 ×0.1 제7조 ②항 / 화해 ×0.2 제7조 ①항, 1심 only).
  *   6. × electronicFiling (×0.9, 제16조 — filingDate 가 시행일 2011-10-19 이전이면 미적용).
  *   7. 재심 (isRetrial=true): 산식 무영향 (제8조 본문 "심급에 따라 ... 금액"), formulaText prefix 만.
- *   8. applyStampDutyRounding  — 1,000원 floor + 100원 절사 (제2조 ②항), 모든 multiplier 적용 후 마지막.
+ *   8. 제2조 ②항 1,000원 하한은 **배수를 곱하기 전** baseLine 에 건다. 문언이 "**제1항에
+ *      따라 계산한** 인지액이 1천원 미만이면" 이고, 제3조("제2조에 따른 금액"의 1.5배·2배)와
+ *      제16조("제2조에 따른 인지액"의 10분의 9)가 곱하는 대상은 그 하한이 적용된 금액이다.
+ *      하한을 배수 **뒤**에 걸면 배수가 하한에 통째로 먹힌다 — 소가 10,000 항소가
+ *      1,000원(정답 1,500), 상고가 1,000원(정답 2,000), 전자가 1,000원(정답 900)이 됐다.
+ *      영향 구간은 제2조 ①항 금액이 1,000원 미만인 소가 약 222,222원 이하 전체다.
+ *      예외로 화해·지급명령은 제7조 ④항이 "제1항과 제2항에 따른 인지액에 관하여는
+ *      제2조제2항을 준용한다" 며 배수 **뒤**에 다시 걸라고 명문화했으므로 한 번 더 건다.
+ *      민사조정규칙 제3조 ②항도 같은 구조다 — "제1항 본문에 따른 수수료가 1천원 미만이면
+ *      1천원으로 하고, 제1항 본문 또는 단서에 따른 수수료 중 100원 미만은 계산하지
+ *      아니한다" (하한은 감액 전 본문에만, 절사는 감액 전후 양쪽에).
+ *   9. 100원 절사는 모든 배수·감액이 끝난 뒤 마지막 한 번만. 절사를 배수 앞으로 옮기는 것은
+ *      별개 쟁점이라 손대지 않았다 (소가 3,350,000 항소가 25,100 과 25,050 으로 갈린다).
  *
  * 누적 multiplier 가 [0, 1.5] 범위 외인 변호사보수와 달리 인지법의 multiplier 는 본 규칙상
  * 각각 명시적이므로 clamp 미적용 (특별절차 0.1 < 항소 1.5 < 상고 + 1심외 X 조합 차단은 validator 에서).
@@ -96,10 +108,18 @@ function buildFormulaText(args: {
   specialLabel: string | null;
   electronicMultiplier: number | null;
   electronicSkippedNote: string | null;
+  /** 제2조 ②항 1,000원 하한이 제2조 ①항 금액에 실제로 걸렸을 때 그 금액. 안 걸렸으면 null. */
+  article2FloorWon: number | null;
+  /** 제7조 ④항 준용 하한이 화해·지급명령 금액에 실제로 걸렸을 때 그 금액. 안 걸렸으면 null. */
+  specialFloorWon: number | null;
   preRounding: number;
   finalAmount: number;
+  deemedNote?: string | null;
 }): string {
   const segments: string[] = [];
+  if (args.deemedNote) {
+    segments.push(args.deemedNote);
+  }
   if (args.input.isRetrial) {
     segments.push("재심소장 (제8조, 심급별 동일 적용)");
   }
@@ -115,9 +135,15 @@ function buildFormulaText(args: {
   }
 
   const arithmetic: string[] = [bracketFormulaSegment(args.bracket, args.input.caseValue)];
+  if (args.article2FloorWon !== null) {
+    arithmetic.push(`= ${args.article2FloorWon.toLocaleString("en-US")}원 (제2조 ②항 하한)`);
+  }
   arithmetic.push(`× ${args.appealsMultiplier}`);
   if (args.specialMultiplier !== null) {
     arithmetic.push(`× ${args.specialMultiplier}`);
+  }
+  if (args.specialFloorWon !== null) {
+    arithmetic.push(`= ${args.specialFloorWon.toLocaleString("en-US")}원 (제7조 ④항 하한)`);
   }
   if (args.electronicMultiplier !== null) {
     arithmetic.push(`× ${args.electronicMultiplier}`);
@@ -126,12 +152,43 @@ function buildFormulaText(args: {
   const preRoundingDisplay = Number.isInteger(args.preRounding)
     ? args.preRounding.toLocaleString("en-US")
     : args.preRounding.toFixed(2);
-  const arithmeticText = `${arithmetic.join(" ")} = ${preRoundingDisplay}원 → ${args.finalAmount.toLocaleString("en-US")}원 (제2조 ②항 반올림)`;
+  const arithmeticText = `${arithmetic.join(" ")} = ${preRoundingDisplay}원 → ${args.finalAmount.toLocaleString("en-US")}원 (제2조 ②항 100원 절사)`;
   return `${segments.join(" + ")}: ${arithmeticText}`;
 }
 
 function isProvisionalCaseType(caseType: CaseType): boolean {
   return caseType === "provisionalMeasureCollegial" || caseType === "provisionalMeasureSingle";
+}
+
+/**
+ * 소가 산정 (「민사소송 등 인지규칙」제18조의2).
+ *
+ * "재산권상의 소로서 그 소가를 산출할 수 없는 것과 비재산권을 목적으로 하는 소송의 소가는
+ * 5천만 원으로 한다. 다만, 제15조제1항 내지 제3항, 제15조의2, 제17조의2, 제18조에 정한
+ * 소송의 소가는 1억 원으로 한다."
+ *
+ * 변호사보수도 같은 소가를 쓴다 (「변호사보수의 소송비용 산입에 관한 규칙」제4조 ①항이
+ * 소송목적의 값 산정을 인지법 제2조에 따르게 한다). 두 도메인이 갈리지 않도록 이 함수를
+ * 단일 출처로 삼는다.
+ */
+export function resolveEffectiveCaseValue(
+  input: Pick<StampDutyInput, "caseValue" | "caseValueBasis">,
+  deps?: Pick<ComputeStampDutyDeps, "dataset">,
+): { caseValue: number; deemedNote: string | null } {
+  const basis = input.caseValueBasis ?? "amount";
+  if (basis === "amount") {
+    return { caseValue: input.caseValue, deemedNote: null };
+  }
+  const deemed = loadStampDutyDataset(deps?.dataset).specialProcedures.deemedCaseValues;
+  const caseValue = basis === "unascertainableHighTier" ? deemed.highTierWon : deemed.standardWon;
+  const label =
+    basis === "unascertainableHighTier"
+      ? `소가 산출 불가 · ${deemed.highTierNote}`
+      : "소가 산출 불가 또는 비재산권 소송";
+  return {
+    caseValue,
+    deemedNote: `${label} → 소가 ${caseValue.toLocaleString("en-US")}원 간주 (${deemed.sourceArticle})`,
+  };
 }
 
 /**
@@ -234,8 +291,41 @@ function computeProvisionalMeasureStampDuty(
 }
 
 /**
+ * 항고·재항고(라/마) 인지. 인지법 제11조 별도 체계 — 제2조 소장 누진표를 쓰지 않는다.
+ *
+ *   - 제11조 ②항 (기본): "제1항의 항고장 외의 항고장에는 2천원의 인지를 붙여야 한다."
+ *   - 제11조 ①항: "제9조 또는 제10조의 신청에 관한 재판(항고법원의 재판을 포함한다)에 대한
+ *     항고장 및 상소장에는 해당 신청서에 붙인 인지액의 2배에 해당하는 인지를 붙여야 한다."
+ *     원신청서 인지액은 계산기가 알 수 없으므로 호출자가 넘길 때만 이 경로를 탄다.
+ *
+ * 전자소송 감액(제16조)은 준용하지 않는다. 제16조 ②항의 준용 범위가 "제3조부터 제10조까지"라
+ * 제11조는 빠진다. 제2조 ②항 절사도 제11조에 준용 문구가 없어 적용하지 않는다.
+ */
+function computeInterlocutoryAppealStampDuty(
+  dataset: StampDutyDataset,
+  input: StampDutyInput,
+  computedAt: string,
+): StampDutyResult {
+  const ia = dataset.specialProcedures.interlocutoryAppeal;
+  const underlying = input.underlyingApplicationStampDutyWon;
+
+  const finalAmount = underlying !== undefined ? underlying * ia.underlyingMultiplier : ia.flatWon;
+  const formulaText =
+    underlying !== undefined
+      ? `항고장 (${ia.underlyingSourceArticle}): 원신청서 인지액 ${underlying.toLocaleString("en-US")} × ${ia.underlyingMultiplier} = ${finalAmount.toLocaleString("en-US")}원`
+      : `항고장 (${ia.sourceArticle}): ${ia.rateText} = ${finalAmount.toLocaleString("en-US")}원`;
+
+  return {
+    amount: finalAmount,
+    formulaText,
+    dataVersion: stampDutyVersionTag(dataset),
+    computedAt,
+  };
+}
+
+/**
  * 인지대 계산. 입력 검증 → 누진 산식 → 심급/특별절차/전자소송 multiplier → 반올림.
- * 보전처분(가압류·가처분)은 제2조 대신 제9조 ②항 별도 체계로 분기.
+ * 보전처분(가압류·가처분)은 제2조 대신 제9조 ②항, 항고·재항고는 제11조 별도 체계로 분기.
  */
 export function computeStampDuty(
   input: StampDutyInput,
@@ -245,11 +335,19 @@ export function computeStampDuty(
   const dataset = loadStampDutyDataset(deps?.dataset);
   const computedAt = deps?.computedAt ?? new Date().toISOString();
 
-  if (isProvisionalCaseType(input.caseType)) {
-    return computeProvisionalMeasureStampDuty(dataset, input, computedAt);
+  // 규칙 제18조의2 간주 소가를 먼저 해소한 뒤 모든 분기가 같은 값을 쓴다.
+  const { caseValue, deemedNote } = resolveEffectiveCaseValue(input, { dataset });
+  const effective: StampDutyInput = caseValue === input.caseValue ? input : { ...input, caseValue };
+
+  if (isProvisionalCaseType(effective.caseType)) {
+    return computeProvisionalMeasureStampDuty(dataset, effective, computedAt);
   }
 
-  const { bracket, baseLine } = progressiveBaseLine(dataset, input.caseValue);
+  if (effective.caseType === "civilInterlocutoryAppeal") {
+    return computeInterlocutoryAppealStampDuty(dataset, effective, computedAt);
+  }
+
+  const { bracket, baseLine } = progressiveBaseLine(dataset, effective.caseValue);
 
   const appealsMultiplier = getAppealsMultiplier(dataset, input.appealsLevel);
 
@@ -262,6 +360,13 @@ export function computeStampDuty(
   if (isPaymentOrder) {
     specialMultiplier = dataset.specialProcedures.paymentOrder.multiplier;
     specialLabel = "지급명령";
+  } else if (input.caseType === "civilMediation") {
+    // 조정신청(머)은 인지법이 아니라 「민사조정규칙」제3조 제1항이 근거다 —
+    // "조정신청의 수수료는 「민사소송 등 인지법」 제2조에 따라 산출한 금액의 10분의 1로 한다."
+    // 지급명령과 같은 구조라 사건구분만으로 자동 적용한다. 이 분기가 없던 동안
+    // 조정신청에 소장 누진식이 그대로 적용되어 10배로 산출됐다.
+    specialMultiplier = dataset.specialProcedures.mediation.multiplier;
+    specialLabel = "조정신청";
   } else if (input.isSettlement) {
     specialMultiplier = dataset.specialProcedures.settlement.multiplier;
     specialLabel = "화해";
@@ -270,18 +375,40 @@ export function computeStampDuty(
   const { multiplier: electronicMultiplier, skippedNote: electronicSkippedNote } =
     resolveElectronicDiscount(dataset, input);
 
-  let preRounding = baseLine * appealsMultiplier;
+  // 제2조 ②항의 1,000원 하한은 문언상 "**제1항에 따라 계산한** 인지액" 에 건다. 제3조가
+  // 곱하는 "제2조에 따른 금액", 제16조가 곱하는 "제2조에 따른 인지액" 은 모두 이 하한이
+  // 이미 적용된 금액이다. 하한을 배수 **뒤**에 걸면 배수가 하한에 통째로 먹힌다 —
+  // 소가 10,000 항소가 1,000원(정답 1,500), 상고가 1,000원(정답 2,000)이 되고,
+  // 전자소송 감액도 같은 이유로 사라진다 (소가 10,000 전자 = 1,000원 ← 정답 900원).
+  // 소가 약 222,222원 이하(= 제2조 ①항 금액이 1,000원 미만인 구간) 전체가 영향권이다.
+  const article2Floor = Math.max(baseLine, dataset.roundingPolicy.floorMinimumWon);
+  const article2FloorWon = article2Floor > baseLine ? article2Floor : null;
+
+  let preRounding = article2Floor * appealsMultiplier;
+
+  // 제7조 ④항은 "제1항과 제2항에 따른 인지액에 관하여는 제2조제2항을 준용한다" 로, 화해·
+  // 지급명령 배수를 곱한 **뒤**의 금액에 하한을 다시 건다고 명문화했다. 제3조에는 그런
+  // 준용 문구가 없어 배수 앞에서 한 번 거는 것으로 끝난다.
+  let specialFloorWon: number | null = null;
   if (specialMultiplier !== null) {
-    preRounding *= specialMultiplier;
+    const afterSpecial = preRounding * specialMultiplier;
+    preRounding = Math.max(afterSpecial, dataset.roundingPolicy.floorMinimumWon);
+    specialFloorWon = preRounding > afterSpecial ? preRounding : null;
   }
+
   if (electronicMultiplier !== null) {
     preRounding *= electronicMultiplier;
   }
 
-  const finalAmount = applyStampDutyRounding(preRounding, dataset.roundingPolicy);
+  // 100원 절사는 마지막 한 번만. 절사를 배수·감액 앞으로 옮기는 것은 별개 쟁점이다
+  // (소가 3,350,000 항소에서 25,100 과 25,050 으로 갈리며, 근거가 확정되지 않았다).
+  const finalAmount = applyStampDutyRounding(preRounding, {
+    ...dataset.roundingPolicy,
+    floorMinimumWon: 0,
+  });
 
   const formulaText = buildFormulaText({
-    input,
+    input: effective,
     bracket,
     baseLine,
     appealsMultiplier,
@@ -289,8 +416,11 @@ export function computeStampDuty(
     specialLabel,
     electronicMultiplier,
     electronicSkippedNote,
+    article2FloorWon,
+    specialFloorWon,
     preRounding,
     finalAmount,
+    deemedNote,
   });
 
   return {

@@ -69,7 +69,11 @@ export {
 
 export type { ComputeStampDutyDeps } from "./compute-stamp-duty";
 
-export { applyStampDutyRounding, computeStampDuty } from "./compute-stamp-duty";
+export {
+  applyStampDutyRounding,
+  computeStampDuty,
+  resolveEffectiveCaseValue,
+} from "./compute-stamp-duty";
 
 export type {
   DeliveryCountMatrixEntry,

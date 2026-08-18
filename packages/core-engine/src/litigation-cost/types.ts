@@ -74,6 +74,36 @@ export interface StampDutyInput {
    */
   provisionalMeasureType?: "general" | "provisionalStatus";
   /**
+   * 소가 산정 기준 (「민사소송 등 인지규칙」제18조의2).
+   *
+   *   - `"amount"` (기본): `caseValue` 를 그대로 소가로 쓴다.
+   *   - `"unascertainable"`: 소가를 산출할 수 없는 재산권상의 소 / 비재산권을 목적으로 하는
+   *     소송 → 소가 5천만원으로 간주. 이때 `caseValue` 는 무시된다.
+   *   - `"unascertainableHighTier"`: 위 중 규칙 제15조①~③·제15조의2·제17조의2·제18조에
+   *     정한 소송(회사관계·특허·무체재산권 등) → 1억원으로 간주.
+   *
+   * 이 필드가 없던 동안 비재산권 소송에 소가 0 을 넣으면 인지액이 1,000원(하한)으로
+   * 나왔다 (정답 230,000원).
+   */
+  caseValueBasis?: "amount" | "unascertainable" | "unascertainableHighTier";
+  /**
+   * 항고·재항고(라/마) 전용. 인지법 제11조 ①항 대상일 때 원신청서에 붙인 인지액.
+   *
+   * 제9조·제10조 신청에 관한 재판에 대한 항고는 "해당 신청서에 붙인 인지액의 2배"라
+   * 원신청서 금액을 알아야 한다. 미지정 시 제11조 ②항의 2천원 정액을 적용한다.
+   * 다른 사건구분에서는 무시된다.
+   */
+  underlyingApplicationStampDutyWon?: number;
+  /**
+   * 항소·상고 사건의 **전체 소가**. 계산에는 쓰지 않는다.
+   *
+   * 「민사소송 등 인지규칙」제25조에 따라 상소심 인지액은 불복 범위를 기준으로 산정하므로
+   * 그 사건의 `caseValue` 는 불복 범위다. 그러면 전체 소가가 어디에도 남지 않아 `.lcalc` 을
+   * 다시 열었을 때 복원할 수 없고, 심급을 1심으로 되돌리면 불복 범위를 소가로 착각해 조용히
+   * 과소 계산된다. 그 유실을 막기 위한 보존용 필드다.
+   */
+  fullCaseValue?: number;
+  /**
    * 접수일 — 전자소송 감액 (제16조) 적용 여부 분기.
    * 제16조 시행일 (dataset `electronicFilingDiscount.effectiveFrom`, 2011-10-19) 이전 접수는
    * 감액 미적용. 미지정 시 현행 사건으로 간주해 감액을 적용한다 (송달료 슬라이스와 동일 정책).
@@ -190,10 +220,7 @@ export type LawyerFeeAppealsRule = "perInstanceIndependent";
  *   - `orderForPerformance`: 이행권고결정 확정 (2020-12-28 이후 적용, 대법원규칙 제2936호)
  */
 export type NoOralHearingReason =
-  | "admission"
-  | "defaultAdmission"
-  | "noOralHearing"
-  | "orderForPerformance";
+  "admission" | "defaultAdmission" | "noOralHearing" | "orderForPerformance";
 
 /**
  * 변호사보수 감액/조정 옵션. G5 final 5 variant.

@@ -19,12 +19,30 @@ import {
   caseCode,
   computeLitigationCost,
   listCaseTypes,
+  resolveEffectiveCaseValue,
   type AppealsLevel,
   type CaseType,
   type LawyerFeeDiscount,
   type LitigationCostInput,
   type LitigationCostResult,
+  type StampDutyInput,
 } from "@lawcalc-kr/core-engine";
+
+/** 소가 산정 기준 (인지규칙 제18조의2). 엔진 입력 타입에서 파생해 두 곳이 어긋나지 않게 한다. */
+type CaseValueBasis = NonNullable<StampDutyInput["caseValueBasis"]>;
+
+/**
+ * 보전사건의 사건 성격 (변호사보수규칙 제3조 ②항).
+ *
+ * 단서는 "가압류, 가처분 명령의 신청사건에 있어서는 변론 또는 심문을 거친 경우에 한한다"라
+ * 신청사건 전용이다. 이의·취소 신청사건은 단서 대상이 아니므로 변론·심문 여부와 무관하게
+ * 1/2 이 산입된다. 직전 UI 는 체크박스 하나뿐이라 이의·취소 사건도 산입 불가(0원)로 강제됐다.
+ */
+type ProvisionalApplicationKind =
+  | "unspecified"
+  | "applicationWithHearing"
+  | "applicationWithoutHearing"
+  | "objectionOrCancellation";
 
 import { ProportionalPillInput } from "../components/form/ProportionalPillInput";
 import { Button } from "../components/ui/button";
@@ -103,12 +121,21 @@ export function hasLegacyPaymentOrderFlag(stampDuty: LitigationCostInput["stampD
  */
 export function buildStampDutyInput(state: {
   caseValue: number;
+  /** 소가 산정 기준 (인지규칙 제18조의2). 미지정 시 `"amount"`. */
+  caseValueBasis?: CaseValueBasis;
+  /** 항소·상고로 불복하는 범위의 소가. 미지정 시 `caseValue` 를 그대로 쓴다. */
+  appealValue?: number;
   caseType: CaseType;
   appealsLevel: AppealsLevel;
   legacyPaymentOrder: boolean;
   isSettlement: boolean;
   isElectronicFiling: boolean;
   provisionalMeasureType: "general" | "provisionalStatus";
+  /**
+   * 항고·재항고(라/마) 에서 인지법 제11조 ①항 대상일 때 원신청서에 붙인 인지액.
+   * 미지정이면 제11조 ②항 정액 2,000원이 적용된다.
+   */
+  underlyingApplicationStampDutyWon?: number;
   filingDate: string;
 }): LitigationCostInput["stampDuty"] {
   const isProvisional =
@@ -117,24 +144,92 @@ export function buildStampDutyInput(state: {
   // 보전처분은 제9조 ②항 별도 체계라 지급명령 감액 자체가 성립하지 않는다 (validator 도 거부).
   const isPaymentOrder =
     !isProvisional && (state.caseType === "paymentOrder" || state.legacyPaymentOrder);
+  // 조정신청(머)은 「민사조정규칙」제3조의 신청 수수료라 심급 배수를 탈 자리가 없다
+  // (validator 도 거부한다).
+  const isMediation = state.caseType === "civilMediation";
   const appealsLevel: AppealsLevel =
-    isProvisional || isPaymentOrder ? "firstInstance" : state.appealsLevel;
+    isProvisional || isPaymentOrder || isMediation ? "firstInstance" : state.appealsLevel;
+
+  // 「민사소송 등 인지규칙」제25조(원칙): "항소장 또는 상고장에 첩부할 인지액은 상소로써
+  // 불복하는 범위의 소가를 기준으로 하여 산정한다." 전체 소가를 그대로 쓰면 일부만
+  // 불복하는 사건에서 인지대가 과대해진다.
+  // 심급 판정과 같은 곳에서 정하므로 인지와 변호사보수가 서로 다른 기준을 쓸 수 없다.
+  const effectiveCaseValue =
+    appealsLevel === "firstInstance" ? state.caseValue : (state.appealValue ?? state.caseValue);
 
   return {
-    caseValue: state.caseValue,
+    caseValue: effectiveCaseValue,
     caseType: state.caseType,
     appealsLevel,
+    // 간주 소가일 때는 엔진이 소가를 대체하므로 불복 범위 대체는 의미가 없다.
+    ...(state.caseValueBasis && state.caseValueBasis !== "amount"
+      ? { caseValueBasis: state.caseValueBasis }
+      : {}),
     ...(isProvisional ? { provisionalMeasureType: state.provisionalMeasureType } : {}),
     // 사건구분이 차(paymentOrder)면 엔진이 자동 파생한다. 구파일 플래그일 때만 명시 전달.
     ...(isPaymentOrder && state.caseType !== "paymentOrder" ? { isPaymentOrder: true } : {}),
     ...(state.isSettlement && !isProvisional && !isPaymentOrder ? { isSettlement: true } : {}),
     ...(state.isElectronicFiling ? { isElectronicFiling: true } : {}),
     ...(state.filingDate ? { filingDate: state.filingDate } : {}),
+    // 제11조 ①항은 항고 사건에서만 의미가 있다. 다른 사건구분에 흘려보내면 엔진이 무시하지만
+    // `.lcalc` 에는 남아 파일을 읽는 쪽을 헷갈리게 한다.
+    ...(state.caseType === "civilInterlocutoryAppeal" &&
+    state.underlyingApplicationStampDutyWon !== undefined
+      ? { underlyingApplicationStampDutyWon: state.underlyingApplicationStampDutyWon }
+      : {}),
+    // 상소심에서 `caseValue` 는 불복 범위다. 전체 소가를 함께 남기지 않으면 파일에서
+    // 사라져 복원할 수 없다 (심급을 1심으로 되돌리면 조용히 과소 계산된다).
+    ...(appealsLevel !== "firstInstance" && effectiveCaseValue !== state.caseValue
+      ? { fullCaseValue: state.caseValue }
+      : {}),
+  };
+}
+
+/**
+ * 보전사건 변호사보수 discount 조립 (변호사보수규칙 제3조 ②항).
+ *
+ * 본문 1/2 은 엔진이 사건구분만으로 자동 적용하므로 여기서는 단서 판정에 필요한
+ * 사건 성격만 전달한다. 단서("가압류, 가처분 명령의 신청사건에 있어서는 변론 또는
+ * 심문을 거친 경우에 한한다")는 신청사건 전용이라, 이의·취소 신청사건은 변론·심문
+ * 여부와 무관하게 1/2 이 산입된다.
+ *
+ * 직전 UI 는 체크박스 하나뿐이라 이의·취소 사건에도 `hasOralHearing: false` 를 붙여
+ * 산입 불가(0원)로 강제했다.
+ */
+export function buildProvisionalDiscount(
+  kind: ProvisionalApplicationKind,
+  caseType: CaseType,
+): LawyerFeeDiscount | null {
+  const isProvisional =
+    caseType === "provisionalMeasureCollegial" || caseType === "provisionalMeasureSingle";
+  if (!isProvisional || kind === "unspecified") return null;
+  if (kind === "objectionOrCancellation") {
+    return { kind: "provisionalCase", applicationKind: "objectionOrCancellation" };
+  }
+  return {
+    kind: "provisionalCase",
+    applicationKind: "application",
+    hasOralHearing: kind === "applicationWithHearing",
   };
 }
 
 function distributionLabel(mode: DistributionMode) {
   return mode === "equal" ? "균등" : "소가 비례";
+}
+
+/**
+ * 소송비용 결과의 사용자 경고 문구 — **단일 출처**.
+ *
+ * 대한법률구조공단 적용 사건 범위 경고가 화면에만 있고 clipboard·PDF·CSV 에는 없었다.
+ * 손해배상 export 와 같은 정책으로, 문구를 여기서 한 번 만들어 세 경로가 함께 쓴다.
+ */
+export function buildLitigationCostExportWarnings(result: LitigationCostResult): string[] {
+  return result.lawyerFee.koreaLegalAidWarnings.map((w) => w.messageKo);
+}
+
+/** export payload — 결과 원본에 경고 목록만 덧붙인다. `.lcalc` 에는 저장하지 않는다. */
+function withLitigationCostExportWarnings(result: LitigationCostResult) {
+  return { ...result, exportWarnings: buildLitigationCostExportWarnings(result) };
 }
 
 function formatLitigationCostForClipboard(result: LitigationCostResult): string {
@@ -164,6 +259,13 @@ function formatLitigationCostForClipboard(result: LitigationCostResult): string 
           distributionRows,
         ]
       : []),
+    ...(buildLitigationCostExportWarnings(result).length > 0
+      ? [
+          "",
+          "확인이 필요한 사항",
+          ...buildLitigationCostExportWarnings(result).map((w) => `- ${w}`),
+        ]
+      : []),
     "",
     STANDARD_DISCLAIMER,
   ].join("\n");
@@ -189,7 +291,16 @@ function buildLcalcFile(
   return {
     schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     kind: "litigation-cost",
-    envelopeFeatures: ["litigation-cost@1"],
+    // optional 은 **구파일 → 신앱** 방향만 안전하다. 반대로 신파일을 구앱이 열면 이 필드들이
+    // 조용히 버려져 금액이 달라지므로(간주 소가 무시 → 1,000원, 전체 소가 유실 → 불복 범위로
+    // 재계산) 실제로 붙은 파일만 @2 로 올려 구앱이 fast-reject 하게 한다.
+    envelopeFeatures: [
+      input.stampDuty.fullCaseValue !== undefined ||
+      input.stampDuty.underlyingApplicationStampDutyWon !== undefined ||
+      (input.stampDuty.caseValueBasis !== undefined && input.stampDuty.caseValueBasis !== "amount")
+        ? "litigation-cost@2"
+        : "litigation-cost@1",
+    ],
     dataVersions: {
       "stamp-duty": result.dataVersions["stamp-duty"]!,
       delivery: result.dataVersions.delivery!,
@@ -208,8 +319,13 @@ const caseTypeOptions = listCaseTypes();
 export function LitigationCostCalculator({ active = true }: { active?: boolean }) {
   const [caseType, setCaseType] = useState<CaseType>("civilFirstInstanceSingle");
   const [caseValueText, setCaseValueText] = useState("30000000");
+  const [caseValueBasis, setCaseValueBasis] = useState<CaseValueBasis>("amount");
   const [appealsLevel, setAppealsLevel] = useState<AppealsLevel>("firstInstance");
-  const [appealValueText, setAppealValueText] = useState("30000000");
+  // 비워 두면 빌더가 소가를 그대로 쓴다. 초기값을 넣어 두면 소가만 고쳤을 때 불복 범위가
+  // 옛 값에 남아 인지대가 조용히 틀린다 (인지 부족은 보정명령 사유다).
+  const [appealValueText, setAppealValueText] = useState("");
+  // 항고 사건의 원신청서 인지액 (인지법 제11조 ①항). 비우면 제11조 ②항 정액 2,000원.
+  const [underlyingStampDutyText, setUnderlyingStampDutyText] = useState("");
   const [partyCountText, setPartyCountText] = useState("2");
   const [filingDate, setFilingDate] = useState(todayIso());
   const [isElectronicFiling, setIsElectronicFiling] = useState(false);
@@ -221,7 +337,8 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   const [legacyPaymentOrder, setLegacyPaymentOrder] = useState(false);
   const [agreedFeeText, setAgreedFeeText] = useState("");
   const [applyNoOral, setApplyNoOral] = useState(false);
-  const [applyProvisionalDiscount, setApplyProvisionalDiscount] = useState(false);
+  const [provisionalApplicationKind, setProvisionalApplicationKind] =
+    useState<ProvisionalApplicationKind>("unspecified");
   const [applyKoreaLegalAid, setApplyKoreaLegalAid] = useState(false);
   const [koreaLegalAidAgreedFeeText, setKoreaLegalAidAgreedFeeText] = useState("");
   const [courtMultiplierText, setCourtMultiplierText] = useState("1");
@@ -237,37 +354,44 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const input = useMemo<LitigationCostInput>(() => {
-    const caseValue = parseNonNegativeInteger(caseValueText, 0);
+    // 인지규칙 제18조의2 간주 소가는 인지·변호사보수가 같은 값을 써야 하므로
+    // 엔진의 `resolveEffectiveCaseValue` 를 단일 출처로 삼는다.
+    const rawCaseValue = parseNonNegativeInteger(caseValueText, 0);
+    const caseValue = resolveEffectiveCaseValue({
+      caseValue: rawCaseValue,
+      caseValueBasis,
+    }).caseValue;
     const partyCount = parsePositiveInteger(partyCountText, 1);
     const lawyerFeeAppliesNow = appliedDomains(caseType).includes("lawyerFee");
     // 지급명령(차)과 보전처분(카합/카단)은 심급 배수를 쓰지 않으므로 1심으로 고정한다.
     const stampDuty = buildStampDutyInput({
-      caseValue,
+      caseValue: rawCaseValue,
+      caseValueBasis,
+      appealValue: parseNonNegativeInteger(appealValueText, rawCaseValue),
       caseType,
       appealsLevel,
       legacyPaymentOrder,
       isSettlement,
       isElectronicFiling,
       provisionalMeasureType,
+      ...(parseNonNegativeInteger(underlyingStampDutyText, 0) > 0
+        ? {
+            underlyingApplicationStampDutyWon: parseNonNegativeInteger(underlyingStampDutyText, 0),
+          }
+        : {}),
       filingDate,
     });
-    const effectiveAppealsLevel = stampDuty.appealsLevel;
-    const lawyerCaseValue =
-      effectiveAppealsLevel === "firstInstance"
-        ? caseValue
-        : parseNonNegativeInteger(appealValueText, caseValue);
+    // 변호사보수도 같은 기준액을 쓴다 (빌더가 심급에 따라 이미 불복 범위를 반영했고,
+    // 간주 소가일 때는 심급과 무관하게 간주액이 기준이다).
+    const lawyerCaseValue = caseValueBasis === "amount" ? stampDuty.caseValue : caseValue;
     const discounts: LawyerFeeDiscount[] = [];
     if (lawyerFeeAppliesNow) {
       if (applyNoOral) {
         discounts.push({ kind: "noOralHearingOrAdmission", reason: "noOralHearing" });
       }
-      // 제3조 ②항은 가압류·가처분 사건구분에만 적용된다 (validator 가 그 외 조합을 거부).
-      // 본문 1/2 은 엔진이 caseType 으로 자동 적용하므로, 여기서는 단서(산입 불가)만 전달한다.
-      if (
-        applyProvisionalDiscount &&
-        (caseType === "provisionalMeasureCollegial" || caseType === "provisionalMeasureSingle")
-      ) {
-        discounts.push({ kind: "provisionalCase", hasOralHearing: false });
+      const provisionalDiscount = buildProvisionalDiscount(provisionalApplicationKind, caseType);
+      if (provisionalDiscount) {
+        discounts.push(provisionalDiscount);
       }
       if (applyKoreaLegalAid) {
         discounts.push({ kind: "koreaLegalAid" });
@@ -321,8 +445,9 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     appealsLevel,
     applyKoreaLegalAid,
     applyNoOral,
-    applyProvisionalDiscount,
+    provisionalApplicationKind,
     caseType,
+    caseValueBasis,
     caseValueText,
     courtMultiplierText,
     customRateText,
@@ -345,6 +470,8 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   const isProvisionalCase =
     caseType === "provisionalMeasureCollegial" || caseType === "provisionalMeasureSingle";
   const isPaymentOrderCase = caseType === "paymentOrder";
+  const isMediationCase = caseType === "civilMediation";
+  const isInterlocutoryAppealCase = caseType === "civilInterlocutoryAppeal";
   // 구파일 플래그도 지급명령과 같은 배타 규칙을 받는다 (1심 고정, 화해 배타).
   const paymentOrderApplies = isPaymentOrderCase || (legacyPaymentOrder && !isProvisionalCase);
   const dirtySnapshot = useMemo(() => buildDirtySnapshot(input, note), [input, note]);
@@ -353,9 +480,12 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
 
   const applyInput = (loaded: LitigationCostInput) => {
     setCaseType(loaded.stampDuty.caseType);
-    setCaseValueText(String(loaded.stampDuty.caseValue));
+    // 상소심 파일의 `caseValue` 는 불복 범위다. 보존해 둔 전체 소가가 있으면 그것이 소가란.
+    setCaseValueText(String(loaded.stampDuty.fullCaseValue ?? loaded.stampDuty.caseValue));
     setAppealsLevel(loaded.stampDuty.appealsLevel);
-    setAppealValueText(String(loaded.lawyerFee.caseValue));
+    setAppealValueText(
+      loaded.stampDuty.appealsLevel === "firstInstance" ? "" : String(loaded.stampDuty.caseValue),
+    );
     setPartyCountText(String(loaded.deliveryFee.partyCount));
     setFilingDate(
       loaded.stampDuty.filingDate ??
@@ -367,9 +497,27 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     setIsSettlement(Boolean(loaded.stampDuty.isSettlement));
     setLegacyPaymentOrder(hasLegacyPaymentOrderFlag(loaded.stampDuty));
     setProvisionalMeasureType(loaded.stampDuty.provisionalMeasureType ?? "general");
+    setCaseValueBasis(loaded.stampDuty.caseValueBasis ?? "amount");
+    setUnderlyingStampDutyText(
+      loaded.stampDuty.underlyingApplicationStampDutyWon === undefined
+        ? ""
+        : String(loaded.stampDuty.underlyingApplicationStampDutyWon),
+    );
     setApplyNoOral(loaded.lawyerFee.discounts.some((d) => d.kind === "noOralHearingOrAdmission"));
-    setApplyProvisionalDiscount(
-      loaded.lawyerFee.discounts.some((d) => d.kind === "provisionalCase"),
+    // 보전 사건 성격은 discount 의 applicationKind / hasOralHearing 조합에서 되살린다.
+    // 구파일은 `{ kind: "provisionalCase", hasOralHearing: false }` 만 저장했으므로
+    // "신청사건 · 변론·심문 없음" 으로 복원된다 (저장 당시 결과와 일치).
+    const provisional = loaded.lawyerFee.discounts.find((d) => d.kind === "provisionalCase");
+    setProvisionalApplicationKind(
+      provisional === undefined
+        ? "unspecified"
+        : provisional.applicationKind === "objectionOrCancellation"
+          ? "objectionOrCancellation"
+          : provisional.hasOralHearing === true
+            ? "applicationWithHearing"
+            : provisional.hasOralHearing === false
+              ? "applicationWithoutHearing"
+              : "unspecified",
     );
     setApplyKoreaLegalAid(loaded.lawyerFee.discounts.some((d) => d.kind === "koreaLegalAid"));
     const court = loaded.lawyerFee.discounts.find((d) => d.kind === "courtDiscretion");
@@ -422,8 +570,11 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   const handleReset = () => {
     setCaseType("civilFirstInstanceSingle");
     setCaseValueText("30000000");
+    setCaseValueBasis("amount");
+    setLegacyPaymentOrder(false);
     setAppealsLevel("firstInstance");
-    setAppealValueText("30000000");
+    setAppealValueText("");
+    setUnderlyingStampDutyText("");
     setPartyCountText("2");
     setFilingDate(todayIso());
     setIsElectronicFiling(false);
@@ -431,7 +582,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     setProvisionalMeasureType("general");
     setAgreedFeeText("");
     setApplyNoOral(false);
-    setApplyProvisionalDiscount(false);
+    setProvisionalApplicationKind("unspecified");
     setApplyKoreaLegalAid(false);
     setKoreaLegalAidAgreedFeeText("");
     setCourtMultiplierText("1");
@@ -449,14 +600,14 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   const handleExportPdf = () =>
     runAction("pdf", async () => {
       if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
-      const path = await ipc.exportLitigationCostPdf(result);
+      const path = await ipc.exportLitigationCostPdf(withLitigationCostExportWarnings(result));
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
       if (!result) throw new Error("계산 후 CSV를 저장해 주세요.");
-      const path = await ipc.exportLitigationCostCsv(result);
+      const path = await ipc.exportLitigationCostCsv(withLitigationCostExportWarnings(result));
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
@@ -553,6 +704,27 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 })}
               </Select>
             </label>
+            <label className="grid gap-2 text-sm font-medium">
+              소가 산정 기준
+              <Select
+                value={caseValueBasis}
+                onChange={(e) => setCaseValueBasis(e.target.value as CaseValueBasis)}
+              >
+                <option value="amount">금액으로 산출</option>
+                <option value="unascertainable">
+                  소가 산출 불가 또는 비재산권 소송 (5,000만원 간주)
+                </option>
+                <option value="unascertainableHighTier">
+                  회사관계·특허·무체재산권 등 (1억원 간주)
+                </option>
+              </Select>
+            </label>
+            {caseValueBasis !== "amount" ? (
+              <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                「민사소송 등 인지규칙」제18조의2에 따라 소가를 간주합니다. 입력한 소가 금액은
+                인지대·변호사보수 산정에 쓰이지 않습니다.
+              </p>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium">
                 소가
@@ -560,6 +732,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   value={formatWonInput(caseValueText)}
                   inputMode="numeric"
                   placeholder="예: 30,000,000"
+                  disabled={caseValueBasis !== "amount"}
                   onChange={(e) => setCaseValueText(parseWonText(e.target.value))}
                 />
               </label>
@@ -577,7 +750,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 심급
                 <Select
                   value={appealsLevel}
-                  disabled={isProvisionalCase || paymentOrderApplies}
+                  disabled={isProvisionalCase || paymentOrderApplies || isMediationCase}
                   onChange={(e) => setAppealsLevel(e.target.value as AppealsLevel)}
                 >
                   <option value="firstInstance">1심</option>
@@ -590,14 +763,35 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 <Input
                   value={formatWonInput(appealValueText)}
                   inputMode="numeric"
-                  placeholder="예: 30,000,000"
+                  placeholder="비워 두면 소가와 동일"
                   disabled={
-                    appealsLevel === "firstInstance" || isProvisionalCase || paymentOrderApplies
+                    appealsLevel === "firstInstance" ||
+                    isProvisionalCase ||
+                    paymentOrderApplies ||
+                    isMediationCase ||
+                    // 간주 소가는 엔진이 소가를 통째로 대체하므로 불복 범위를 고쳐도 결과가
+                    // 바뀌지 않는다. 편집 가능한 채로 두면 반영된다고 믿게 된다.
+                    caseValueBasis !== "amount"
                   }
                   onChange={(e) => setAppealValueText(parseWonText(e.target.value))}
                 />
               </label>
             </div>
+            {isInterlocutoryAppealCase ? (
+              <label className="grid gap-2 text-sm font-medium">
+                원신청서 인지액 (인지법 제11조 제1항)
+                <Input
+                  value={formatWonInput(underlyingStampDutyText)}
+                  inputMode="numeric"
+                  placeholder="비워 두면 제11조 제2항 정액 2,000원"
+                  onChange={(e) => setUnderlyingStampDutyText(parseWonText(e.target.value))}
+                />
+                <span className="text-xs font-normal text-muted-foreground">
+                  제9조·제10조의 신청에 관한 재판에 대한 항고장·상소장은 그 신청서에 붙인 인지액의
+                  2배입니다. 그 밖의 항고장은 비워 두세요.
+                </span>
+              </label>
+            ) : null}
             {isProvisionalCase ? (
               <label className="grid gap-2 text-sm font-medium">
                 보전처분 종류 (인지법 제9조 ②항)
@@ -709,14 +903,30 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   <p className="text-xs text-muted-foreground">
                     가압류·가처분 사건은 제3조 ②항 본문에 따라 별표 산정액의 1/2이 자동 적용됩니다.
                   </p>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={applyProvisionalDiscount}
-                      onChange={(e) => setApplyProvisionalDiscount(e.target.checked)}
-                    />
-                    신청사건이고 변론·심문을 거치지 않음 (제3조 ②항 단서, 산입 불가)
+                  <label className="grid gap-2 text-sm font-medium">
+                    사건 성격 (제3조 ②항 단서)
+                    <Select
+                      value={provisionalApplicationKind}
+                      onChange={(e) =>
+                        setProvisionalApplicationKind(e.target.value as ProvisionalApplicationKind)
+                      }
+                    >
+                      <option value="unspecified">지정하지 않음 (본문 1/2만 적용)</option>
+                      <option value="applicationWithHearing">
+                        신청사건 · 변론 또는 심문을 거침 (1/2 산입)
+                      </option>
+                      <option value="applicationWithoutHearing">
+                        신청사건 · 변론·심문을 거치지 않음 (산입 불가)
+                      </option>
+                      <option value="objectionOrCancellation">
+                        이의 또는 취소 신청사건 (1/2 산입, 단서 대상 아님)
+                      </option>
+                    </Select>
                   </label>
+                  <p className="text-xs text-muted-foreground">
+                    제3조 ②항 단서는 가압류·가처분 명령의 <strong>신청사건</strong>에만 적용됩니다.
+                    이의·취소 신청사건은 변론·심문 여부와 무관하게 1/2이 산입됩니다.
+                  </p>
                 </>
               ) : null}
               <label className="flex items-center gap-2">

@@ -1,6 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { STANDARD_DISCLAIMER, computeLitigationCost, type LitigationCostInput } from "../src";
+import {
+  STANDARD_DISCLAIMER,
+  computeLitigationCost,
+  deliveryDatasetVersionTag,
+  getDeliveryUnitPriceAt,
+  loadDeliveryDataset,
+  type LitigationCostInput,
+} from "../src";
+
+// 송달료 회당 단가는 우편요금 인상마다 바뀐다. 여기서 검증하려는 것은 도메인 합산과
+// 분배이지 단가 값이 아니므로 dataset 단일 출처에서 읽는다 (단가 자체는
+// delivery-fee.test.ts 가 리터럴로 고정한다).
+const UNIT = getDeliveryUnitPriceAt(loadDeliveryDataset()).unitPriceWon;
+const DELIVERY_TAG = deliveryDatasetVersionTag(loadDeliveryDataset());
+const DELIVERY_2P_15 = 2 * 15 * UNIT;
+const TOTAL_BASE = 140_000 + DELIVERY_2P_15 + 2_800_000;
 
 const computedAt = "2026-05-11T12:00:00.000Z";
 
@@ -26,13 +41,13 @@ describe("litigation-cost / computeLitigationCost", () => {
     const result = computeLitigationCost(baseInput, { computedAt });
 
     expect(result.stampDuty.amount).toBe(140_000);
-    expect(result.deliveryFee.amount).toBe(165_000);
+    expect(result.deliveryFee.amount).toBe(DELIVERY_2P_15);
     expect(result.lawyerFee.amount).toBe(2_800_000);
-    expect(result.totalAmount).toBe(3_105_000);
+    expect(result.totalAmount).toBe(TOTAL_BASE);
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
     expect(result.dataVersions).toEqual({
-      "stamp-duty": "stamp-duty/v1.1.0",
-      delivery: "delivery/v1.1.0",
+      "stamp-duty": "stamp-duty/v1.2.0",
+      delivery: DELIVERY_TAG,
       "lawyer-fee": "lawyer-fee/v1.2.0",
     });
     expect(result.computedAt).toBe(computedAt);
@@ -52,8 +67,8 @@ describe("litigation-cost / computeLitigationCost", () => {
 
     expect(result.distribution).toEqual({
       mode: "equal",
-      totalWon: 3_105_000,
-      perParty: [1_552_500, 1_552_500],
+      totalWon: TOTAL_BASE,
+      perParty: [TOTAL_BASE / 2, TOTAL_BASE / 2],
       remainder: 0,
       basis: "partyCount",
     });
@@ -68,7 +83,7 @@ describe("litigation-cost / computeLitigationCost", () => {
       { computedAt },
     );
 
-    expect(result.distribution?.perParty).toEqual([1_552_500, 1_552_500]);
+    expect(result.distribution?.perParty).toEqual([TOTAL_BASE / 2, TOTAL_BASE / 2]);
   });
 
   it("adds proportional distribution when requested", () => {
@@ -82,8 +97,9 @@ describe("litigation-cost / computeLitigationCost", () => {
 
     expect(result.distribution).toEqual({
       mode: "proportional",
-      totalWon: 3_105_000,
-      perParty: [1_035_000, 2_070_000],
+      totalWon: TOTAL_BASE,
+      // 1 : 2 안분. 합계가 3 으로 나누어떨어지므로 잔여 배정은 발생하지 않는다.
+      perParty: [TOTAL_BASE / 3, (TOTAL_BASE / 3) * 2],
       remainder: 0,
       basis: "partyValuesWon",
     });
@@ -101,7 +117,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     ).toThrow("안분에는 partyValuesWon 이 필요합니다");
   });
 
-  it("paymentOrder: 인지대(×0.1) + 송달료(2 × 6 × 5,500) 정상 계산, 변호사보수 산입 외", () => {
+  it("paymentOrder: 인지대(×0.1) + 송달료(2 × 6 × 회당 단가) 정상 계산, 변호사보수 산입 외", () => {
     const input: LitigationCostInput = {
       stampDuty: {
         caseValue: 30_000_000,
@@ -132,16 +148,16 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.lawyerFee.dataVersion).toBe("lawyer-fee/v1.2.0");
     expect(result.lawyerFee.computedAt).toBe(computedAt);
 
-    // 송달료: 재일 87-4 별표 1 — 독촉사건 6회 × 채권자·채무자 2명 × 5,500원
+    // 송달료: 재일 87-4 별표 1 — 독촉사건 6회 × 채권자·채무자 2명 × 회당 단가
     expect(result.deliveryFee.deliveryCount).toBe(12);
-    expect(result.deliveryFee.amount).toBe(66_000);
+    expect(result.deliveryFee.amount).toBe(2 * 6 * UNIT);
 
     // 인지대: 30,000,000 × 0.0045 + 5,000 = 140,000 정도, ×0.1 (지급명령) ≈ 14,000원대 (100원 절사)
     expect(result.stampDuty.amount).toBeGreaterThan(0);
     expect(result.totalAmount).toBe(result.stampDuty.amount + result.deliveryFee.amount);
     expect(result.dataVersions).toEqual({
-      "stamp-duty": "stamp-duty/v1.1.0",
-      delivery: "delivery/v1.1.0",
+      "stamp-duty": "stamp-duty/v1.2.0",
+      delivery: DELIVERY_TAG,
       "lawyer-fee": "lawyer-fee/v1.2.0",
     });
   });
