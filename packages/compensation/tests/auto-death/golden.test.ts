@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import { computeCompensationDeath } from "../../src/auto-death/compute";
 import type { CompensationAutoDeathInput } from "../../src/auto-death/types";
-import { findCoverageViolations, type GoldenCoverage } from "@golden-coverage";
+import {
+  findCoverageViolations,
+  type GoldenCoverage,
+} from "../../../core-engine/tests/golden-coverage";
 
 const GOLDEN_FIXTURE_SCHEMA = "2";
 const FIXED_NOW = () => new Date("2026-06-02T00:00:00.000Z");
