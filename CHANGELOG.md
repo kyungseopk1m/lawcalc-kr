@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-08-18
+
 > 계산 결과는 v0.12.0 과 같습니다. 같은 입력에 같은 금액이 나오며, 이번 릴리스는 표시 문구와 파일 검증만 바뀝니다.
 
 ### Changed
@@ -422,7 +424,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.9.0...v0.10.0
