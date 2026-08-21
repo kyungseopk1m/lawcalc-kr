@@ -213,6 +213,19 @@ export function heirsForDirtySnapshot(heirs: HeirInput[]) {
   }));
 }
 
+/**
+ * 상속 순위별 입력 안내. 상속분 탭과 손해배상 사망 탭이 같은 상속 엔진을 재사용하므로
+ * 안내도 한 곳에서만 정의한다. 뷰마다 따로 두면 문구가 갈린다.
+ */
+export const HEIR_GROUP_HINTS = {
+  linealDescendants: "자녀·손자녀 등. 사망 시 그 직계비속(피상속인의 손자녀)이 1차 대습.",
+  linealAscendants:
+    "각 직계존속의 촌수를 고르세요. 부모(1촌)·조부모(2촌) 중 최근친만 상속합니다. 부모가 있으면 조부모는 자동 제외 (제1000조 제2항). 1순위 부재 시에만 참여. 대습상속 대상 아님 (제1001조).",
+  siblings: "1·2순위·배우자 모두 부재 시에만. 사망 시 그 직계비속(조카)이 1차 대습 가능.",
+  collaterals:
+    "1·2·3순위·배우자 모두 부재 시에만. 각 방계혈족의 촌수를 고르세요. 3촌(예: 삼촌)이 4촌(예: 사촌)에 우선해 최근친만 상속합니다 (제1000조 제2항). 대습상속 대상 아님.",
+} as const;
+
 export interface HeirGroupCardProps {
   title: string;
   hint: string;

@@ -20,6 +20,7 @@ import {
 } from "@lawcalc-kr/core-engine";
 
 import {
+  HEIR_GROUP_HINTS,
   HeirGroupCard,
   applyInheritanceInput,
   buildInheritanceInput,
@@ -425,7 +426,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="1순위 직계비속"
-          hint="자녀·손자녀 등. 사망 시 그 직계비속 (피상속인의 손자녀) 이 1차 대습."
+          hint={HEIR_GROUP_HINTS.linealDescendants}
           heirs={linealDescendants}
           onChange={setLinealDescendants}
           allowRepresentation={true}
@@ -434,7 +435,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="2순위 직계존속"
-          hint="각 직계존속의 촌수를 고르세요. 부모(1촌)·조부모(2촌) 중 최근친만 상속합니다. 부모가 있으면 조부모는 자동 제외 (제1000조 제2항). 1순위 부재 시에만 참여. 대습상속 대상 아님 (제1001조)."
+          hint={HEIR_GROUP_HINTS.linealAscendants}
           heirs={linealAscendants}
           onChange={setLinealAscendants}
           allowRepresentation={false}
@@ -448,7 +449,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="3순위 형제자매"
-          hint="1·2순위·배우자 모두 부재 시에만. 사망 시 그 직계비속 (조카) 이 1차 대습 가능."
+          hint={HEIR_GROUP_HINTS.siblings}
           heirs={siblings}
           onChange={setSiblings}
           allowRepresentation={true}
@@ -457,7 +458,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
         <HeirGroupCard
           title="4순위 4촌 이내 방계혈족"
-          hint="1·2·3순위·배우자 모두 부재 시에만. 각 방계혈족의 촌수를 고르세요. 3촌(예: 삼촌)이 4촌(예: 사촌)에 우선해 최근친만 상속합니다 (제1000조 제2항). 대습상속 대상 아님."
+          hint={HEIR_GROUP_HINTS.collaterals}
           heirs={collateralFourth}
           onChange={setCollateralFourth}
           allowRepresentation={false}
