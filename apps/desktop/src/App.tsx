@@ -147,7 +147,7 @@ function toLegalRatePreset(
  * 프리셋이 계산 기간 전체를 덮는지 미리 본다.
  *
  * 덮지 못하면 `resolveSegments` 가 함수명과 영어 지시문이 든 RangeError 를 던지고, 그 문구가
- * 결과 영역 빨간 박스에 그대로 노출된다 ("supply an explicit segment" 가 이 앱의 "이자율 구간
+ * 결과 영역 빨간 박스에 그대로 노출된다 ("supply an explicit segment" 가 이 앱의 "이율 구간
  * 직접 입력" 을 가리킨다는 걸 알아볼 방법이 없다). 계산 자체를 막고 한국어로 안내한다.
  *
  * 경계일은 하드코딩하지 않고 데이터셋에서 읽는다 — 데이터가 바뀌면 문구도 따라간다.
@@ -163,7 +163,7 @@ export function validatePresetCoverage(
   const earliest = history[0]?.from;
   if (earliest === undefined || input.startDate >= earliest) return "";
   const label = legalRateOptions[preset].label;
-  return `${label} 이율은 ${earliest} 부터 적용됩니다. 그 이전 기간은 아래 "이자율 구간 직접 입력" 으로 지정해 주세요.`;
+  return `${label} 이율은 ${earliest}부터 적용됩니다. 그 이전 기간은 아래 "이율 구간"에서 지정해 주세요.`;
 }
 
 function validateInput(input: InterestInput, preset: LegalRatePresetOption, customRate: number) {
@@ -188,17 +188,17 @@ function validateSegments(startDate: string, endDate: string, segments: RateSegm
   }
 
   if (segments.some((segment) => !segment.from || !segment.to || segment.rate <= 0)) {
-    return "이자율 구간의 시작일, 종료일, 연이율을 모두 입력해 주세요.";
+    return "이율 구간의 시작일, 종료일, 연이율을 모두 입력해 주세요.";
   }
 
   const sorted = [...segments].sort((left, right) => left.from.localeCompare(right.from));
 
   if (sorted[0]?.from !== startDate) {
-    return "이자율 구간은 계산 시작일과 같은 날짜에서 시작해야 합니다.";
+    return "이율 구간은 계산 시작일과 같은 날짜에서 시작해야 합니다.";
   }
 
   if (sorted[sorted.length - 1]?.to !== endDate) {
-    return "이자율 구간은 계산 종료일까지 빠짐없이 덮어야 합니다.";
+    return "이율 구간은 계산 종료일까지 빠짐없이 덮어야 합니다.";
   }
 
   for (let index = 0; index < sorted.length; index += 1) {
@@ -208,17 +208,17 @@ function validateSegments(startDate: string, endDate: string, segments: RateSegm
     }
 
     if (segment.to < segment.from) {
-      return "이자율 구간의 종료일은 시작일과 같거나 이후여야 합니다.";
+      return "이율 구간의 종료일은 시작일과 같거나 이후여야 합니다.";
     }
 
     const previous = sorted[index - 1];
     if (previous) {
       if (segment.from <= previous.to) {
-        return "이자율 구간이 서로 겹칩니다.";
+        return "이율 구간이 서로 겹칩니다.";
       }
 
       if (segment.from !== addDays(previous.to, 1)) {
-        return "이자율 구간 사이에 비어 있는 날짜가 있습니다.";
+        return "이율 구간 사이에 비어 있는 날짜가 있습니다.";
       }
     }
   }

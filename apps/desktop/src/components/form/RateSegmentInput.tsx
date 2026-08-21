@@ -33,7 +33,7 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
     <div className="grid gap-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-medium">이자율 구간</h3>
+          <h3 className="text-sm font-medium">이율 구간</h3>
           <p className="text-xs leading-5 text-muted-foreground">
             구간이 없으면 {fallbackLabel} 프리셋을 전체 기간에 적용합니다.
           </p>
@@ -46,7 +46,7 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
 
       {value.length === 0 ? (
         <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-4 text-sm text-muted-foreground">
-          직접 지정한 이자율 구간이 없습니다.
+          직접 지정한 이율 구간이 없습니다.
         </div>
       ) : (
         <div className="grid gap-3">
@@ -100,7 +100,7 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
                   />
                 </label>
                 <Button
-                  aria-label="이자율 구간 삭제"
+                  aria-label="이율 구간 삭제"
                   size="icon"
                   type="button"
                   variant="ghost"

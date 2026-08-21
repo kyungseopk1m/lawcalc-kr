@@ -52,7 +52,7 @@ describe("법정이율 프리셋 커버리지 안내", () => {
 
     const alert = panel.getByRole("alert");
     expect(alert.textContent).toContain("2003-06-01");
-    expect(alert.textContent).toContain("이자율 구간 직접 입력");
+    expect(alert.textContent).toContain("이율 구간");
     // 개발자용 문구가 사용자 화면에 새지 않는다.
     expect(alert.textContent).not.toContain("resolveSegments");
     expect(panel.getByRole("button", { name: "계산" })).toHaveProperty("disabled", true);

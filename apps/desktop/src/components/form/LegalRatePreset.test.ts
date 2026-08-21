@@ -74,7 +74,7 @@ describe("validatePresetCoverage", () => {
   it("소촉법 + 2003-06-01 이전이면 한국어 안내를 낸다", () => {
     const message = validatePresetCoverage(input("2001-01-01"), "promotion");
     expect(message).toContain("2003-06-01");
-    expect(message).toContain("이자율 구간 직접 입력");
+    expect(message).toContain("이율 구간");
     // 개발자용 문구가 사용자 화면에 새지 않는다.
     expect(message).not.toContain("resolveSegments");
     expect(message).not.toMatch(/[a-z]{4,} [a-z]{2,} [a-z]{4,}/);
