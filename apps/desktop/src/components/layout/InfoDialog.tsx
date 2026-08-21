@@ -29,9 +29,11 @@ function handleExternal(url: string) {
 interface InfoDialogProps {
   open: boolean;
   onClose: () => void;
+  /** 수동 업데이트 확인. 결과는 UpdateDialog 가 띄우므로 이 창은 먼저 닫는다. */
+  onCheckUpdate: () => void;
 }
 
-export function InfoDialog({ open, onClose }: InfoDialogProps) {
+export function InfoDialog({ open, onClose, onCheckUpdate }: InfoDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -207,7 +209,20 @@ export function InfoDialog({ open, onClose }: InfoDialogProps) {
             <h3 id="info-version" className="mb-1 font-medium">
               버전
             </h3>
-            <p className="text-muted-foreground">v{__APP_VERSION__}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-muted-foreground">v{__APP_VERSION__}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onCheckUpdate();
+                }}
+              >
+                업데이트 확인
+              </Button>
+            </div>
           </section>
         </div>
 

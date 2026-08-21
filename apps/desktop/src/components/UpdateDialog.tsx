@@ -1,4 +1,4 @@
-import { Download, RefreshCw, X } from "lucide-react";
+import { CheckCircle2, Download, Loader2, RefreshCw, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { UpdaterApi, UpdaterState } from "../hooks/useUpdater";
@@ -9,6 +9,8 @@ import { Button } from "./ui/button";
  * 인앱 업데이트 dialog. hop 패턴 5단계 state machine 기반.
  *
  * - `idle`: 렌더링 안 함.
+ * - `checking`: 수동 확인 중 spinner. 자동 체크는 이 상태를 거치지 않는다.
+ * - `uptodate`: 수동 확인이 "최신"으로 끝났음을 알림. 자동 체크는 조용히 idle 로 간다.
  * - `available`: "지금 업데이트" / "나중에" 선택.
  * - `downloading`: progress bar (받은 / 전체 byte).
  * - `ready`: `.lcalc` 미저장 변경이 없을 때만 재시작 허용.
@@ -23,7 +25,9 @@ export function UpdateDialog({ api }: { api: UpdaterApi }): ReactNode {
       <div
         aria-hidden
         className="absolute inset-0 bg-black/40"
-        onClick={state.status === "downloading" ? undefined : dismiss}
+        onClick={
+          state.status === "downloading" || state.status === "checking" ? undefined : dismiss
+        }
       />
       <div
         role="dialog"
@@ -56,6 +60,10 @@ interface BodyProps {
 function UpdateDialogBody(props: BodyProps): ReactNode {
   const { state } = props;
   switch (state.status) {
+    case "checking":
+      return <CheckingBody />;
+    case "uptodate":
+      return <UpToDateBody onDismiss={props.onDismiss} />;
     case "available":
       return <AvailableBody {...props} state={state} />;
     case "downloading":
@@ -71,6 +79,39 @@ function UpdateDialogBody(props: BodyProps): ReactNode {
     case "error":
       return <ErrorBody state={state} onRetry={props.onRetry} onDismiss={props.onDismiss} />;
   }
+}
+
+function CheckingBody(): ReactNode {
+  return (
+    <div className="flex items-center gap-3">
+      <Loader2 className="h-5 w-5 animate-spin text-slate-400" aria-hidden="true" />
+      <h2 id="update-dialog-title" className="text-lg font-semibold">
+        업데이트 확인 중…
+      </h2>
+    </div>
+  );
+}
+
+function UpToDateBody({ onDismiss }: { onDismiss: () => void }): ReactNode {
+  return (
+    <>
+      <div className="flex items-center gap-3">
+        <CheckCircle2
+          className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
+          aria-hidden="true"
+        />
+        <h2 id="update-dialog-title" className="text-lg font-semibold">
+          최신 버전입니다
+        </h2>
+      </div>
+      <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+        LawCalc Korea v{__APP_VERSION__}을 사용 중입니다.
+      </p>
+      <div className="mt-4 flex justify-end">
+        <Button onClick={onDismiss}>닫기</Button>
+      </div>
+    </>
+  );
 }
 
 function AvailableBody({

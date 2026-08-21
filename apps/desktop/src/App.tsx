@@ -683,7 +683,11 @@ export function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30 text-foreground">
-      <Header />
+      <Header
+        onCheckUpdate={() => {
+          void updaterApi.checkNow();
+        }}
+      />
 
       <nav className="border-b border-border bg-background">
         <div className="mx-auto flex w-full max-w-6xl gap-1 px-4 py-2 sm:px-6" role="tablist">

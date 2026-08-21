@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { InfoDialog } from "./InfoDialog";
 import { SettingsDialog } from "./SettingsDialog";
 
-export function Header() {
+export function Header({ onCheckUpdate }: { onCheckUpdate: () => void }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -47,7 +47,11 @@ export function Header() {
         </div>
       </header>
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <InfoDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
+      <InfoDialog
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        onCheckUpdate={onCheckUpdate}
+      />
     </>
   );
 }
