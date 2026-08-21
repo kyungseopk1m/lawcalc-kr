@@ -45,12 +45,17 @@ function normalizeLegacyLawyerFeeValue(value: unknown): unknown {
   if (typeof normalized.messageKo === "string") {
     normalized.messageKo = normalized.messageKo
       .replaceAll("KLAC 적용", "대한법률구조공단 적용")
-      .replaceAll("KLAC variant", "대한법률구조공단 variant");
+      .replaceAll("KLAC variant", "대한법률구조공단 variant")
+      .replaceAll(
+        "대한법률구조공단 variant 와 다른 multiplier 의 누적은 이중 감액 위험이 있습니다",
+        "대한법률구조공단 기준과 다른 감액을 함께 적용하면 이중 감액이 될 수 있습니다",
+      );
   }
   if (typeof normalized.formulaText === "string") {
     normalized.formulaText = normalized.formulaText
       .replaceAll("KLAC (대한법률구조공단, ×0.42 default)", "대한법률구조공단 (×0.42 default)")
-      .replaceAll("KLAC", "대한법률구조공단");
+      .replaceAll("KLAC", "대한법률구조공단")
+      .replaceAll("대한법률구조공단 (×0.42 default)", "대한법률구조공단 기준 (×0.42)");
   }
 
   return normalized;

@@ -219,7 +219,10 @@ describe("migrateLcalcFile", () => {
     expect(loaded.result?.lawyerFee.koreaLegalAidWarnings[0]?.reason).toBe(
       "koreaLegalAidScopeOverridden",
     );
-    expect(loaded.result?.lawyerFee.formulaText).toBe("대한법률구조공단 (×0.42 default)");
+    expect(loaded.result?.lawyerFee.koreaLegalAidWarnings[0]?.messageKo).toBe(
+      "대한법률구조공단 기준과 다른 감액을 함께 적용하면 이중 감액이 될 수 있습니다",
+    );
+    expect(loaded.result?.lawyerFee.formulaText).toBe("대한법률구조공단 기준 (×0.42)");
   });
 
   it("opens a legacy provisional-measure file saved with an appeal level", () => {

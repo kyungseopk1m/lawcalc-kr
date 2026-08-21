@@ -61,7 +61,7 @@ function discountSegment(discount: LawyerFeeDiscount): string {
         ? "제3조 제2항 (가압류·가처분 신청사건, 변론·심문 거침 ×0.5)"
         : "제3조 제2항 본문 (가압류·가처분 ×0.5)";
     case "koreaLegalAid":
-      return "대한법률구조공단 (×0.42 default)";
+      return "대한법률구조공단 기준 (×0.42)";
     case "courtDiscretion":
       return `제6조 (재량 ×${discount.multiplier})`;
     case "customPercent":

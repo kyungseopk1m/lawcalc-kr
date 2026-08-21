@@ -341,7 +341,7 @@ export function validateKoreaLegalAidDiscountScope(
     warnings.push({
       caseType,
       reason: "koreaLegalAidScopeOverridden",
-      messageKo: "대한법률구조공단 variant 와 다른 multiplier 의 누적은 이중 감액 위험이 있습니다",
+      messageKo: "대한법률구조공단 기준과 다른 감액을 함께 적용하면 이중 감액이 될 수 있습니다",
     });
   }
   return warnings;
