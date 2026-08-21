@@ -12,9 +12,9 @@
 
 ## 데이터 관리
 
-- 모든 데이터셋의 단일 출처는 저장소 루트 `data/<dataset-id>/v<N>.json` 이다. `scripts/sync-<id>.mjs` 가 빌드 타임에 `src/<id>.dataset.generated.ts` 로 인라인하며, `prebuild` / `pretest` 훅이 `pnpm sync:datasets` 를 자동 실행한다.
-- 데이터셋을 갱신할 때는 JSON 의 `source` / `sourceUrl` / `license` / `snapshotDate` / `snapshotMethod` 메타데이터를 함께 갱신한다.
+- 모든 데이터셋의 단일 출처는 저장소 루트 `data/<dataset-id>/v<N>.json` 이다. `scripts/sync-<id>.mjs`가 빌드 타임에 `src/<id>.dataset.generated.ts`로 인라인하며, `prebuild` / `pretest` 훅이 `pnpm sync:datasets`를 자동 실행한다.
+- 데이터셋을 갱신할 때는 JSON의 `source` / `sourceUrl` / `license` / `snapshotDate` / `snapshotMethod` 메타데이터를 함께 갱신한다.
 
 ## 의존성
 
-외부 의존 없음 (순수 TypeScript). core-engine 과의 순환 의존을 피하기 위해 `IsoDate` 타입은 자체 정의한다.
+외부 의존 없음 (순수 TypeScript). core-engine과의 순환 의존을 피하기 위해 `IsoDate` 타입은 자체 정의한다.

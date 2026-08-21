@@ -17,4 +17,4 @@
 
 ## `.lcalc` 호환
 
-`.lcalc` v3 저장 파일의 기능 ID `compensation@1`(부상)부터 `compensation@4`(기타손해)까지 제공한다. 이전 기능 ID 로 저장된 파일은 로드 시 현재 형식으로 마이그레이션된다.
+`.lcalc` v3 저장 파일의 기능 ID `compensation@1`(부상)부터 `compensation@4`(기타손해)까지 제공한다. 이전 기능 ID로 저장된 파일은 로드 시 현재 형식으로 마이그레이션된다.

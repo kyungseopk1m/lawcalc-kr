@@ -3,9 +3,9 @@
 판결금·지연손해금 이자, 상속분 간이 계산, 소송비용, 변제충당을 다루는 순수 TypeScript 계산 엔진. lawcalc-kr 데스크톱 앱의 계산 모듈을
 독립 패키지로 분리해, UI 나 Tauri 셸 없이도 단위 테스트와 골든 테스트로 검증할 수 있게 한다.
 
-> **상태**: 공개 API 안정. 이자 엔진은 반올림 정책 (`options.rounding`) + 데이터셋 주입 (`calculateInterest(input, { dataset })`) 을 지원하고, 상속분 엔진은 1991-01-01 이후 사망 케이스와 1차 대습상속까지 지원한다.
+> **상태**: 공개 API 안정. 이자 엔진은 반올림 정책 (`options.rounding`) + 데이터셋 주입 (`calculateInterest(input, { dataset })`)을 지원하고, 상속분 엔진은 1991-01-01 이후 사망 케이스와 1차 대습상속까지 지원한다.
 
-법령·판례 출처는 루트 [`docs/LEGAL_REFERENCES.md`](../../docs/LEGAL_REFERENCES.md) 를 참조한다.
+법령·판례 출처는 루트 [`docs/LEGAL_REFERENCES.md`](../../docs/LEGAL_REFERENCES.md)를 참조한다.
 
 ## 설치 (워크스페이스)
 
@@ -14,8 +14,8 @@
 pnpm install
 ```
 
-본 패키지는 npm 에 배포하지 않는 워크스페이스 내부 패키지다. 데스크톱 앱
-(`apps/desktop`) 이 `workspace:*` 로 import 한다.
+본 패키지는 npm에 배포하지 않는 워크스페이스 내부 패키지다. 데스크톱 앱
+(`apps/desktop`)이 `workspace:*`로 import 한다.
 
 ## 이자 계산 빠른 사용
 
@@ -54,13 +54,13 @@ const result: InterestResult = calculateInterest(input);
 // }
 ```
 
-`result.segments[i].formula` 는 사람이 읽을 수 있는 적용 식이다 (예: `1,000,000원 × 5% × 100일 / 365`).
-원금에 `원`, 이율은 `%`, 일수는 `일` 접미사로 통일한다. UI / PDF / CSV 가 그대로 노출해 계산 근거를 투명하게 보여준다.
+`result.segments[i].formula`는 사람이 읽을 수 있는 적용 식이다 (예: `1,000,000원 × 5% × 100일 / 365`).
+원금에 `원`, 이율은 `%`, 일수는 `일` 접미사로 통일한다. UI / PDF / CSV가 그대로 노출해 계산 근거를 투명하게 보여준다.
 
 ## Dataset 주입 (`deps.dataset`, v0.2)
 
-`calculateInterest` 두 번째 인자로 `LegalRateDataset` 을 주입할 수 있다. 미지정 시 빌드 타임에
-인라인된 bundled dataset (`data/legal-rates/v1.json` 동등) 으로 동작해 v0.1.x 호출자는 무변경 통과한다.
+`calculateInterest` 두 번째 인자로 `LegalRateDataset`을 주입할 수 있다. 미지정 시 빌드 타임에
+인라인된 bundled dataset (`data/legal-rates/v1.json` 동등)으로 동작해 v0.1.x 호출자는 무변경 통과한다.
 
 ```ts
 import {
@@ -103,11 +103,11 @@ const inj = calculateInterest(input, { dataset: future });
 // inj.totalInterest = 70_000, inj.dataVersion = "legal-rates/v9.9.9-test"
 ```
 
-주입된 dataset 도 `validate()` 를 통과해야 한다 (code unique, `validTo >= validFrom`, `annualRate >= 0`).
-검증 실패 시 `RangeError` / `Error` 가 던져진다.
+주입된 dataset도 `validate()`를 통과해야 한다 (code unique, `validTo >= validFrom`, `annualRate >= 0`).
+검증 실패 시 `RangeError` / `Error`가 던져진다.
 
-향후 법정이율 외 dataset 을 쓰는 도메인이 추가되면 `deps` 타입은 `{ datasets: { legalRates?, ... } }`
-형태로 일반화될 수 있다. 현 시점에서 외부 주입이 필요한 dataset 은 `legalRates` 하나다.
+향후 법정이율 외 dataset을 쓰는 도메인이 추가되면 `deps` 타입은 `{ datasets: { legalRates?, ... } }`
+형태로 일반화될 수 있다. 현 시점에서 외부 주입이 필요한 dataset은 `legalRates` 하나다.
 
 ## 상속분 간이 계산 빠른 사용
 
@@ -129,7 +129,7 @@ const result = calculateInheritance(input);
 ```
 
 상속 엔진은 민법 제1000·1001·1003·1009·1010조에 따른 법정상속분만 다룬다.
-현재 런타임 정책은 `calculate.ts` 에 고정돼 있다.
+현재 런타임 정책은 `calculate.ts`에 고정돼 있다.
 
 - 피상속인 사망일은 1991-01-01 이후만 지원한다.
 - 배우자는 1·2순위와 동순위 공동상속, 1·2순위가 없으면 단독상속으로 처리한다.
@@ -145,7 +145,7 @@ const result = calculateInheritance(input);
 | `includeFirstDay` | `boolean`                                                    | 초일 산입 여부. 민법 제157조 원칙은 불산입 (`false`) |
 | `rounding`        | `"floor"` \| `"ceil"` \| `"round"` (선택, default `"floor"`) | 원 단위 끝수 처리 (절사 / 절상 / 사사오입)           |
 
-`rounding` 미지정 시 `"floor"` 가 적용되어 v1 호환을 유지한다. `.lcalc` v1 파일,
+`rounding` 미지정 시 `"floor"`가 적용되어 v1 호환을 유지한다. `.lcalc` v1 파일,
 기존 골든, 외부 호출자가 무변경 통과한다.
 
 ## 법정이율 프리셋 (`legalRatePreset`)
@@ -157,11 +157,11 @@ const result = calculateInheritance(input);
 | `"promotion"`    | 소송촉진 등에 관한 특례법 제3조 | 연 12%(2019-06-01~) / 15%(2015-10-01~05-31) / 20%(이전) |
 | `{ customRate }` | 사용자 지정 (예: 당사자 합의)   | 단일 구간 고정                                          |
 
-`promotion` 프리셋은 `[startDate, endDate]` 가 변경일을 가로지르면 자동으로 segment 를
-분할한다. 데이터셋 변경 이력의 single source 는 워크스페이스 루트 `data/legal-rates/v1.json` 이며,
-`scripts/sync-legal-rates.mjs` 가 빌드 타임 (`prebuild` / `pretest` 훅) 에 `src/legal-rates.dataset.generated.ts`
+`promotion` 프리셋은 `[startDate, endDate]`가 변경일을 가로지르면 자동으로 segment를
+분할한다. 데이터셋 변경 이력의 single source는 워크스페이스 루트 `data/legal-rates/v1.json` 이며,
+`scripts/sync-legal-rates.mjs`가 빌드 타임 (`prebuild` / `pretest` 훅)에 `src/legal-rates.dataset.generated.ts`
 로 인라인한다. JSON Schema 정의는 [`data/legal-rates/v1.schema.json`](../../data/legal-rates/v1.schema.json) 참조.
-`result.dataVersion` 에 식별자(`legal-rates/vX.Y.Z`) 가 기록되어 재현성을 보장한다.
+`result.dataVersion`에 식별자(`legal-rates/vX.Y.Z`)가 기록되어 재현성을 보장한다.
 
 ## 명시 segments (`input.segments`)
 
@@ -232,21 +232,21 @@ packages/core-engine/
 | `pnpm --filter @lawcalc-kr/core-engine test`             | `pretest` (sync) → 단위 테스트 (`tests/golden.test.ts` 제외)        |
 | `pnpm --filter @lawcalc-kr/core-engine test:golden`      | 골든 테스트                                                         |
 
-루트에서 `pnpm test` / `pnpm test:golden` / `pnpm lint` / `pnpm build` 도 모두 본 패키지를
+루트에서 `pnpm test` / `pnpm test:golden` / `pnpm lint` / `pnpm build`도 모두 본 패키지를
 포함한다 (워크스페이스 단위).
 
 ## 골든 케이스
 
-- 이자: `tests/golden/case-XXX.json` 에 입력 + 기대 출력으로 동결.
-- `case-001..006` 은 엔진 내부 회귀 (`source: engine-internal-w2`).
-- `case-007` 은 윤일이 포함된 1년 미만 기간의 분모 366 산정을 독립 유도한 케이스다 (`mode="period"`,
+- 이자: `tests/golden/case-XXX.json`에 입력 + 기대 출력으로 동결.
+- `case-001..006`은 엔진 내부 회귀 (`source: engine-internal-w2`).
+- `case-007`은 윤일이 포함된 1년 미만 기간의 분모 366 산정을 독립 유도한 케이스다 (`mode="period"`,
   `leapYear="actual"`, 2015-05-01 시작 → 기간 내 2016-02-29 포함 → 분모 366).
-- `case-009 / case-010` 은 후속 회귀 케이스 (반올림 옵션 / 윤년 만기 등).
-- `case-008-input.json` (golden-pending) 은 외부 대조 캡처 대기용 입력 시트다. 외부 공식 계산 결과를
+- `case-009 / case-010`은 후속 회귀 케이스 (반올림 옵션 / 윤년 만기 등).
+- `case-008-input.json` (golden-pending)은 외부 대조 캡처 대기용 입력 시트다. 외부 공식 계산 결과를
   확보하면 골든 케이스로 추가한다.
-- 상속: `tests/golden/inheritance/case-001..008.json` 에 기본 순위, 배우자, 대습, cutoff, 거부 케이스를 동결한다.
+- 상속: `tests/golden/inheritance/case-001..008.json`에 기본 순위, 배우자, 대습, cutoff, 거부 케이스를 동결한다.
 
-각 도메인 fixture 는 해당 golden runner 의 schema gate 가 누락 / 불일치를 명시 실패로 잡는다.
+각 도메인 fixture는 해당 golden runner의 schema gate가 누락 / 불일치를 명시 실패로 잡는다.
 
 ## 출처 / 참고
 
