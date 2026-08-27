@@ -200,8 +200,8 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
   it("dataVersions 4종 + disclaimer 단일 source + computedAt", () => {
     const result = computeCompensationDeath(baseInput(), { now: FIXED_NOW });
     expect(result.dataVersions).toEqual({
-      laborRates: "labor-rates/v1.0.0",
-      lifeExpectancy: "life-expectancy/v1.0.0",
+      laborRates: "labor-rates/v1.1.0",
+      lifeExpectancy: "life-expectancy/v1.1.0",
       hoffman: "hoffman/v1.0.0",
       leibniz: "leibniz/v1.0.0",
     });

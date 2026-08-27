@@ -240,8 +240,8 @@ describe("computeCompensation — 10 단계 path", () => {
 
   it("dataVersions emits 4 dataset tags", () => {
     const result = computeCompensation(baseInput(), { now: FIXED_NOW });
-    expect(result.dataVersions.laborRates).toBe("labor-rates/v1.0.0");
-    expect(result.dataVersions.lifeExpectancy).toBe("life-expectancy/v1.0.0");
+    expect(result.dataVersions.laborRates).toBe("labor-rates/v1.1.0");
+    expect(result.dataVersions.lifeExpectancy).toBe("life-expectancy/v1.1.0");
     expect(result.dataVersions.hoffman).toBe("hoffman/v1.0.0");
     expect(result.dataVersions.leibniz).toBe("leibniz/v1.0.0");
   });
@@ -344,5 +344,61 @@ describe("computeCompensation — 산재(산×부상) 장해급여 공제 (2021�
     expect(result.industrialBenefit).toBeUndefined();
     expect(result.deductions.industrialBenefitWon).toBeUndefined();
     expect(result.finalWon).toBe(249399900);
+  });
+});
+
+/**
+ * 과거 사고일 경로 (2026-08-27 노임단가 확장).
+ *
+ * 골든 케이스 15건이 전부 사고일 2026-01-01 이라 이 경로에 커버리지가 없었다. 종전에는
+ * 노임단가 슬라이스가 2026년 상반기 하나뿐이라 그 이전 사고는 전부 조회 실패였고,
+ * 사용자가 일당을 직접 넣어야 계산이 됐다.
+ */
+describe("computeCompensation — 과거 사고일 노임단가", () => {
+  function pastInput(accidentDate: string, occupation = "보통인부"): CompensationInput {
+    const input = baseInput();
+    input.base.birthDate = "1980-01-01";
+    input.base.accidentDate = accidentDate;
+    input.base.treatmentEndDate = accidentDate;
+    input.lostIncome = { occupation, discountMethod: "hoffman" };
+    return input;
+  }
+
+  it("2010년 사고도 그 시점 단가로 일실수입이 계산된다", () => {
+    const result = computeCompensation(pastInput("2010-01-01"), { now: FIXED_NOW });
+    expect(result.lostIncomeSubtotalWon).toBeGreaterThan(0);
+  });
+
+  it("같은 직종이라도 사고일이 다르면 단가가 다르다", () => {
+    const older = computeCompensation(pastInput("2000-01-01"), { now: FIXED_NOW });
+    const newer = computeCompensation(pastInput("2020-01-01"), { now: FIXED_NOW });
+    // 슬라이스 선택이 죽어 있으면 두 값이 같아진다.
+    expect(newer.segments[0]!.dailyWageWon).toBeGreaterThan(older.segments[0]!.dailyWageWon);
+  });
+
+  it("적용일이 9월 1일이라 8월 사고는 아직 상반기 단가다", () => {
+    // 일실수입 합계는 사고일에 따라 가동기간도 함께 움직인다. 여기서 보려는 것은 단가이므로
+    // 결과의 dailyWageWon 을 직접 본다.
+    const wage = (date: string) =>
+      computeCompensation(pastInput(date), { now: FIXED_NOW }).segments[0]!.dailyWageWon;
+    expect(wage("2015-08-31")).toBe(wage("2015-01-01"));
+    expect(wage("2015-09-01")).not.toBe(wage("2015-01-01"));
+  });
+
+  it("데이터셋이 덮지 않는 1991년 이전 사고는 종전대로 일당 직접 입력을 요구한다", () => {
+    expect(() => computeCompensation(pastInput("1990-12-31"), { now: FIXED_NOW })).toThrow(
+      RangeError,
+    );
+  });
+
+  it("2010년 통합으로 사라진 직종은 그 이후 사고일에서 조회되지 않는다", () => {
+    // 갱부는 2009년 사고까지만 자기 단가가 있다.
+    expect(() =>
+      computeCompensation(pastInput("2009-09-01", "갱부"), { now: FIXED_NOW }),
+    ).not.toThrow();
+    // 이후는 조용히 특별인부 단가로 바뀌지 않고 오류로 알린다.
+    expect(() => computeCompensation(pastInput("2015-01-01", "갱부"), { now: FIXED_NOW })).toThrow(
+      RangeError,
+    );
   });
 });

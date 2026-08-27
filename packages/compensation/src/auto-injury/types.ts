@@ -59,7 +59,7 @@ export interface CompensationLossRateInput {
 /** 일실수입 입력. occupation lookup 또는 directWageWon raw override. */
 export interface CompensationLostIncomeInput {
   /**
-   * 직종 식별자 (예: "보통인부"). `labor-rates/v1.0.0` dataset 의 slice 별 `rates` 키와 일치해야 한다.
+   * 직종 식별자 (예: "보통인부"). `labor-rates/v1.1.0` dataset 의 slice 별 `rates` 키와 일치해야 한다.
    * lookup miss 또는 dataset 단가 자체가 stale 한 경우 `directWageWon` 으로 fall through.
    */
   occupation?: string;

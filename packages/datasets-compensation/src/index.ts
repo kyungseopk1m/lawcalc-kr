@@ -1,17 +1,32 @@
 export type { IsoDate } from "./types";
 
-export type { LaborRatesDataset, LaborRatesSlice } from "./labor-rates";
+export type {
+  LaborRateOccupationMerge,
+  LaborRateOccupationMerges,
+  LaborRateSurveyChange,
+  LaborRatesDataset,
+  LaborRatesSlice,
+} from "./labor-rates";
 export {
+  findOccupationMerge,
   getLaborRateAt,
   laborRatesDatasetVersionTag,
   latestSliceEffectiveFrom,
+  listOccupationsAt,
   loadLaborRatesTable,
 } from "./labor-rates";
 
-export type { LifeExpectancyDataset } from "./life-expectancy";
+export type {
+  LifeExpectancyDataset,
+  LifeExpectancyEntry,
+  LifeExpectancySex,
+  LifeExpectancyYear,
+} from "./life-expectancy";
 export {
   getLifeExpectancyAt,
+  getLifeExpectancyAtYear,
   lifeExpectancyDatasetVersionTag,
+  listLifeExpectancyYears,
   loadLifeExpectancyTable,
 } from "./life-expectancy";
 
