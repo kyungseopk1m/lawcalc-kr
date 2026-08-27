@@ -142,3 +142,26 @@ export {
 export type { ComputeLitigationCostDeps } from "./compute-litigation-cost";
 
 export { computeLitigationCost } from "./compute-litigation-cost";
+
+export type { ComputeClaimAmendmentDeps } from "./compute-claim-amendment";
+export { computeClaimAmendmentStampDuty } from "./compute-claim-amendment";
+
+export type {
+  CaseValueClaimKind,
+  CaseValueDataset,
+  CaseValueRoundingPolicy,
+  CaseValueSourceLaw,
+} from "./case-value-dataset";
+export {
+  caseValueDatasetVersionTag,
+  getCaseValueClaimKind,
+  listCaseValueClaimKinds,
+  loadCaseValueDataset,
+} from "./case-value-dataset";
+
+export type {
+  ComputeRealEstateCaseValueDeps,
+  RealEstateCaseValueInput,
+  RealEstateCaseValueResult,
+} from "./compute-case-value";
+export { computeRealEstateCaseValue } from "./compute-case-value";

@@ -168,3 +168,20 @@ export {
   validateLawyerFeeInput,
   validateStampDutyInput,
 } from "./litigation-cost";
+
+export type {
+  CaseValueClaimKind,
+  CaseValueDataset,
+  CaseValueRoundingPolicy,
+  CaseValueSourceLaw,
+  ComputeRealEstateCaseValueDeps,
+  RealEstateCaseValueInput,
+  RealEstateCaseValueResult,
+} from "./litigation-cost";
+export {
+  caseValueDatasetVersionTag,
+  computeRealEstateCaseValue,
+  getCaseValueClaimKind,
+  listCaseValueClaimKinds,
+  loadCaseValueDataset,
+} from "./litigation-cost";
