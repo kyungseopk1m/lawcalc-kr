@@ -52,6 +52,11 @@ export interface DeliveryCountMatrixEntry {
   labelKo: string;
   formula: DeliveryFormula;
   verifiedBy: string[];
+  /**
+   * 산식만으로 표현되지 않는 정본 단서. 예: 채권집행의 "송달을 요하지 아니한 경우 제외",
+   * 특허 소장의 "피고가 지식재산처장인 경우 6회분 정액". 결과 formulaText 뒤에 괄호로 붙는다.
+   */
+  noteKo?: string;
 }
 
 export interface DeliveryUnverifiedEntry {
@@ -115,6 +120,12 @@ function validateFormula(formula: DeliveryFormula, context: string): void {
   switch (formula.kind) {
     case "simplePerParty":
       assertPositiveInt(formula.countPerParty, `${context}.countPerParty`);
+      if (formula.provisionalStatusCountPerParty !== undefined) {
+        assertPositiveInt(
+          formula.provisionalStatusCountPerParty,
+          `${context}.provisionalStatusCountPerParty`,
+        );
+      }
       return;
     case "partyOffsetTimesCount":
       assertPositiveInt(formula.countPerParty, `${context}.countPerParty`);
@@ -126,6 +137,12 @@ function validateFormula(formula: DeliveryFormula, context: string): void {
     case "baseCountPlusCreditorMultiple":
       assertPositiveInt(formula.baseCount, `${context}.baseCount`);
       assertPositiveInt(formula.creditorMultiple, `${context}.creditorMultiple`);
+      return;
+    case "perPartyPlusExtra":
+      assertPositiveInt(formula.countPerParty, `${context}.countPerParty`);
+      if (formula.extraBasis !== "inquiredInstitutions") {
+        throw new RangeError(`${context}.extraBasis: must be "inquiredInstitutions"`);
+      }
       return;
     case "range":
       assertPositiveInt(formula.countMin, `${context}.countMin`);

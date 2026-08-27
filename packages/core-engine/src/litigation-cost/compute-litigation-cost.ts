@@ -9,7 +9,11 @@ import {
   loadLawyerFeeDataset,
   type LawyerFeeDataset,
 } from "./lawyer-fee-dataset";
-import type { StampDutyDataset } from "./stamp-duty-dataset";
+import {
+  loadStampDutyDataset,
+  stampDutyVersionTag,
+  type StampDutyDataset,
+} from "./stamp-duty-dataset";
 import { appliedDomains } from "./helpers";
 import type {
   LawyerFeeInput,
@@ -17,6 +21,7 @@ import type {
   LitigationCostDistributionResult,
   LitigationCostInput,
   LitigationCostResult,
+  StampDutyResult,
 } from "./types";
 
 export interface ComputeLitigationCostDeps {
@@ -55,6 +60,28 @@ function buildLawyerFeeDeps(deps: ComputeLitigationCostDeps | undefined): Comput
  * `LitigationCostResult` 의 shape 일관성을 위해 0원 결과를 합성하고 dataset 버전 tag 는 유지한다.
  * 인지대/송달료는 정상 계산되므로 caller (UI/PDF/CSV) 는 변호사보수 0 + 안내 formulaText 만 노출.
  */
+/**
+ * 인지대 산입 외 사건구분의 0원 결과.
+ *
+ * 「민사소송 등 인지법」 제2조의 누진 산식이 적용되지 않는 사건구분 (민사집행·도산·가사비송·
+ * 각종 신청사건) 은 인지액이 별도 예규의 정액이라 본 엔진이 산출할 수 없다. 0원을 계산 결과로
+ * 제시하는 대신 formulaText 로 산출 대상이 아님을 밝힌다.
+ */
+function buildExcludedStampDutyResult(
+  computedAt: string,
+  injected?: StampDutyDataset,
+): StampDutyResult {
+  const dataset = loadStampDutyDataset(injected);
+  return {
+    amount: 0,
+    formulaText:
+      "인지액 산출 외 사건구분입니다. 「민사소송 등 인지법」 제2조의 누진 산식 대상이 아니며, " +
+      "해당 사건의 인지액은 별도 예규가 정하는 정액입니다.",
+    dataVersion: stampDutyVersionTag(dataset),
+    computedAt,
+  };
+}
+
 function buildExcludedLawyerFeeResult(
   input: LawyerFeeInput,
   computedAt: string,
@@ -139,7 +166,13 @@ export function computeLitigationCost(
     computedAt,
   };
 
-  const stampDuty = computeStampDuty(input.stampDuty, buildStampDutyDeps(resolvedDeps));
+  // 민사집행·도산·가사비송처럼 인지액 근거가 「민사소송 등 인지법」의 누진 산식이 아닌
+  // 사건구분은 `appliedDomains` 에 stampDuty 가 없다. 그대로 computeStampDuty 를 부르면
+  // validator 가 거부해 통합 계산 전체가 던진다 — 변호사보수와 같은 방식으로 건너뛴다.
+  const stampDutyApplies = appliedDomains(input.stampDuty.caseType).includes("stampDuty");
+  const stampDuty = stampDutyApplies
+    ? computeStampDuty(input.stampDuty, buildStampDutyDeps(resolvedDeps))
+    : buildExcludedStampDutyResult(computedAt, resolvedDeps.stampDutyDataset);
   const deliveryFee = computeDeliveryFee(input.deliveryFee, buildDeliveryDeps(resolvedDeps));
   const lawyerFeeApplies = appliedDomains(input.lawyerFee.caseType).includes("lawyerFee");
   const lawyerFee = lawyerFeeApplies

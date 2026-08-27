@@ -191,6 +191,12 @@ export function validateDeliveryFeeInput(input: DeliveryFeeInput): void {
       `사용자 입력 송달 횟수가 유효하지 않습니다 (입력: ${String(input.customCount)}, 양의 정수만 허용)`,
     );
   }
+  if (input.extraCount !== undefined && !isFiniteNonNegativeInt(input.extraCount)) {
+    fail(
+      prefix,
+      `가산 항목 수가 유효하지 않습니다 (입력: ${String(input.extraCount)}, 0 이상 정수만 허용)`,
+    );
+  }
   if (
     input.perDeliveryUnitPriceWon !== undefined &&
     !isFiniteNonNegative(input.perDeliveryUnitPriceWon)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CASE_TYPE_META,
   computeDeliveryFee,
   deliveryDatasetVersionTag,
   getDeliveryCount,
@@ -34,13 +35,13 @@ function input(overrides: Partial<DeliveryFeeInput> = {}): DeliveryFeeInput {
 describe("loadDeliveryDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadDeliveryDataset();
-    expect(ds.version).toBe("1.2.0");
+    expect(ds.version).toBe("1.3.0");
     expect(ds.unitPriceHistory).toHaveLength(5);
     // 현행 단가 5,640원, 2026-07-01 시행. 법제처 생활법령정보 '인지액 및 송달료' +
     // 대한법률구조공단 자동계산기 고지("2026. 7. 1. 송달료 5,640원으로 인상")로 대조.
     expect(ds.unitPriceHistory[0]!.unitPriceWon).toBe(5640);
     expect(ds.unitPriceHistory[0]!.effectiveFrom).toBe("2026-07-01");
-    expect(ds.countMatrix).toHaveLength(13);
+    expect(ds.countMatrix).toHaveLength(41);
     expect(ds.unverifiedMatrix).toHaveLength(0);
   });
 
@@ -50,8 +51,8 @@ describe("loadDeliveryDataset / 기본 dataset", () => {
     expect(new Set(dates).size).toBe(dates.length);
   });
 
-  it("deliveryDatasetVersionTag 는 delivery/v1.2.0", () => {
-    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.2.0");
+  it("deliveryDatasetVersionTag 는 delivery/v1.3.0", () => {
+    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.3.0");
   });
 
   it("음수 unitPriceWon 거부", () => {
@@ -190,14 +191,22 @@ describe("getDeliveryCount / 매트릭스 lookup", () => {
     expect(entry.formula).toEqual({ kind: "simplePerParty", countPerParty: 5 });
   });
 
-  it("민사가압류 합의 (카합) — simplePerParty(3) (easylaw cross-validated)", () => {
+  it("민사가압류 합의 (카합) — simplePerParty(3), 임시지위 가처분 8회", () => {
     const entry = getDeliveryCount(ds, "provisionalMeasureCollegial");
-    expect(entry.formula).toEqual({ kind: "simplePerParty", countPerParty: 3 });
+    expect(entry.formula).toEqual({
+      kind: "simplePerParty",
+      countPerParty: 3,
+      provisionalStatusCountPerParty: 8,
+    });
   });
 
-  it("민사가압류 단독 (카단) — simplePerParty(3)", () => {
+  it("민사가압류 단독 (카단) — simplePerParty(3), 임시지위 가처분 8회", () => {
     const entry = getDeliveryCount(ds, "provisionalMeasureSingle");
-    expect(entry.formula).toEqual({ kind: "simplePerParty", countPerParty: 3 });
+    expect(entry.formula).toEqual({
+      kind: "simplePerParty",
+      countPerParty: 3,
+      provisionalStatusCountPerParty: 8,
+    });
   });
 
   it("paymentOrder (차) → simplePerParty 6회 (재일 87-4 별표 1 정본)", () => {
@@ -495,5 +504,230 @@ describe("computeDeliveryFee / formulaText 회귀", () => {
       { computedAt: FROZEN_AT },
     );
     expect(r.formulaText).toContain("직접 입력");
+  });
+});
+
+/**
+ * 2026-08-27 확장분 (countMatrix 13 → 40).
+ *
+ * 정본 대조는 대법원 전자소송 소송비용계산(`PSP007P01.xml`) 의 9개 소송유형 탭이다.
+ * 아래는 그 탭들이 명시한 산식을 회수(count)로 검증한다. 금액이 아니라 회수를 보는 이유는
+ * 위 CURRENT_UNIT_WON 주석과 같다 — 단가가 바뀌어도 매트릭스는 그대로여야 한다.
+ */
+describe("computeDeliveryFee / 확장 사건구분 (전자소송 대조)", () => {
+  it("부동산등 경매(타경): (이해관계인수 + 3) × 10회", () => {
+    const r = computeDeliveryFee(input({ caseType: "executionRealEstateAuction", partyCount: 2 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.deliveryCount).toBe((2 + 3) * 10);
+  });
+
+  it("개인회생(개회): 10회 + 채권자수 × 8회", () => {
+    const r = computeDeliveryFee(
+      input({ caseType: "rehabilitationIndividual", partyCount: 1, creditorCount: 5 }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.deliveryCount).toBe(10 + 5 * 8);
+  });
+
+  it("면책(하면)은 채권자 배수가 3, 개인파산(하단)은 4, 법인은 기본 40회", () => {
+    const count = (caseType: DeliveryFeeInput["caseType"]) =>
+      computeDeliveryFee(input({ caseType, partyCount: 1, creditorCount: 2 }), {
+        computedAt: FROZEN_AT,
+      }).deliveryCount;
+    expect(count("bankruptcyDischarge")).toBe(10 + 2 * 3);
+    expect(count("bankruptcyIndividual")).toBe(10 + 2 * 4);
+    expect(count("rehabilitationCorporate")).toBe(40 + 2 * 3);
+  });
+
+  it("재산조회(카조): 신청인수 × 2회 + 우편 조회대상 기관수 가산", () => {
+    const withInstitutions = computeDeliveryFee(
+      input({ caseType: "executionAssetInquiry", partyCount: 1, extraCount: 3 }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(withInstitutions.deliveryCount).toBe(1 * 2 + 3);
+    // 기관 가산은 선택 입력이다. 미지정 시 0 으로 보고 본문 산식만 적용한다.
+    const withoutInstitutions = computeDeliveryFee(
+      input({ caseType: "executionAssetInquiry", partyCount: 1 }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(withoutInstitutions.deliveryCount).toBe(2);
+    expect(withoutInstitutions.formulaText).toContain("기관 가산 없음");
+  });
+
+  it("가사비송 라류(느단)는 6~10회 범위라 직접 입력을 요구한다", () => {
+    expect(() =>
+      computeDeliveryFee(input({ caseType: "familyRuiPetition", partyCount: 1 }), {
+        computedAt: FROZEN_AT,
+      }),
+    ).toThrow(RangeError);
+    const r = computeDeliveryFee(
+      input({ caseType: "familyRuiPetition", partyCount: 1, customCount: 8 }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.deliveryCount).toBe(8);
+    expect(() =>
+      computeDeliveryFee(input({ caseType: "familyRuiPetition", partyCount: 1, customCount: 11 }), {
+        computedAt: FROZEN_AT,
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it("noteKo 가 있는 사건은 formulaText 끝에 정본 단서를 붙인다", () => {
+    const r = computeDeliveryFee(input({ caseType: "executionClaimAttachment", partyCount: 3 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.deliveryCount).toBe(6);
+    expect(r.formulaText).toContain("송달을 요하지 아니한 경우는 제외");
+  });
+
+  it("임시의 지위를 정하는 가처분은 1인당 8회로 계산한다", () => {
+    // 별표 1 1. 민사 는 카합/카단 한 부호에 "가압류, 가처분사건 3회" 와
+    // "임시의 지위를 정하는 가처분사건 8회" 를 별도 행으로 둔다. 회수는 당사자 1인당이다.
+    const general = computeDeliveryFee(
+      input({ caseType: "provisionalMeasureCollegial", partyCount: 2 }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(general.deliveryCount).toBe(6);
+
+    const status = computeDeliveryFee(
+      input({
+        caseType: "provisionalMeasureCollegial",
+        partyCount: 2,
+        provisionalMeasureType: "provisionalStatus",
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(status.deliveryCount).toBe(16);
+    expect(status.amount).toBe(16 * CURRENT_UNIT_WON);
+    expect(status.formulaText).toContain("임시의 지위를 정하는 가처분");
+
+    // general 을 명시해도 기본 행(3회)을 쓴다.
+    expect(
+      computeDeliveryFee(
+        input({
+          caseType: "provisionalMeasureSingle",
+          partyCount: 2,
+          provisionalMeasureType: "general",
+        }),
+        { computedAt: FROZEN_AT },
+      ).deliveryCount,
+    ).toBe(6);
+  });
+
+  it("보전 사건구분이 아니면 provisionalMeasureType 은 무시된다", () => {
+    const r = computeDeliveryFee(
+      input({
+        caseType: "civilFirstInstanceCollegial",
+        partyCount: 2,
+        provisionalMeasureType: "provisionalStatus",
+      }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.deliveryCount).toBe(30);
+  });
+
+  it("가사 (재)항고는 브·스 모두 5회 정액이다", () => {
+    // 별표 1 6. 가사: 가사항고사건(브) 5회 / 가사재항고사건(스) 5회.
+    // 종전 range 2~5 의 하한 2 는 가사특별항고(으) 2회가 흘러든 값이었다.
+    const r = computeDeliveryFee(input({ caseType: "familyInterlocutoryAppeal", partyCount: 2 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.deliveryCount).toBe(10);
+  });
+
+  it("행정 (재)항고는 루(3회)·무(5회) 부호이고 그 사이 값만 받는다", () => {
+    // 별표 1 2. 행정: 행정항고사건(루) 3회, 행정재항고사건(무) 5회.
+    // 종전 부호 "부/수" 는 부가 행정특별항고(3회), 수가 선거소송(10회) 이라 둘 다 이 행이 아니다.
+    expect(CASE_TYPE_META.administrativeInterlocutoryAppeal.code).toBe("루/무");
+    expect(CASE_TYPE_META.administrativeInterlocutoryAppeal.codeNumber).toBe("036/133");
+    const r = computeDeliveryFee(
+      input({ caseType: "administrativeInterlocutoryAppeal", partyCount: 2, customCount: 5 }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.deliveryCount).toBe(5);
+    expect(r.formulaText).toContain("행정재항고(무) 5회");
+    expect(() =>
+      computeDeliveryFee(
+        input({ caseType: "administrativeInterlocutoryAppeal", partyCount: 2, customCount: 2 }),
+        { computedAt: FROZEN_AT },
+      ),
+    ).toThrow(RangeError);
+  });
+
+  it("특허 재항고는 흐(5회) 부호다", () => {
+    // 별표 1 5. 특허: 특허재항고사건(흐) 5회 / 특허특별(준)항고사건(히) 3회.
+    // 종전에는 히 부호에 흐의 5회가 붙어 있었다. 특별항고·준항고는 이 데이터셋이
+    // 민사(그·바)·행정(부·사)·가사(으) 어디에서도 담지 않으므로 특허도 재항고만 둔다.
+    expect(CASE_TYPE_META.patentInterlocutoryAppeal.code).toBe("흐");
+    expect(CASE_TYPE_META.patentInterlocutoryAppeal.codeNumber).toBe("032");
+    const r = computeDeliveryFee(input({ caseType: "patentInterlocutoryAppeal", partyCount: 2 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.deliveryCount).toBe(10);
+  });
+
+  it("가사신청은 원칙 3회이되 가압류·가처분 이의·취소 단서 8회까지 받는다", () => {
+    // 별표 1 6. 가사: 가사신청사건 3회, 단 가압류·가처분에 대한 이의·취소 사건은 8회.
+    const r = computeDeliveryFee(
+      input({ caseType: "familyApplication", partyCount: 2, customCount: 8 }),
+      { computedAt: FROZEN_AT },
+    );
+    expect(r.deliveryCount).toBe(8);
+    expect(r.formulaText).toContain("이의·취소");
+    expect(() =>
+      computeDeliveryFee(input({ caseType: "familyApplication", partyCount: 2, customCount: 9 }), {
+        computedAt: FROZEN_AT,
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it("특허신청사건(카허)은 신청인·상대방 1인당 5회분이다", () => {
+    // 재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 5. 특허:
+    // 특허신청사건(카허) 5회, 수송달자 신청인·상대방. 단서 없는 정액이라 range 가 아니다.
+    const r = computeDeliveryFee(input({ caseType: "patentApplication", partyCount: 2 }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.deliveryCount).toBe(10);
+    expect(r.amount).toBe(10 * CURRENT_UNIT_WON);
+    expect(r.formulaText).toContain("위헌법률심판제청사건은 제외");
+  });
+
+  it("확장 사건구분 28종이 전부 매트릭스에 있고 회수 산식이 검증된다", () => {
+    const ds = loadDeliveryDataset();
+    const added = [
+      "executionAssetDisclosure",
+      "executionDebtorRegister",
+      "executionAssetInquiry",
+      "executionRealEstateAuction",
+      "executionClaimAttachment",
+      "executionOther",
+      "rehabilitationIndividual",
+      "bankruptcyIndividual",
+      "bankruptcyDischarge",
+      "rehabilitationCorporate",
+      "insolvencyClaimDetermination",
+      "familyRuiPetition",
+      "familyMaPetition",
+      "familyAppeal",
+      "familySupremeAppeal",
+      "familyMediation",
+      "familyInterlocutoryAppeal",
+      "familyApplication",
+      "administrativeAppeal",
+      "administrativeSupremeAppeal",
+      "administrativeInterlocutoryAppeal",
+      "administrativeApplication",
+      "patentFirstInstance",
+      "patentSupremeAppeal",
+      "patentInterlocutoryAppeal",
+      "patentApplication",
+      "fineObjection",
+      "nonContentious",
+    ] as const;
+    expect(added).toHaveLength(28);
+    for (const caseType of added) {
+      expect(() => getDeliveryCount(ds, caseType), caseType).not.toThrow();
+    }
   });
 });

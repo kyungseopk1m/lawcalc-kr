@@ -22,8 +22,18 @@ import {
 } from "../src";
 
 describe("litigation-cost / CaseType meta", () => {
-  it("CASE_TYPE_META covers exactly 13 variants (옵션 C)", () => {
-    expect(Object.keys(CASE_TYPE_META)).toHaveLength(13);
+  it("CASE_TYPE_META covers exactly 41 variants (민사 13 + 집행·도산·가사·행정·특허·과태료·비송 28)", () => {
+    expect(Object.keys(CASE_TYPE_META)).toHaveLength(41);
+  });
+
+  it("모든 사건구분이 code / codeNumber / nameKo / appliedDomains 를 갖는다", () => {
+    for (const [caseType, meta] of Object.entries(CASE_TYPE_META)) {
+      expect(meta.code, caseType).toBeTruthy();
+      expect(meta.codeNumber, caseType).toMatch(/^\d{3}(\/\d{3})?$/);
+      expect(meta.nameKo, caseType).toBeTruthy();
+      expect(meta.appliedDomains.length, caseType).toBeGreaterThan(0);
+      expect(meta.appliedDomains, caseType).toContain("deliveryFee");
+    }
   });
 
   it("caseCode returns 정본 부호 for each variant", () => {
@@ -81,9 +91,9 @@ describe("litigation-cost / CaseType meta", () => {
     expect(isCaseType(undefined)).toBe(false);
   });
 
-  it("listCaseTypes returns all 13 entries with meta", () => {
+  it("listCaseTypes returns all 41 entries with meta", () => {
     const list = listCaseTypes();
-    expect(list).toHaveLength(13);
+    expect(list).toHaveLength(41);
     const head = list[0]!;
     expect(head).toHaveProperty("caseType");
     expect(head).toHaveProperty("meta");

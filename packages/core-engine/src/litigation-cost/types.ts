@@ -133,7 +133,19 @@ export interface StampDutyResult {
  *   - `range`: 항고/재항고. countMin ~ countMax 범위, 사용자 직접 입력.
  */
 export type DeliveryFormula =
-  | { kind: "simplePerParty"; countPerParty: number }
+  | {
+      kind: "simplePerParty";
+      countPerParty: number;
+      /**
+       * 임시의 지위를 정하는 가처분일 때의 1인당 회수. 보전처분(카합/카단) 전용.
+       *
+       * 별표 1 은 같은 부호에 "가압류, 가처분사건 3회" 와 "임시의 지위를 정하는 가처분사건
+       * 8회" 를 별도 행으로 둔다. 사건구분을 나누면 인지법 제9조 제2항 분기로 이미 있는
+       * `provisionalMeasureType` 과 같은 개념이 두 군데로 갈리므로, 그 필드를 그대로 쓴다.
+       * 미지정 사건구분에서는 `provisionalMeasureType` 이 와도 무시된다.
+       */
+      provisionalStatusCountPerParty?: number;
+    }
   | {
       kind: "partyOffsetTimesCount";
       countPerParty: number;
@@ -150,6 +162,12 @@ export type DeliveryFormula =
       countMin: number;
       countMax: number;
       partyBasis: "appellantPlusOpponent";
+    }
+  | {
+      kind: "perPartyPlusExtra";
+      countPerParty: number;
+      /** 가산분의 의미 라벨. 재산조회(카조) 의 "우편 조회대상 기관수" 처럼 당사자수와 별개인 가산 항목. */
+      extraBasis: "inquiredInstitutions";
     };
 
 /**
@@ -169,6 +187,17 @@ export interface DeliveryFeeInput {
   creditorCount?: number;
   /** range 분기 전용. 항고/재항고의 실제 송달 횟수 직접 입력. */
   customCount?: number;
+  /**
+   * 보전처분(카합/카단) 전용. 인지대의 `StampDutyInput.provisionalMeasureType` 과 같은 값을 쓴다.
+   * `provisionalStatus` 면 별표 1 의 "임시의 지위를 정하는 가처분사건" 행(8회)을 적용한다.
+   * 미지정 시 `general` 로 간주.
+   */
+  provisionalMeasureType?: "general" | "provisionalStatus";
+  /**
+   * perPartyPlusExtra 분기 전용 가산분. 재산조회(카조) 의 "우편에 의하여 재산조회를 실시하는
+   * 조회대상 기관의 수". 미지정 시 0 으로 간주한다 (기관 가산 없음).
+   */
+  extraCount?: number;
   /** 회당 단가 override. 미지정 시 dataset 의 시기별 슬라이스 (filingDate 기준) 또는 현행 단가 사용. */
   perDeliveryUnitPriceWon?: number;
   /** 접수일 — 시기별 단가 슬라이스 분기용 (PR 3 wire-up). 미지정 시 dataset 의 현행 단가 사용. */
@@ -325,7 +354,41 @@ export type CaseType =
   | "administrativeFirstInstance"
   | "provisionalMeasureCollegial"
   | "provisionalMeasureSingle"
-  | "paymentOrder";
+  | "paymentOrder"
+  // 민사집행 (「민사집행법」 사건). 전자소송 소송비용계산 '민사집행' 탭 기준.
+  | "executionAssetDisclosure"
+  | "executionDebtorRegister"
+  | "executionAssetInquiry"
+  | "executionRealEstateAuction"
+  | "executionClaimAttachment"
+  | "executionOther"
+  // 도산 (「채무자 회생 및 파산에 관한 법률」 사건). 전자소송 '회생파산' 탭 기준.
+  | "rehabilitationIndividual"
+  | "bankruptcyIndividual"
+  | "bankruptcyDischarge"
+  | "rehabilitationCorporate"
+  | "insolvencyClaimDetermination"
+  // 가사 (본안 1심 외). 전자소송 '가사' 탭 기준.
+  | "familyRuiPetition"
+  | "familyMaPetition"
+  | "familyAppeal"
+  | "familySupremeAppeal"
+  | "familyMediation"
+  | "familyInterlocutoryAppeal"
+  | "familyApplication"
+  // 행정 (1심 외). 전자소송 '행정' 탭 기준.
+  | "administrativeAppeal"
+  | "administrativeSupremeAppeal"
+  | "administrativeInterlocutoryAppeal"
+  | "administrativeApplication"
+  // 특허. 전자소송 '특허' 탭 기준.
+  | "patentFirstInstance"
+  | "patentSupremeAppeal"
+  | "patentInterlocutoryAppeal"
+  | "patentApplication"
+  // 과태료 · 비송. 전자소송 '과태료' / '비송' 탭 기준.
+  | "fineObjection"
+  | "nonContentious";
 
 /**
  * 사건구분 메타. caseCode / caseNameKo / appliedDomains / isCivilOrFamily lookup 의 source.
@@ -441,6 +504,216 @@ export const CASE_TYPE_META: Readonly<Record<CaseType, CaseTypeMeta>> = {
     codeNumber: "012",
     nameKo: "독촉사건 (지급명령)",
     appliedDomains: ["stampDuty", "deliveryFee"],
+    isCivilOrFamily: false,
+  },
+
+  // ===== 민사집행 (전자소송 '민사집행' 탭). 인지대는 「민사집행법」·「민사접수서류에 붙일 인지액」
+  // 예규가 정하는 정액이라 본 dataset 의 누진 산식 대상이 아니다 → deliveryFee 만 적용. =====
+  executionAssetDisclosure: {
+    code: "카명",
+    codeNumber: "201",
+    nameKo: "재산명시사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  executionDebtorRegister: {
+    code: "카불",
+    codeNumber: "236",
+    nameKo: "채무불이행자명부 등재·말소사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  executionAssetInquiry: {
+    code: "카조",
+    codeNumber: "212",
+    nameKo: "재산조회사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  executionRealEstateAuction: {
+    code: "타경",
+    codeNumber: "013",
+    nameKo: "부동산등 경매사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  executionClaimAttachment: {
+    code: "타채",
+    codeNumber: "200",
+    nameKo: "채권등 집행사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  executionOther: {
+    code: "타기",
+    codeNumber: "014",
+    nameKo: "기타 집행사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+
+  // ===== 도산 (전자소송 '회생파산' 탭). 인지대는 「채무자 회생 및 파산에 관한 법률」의 정액. =====
+  rehabilitationIndividual: {
+    code: "개회",
+    codeNumber: "253",
+    nameKo: "개인회생사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  bankruptcyIndividual: {
+    code: "하단",
+    codeNumber: "210",
+    nameKo: "개인파산사건 (파산선고)",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  bankruptcyDischarge: {
+    code: "하면",
+    codeNumber: "214",
+    nameKo: "면책사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  rehabilitationCorporate: {
+    code: "회합/회단",
+    codeNumber: "292/291",
+    nameKo: "일반회생·법인회생·법인파산사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  insolvencyClaimDetermination: {
+    code: "회확",
+    codeNumber: "293",
+    nameKo: "채권조사확정재판사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+
+  // ===== 가사 본안 1심 외 (전자소송 '가사' 탭). 인지대는 「가사소송수수료규칙」 소관이라
+  // 본 dataset 의 「민사소송 등 인지법」 누진 산식과 근거 규칙이 다르다 → deliveryFee 만 적용. =====
+  familyRuiPetition: {
+    code: "느단",
+    codeNumber: "162",
+    nameKo: "가사비송 라류사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: true,
+  },
+  familyMaPetition: {
+    code: "느합",
+    codeNumber: "163",
+    nameKo: "가사비송 마류사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: true,
+  },
+  familyAppeal: {
+    code: "르",
+    codeNumber: "024",
+    nameKo: "가사항소사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: true,
+  },
+  familySupremeAppeal: {
+    code: "므",
+    codeNumber: "025",
+    nameKo: "가사상고사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: true,
+  },
+  familyMediation: {
+    code: "너",
+    codeNumber: "029",
+    nameKo: "가사조정사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: true,
+  },
+  familyInterlocutoryAppeal: {
+    code: "브/스",
+    codeNumber: "026/027",
+    nameKo: "가사항고·재항고사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: true,
+  },
+  familyApplication: {
+    code: "즈단/즈합",
+    codeNumber: "177/178",
+    nameKo: "가사신청사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: true,
+  },
+
+  // ===== 행정 1심 외 (전자소송 '행정' 탭). =====
+  administrativeAppeal: {
+    code: "누",
+    codeNumber: "034",
+    nameKo: "행정항소사건",
+    appliedDomains: ["stampDuty", "deliveryFee", "lawyerFee"],
+    isCivilOrFamily: false,
+  },
+  administrativeSupremeAppeal: {
+    code: "두",
+    codeNumber: "035",
+    nameKo: "행정상고사건",
+    appliedDomains: ["stampDuty", "deliveryFee", "lawyerFee"],
+    isCivilOrFamily: false,
+  },
+  administrativeInterlocutoryAppeal: {
+    code: "루/무",
+    codeNumber: "036/133",
+    nameKo: "행정항고·재항고사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  administrativeApplication: {
+    code: "아",
+    codeNumber: "127",
+    nameKo: "행정신청사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+
+  // ===== 특허 (전자소송 '특허' 탭). =====
+  patentFirstInstance: {
+    code: "허",
+    codeNumber: "129",
+    nameKo: "특허1심사건",
+    appliedDomains: ["stampDuty", "deliveryFee", "lawyerFee"],
+    isCivilOrFamily: false,
+  },
+  patentSupremeAppeal: {
+    code: "후",
+    codeNumber: "046",
+    nameKo: "특허상고사건",
+    appliedDomains: ["stampDuty", "deliveryFee", "lawyerFee"],
+    isCivilOrFamily: false,
+  },
+  patentInterlocutoryAppeal: {
+    code: "흐",
+    codeNumber: "032",
+    nameKo: "특허재항고사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  patentApplication: {
+    code: "카허",
+    codeNumber: "131",
+    nameKo: "특허신청사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+
+  // ===== 과태료 · 비송 (전자소송 '과태료' / '비송' 탭). =====
+  fineObjection: {
+    code: "과",
+    codeNumber: "179",
+    nameKo: "과태료 결정에 대한 이의신청사건",
+    appliedDomains: ["deliveryFee"],
+    isCivilOrFamily: false,
+  },
+  nonContentious: {
+    code: "비단/비합",
+    codeNumber: "216/215",
+    nameKo: "비송사건 (과태료 제외)",
+    appliedDomains: ["deliveryFee"],
     isCivilOrFamily: false,
   },
 };

@@ -208,3 +208,49 @@ describe("computeLitigationCost / 감사 F1·F3 통합 회귀 가드", () => {
     expect(r.stampDuty.amount).toBe(10_000);
   });
 });
+
+describe("computeLitigationCost / 인지대 산입 외 사건구분", () => {
+  it("개인회생(개회)은 인지액을 0원으로 두고 송달료만 산출한다", () => {
+    const input: LitigationCostInput = {
+      stampDuty: {
+        caseValue: 50_000_000,
+        caseType: "rehabilitationIndividual",
+        appealsLevel: "firstInstance",
+      },
+      deliveryFee: {
+        caseType: "rehabilitationIndividual",
+        partyCount: 1,
+        creditorCount: 5,
+      },
+      lawyerFee: {
+        caseValue: 50_000_000,
+        caseType: "rehabilitationIndividual",
+        discounts: [],
+      },
+    };
+    const r = computeLitigationCost(input, { computedAt });
+    expect(r.stampDuty.amount).toBe(0);
+    expect(r.stampDuty.formulaText).toContain("인지액 산출 외 사건구분");
+    expect(r.lawyerFee.amount).toBe(0);
+    // 10회 + 채권자 5명 × 8회 = 50회
+    expect(r.deliveryFee.amount).toBe(50 * UNIT);
+    expect(r.totalAmount).toBe(50 * UNIT);
+  });
+
+  it("사건구분이 인지 대상이 아니어도 dataVersions 는 3종 모두 기록한다", () => {
+    const input: LitigationCostInput = {
+      stampDuty: {
+        caseValue: 0,
+        caseType: "fineObjection",
+        appealsLevel: "firstInstance",
+      },
+      deliveryFee: { caseType: "fineObjection", partyCount: 2 },
+      lawyerFee: { caseValue: 0, caseType: "fineObjection", discounts: [] },
+    };
+    const r = computeLitigationCost(input, { computedAt });
+    expect(r.dataVersions.delivery).toBe(DELIVERY_TAG);
+    expect(r.dataVersions["stamp-duty"]).toMatch(/^stamp-duty\/v/);
+    expect(r.dataVersions["lawyer-fee"]).toMatch(/^lawyer-fee\/v/);
+    expect(r.disclaimer).toBe(STANDARD_DISCLAIMER);
+  });
+});

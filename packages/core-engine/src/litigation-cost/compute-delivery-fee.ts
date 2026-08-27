@@ -18,8 +18,10 @@ import { validateDeliveryFeeInput } from "./validators";
  *      unverifiedMatrix 의 caseType (지급명령 등) 시 RangeError throw.
  *   3. formula.kind 분기:
  *        - simplePerParty: count = countPerParty × partyCount.
+ *          보전처분은 provisionalMeasureType 이 provisionalStatus 면 provisionalStatusCountPerParty 를 쓴다.
  *        - partyOffsetTimesCount: count = (partyCount + partyOffset) × countPerParty.
  *        - baseCountPlusCreditorMultiple: count = baseCount + creditorCount × creditorMultiple.
+ *        - perPartyPlusExtra: count = countPerParty × partyCount + extraCount (재산조회 기관 가산).
  *        - range: count = customCount (countMin ~ countMax 범위 강제).
  *   4. perDeliveryUnitPriceWon 결정 (우선순위):
  *        - input.perDeliveryUnitPriceWon override (가장 우선).
@@ -44,11 +46,24 @@ interface CountComputation {
 
 function computeCount(input: DeliveryFeeInput, formula: DeliveryFormula): CountComputation {
   switch (formula.kind) {
-    case "simplePerParty":
+    case "simplePerParty": {
+      // 별표 1 이 같은 부호에 임시의 지위를 정하는 가처분 행을 따로 둔 사건구분(카합/카단)만
+      // provisionalMeasureType 을 본다. 나머지 사건구분에서는 이 필드가 와도 무시된다.
+      const isProvisionalStatus =
+        input.provisionalMeasureType === "provisionalStatus" &&
+        formula.provisionalStatusCountPerParty !== undefined;
+      const countPerParty =
+        input.provisionalMeasureType === "provisionalStatus" &&
+        formula.provisionalStatusCountPerParty !== undefined
+          ? formula.provisionalStatusCountPerParty
+          : formula.countPerParty;
       return {
-        count: formula.countPerParty * input.partyCount,
-        segment: `당사자수 ${input.partyCount} × ${formula.countPerParty}회`,
+        count: countPerParty * input.partyCount,
+        segment:
+          `당사자수 ${input.partyCount} × ${countPerParty}회` +
+          (isProvisionalStatus ? " (임시의 지위를 정하는 가처분)" : ""),
       };
+    }
     case "partyOffsetTimesCount": {
       const adjustedPartyCount = input.partyCount + formula.partyOffset;
       return {
@@ -68,20 +83,31 @@ function computeCount(input: DeliveryFeeInput, formula: DeliveryFormula): CountC
         segment: `기본 ${formula.baseCount}회 + 채권자수 ${input.creditorCount} × ${formula.creditorMultiple}회`,
       };
     }
+    case "perPartyPlusExtra": {
+      const extraCount = input.extraCount ?? 0;
+      const count = formula.countPerParty * input.partyCount + extraCount;
+      return {
+        count,
+        segment:
+          `당사자수 ${input.partyCount} × ${formula.countPerParty}회` +
+          (extraCount > 0 ? ` + 조회대상 기관수 ${extraCount}회 가산` : " (기관 가산 없음)"),
+      };
+    }
     case "range": {
-      if (input.customCount === undefined) {
+      const count = input.customCount;
+      if (count === undefined) {
         throw new RangeError(
           "computeDeliveryFee: range 분기에는 input.customCount 가 필요합니다 (사용자 직접 입력)",
         );
       }
-      if (input.customCount < formula.countMin || input.customCount > formula.countMax) {
+      if (count < formula.countMin || count > formula.countMax) {
         throw new RangeError(
-          `computeDeliveryFee: customCount ${input.customCount} 가 허용 범위 [${formula.countMin}, ${formula.countMax}] 를 벗어납니다`,
+          `computeDeliveryFee: customCount ${count} 가 허용 범위 [${formula.countMin}, ${formula.countMax}] 를 벗어납니다`,
         );
       }
       return {
-        count: input.customCount,
-        segment: `사용자 입력 ${input.customCount}회 (허용 범위 ${formula.countMin}~${formula.countMax})`,
+        count,
+        segment: `사용자 입력 ${count}회 (허용 범위 ${formula.countMin}~${formula.countMax})`,
       };
     }
   }
@@ -117,9 +143,11 @@ function buildFormulaText(args: {
   unitPriceSegment: string;
   perDeliveryUnitPriceWon: number;
   amount: number;
+  noteKo?: string;
 }): string {
   const product = `${args.count} × ${args.perDeliveryUnitPriceWon.toLocaleString("en-US")} = ${args.amount.toLocaleString("en-US")}원`;
-  return `${args.labelKo}: ${args.countSegment} = ${args.count}회 송달, ${args.unitPriceSegment} → ${product}`;
+  const base = `${args.labelKo}: ${args.countSegment} = ${args.count}회 송달, ${args.unitPriceSegment} → ${product}`;
+  return args.noteKo ? `${base} (${args.noteKo})` : base;
 }
 
 /**
@@ -147,6 +175,7 @@ export function computeDeliveryFee(
     unitPriceSegment,
     perDeliveryUnitPriceWon,
     amount,
+    ...(countEntry.noteKo !== undefined ? { noteKo: countEntry.noteKo } : {}),
   });
 
   return {

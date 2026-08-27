@@ -5,8 +5,8 @@
 import type { DeliveryDataset } from "./delivery-dataset";
 
 export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
-  "version": "1.2.0",
-  "updatedAt": "2026-08-18",
+  "version": "1.3.0",
+  "updatedAt": "2026-08-27",
   "sourceLaw": {
     "name": "송달료규칙",
     "lsId": "223133",
@@ -185,22 +185,32 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
       "labelKo": "민사가압류·가처분 등 합의 (카합)",
       "formula": {
         "kind": "simplePerParty",
-        "countPerParty": 3
+        "countPerParty": 3,
+        "provisionalStatusCountPerParty": 8
       },
       "verifiedBy": [
-        "easylaw.go.kr"
-      ]
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 원문, 법제처 국가법령정보 별표 서식파일 flSeq=162015279, 2026-08-27 확인: 1. 민사 가압류·가처분사건(카합) 3회 / 임시의 지위를 정하는 가처분사건(카합) 8회, 신청인·상대방",
+        "CourtCalcEx 내장 DB sd.csv KEY 12 3 / KEY 13 8",
+        "easylaw.go.kr",
+        "당사자수 = 신청인수 + 상대방수"
+      ],
+      "noteKo": "임시의 지위를 정하는 가처분은 1인당 8회. 가압류·가처분결정에 대한 이의·취소(집행취소는 제외) 사건도 별표 1 상 8회이나 본 데이터셋은 아직 그 신청을 별도로 다루지 않는다"
     },
     {
       "caseType": "provisionalMeasureSingle",
       "labelKo": "민사가압류·가처분 등 단독 (카단)",
       "formula": {
         "kind": "simplePerParty",
-        "countPerParty": 3
+        "countPerParty": 3,
+        "provisionalStatusCountPerParty": 8
       },
       "verifiedBy": [
-        "easylaw.go.kr"
-      ]
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 원문, 법제처 국가법령정보 별표 서식파일 flSeq=162015279, 2026-08-27 확인: 1. 민사 가압류·가처분사건(카단) 3회 / 임시의 지위를 정하는 가처분사건(카단) 8회, 신청인·상대방",
+        "CourtCalcEx 내장 DB sd.csv KEY 12 3 / KEY 13 8",
+        "easylaw.go.kr",
+        "당사자수 = 신청인수 + 상대방수"
+      ],
+      "noteKo": "임시의 지위를 정하는 가처분은 1인당 8회. 가압류·가처분결정에 대한 이의·취소(집행취소는 제외) 사건도 별표 1 상 8회이나 본 데이터셋은 아직 그 신청을 별도로 다루지 않는다"
     },
     {
       "caseType": "paymentOrder",
@@ -213,11 +223,379 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
         "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01): 독촉사건(차) 6회, 채권자·채무자",
         "portal.scourt.go.kr jisCntntsSrno=2026000031884"
       ]
+    },
+    {
+      "caseType": "executionAssetDisclosure",
+      "labelKo": "재산명시 (카명)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 5
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수 + 상대방수"
+      ]
+    },
+    {
+      "caseType": "executionDebtorRegister",
+      "labelKo": "채무불이행자명부 등재·말소 (카불)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 5
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수 + 상대방수"
+      ]
+    },
+    {
+      "caseType": "executionAssetInquiry",
+      "labelKo": "재산조회 (카조)",
+      "formula": {
+        "kind": "perPartyPlusExtra",
+        "countPerParty": 2,
+        "extraBasis": "inquiredInstitutions"
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수"
+      ],
+      "noteKo": "우편에 의하여 재산조회를 실시하는 조회대상 기관의 수를 가산"
+    },
+    {
+      "caseType": "executionRealEstateAuction",
+      "labelKo": "부동산등 경매 (타경)",
+      "formula": {
+        "kind": "partyOffsetTimesCount",
+        "countPerParty": 10,
+        "partyOffset": 3,
+        "partyBasis": "stakeholders"
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청서상의 이해관계인수"
+      ]
+    },
+    {
+      "caseType": "executionClaimAttachment",
+      "labelKo": "채권등 집행 (타채)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 2
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 채권자수 + 채무자수 + 제3채무자수"
+      ],
+      "noteKo": "송달을 요하지 아니한 경우는 제외"
+    },
+    {
+      "caseType": "executionOther",
+      "labelKo": "기타 집행 (타기)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 2
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 채권자수 + 채무자수 + 제3채무자수"
+      ],
+      "noteKo": "송달을 요하지 아니한 경우는 제외"
+    },
+    {
+      "caseType": "rehabilitationIndividual",
+      "labelKo": "개인회생 (개회)",
+      "formula": {
+        "kind": "baseCountPlusCreditorMultiple",
+        "baseCount": 10,
+        "creditorMultiple": 8
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "채권자수 별도 입력"
+      ]
+    },
+    {
+      "caseType": "bankruptcyIndividual",
+      "labelKo": "개인파산 파산선고 (하단)",
+      "formula": {
+        "kind": "baseCountPlusCreditorMultiple",
+        "baseCount": 10,
+        "creditorMultiple": 4
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "채권자수 별도 입력"
+      ]
+    },
+    {
+      "caseType": "bankruptcyDischarge",
+      "labelKo": "면책 (하면)",
+      "formula": {
+        "kind": "baseCountPlusCreditorMultiple",
+        "baseCount": 10,
+        "creditorMultiple": 3
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "채권자수 별도 입력"
+      ]
+    },
+    {
+      "caseType": "rehabilitationCorporate",
+      "labelKo": "일반회생·법인회생·법인파산 (회합/회단)",
+      "formula": {
+        "kind": "baseCountPlusCreditorMultiple",
+        "baseCount": 40,
+        "creditorMultiple": 3
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "채권자수 별도 입력"
+      ]
+    },
+    {
+      "caseType": "insolvencyClaimDetermination",
+      "labelKo": "채권조사확정재판 (회확)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 5
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수 + 상대방수"
+      ],
+      "noteKo": "법인파산 사건의 채권조사확정재판은 상대방수만 계산"
+    },
+    {
+      "caseType": "familyRuiPetition",
+      "labelKo": "가사비송 라류 (느단)",
+      "formula": {
+        "kind": "range",
+        "countMin": 6,
+        "countMax": 10,
+        "partyBasis": "appellantPlusOpponent"
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 청구인수"
+      ]
+    },
+    {
+      "caseType": "familyMaPetition",
+      "labelKo": "가사비송 마류 (느합)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 12
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 상대방수"
+      ]
+    },
+    {
+      "caseType": "familyAppeal",
+      "labelKo": "가사항소 (르)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 12
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 피항소인수"
+      ]
+    },
+    {
+      "caseType": "familySupremeAppeal",
+      "labelKo": "가사상고 (므)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 8
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 피상고인수"
+      ]
+    },
+    {
+      "caseType": "familyMediation",
+      "labelKo": "가사조정 (너)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 5
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수 + 피신청인수"
+      ]
+    },
+    {
+      "caseType": "familyInterlocutoryAppeal",
+      "labelKo": "가사항고·재항고 (브/스)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 5
+      },
+      "verifiedBy": [
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 원문, 법제처 국가법령정보 별표 서식파일 flSeq=162015279, 2026-08-27 확인: 6. 가사 가사항고사건(브) 5회 / 가사재항고사건(스) 5회, 항고인·재항고인·상대방",
+        "당사자수 = (재)항고인수 + 상대방수"
+      ],
+      "noteKo": "별표 1 기준 가사항고(브)·가사재항고(스) 모두 5회. CourtCalcEx 내장 DB 는 브 3회로 적혀 있으나 별표 1 개정을 따라가지 못한 낡은 스냅샷이다"
+    },
+    {
+      "caseType": "familyApplication",
+      "labelKo": "가사신청 (즈단/즈합)",
+      "formula": {
+        "kind": "range",
+        "countMin": 3,
+        "countMax": 8,
+        "partyBasis": "appellantPlusOpponent"
+      },
+      "verifiedBy": [
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 원문, 법제처 국가법령정보 별표 서식파일 flSeq=162015279, 2026-08-27 확인: 6. 가사 가사신청사건(즈합, 즈단, 즈기) 3회, 단 가압류·가처분에 대한 이의·취소(집행취소는 제외) 사건은 8회, 신청인·상대방",
+        "CourtCalcEx 내장 DB sd.csv KEY 78 3 / KEY 79 8 (같은 부호의 두 행)",
+        "당사자수 = 신청인수 + 피신청인수"
+      ],
+      "noteKo": "가압류·가처분에 대한 이의·취소(집행취소는 제외) 사건은 8회, 그 밖에는 3회"
+    },
+    {
+      "caseType": "administrativeAppeal",
+      "labelKo": "행정항소 (누)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 10
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 피항소인수"
+      ]
+    },
+    {
+      "caseType": "administrativeSupremeAppeal",
+      "labelKo": "행정상고 (두)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 8
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 피상고인수"
+      ]
+    },
+    {
+      "caseType": "administrativeInterlocutoryAppeal",
+      "labelKo": "행정항고·재항고 (루/무)",
+      "formula": {
+        "kind": "range",
+        "countMin": 3,
+        "countMax": 5,
+        "partyBasis": "appellantPlusOpponent"
+      },
+      "verifiedBy": [
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 원문, 법제처 국가법령정보 별표 서식파일 flSeq=162015279, 2026-08-27 확인: 2. 행정 행정항고사건(루) 3회 / 행정재항고사건(무) 5회, 항고인·재항고인·상대방",
+        "CourtCalcEx 내장 DB sd.csv KEY 55 '행정항고사건'(루) 3, KEY 56 '행정재항고사건'(무) 5",
+        "당사자수 = (재)항고인수 + 상대방수"
+      ],
+      "noteKo": "행정항고(루) 3회, 행정재항고(무) 5회"
+    },
+    {
+      "caseType": "administrativeApplication",
+      "labelKo": "행정신청 (아)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 2
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수 + 피신청인수"
+      ]
+    },
+    {
+      "caseType": "patentFirstInstance",
+      "labelKo": "특허 1심 (허)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 10
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 피고수"
+      ],
+      "noteKo": "피고가 지식재산처장인 경우 6회분 정액 (33,840원). 별표 1 5. 특허 절과 CourtCalcEx 내장 DB 어디에서도 확인되지 않았고 대법원 전자소송 소송비용계산 고지에서 온 서술이다"
+    },
+    {
+      "caseType": "patentSupremeAppeal",
+      "labelKo": "특허상고 (후)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 8
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 피상고인수"
+      ],
+      "noteKo": "피상고인이 지식재산처장인 경우 6회분 정액 (33,840원). 별표 1 5. 특허 절과 CourtCalcEx 내장 DB 어디에서도 확인되지 않았고 대법원 전자소송 소송비용계산 고지에서 온 서술이다"
+    },
+    {
+      "caseType": "patentInterlocutoryAppeal",
+      "labelKo": "특허재항고 (흐)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 5
+      },
+      "verifiedBy": [
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 원문, 법제처 국가법령정보 별표 서식파일 flSeq=162015279, 2026-08-27 확인: 5. 특허 특허재항고사건(흐) 5회, 재항고인·상대방",
+        "CourtCalcEx 내장 DB sd.csv KEY 69 '특허재항고사건'(흐) 5",
+        "당사자수 = 재항고인수 + 상대방수"
+      ]
+    },
+    {
+      "caseType": "patentApplication",
+      "labelKo": "특허신청 (카허)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 5
+      },
+      "verifiedBy": [
+        "재일 87-4 별표 1 (재판예규 제1950호, 시행 2026-03-01) 5. 특허: 특허신청사건(카허) 5회, 신청인·상대방. 법제처 국가법령정보 별표 서식파일 flSeq=162015279 원문, 2026-08-27 확인",
+        "CourtCalcEx 내장 DB sd.csv KEY 71 '특허신청사건' VALUE 5 (PLUS 0 / MUL 0)",
+        "당사자수 = 신청인수 + 상대방수"
+      ],
+      "noteKo": "위헌법률심판제청사건은 제외"
+    },
+    {
+      "caseType": "fineObjection",
+      "labelKo": "과태료 결정 이의신청 (과)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 3
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수 + 검사수"
+      ]
+    },
+    {
+      "caseType": "nonContentious",
+      "labelKo": "비송 (비단/비합, 과태료 제외)",
+      "formula": {
+        "kind": "simplePerParty",
+        "countPerParty": 2
+      },
+      "verifiedBy": [
+        "대법원 전자소송 소송비용계산 (ecfs.scourt.go.kr, PSP007P01.xml) 2026-08-27 확인",
+        "당사자수 = 신청인수 + 사건본인수"
+      ]
     }
   ],
   "unverifiedMatrix": [],
   "historyNote": {
     "ruleChanges": [
+      {
+        "effectiveFrom": "2026-08-27",
+        "ruleNumber": "(데이터셋 변경)",
+        "summary": "countMatrix 13종 → 41종 확장. 민사집행 6 · 도산 5 · 가사 7 · 행정 4 · 특허 4 · 과태료 1 · 비송 1 추가. 확장분의 1차 출처는 대법원 전자소송 소송비용계산(PSP007P01) 9개 소송유형 탭이고, 이후 41종 전부를 재일 87-4 별표 1 원문(flSeq=162015279)과 CourtCalcEx 내장 DB sd.csv 로 전수 대조했다. 그 대조에서 3건을 정정: 행정 (재)항고 부호 '부/수'(부는 행정특별항고, 수는 선거소송) → '루/무', 특허 (재)항고 부호 '히'(특별(준)항고 3회)에 붙어 있던 5회를 정본대로 '흐'(재항고 5회)로, 가사신청 회수 범위 3~5 → 3~8(별표 1 원칙 3회, 가압류·가처분 이의·취소 단서 8회). 이어서 3건 추가 정정: 가사 (재)항고(브/스) 범위 2~5 → 5회 정액(별표 1 은 브·스 모두 5회이고 min 2 는 sd 의 가사특별항고(으) 2회가 흘러든 값이었다), 보전처분(카합/카단) 3회 정액 → 범위 3~8 기본 3회(별표 1 이 같은 부호에 원칙 3회 · 임시의 지위를 정하는 가처분 8회 · 가압류가처분 이의취소 8회 세 행을 둔다), 특허 1심·상고의 지식재산처장 주석에 별표 1 미확인 사실 명기"
+      },
       {
         "effectiveFrom": "2026-03-01",
         "ruleNumber": "재판예규 제1950호",
