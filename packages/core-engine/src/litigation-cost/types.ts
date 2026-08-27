@@ -111,6 +111,41 @@ export interface StampDutyInput {
   filingDate?: IsoDate;
 }
 
+/**
+ * 청구취지 확장(청구변경신청) 인지액 입력. 인지법 제5조.
+ *
+ * 소가는 변경 전·후 두 값을 받는다. 심급은 제5조 고지가 제1심·제2심만 정하므로 두 값뿐이다.
+ */
+export interface ClaimAmendmentInput {
+  caseType: CaseType;
+  appealsLevel: "firstInstance" | "appeal";
+  /** 변경 전 청구의 소가. `beforeStampDutyWon` 을 직접 넣으면 무시된다. */
+  beforeCaseValue: number;
+  /** 변경 후 청구의 소가. */
+  afterCaseValue: number;
+  /**
+   * 변경 전 청구에 관하여 **실제로 납부한** 인지액. 제5조 문언이 "납부한 인지액" 이라,
+   * 소가에서 역산한 값과 실제 납부액이 다를 때 (일부 면제·구조 결정 등) 이 값이 우선한다.
+   */
+  beforeStampDutyWon?: number;
+  isElectronicFiling?: boolean;
+  filingDate?: IsoDate;
+}
+
+export interface ClaimAmendmentResult {
+  /** 추가로 붙일 인지액. 청구가 감축되면 0. */
+  amount: number;
+  /** 변경 후 청구 인지액 (종이 기준, 심급 배수 반영). */
+  afterAmount: number;
+  /** 변경 전 청구 인지액 (종이 기준). */
+  beforeAmount: number;
+  /** 전자소송 감액 적용 전 차액. */
+  differenceAmount: number;
+  formulaText: string;
+  dataVersion: string;
+  computedAt: string;
+}
+
 export interface StampDutyResult {
   amount: number;
   formulaText: string;

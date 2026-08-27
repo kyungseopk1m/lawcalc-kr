@@ -107,6 +107,23 @@ export interface StampDutyElectronicFilingDiscount {
   sourceLawNumber: string;
 }
 
+/**
+ * 청구취지 확장(청구변경신청) 인지액. 인지법 제5조.
+ *
+ * `afterMultipliers` 는 변경 **후** 청구 인지액에 곱하는 심급 배수이고, `beforeMultiplier` 는
+ * 변경 **전** 항에 곱하는 배수다. 전자소송 고지가 제2심에서 변경 후에만 1.5 를 곱하므로
+ * 기본값이 1.0 으로 비대칭이다 — 자세한 근거는 dataset 의 `note`.
+ */
+export interface StampDutyClaimAmendment {
+  sourceArticle: string;
+  sourceText: string;
+  afterMultipliers: { firstInstance: number; appeal: number };
+  beforeMultiplier: number;
+  note: string;
+  electronicDiscountPolicy: string;
+  sourceRef: string;
+}
+
 export interface StampDutyHistoryNote {
   bracketTableStableSince: string;
   paymentOrderChangedAt: string;
@@ -130,6 +147,7 @@ export interface StampDutyDataset {
   specialProcedures: StampDutySpecialProcedures;
   provisionalMeasures: StampDutyProvisionalMeasures;
   electronicFilingDiscount: StampDutyElectronicFilingDiscount;
+  claimAmendment: StampDutyClaimAmendment;
   historyNote: StampDutyHistoryNote;
 }
 
@@ -326,6 +344,20 @@ function validate(dataset: StampDutyDataset): void {
     "electronicFilingDiscount.multiplier",
   );
   assertIsoDate(electronicFilingDiscount.effectiveFrom, "electronicFilingDiscount.effectiveFrom");
+
+  const { claimAmendment } = dataset;
+  if (!claimAmendment || !claimAmendment.sourceArticle) {
+    throw new Error("StampDutyDataset: claimAmendment.sourceArticle is required");
+  }
+  for (const [key, value] of [
+    ["afterMultipliers.firstInstance", claimAmendment.afterMultipliers?.firstInstance],
+    ["afterMultipliers.appeal", claimAmendment.afterMultipliers?.appeal],
+    ["beforeMultiplier", claimAmendment.beforeMultiplier],
+  ] as const) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError(`claimAmendment.${key}: must be > 0 (got ${String(value)})`);
+    }
+  }
 }
 
 /**

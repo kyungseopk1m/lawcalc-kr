@@ -2,6 +2,8 @@ export type {
   AppealsLevel,
   CaseType,
   CaseTypeMeta,
+  ClaimAmendmentInput,
+  ClaimAmendmentResult,
   DeliveryCount,
   DeliveryFeeInput,
   DeliveryFeeResult,
@@ -46,6 +48,7 @@ export {
 export {
   CASE_VALUE_BASES,
   PROVISIONAL_MEASURE_TYPES,
+  validateClaimAmendmentInput,
   validateDeliveryFeeInput,
   validateKoreaLegalAidDiscountScope,
   validateLawyerFeeInput,

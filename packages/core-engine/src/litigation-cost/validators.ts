@@ -20,6 +20,7 @@ import {
 import type {
   AppealsLevel,
   CaseType,
+  ClaimAmendmentInput,
   DeliveryFeeInput,
   KoreaLegalAidScopeWarning,
   LawyerFeeDiscount,
@@ -158,6 +159,37 @@ export function validateStampDutyInput(input: StampDutyInput): void {
     fail(
       prefix,
       `원신청서 인지액이 유효하지 않습니다 (입력: ${String(input.underlyingApplicationStampDutyWon)})`,
+    );
+  }
+  if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
+    fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
+  }
+}
+
+// ===== Claim Amendment (제5조) =====
+
+export function validateClaimAmendmentInput(input: ClaimAmendmentInput): void {
+  const prefix = "청구변경신청 인지액";
+  if (!isCaseType(input.caseType)) {
+    fail(prefix, `사건구분이 유효하지 않습니다 (입력: ${String(input.caseType)})`);
+  }
+  assertCaseTypeAppliesDomain(input.caseType, "stampDuty", prefix);
+  if (input.appealsLevel !== "firstInstance" && input.appealsLevel !== "appeal") {
+    fail(
+      prefix,
+      `심급이 유효하지 않습니다 (입력: ${String(input.appealsLevel)}). 제5조 고지는 제1심·제2심만 정합니다`,
+    );
+  }
+  if (!isFiniteNonNegative(input.beforeCaseValue)) {
+    fail(prefix, `변경 전 소가가 유효하지 않습니다 (입력: ${String(input.beforeCaseValue)})`);
+  }
+  if (!isFiniteNonNegative(input.afterCaseValue)) {
+    fail(prefix, `변경 후 소가가 유효하지 않습니다 (입력: ${String(input.afterCaseValue)})`);
+  }
+  if (input.beforeStampDutyWon !== undefined && !isFiniteNonNegative(input.beforeStampDutyWon)) {
+    fail(
+      prefix,
+      `변경 전 납부 인지액이 유효하지 않습니다 (입력: ${String(input.beforeStampDutyWon)})`,
     );
   }
   if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
