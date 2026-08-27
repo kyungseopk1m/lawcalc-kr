@@ -583,6 +583,15 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
             "payload.input.deliveryFee.customCount",
           ),
         }),
+    ...(deliveryRecord.provisionalMeasureType === undefined
+      ? {}
+      : {
+          provisionalMeasureType: requireOneOf(
+            deliveryRecord.provisionalMeasureType,
+            PROVISIONAL_MEASURE_TYPES,
+            "payload.input.deliveryFee.provisionalMeasureType",
+          ),
+        }),
     ...(deliveryRecord.perDeliveryUnitPriceWon === undefined
       ? {}
       : {

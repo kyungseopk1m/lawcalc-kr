@@ -29,6 +29,8 @@ import {
   defaultCompensationFormState,
   formatCompensationDeathForClipboard,
   formatCompensationForClipboard,
+  occupationHintAt,
+  occupationOptionsAt,
   type CompensationDeathFormState,
   type CompensationFormState,
 } from "./CompensationCalculator";
@@ -118,8 +120,8 @@ describe("computeCompensation integration via builder", () => {
     const result = computeCompensation(input);
     expect(result.finalWon).toBeGreaterThan(0);
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
-    expect(result.dataVersions.laborRates).toBe("labor-rates/v1.0.0");
-    expect(result.dataVersions.lifeExpectancy).toBe("life-expectancy/v1.0.0");
+    expect(result.dataVersions.laborRates).toBe("labor-rates/v1.1.0");
+    expect(result.dataVersions.lifeExpectancy).toBe("life-expectancy/v1.1.0");
     expect(result.dataVersions.hoffman).toBe("hoffman/v1.0.0");
     expect(result.dataVersions.leibniz).toBe("leibniz/v1.0.0");
   });
@@ -139,8 +141,8 @@ describe("formatCompensationForClipboard + buildCompensationLcalcFile", () => {
     const result = computeCompensation(buildCompensationInput(defaultCompensationFormState()));
     const text = formatCompensationForClipboard(result);
     expect(text).toContain("LawCalc Korea 자동차 사고 부상 손해배상 계산 결과");
-    expect(text).toContain("laborRates=labor-rates/v1.0.0");
-    expect(text).toContain("lifeExpectancy=life-expectancy/v1.0.0");
+    expect(text).toContain("laborRates=labor-rates/v1.1.0");
+    expect(text).toContain("lifeExpectancy=life-expectancy/v1.1.0");
     expect(text).toContain("hoffman=hoffman/v1.0.0");
     expect(text).toContain("leibniz=leibniz/v1.0.0");
     expect(text.trim().endsWith(STANDARD_DISCLAIMER)).toBe(true);
@@ -256,7 +258,7 @@ describe("computeCompensationDeath integration via death builder", () => {
     expect(result.finalWon).toBeGreaterThan(0);
     expect(result.funeralExpenseWon).toBe(5_000_000);
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
-    expect(result.dataVersions.laborRates).toBe("labor-rates/v1.0.0");
+    expect(result.dataVersions.laborRates).toBe("labor-rates/v1.1.0");
   });
 
   it("상속인 입력 시 분배 합계 = finalWon (round-trip 보장)", () => {
@@ -633,5 +635,84 @@ describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
     expect(result).not.toHaveProperty("otherDamages");
     const file = buildCompensationDeathLcalcFile(input, result, "");
     expect(file.envelopeFeatures).toEqual(["compensation@2"]);
+  });
+});
+
+/**
+ * 직종 선택지는 사고일이 속한 노임단가 회차에서 나와야 한다.
+ *
+ * 노임단가 슬라이스가 하나뿐이던 동안에는 "최신 슬라이스" 가 곧 정답이라 이 구분이 없었다.
+ * 1991년부터 반기별로 들어오면서 회차마다 조사 직종이 달라졌다.
+ */
+describe("직종 선택지 · 안내 (사고일 기준)", () => {
+  const names = (accidentDate: string, selected?: string) =>
+    occupationOptionsAt(accidentDate, selected).map((o) => o.value);
+
+  it("2009년 사고에는 갱부가 있고 2015년 사고에는 없다", () => {
+    expect(names("2009-09-01")).toContain("갱부");
+    expect(names("2015-01-01")).not.toContain("갱부");
+    expect(names("2015-01-01")).toContain("특별인부");
+  });
+
+  it("사고일이 다르면 선택지 자체가 다르다", () => {
+    const old2005 = names("2005-01-01");
+    const now = names("2026-01-01");
+    expect(old2005).not.toEqual(now);
+    // 창호공은 2010년 통합으로 생긴 이름이라 2005년에는 없다.
+    expect(old2005).not.toContain("창호공");
+    expect(now).toContain("창호공");
+  });
+
+  it("데이터셋이 덮지 않는 시점에도 빈 목록을 내지 않는다", () => {
+    expect(names("1980-01-01")).toEqual(["보통인부"]);
+  });
+
+  /**
+   * 고른 직종이 그 회차 목록에 없으면 <select> 가 값을 못 찾아 첫 옵션을 보여 준다.
+   * 화면에 보이는 직종과 계산에 쓰이는 직종이 어긋나므로 목록에 남겨 둔다.
+   */
+  it("고른 직종이 그 사고일에 없어도 목록에서 사라지지 않는다", () => {
+    const options = occupationOptionsAt("2015-01-01", "갱부");
+    expect(options[0]).toEqual({ value: "갱부", available: false });
+    expect(options.filter((o) => o.value === "갱부")).toHaveLength(1);
+    // 조회 가능한 직종은 중복으로 추가되지 않는다.
+    const normal = occupationOptionsAt("2015-01-01", "보통인부");
+    expect(normal.filter((o) => o.value === "보통인부")).toHaveLength(1);
+    expect(normal.every((o) => o.available)).toBe(true);
+  });
+
+  it("통합으로 사라진 직종을 고르면 흡수처를 안내한다", () => {
+    expect(occupationHintAt("갱부", "2009-09-01")).toBeNull();
+    const hint = occupationHintAt("갱부", "2015-01-01");
+    expect(hint).toContain("특별인부");
+    expect(hint).toContain("2010-01-01");
+  });
+
+  it("안내 문구의 조사가 받침을 따른다", () => {
+    // 갱부(받침 없음) → 는, 특별인부(받침 없음) → 로
+    const 갱부 = occupationHintAt("갱부", "2015-01-01")!;
+    expect(갱부).toContain('"갱부"는');
+    expect(갱부).toContain("특별인부로");
+    expect(갱부).not.toContain("(으)로");
+    // 함석공(받침 있음) → 은, 덕트공(받침 있음) → 으로
+    const 함석공 = occupationHintAt("함석공", "2015-01-01")!;
+    expect(함석공).toContain('"함석공"은');
+    expect(함석공).toContain("덕트공으로");
+  });
+
+  it("여럿으로 갈린 직종은 흡수처를 모두 안내한다", () => {
+    const hint = occupationHintAt("절단공", "2015-01-01")!;
+    for (const name of ["철근공", "철공", "철판공", "철골공"]) {
+      expect(hint, name).toContain(name);
+    }
+  });
+
+  it("조회 가능한 직종에는 안내를 띄우지 않는다", () => {
+    expect(occupationHintAt("보통인부", "2015-01-01")).toBeNull();
+    expect(occupationHintAt("보통인부", "2026-01-01")).toBeNull();
+  });
+
+  it("데이터셋 범위 밖 사고일은 일당 직접 입력을 안내한다", () => {
+    expect(occupationHintAt("보통인부", "1980-01-01")).toContain("일당을 직접 입력");
   });
 });

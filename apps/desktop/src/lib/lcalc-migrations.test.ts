@@ -727,6 +727,7 @@ describe("validateLcalcEnvelope", () => {
       deliveryFee: {
         caseType: "provisionalMeasureCollegial" as const,
         partyCount: 2,
+        provisionalMeasureType: "provisionalStatus" as const,
       },
       lawyerFee: {
         caseValue: 50_000_000,
@@ -759,6 +760,10 @@ describe("validateLcalcEnvelope", () => {
     validateLcalcEnvelope(roundTripped);
     const loaded = parseLoadedLitigationCostLcalcInput(roundTripped);
     expect(loaded.input.stampDuty.provisionalMeasureType).toBe("provisionalStatus");
+    // 송달료 쪽 provisionalMeasureType 이 화이트리스트에서 빠지면 다시 열었을 때
+    // 임시지위 가처분이 조용히 3회로 되돌아간다 (별표 1 은 8회).
+    expect(loaded.input.deliveryFee.provisionalMeasureType).toBe("provisionalStatus");
+    expect(loaded.result?.deliveryFee.deliveryCount).toBe(16);
     expect(loaded.input.lawyerFee.agreedFeeWon).toBe(1_000_000);
     // 재계산이 아니라 저장된 result 를 그대로 복원한다. 임시지위 인지 230,000×0.5 = 115,000.
     expect(loaded.result?.stampDuty.amount).toBe(115_000);
@@ -1032,7 +1037,7 @@ describe("v3 compensation envelope", () => {
     expect(loaded.input.lostIncome.occupation).toBe("보통인부");
     expect(loaded.note).toBe("compensation note");
     expect(loaded.result?.finalWon).toBeGreaterThan(0);
-    expect(loaded.result?.dataVersions.laborRates).toBe("labor-rates/v1.0.0");
+    expect(loaded.result?.dataVersions.laborRates).toBe("labor-rates/v1.1.0");
   });
 
   it("rejects a compensation envelope missing a required dataVersion", () => {

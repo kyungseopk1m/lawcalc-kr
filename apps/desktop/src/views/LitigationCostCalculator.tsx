@@ -18,12 +18,15 @@ import {
   appliedDomains,
   caseCode,
   computeLitigationCost,
+  getDeliveryCount,
   listCaseTypes,
+  loadDeliveryDataset,
   resolveEffectiveCaseValue,
   type AppealsLevel,
   type CaseType,
   type LawyerFeeDiscount,
   type LitigationCostInput,
+  type DeliveryFormula,
   type LitigationCostResult,
   type StampDutyInput,
 } from "@lawcalc-kr/core-engine";
@@ -44,6 +47,8 @@ type ProvisionalApplicationKind =
   | "applicationWithoutHearing"
   | "objectionOrCancellation";
 
+import { CaseValueEstimator } from "../components/form/CaseValueEstimator";
+import { ClaimAmendmentPanel } from "../components/form/ClaimAmendmentPanel";
 import { ProportionalPillInput } from "../components/form/ProportionalPillInput";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -316,6 +321,17 @@ function buildDirtySnapshot(input: LitigationCostInput, note: string) {
 
 const caseTypeOptions = listCaseTypes();
 
+/**
+ * 사건구분의 송달 횟수 산식 kind. UI 가 어떤 추가 입력을 띄울지 결정한다.
+ *
+ * 매트릭스가 13종이던 동안에는 전부 `simplePerParty` 라 당사자수 하나로 충분했다.
+ * 민사집행·도산·가사비송이 들어오면서 채권자수(도산)·조회기관수(재산조회)·직접 입력 회수
+ * (범위 사건) 가 필요해졌고, 이 값이 없으면 엔진이 RangeError 를 던진다.
+ */
+function deliveryFormulaOf(caseType: CaseType): DeliveryFormula {
+  return getDeliveryCount(loadDeliveryDataset(), caseType).formula;
+}
+
 export function LitigationCostCalculator({ active = true }: { active?: boolean }) {
   const [caseType, setCaseType] = useState<CaseType>("civilFirstInstanceSingle");
   const [caseValueText, setCaseValueText] = useState("30000000");
@@ -327,6 +343,10 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   // 항고 사건의 원신청서 인지액 (인지법 제11조 제1항). 비우면 제11조 제2항 정액 2,000원.
   const [underlyingStampDutyText, setUnderlyingStampDutyText] = useState("");
   const [partyCountText, setPartyCountText] = useState("2");
+  // 확장 사건구분 전용 입력. 산식 kind 가 요구할 때만 화면에 뜬다.
+  const [creditorCountText, setCreditorCountText] = useState("0");
+  const [inquiredInstitutionsText, setInquiredInstitutionsText] = useState("0");
+  const [deliveryCountText, setDeliveryCountText] = useState("");
   const [filingDate, setFilingDate] = useState(todayIso());
   const [isElectronicFiling, setIsElectronicFiling] = useState(false);
   const [isSettlement, setIsSettlement] = useState(false);
@@ -362,6 +382,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       caseValueBasis,
     }).caseValue;
     const partyCount = parsePositiveInteger(partyCountText, 1);
+    const deliveryFormula = deliveryFormulaOf(caseType);
     const lawyerFeeAppliesNow = appliedDomains(caseType).includes("lawyerFee");
     // 지급명령(차)과 보전처분(카합/카단)은 심급 배수를 쓰지 않으므로 1심으로 고정한다.
     const stampDuty = buildStampDutyInput({
@@ -412,6 +433,20 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       deliveryFee: {
         caseType,
         partyCount,
+        ...(deliveryFormula.kind === "baseCountPlusCreditorMultiple"
+          ? { creditorCount: parseNonNegativeInteger(creditorCountText, 0) }
+          : {}),
+        ...(deliveryFormula.kind === "perPartyPlusExtra"
+          ? { extraCount: parseNonNegativeInteger(inquiredInstitutionsText, 0) }
+          : {}),
+        ...(deliveryFormula.kind === "range"
+          ? {
+              customCount: parsePositiveInteger(deliveryCountText, deliveryFormula.countMin),
+            }
+          : {}),
+        ...(caseType === "provisionalMeasureCollegial" || caseType === "provisionalMeasureSingle"
+          ? { provisionalMeasureType }
+          : {}),
         ...(filingDate ? { filingDate } : {}),
       },
       lawyerFee: {
@@ -450,8 +485,11 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     caseValueBasis,
     caseValueText,
     courtMultiplierText,
+    creditorCountText,
     customRateText,
+    deliveryCountText,
     distributionMode,
+    inquiredInstitutionsText,
     filingDate,
     isElectronicFiling,
     isSettlement,
@@ -467,6 +505,11 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     () => appliedDomains(caseType).includes("lawyerFee"),
     [caseType],
   );
+  const stampDutyApplies = useMemo(
+    () => appliedDomains(caseType).includes("stampDuty"),
+    [caseType],
+  );
+  const deliveryFormula = useMemo(() => deliveryFormulaOf(caseType), [caseType]);
   const isProvisionalCase =
     caseType === "provisionalMeasureCollegial" || caseType === "provisionalMeasureSingle";
   const isPaymentOrderCase = caseType === "paymentOrder";
@@ -694,11 +737,17 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 }}
               >
                 {caseTypeOptions.map(({ caseType: value, meta }) => {
-                  const lawyerFeeExcluded = !appliedDomains(value).includes("lawyerFee");
+                  const domains = appliedDomains(value);
+                  // 인지·보수가 둘 다 빠지는 사건구분은 "변호사보수 산입 외" 만 붙이면
+                  // 인지액은 나오는 것처럼 읽힌다. 실제로 나오는 도메인을 그대로 적는다.
+                  const suffix = !domains.includes("stampDuty")
+                    ? " - 송달료만"
+                    : domains.includes("lawyerFee")
+                      ? ""
+                      : " - 변호사보수 산입 외";
                   return (
                     <option key={value} value={value}>
-                      {meta.nameKo} ({caseCode(value)})
-                      {lawyerFeeExcluded ? " - 변호사보수 산입 외" : ""}
+                      {meta.nameKo} ({caseCode(value)}){suffix}
                     </option>
                   );
                 })}
@@ -708,6 +757,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               소가 산정 기준
               <Select
                 value={caseValueBasis}
+                disabled={!stampDutyApplies}
                 onChange={(e) => setCaseValueBasis(e.target.value as CaseValueBasis)}
               >
                 <option value="amount">금액으로 산출</option>
@@ -732,7 +782,9 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   value={formatWonInput(caseValueText)}
                   inputMode="numeric"
                   placeholder="예: 30,000,000"
-                  disabled={caseValueBasis !== "amount"}
+                  // 인지 산출 외 사건구분은 소가가 결과에 쓰이지 않는다. 편집 가능한 채로
+                  // 두면 금액을 넣고도 인지대가 0원이라 계산이 잘못된 것으로 읽힌다.
+                  disabled={caseValueBasis !== "amount" || !stampDutyApplies}
                   onChange={(e) => setCaseValueText(parseWonText(e.target.value))}
                 />
               </label>
@@ -745,12 +797,79 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 />
               </label>
             </div>
+            {deliveryFormula.kind === "baseCountPlusCreditorMultiple" ? (
+              <label className="grid gap-2 text-sm font-medium">
+                채권자수
+                <Input
+                  value={creditorCountText}
+                  inputMode="numeric"
+                  onChange={(e) => setCreditorCountText(e.target.value)}
+                />
+                <span className="text-xs font-normal text-muted-foreground">
+                  송달 횟수 = 기본 {deliveryFormula.baseCount}회 + 채권자수 ×{" "}
+                  {deliveryFormula.creditorMultiple}회
+                </span>
+              </label>
+            ) : null}
+            {deliveryFormula.kind === "perPartyPlusExtra" ? (
+              <label className="grid gap-2 text-sm font-medium">
+                우편 조회대상 기관수
+                <Input
+                  value={inquiredInstitutionsText}
+                  inputMode="numeric"
+                  onChange={(e) => setInquiredInstitutionsText(e.target.value)}
+                />
+                <span className="text-xs font-normal text-muted-foreground">
+                  우편에 의하여 재산조회를 실시하는 기관 수만큼 송달 횟수에 가산합니다. 해당 없으면
+                  0.
+                </span>
+              </label>
+            ) : null}
+            {deliveryFormula.kind === "range" ? (
+              <label className="grid gap-2 text-sm font-medium">
+                송달 횟수 직접 입력
+                <Input
+                  value={deliveryCountText}
+                  inputMode="numeric"
+                  placeholder={`${deliveryFormula.countMin} ~ ${deliveryFormula.countMax}`}
+                  onChange={(e) => setDeliveryCountText(e.target.value)}
+                />
+                <span className="text-xs font-normal text-muted-foreground">
+                  이 사건구분은 정본 기준이 {deliveryFormula.countMin}~{deliveryFormula.countMax}회
+                  범위라 단일 값이 정해져 있지 않습니다. 비워 두면 하한(
+                  {deliveryFormula.countMin}회)으로 계산합니다.
+                </span>
+              </label>
+            ) : null}
+            {stampDutyApplies ? (
+              <>
+                <CaseValueEstimator
+                  onApply={(value) => {
+                    setCaseValueText(String(value));
+                    setCaseValueBasis("amount");
+                  }}
+                />
+                <ClaimAmendmentPanel
+                  caseType={caseType}
+                  isElectronicFiling={isElectronicFiling}
+                  filingDate={filingDate}
+                />
+              </>
+            ) : null}
+            {!stampDutyApplies ? (
+              <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                이 사건구분은 「민사소송 등 인지법」제2조의 누진 산식 대상이 아닙니다. 인지액은 별도
+                예규가 정하는 정액이라 계산하지 않고 0원으로 두며, 송달료만 산출합니다.
+              </p>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium">
                 심급
                 <Select
                   value={appealsLevel}
-                  disabled={isProvisionalCase || paymentOrderApplies || isMediationCase}
+                  disabled={
+                    isProvisionalCase || paymentOrderApplies || isMediationCase || !stampDutyApplies
+                  }
                   onChange={(e) => setAppealsLevel(e.target.value as AppealsLevel)}
                 >
                   <option value="firstInstance">1심</option>
@@ -771,7 +890,8 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                     isMediationCase ||
                     // 간주 소가는 엔진이 소가를 통째로 대체하므로 불복 범위를 고쳐도 결과가
                     // 바뀌지 않는다. 편집 가능한 채로 두면 반영된다고 믿게 된다.
-                    caseValueBasis !== "amount"
+                    caseValueBasis !== "amount" ||
+                    !stampDutyApplies
                   }
                   onChange={(e) => setAppealValueText(parseWonText(e.target.value))}
                 />
@@ -821,6 +941,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 <input
                   type="checkbox"
                   checked={isElectronicFiling}
+                  disabled={!stampDutyApplies}
                   onChange={(e) => setIsElectronicFiling(e.target.checked)}
                 />
                 전자소송
@@ -849,7 +970,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 <input
                   type="checkbox"
                   checked={isSettlement}
-                  disabled={isProvisionalCase || paymentOrderApplies}
+                  disabled={isProvisionalCase || paymentOrderApplies || !stampDutyApplies}
                   onChange={(e) => setIsSettlement(e.target.checked)}
                 />
                 화해 인지대 감액

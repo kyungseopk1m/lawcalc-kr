@@ -32,8 +32,11 @@ import {
 } from "@lawcalc-kr/compensation";
 import {
   computeStaleBadge,
+  findOccupationMerge,
+  getLaborRateAt,
   laborRatesDatasetVersionTag,
   latestSliceEffectiveFrom,
+  listOccupationsAt,
   loadLaborRatesTable,
   type StaleBadgeResult,
 } from "@lawcalc-kr/datasets-compensation";
@@ -139,15 +142,82 @@ const LABOR_RATES_DATASET = loadLaborRatesTable();
 const LABOR_RATES_VERSION_TAG = laborRatesDatasetVersionTag(LABOR_RATES_DATASET);
 const LATEST_LABOR_RATES_SLICE = latestSliceEffectiveFrom(LABOR_RATES_DATASET);
 const LABOR_RATES_SNAPSHOT_DATE = LABOR_RATES_DATASET.snapshotDate;
-const OCCUPATION_OPTIONS = (() => {
-  const latestSlice =
-    LABOR_RATES_DATASET.slices[LABOR_RATES_DATASET.slices.length - 1]?.rates ?? {};
-  const list = Object.keys(latestSlice).sort((a, b) => a.localeCompare(b, "ko-KR"));
-  if (!list.includes(DEFAULT_OCCUPATION)) {
+/**
+ * 사고일 기준으로 고를 수 있는 직종 목록.
+ *
+ * 노임단가 슬라이스가 2026년 상반기 하나뿐이던 동안에는 "최신 슬라이스" 가 곧 정답이었다.
+ * 1991년부터 반기별로 들어오면서 그 전제가 깨졌다. 사고일이 2005년인데 2026년 직종을
+ * 보여 주면, 그때 없던 직종(창호공)은 고를 수 있고 그때 있던 직종(갱부)은 안 보인다.
+ */
+export interface OccupationOption {
+  value: string;
+  /** 그 사고일 회차에 조사된 직종인지. false 면 고를 수는 있어도 단가가 없다. */
+  available: boolean;
+}
+
+export function occupationOptionsAt(accidentDate: string, selected?: string): OccupationOption[] {
+  const list = listOccupationsAt(LABOR_RATES_DATASET, accidentDate).sort((a, b) =>
+    a.localeCompare(b, "ko-KR"),
+  );
+  if (list.length > 0 && !list.includes(DEFAULT_OCCUPATION)) {
     list.unshift(DEFAULT_OCCUPATION);
   }
-  return list;
-})();
+  const options: OccupationOption[] = (list.length > 0 ? list : [DEFAULT_OCCUPATION]).map(
+    (value) => ({ value, available: true }),
+  );
+  // 이미 고른 직종이 이 회차 목록에 없으면 목록에 남겨 둔다. 빼 버리면 <select> 가 값을
+  // 찾지 못해 첫 옵션을 대신 보여 주고, 화면에 보이는 직종과 실제 계산에 쓰이는 직종이
+  // 어긋난다 (사고일만 바꿨을 뿐인데 갱부가 건설기계운전사로 보이던 문제).
+  if (selected && !options.some((o) => o.value === selected)) {
+    options.unshift({ value: selected, available: false });
+  }
+  return options;
+}
+
+/**
+ * 받침 유무에 따른 조사. 안내 문구가 `"갱부"은 ... 특별인부(으)로` 처럼 나오지 않게 한다.
+ */
+function josa(word: string, kind: "은는" | "으로"): string {
+  // 따옴표로 감싼 뒤 판정하면 마지막 글자가 따옴표라 항상 받침 없음으로 나온다.
+  // 반드시 낱말 자체를 넘긴다.
+  const last = word.trim().at(-1) ?? "";
+  const code = last.charCodeAt(0);
+  const isHangul = code >= 0xac00 && code <= 0xd7a3;
+  const jong = isHangul ? (code - 0xac00) % 28 : -1;
+  if (kind === "은는") {
+    // 한글이 아니면(영문·기호로 끝나는 직종명) 판정할 수 없으므로 "는" 으로 둔다.
+    return jong > 0 ? "은" : "는";
+  }
+  // ㄹ 받침(jong === 8)은 "로" 를 쓴다.
+  return jong > 0 && jong !== 8 ? "으로" : "로";
+}
+
+/**
+ * 고른 직종을 그 사고일에 조회할 수 없을 때 화면에 띄울 안내.
+ *
+ * 통합으로 사라진 직종이면 어디로 흡수됐는지 알려 준다. 단가를 대신 계산해 주지는 않는다.
+ */
+export function occupationHintAt(occupation: string, accidentDate: string): string | null {
+  if (!occupation || !ISO_DATE.test(accidentDate)) {
+    return null;
+  }
+  if (getLaborRateAt(LABOR_RATES_DATASET, occupation, accidentDate) !== undefined) {
+    return null;
+  }
+  const merge = findOccupationMerge(LABOR_RATES_DATASET, occupation);
+  if (merge && accidentDate >= merge.effectiveFrom) {
+    const into = merge.mergedInto.join(" · ");
+    const lastInto = merge.mergedInto.at(-1) ?? into;
+    return (
+      `"${occupation}"${josa(occupation, "은는")} ${merge.effectiveFrom} 공표분부터 ` +
+      `${into}${josa(lastInto, "으로")} 통합되어 이 사고일에는 단가가 공표되지 않았습니다. ` +
+      "통합된 직종을 고르거나 일당을 직접 입력하세요."
+    );
+  }
+  return `"${occupation}"${josa(occupation, "은는")} 이 사고일 기준 노임단가에 없습니다. 일당을 직접 입력하세요.`;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function newUid(): string {
   return crypto.randomUUID();
@@ -1144,6 +1214,16 @@ function InjuryCompensationView({
     ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
     : "";
 
+  // 직종 선택지는 사고일이 속한 노임단가 회차에서 나온다. 회차마다 조사 직종이 다르다.
+  const occupationOptions = useMemo(
+    () => occupationOptionsAt(state.accidentDate, state.occupation),
+    [state.accidentDate, state.occupation],
+  );
+  const occupationHint = useMemo(
+    () => occupationHintAt(state.occupation, state.accidentDate),
+    [state.occupation, state.accidentDate],
+  );
+
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
       <div className="grid gap-4">
@@ -1316,12 +1396,17 @@ function InjuryCompensationView({
                 value={state.occupation}
                 onChange={(e) => update({ occupation: e.target.value })}
               >
-                {OCCUPATION_OPTIONS.map((occupation) => (
-                  <option key={occupation} value={occupation}>
-                    {occupation}
+                {occupationOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.available ? option.value : `${option.value} (이 사고일에는 단가 없음)`}
                   </option>
                 ))}
               </Select>
+              {occupationHint ? (
+                <span className="text-xs font-normal text-amber-700 dark:text-amber-300">
+                  {occupationHint}
+                </span>
+              ) : null}
             </label>
             <label className="grid gap-2 text-sm font-medium">
               일당 직접 입력 (원/일, 선택)
@@ -1805,6 +1890,16 @@ function DeathCompensationView({
     ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
     : "";
 
+  // 직종 선택지는 사고일이 속한 노임단가 회차에서 나온다. 회차마다 조사 직종이 다르다.
+  const occupationOptions = useMemo(
+    () => occupationOptionsAt(state.accidentDate, state.occupation),
+    [state.accidentDate, state.occupation],
+  );
+  const occupationHint = useMemo(
+    () => occupationHintAt(state.occupation, state.accidentDate),
+    [state.occupation, state.accidentDate],
+  );
+
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
       <div className="grid gap-4">
@@ -1875,12 +1970,17 @@ function DeathCompensationView({
                 value={state.occupation}
                 onChange={(e) => update({ occupation: e.target.value })}
               >
-                {OCCUPATION_OPTIONS.map((occupation) => (
-                  <option key={occupation} value={occupation}>
-                    {occupation}
+                {occupationOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.available ? option.value : `${option.value} (이 사고일에는 단가 없음)`}
                   </option>
                 ))}
               </Select>
+              {occupationHint ? (
+                <span className="text-xs font-normal text-amber-700 dark:text-amber-300">
+                  {occupationHint}
+                </span>
+              ) : null}
             </label>
             <label className="grid gap-2 text-sm font-medium">
               일당 직접 입력 (원/일, 선택)

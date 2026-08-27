@@ -16,7 +16,9 @@ afterEach(cleanup);
 const caseValueInput = (): HTMLInputElement => screen.getByLabelText("소가");
 const appealScopeInput = (): HTMLInputElement => screen.getByLabelText("항소·상고 불복 범위");
 const basisSelect = (): HTMLSelectElement => screen.getByLabelText(/소가 산정 기준/);
-const levelSelect = (): HTMLSelectElement => screen.getByLabelText(/심급/);
+// 청구변경신청 패널에도 "청구변경 심급" 이 있어 정규식은 두 개를 잡는다. 이 헬퍼가 가리키는
+// 것은 본 계산기 본체의 심급이므로 정확히 일치시킨다.
+const levelSelect = (): HTMLSelectElement => screen.getByLabelText("심급");
 const caseTypeSelect = (): HTMLSelectElement => screen.getByLabelText(/사건구분/);
 
 describe("소가 산정 기준 (인지규칙 제18조의2)", () => {
@@ -65,5 +67,108 @@ describe("사건구분에 따른 입력 노출", () => {
 
     // 엔진에만 있고 UI 에 배선되지 않아 제11조 제1항을 화면에서 계산할 수 없던 결함.
     expect(screen.getByLabelText(/원신청서 인지액/)).toBeTruthy();
+  });
+});
+
+describe("확장 사건구분 (2026-08-27)", () => {
+  it("도산 사건을 고르면 채권자수 입력이 뜨고 인지 산출 외 안내가 나온다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(caseTypeSelect(), { target: { value: "rehabilitationIndividual" } });
+    expect(screen.getByLabelText(/채권자수/)).toBeTruthy();
+    expect(screen.getByText(/누진 산식 대상이 아닙니다/)).toBeTruthy();
+  });
+
+  it("재산조회를 고르면 조회대상 기관수 입력이 뜬다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(caseTypeSelect(), { target: { value: "executionAssetInquiry" } });
+    expect(screen.getByLabelText(/우편 조회대상 기관수/)).toBeTruthy();
+  });
+
+  it("송달 횟수가 범위인 사건은 직접 입력란이 뜬다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(caseTypeSelect(), { target: { value: "familyRuiPetition" } });
+    expect(screen.getByLabelText(/송달 횟수 직접 입력/)).toBeTruthy();
+  });
+
+  it("민사 1심에는 도산·집행 전용 입력이 뜨지 않는다", () => {
+    render(<LitigationCostCalculator />);
+    expect(screen.queryByLabelText(/채권자수/)).toBeNull();
+    expect(screen.queryByLabelText(/우편 조회대상 기관수/)).toBeNull();
+    expect(screen.queryByLabelText(/송달 횟수 직접 입력/)).toBeNull();
+  });
+});
+
+describe("소가 계산 · 청구변경신청 보조 패널", () => {
+  it("인지 대상 사건에서는 두 패널이 모두 배선되어 있다", () => {
+    render(<LitigationCostCalculator />);
+    expect(screen.getByText(/부동산 소가 계산/)).toBeTruthy();
+    expect(screen.getByText(/청구변경신청 인지액/)).toBeTruthy();
+  });
+
+  it("인지 산출 외 사건구분에서는 두 패널이 사라진다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(caseTypeSelect(), { target: { value: "fineObjection" } });
+    expect(screen.queryByText(/부동산 소가 계산/)).toBeNull();
+    expect(screen.queryByText(/청구변경신청 인지액/)).toBeNull();
+  });
+
+  it("소가 계산 결과를 소가 입력란에 적용한다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(screen.getByLabelText(/목적물 가액/), {
+      target: { value: "300,000,000" },
+    });
+    fireEvent.change(screen.getByLabelText(/소의 종류/), {
+      target: { value: "deliveryByOwnership" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "소가에 적용" }));
+    // 3억 × 1/2 = 1.5억
+    expect(caseValueInput().value).toBe("150,000,000");
+  });
+});
+
+describe("인지 산출 외 사건구분의 입력 비활성", () => {
+  const caseValue = (): HTMLInputElement => screen.getByLabelText("소가");
+  const electronicFiling = (): HTMLInputElement => screen.getByLabelText("전자소송");
+
+  it("도산 사건을 고르면 인지대 관련 입력이 모두 잠긴다", () => {
+    render(<LitigationCostCalculator />);
+    expect(caseValue().disabled).toBe(false);
+    expect(levelSelect().disabled).toBe(false);
+    fireEvent.change(caseTypeSelect(), { target: { value: "rehabilitationIndividual" } });
+    // 금액을 넣을 수 있는 채로 두면 인지대 0원이 계산 오류로 읽힌다.
+    expect(caseValue().disabled).toBe(true);
+    expect(basisSelect().disabled).toBe(true);
+    expect(levelSelect().disabled).toBe(true);
+    expect(electronicFiling().disabled).toBe(true);
+  });
+
+  it("민사 1심으로 돌아오면 다시 열린다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(caseTypeSelect(), { target: { value: "fineObjection" } });
+    expect(caseValue().disabled).toBe(true);
+    fireEvent.change(caseTypeSelect(), { target: { value: "civilFirstInstanceSingle" } });
+    expect(caseValue().disabled).toBe(false);
+    expect(levelSelect().disabled).toBe(false);
+  });
+});
+
+describe("소가 계산의 기준 가액 표시", () => {
+  const kindSelect = (): HTMLSelectElement => screen.getByLabelText("소의 종류");
+
+  it("지역권을 고르면 가액 입력란 이름이 승역지 가액으로 바뀐다", () => {
+    render(<LitigationCostCalculator />);
+    // 무엇의 가액을 넣어야 하는지가 화면에 없으면 요역지 가액을 넣고도 맞다고 읽는다.
+    expect(screen.getByLabelText("목적물 가액")).toBeTruthy();
+    fireEvent.change(kindSelect(), { target: { value: "easementConfirmation" } });
+    expect(screen.getByLabelText("승역지 가액")).toBeTruthy();
+    expect(screen.queryByLabelText("목적물 가액")).toBeNull();
+  });
+
+  it("담보물권을 고르면 피담보채권액 입력이 나타난다", () => {
+    render(<LitigationCostCalculator />);
+    // 안내 문구가 라벨 안에 들어 있어 정확 일치로는 잡히지 않는다. 라벨 첫머리로 좁힌다.
+    expect(screen.queryByLabelText(/^피담보채권액/)).toBeNull();
+    fireEvent.change(kindSelect(), { target: { value: "securityRightConfirmation" } });
+    expect(screen.getByLabelText(/^피담보채권액/)).toBeTruthy();
   });
 });
