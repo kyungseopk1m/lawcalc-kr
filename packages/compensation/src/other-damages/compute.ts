@@ -9,7 +9,7 @@ import type { OtherDamagesInput, OtherDamagesResult } from "./types";
 import { computeAttendantCare } from "./attendant";
 import { computeAppliance, computeTreatment } from "./treatment";
 import type { OtherDamagesContext } from "./internal";
-import { validateOtherDamagesInput } from "./validators";
+import { validateLaborRateOptions, validateOtherDamagesInput } from "./validators";
 
 export type { OtherDamagesContext } from "./internal";
 
@@ -22,6 +22,7 @@ export function computeOtherDamages(
   ctx: OtherDamagesContext,
 ): OtherDamagesResult | null {
   validateOtherDamagesInput(input, ctx.accidentDate);
+  validateLaborRateOptions(ctx.accidentDate, ctx.calculationDate, ctx.laborRateEffectiveRule);
 
   const attendant = input.attendantCare ? computeAttendantCare(input.attendantCare, ctx) : null;
   const treatment = input.treatment ? computeTreatment(input.treatment, ctx) : null;

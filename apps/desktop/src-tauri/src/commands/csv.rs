@@ -8,9 +8,11 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    disclaimer_text, format_currency, format_rate_percent, industrial_benefit_value_text,
-    options_summary, CompensationDeathResultView, CompensationOtherDamagesView,
-    CompensationResultView, InheritanceResultView, LitigationCostResultView, ResultView,
+    compensation_deduction_rows, disclaimer_text, format_currency, format_rate_percent,
+    heir_excess_dropped_row, heir_rounding_row, industrial_benefit_value_text, options_summary,
+    segments_have_dates, shares_have_survivor_benefit, CompensationDeathResultView,
+    CompensationOtherDamagesView, CompensationResultView, CompensationSegmentView,
+    InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 /// CSV formula injection defense.
@@ -384,32 +386,29 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         .flexible(true)
         .from_writer(vec![]);
 
-    wtr.write_record([
-        "기간(개월)",
-        "상실률",
-        "단가(원/일)",
-        "호프만(적용)",
-        "금액(원)",
-    ])?;
+    let dated = segments_have_dates(&view.segments);
+    write_segment_header(&mut wtr, dated, &["상실률"])?;
     for (i, segment) in view.segments.iter().enumerate() {
         let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
             " (한도)"
         } else {
             ""
         };
-        let row: [String; 5] = [
-            escape_csv_cell(&format!("{} ~ {}", segment.start_month, segment.end_month))
-                .into_owned(),
-            escape_csv_cell(&format!("{:.2}%", segment.loss_rate * 100.0)).into_owned(),
-            escape_csv_cell(&format_currency(segment.daily_wage_won)).into_owned(),
-            escape_csv_cell(&format!("{:.6}{}", segment.applied_hoffman, cap_marker)).into_owned(),
-            escape_csv_cell(&format_currency(segment.amount_floor_won)).into_owned(),
-        ];
-        wtr.write_record(&row)?;
+        write_segment_row(
+            &mut wtr,
+            segment,
+            dated,
+            &[format!("{:.2}%", segment.loss_rate * 100.0)],
+            cap_marker,
+        )?;
     }
-    let lost_income_cell =
-        escape_csv_cell(&format_currency(view.lost_income_subtotal_won)).into_owned();
-    wtr.write_record(["일실수입 소계", "", "", "", lost_income_cell.as_str()])?;
+    write_segment_subtotal(
+        &mut wtr,
+        "일실수입 소계",
+        dated,
+        1,
+        view.lost_income_subtotal_won,
+    )?;
 
     // 산재(장해급여) — 일실수입 한도 선공제 (2021다241618 전합). 자동차 결과는 skip (회귀 0).
     if let Some(ib) = &view.industrial_benefit {
@@ -423,7 +422,24 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
     }
 
     let excess_key = format!("{}(원)", view.deduction_excess_label);
-    let summary_rows: [(&str, String); 12] = [
+    let heir_dropped =
+        heir_excess_dropped_row(&view.deductions).map(|(label, won)| (format!("{label}(원)"), won));
+    let heir_rounding =
+        heir_rounding_row(&view.deductions).map(|(label, won)| (format!("{label}(원)"), won));
+    let deduction_keys: Vec<(String, f64)> =
+        compensation_deduction_rows(&view.deductions, view.property_only_excess_won)
+            .into_iter()
+            .map(|(label, won)| (format!("{label}(원)"), won))
+            .collect();
+    let mut summary_rows: Vec<(&str, String)> = vec![
+        (
+            if view.labor_rate_timing_text.is_empty() {
+                ""
+            } else {
+                "노임 기준"
+            },
+            view.labor_rate_timing_text.clone(),
+        ),
         (
             "중복 노동능력상실률",
             format!("{:.2}%", view.combined_loss_rate * 100.0),
@@ -441,14 +457,11 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
             "과실상계 후(원)",
             format_currency(view.fault_offset.after_won),
         ),
-        (
-            "비율공제 소계(원)",
-            format_currency(view.deductions.ratio_subtotal_won),
-        ),
-        (
-            "전액공제 소계(원)",
-            format_currency(view.deductions.absolute_subtotal_won),
-        ),
+    ];
+    for (key, won) in &deduction_keys {
+        summary_rows.push((key.as_str(), format_currency(*won)));
+    }
+    summary_rows.extend([
         // legacy — ≤ v0.9.x 저장 결과(과실상계 후 총액 공제)만 해당. 신 결과·자동차는 skip.
         match view.deductions.industrial_benefit_won {
             Some(benefit) => ("산재보험급여 공제(장해급여)(원)", format_currency(benefit)),
@@ -467,13 +480,21 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         } else {
             ("", String::new())
         },
+        match &heir_dropped {
+            Some((label, won)) => (label.as_str(), format_currency(*won)),
+            None => ("", String::new()),
+        },
         if view.solatium_added_won > 0.0 {
             ("위자료 가산(원)", format_currency(view.solatium_added_won))
         } else {
             ("", String::new())
         },
+        match &heir_rounding {
+            Some((label, won)) => (label.as_str(), format_currency(*won)),
+            None => ("", String::new()),
+        },
         ("최종 합계(원)", format_currency(view.final_won)),
-    ];
+    ]);
     for (key, value) in &summary_rows {
         if key.is_empty() {
             continue;
@@ -509,6 +530,65 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
     Ok(out)
 }
 
+/// 구간표 머리글. 계산 기준일을 넣은 결과(`dated`)는 기간 뒤에 초일·말일 열을 둔다.
+/// `middle` 은 기간과 단가 사이 열(부상 = 상실률).
+fn write_segment_header(
+    wtr: &mut csv::Writer<Vec<u8>>,
+    dated: bool,
+    middle: &[&str],
+) -> Result<(), Error> {
+    let mut header = vec!["기간(개월)"];
+    if dated {
+        header.extend(["초일", "말일"]);
+    }
+    header.extend(middle);
+    header.extend(["단가(원/일)", "호프만(적용)", "금액(원)"]);
+    wtr.write_record(&header)?;
+    Ok(())
+}
+
+fn write_segment_row(
+    wtr: &mut csv::Writer<Vec<u8>>,
+    segment: &CompensationSegmentView,
+    dated: bool,
+    middle: &[String],
+    cap_marker: &str,
+) -> Result<(), Error> {
+    let mut row = vec![format!("{} ~ {}", segment.start_month, segment.end_month)];
+    if dated {
+        row.push(segment.start_date.clone().unwrap_or_default());
+        row.push(segment.end_date.clone().unwrap_or_default());
+    }
+    row.extend(middle.iter().cloned());
+    row.extend([
+        format_currency(segment.daily_wage_won),
+        format!("{:.6}{}", segment.applied_hoffman, cap_marker),
+        format_currency(segment.amount_floor_won),
+    ]);
+    let escaped: Vec<String> = row
+        .iter()
+        .map(|cell| escape_csv_cell(cell).into_owned())
+        .collect();
+    wtr.write_record(&escaped)?;
+    Ok(())
+}
+
+/// 구간표 소계 행. 금액은 마지막(금액) 열에 둔다.
+fn write_segment_subtotal(
+    wtr: &mut csv::Writer<Vec<u8>>,
+    label: &str,
+    dated: bool,
+    middle_len: usize,
+    won: f64,
+) -> Result<(), Error> {
+    let blanks = 2 + middle_len + if dated { 2 } else { 0 };
+    let mut row = vec![label.to_string()];
+    row.extend(std::iter::repeat_n(String::new(), blanks));
+    row.push(escape_csv_cell(&format_currency(won)).into_owned());
+    wtr.write_record(&row)?;
+    Ok(())
+}
+
 /// 기타손해(개호비·치료비·보조구 + 소계) CSV 행. `None` (미입력) 이면 한 줄도 쓰지 않아
 /// 자동차/미입력 결과와 byte-identical (회귀 0). injury·death 공용.
 fn write_other_damages_rows<W: std::io::Write>(
@@ -539,30 +619,23 @@ pub fn render_compensation_death_csv_bytes(
         .flexible(true)
         .from_writer(vec![]);
 
-    wtr.write_record(["기간(개월)", "단가(원/일)", "호프만(적용)", "금액(원)"])?;
+    let dated = segments_have_dates(&view.segments);
+    write_segment_header(&mut wtr, dated, &[])?;
     for (i, segment) in view.segments.iter().enumerate() {
         let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
             " (한도)"
         } else {
             ""
         };
-        let row: [String; 4] = [
-            escape_csv_cell(&format!("{} ~ {}", segment.start_month, segment.end_month))
-                .into_owned(),
-            escape_csv_cell(&format_currency(segment.daily_wage_won)).into_owned(),
-            escape_csv_cell(&format!("{:.6}{}", segment.applied_hoffman, cap_marker)).into_owned(),
-            escape_csv_cell(&format_currency(segment.amount_floor_won)).into_owned(),
-        ];
-        wtr.write_record(&row)?;
+        write_segment_row(&mut wtr, segment, dated, &[], cap_marker)?;
     }
-    let lost_income_cell =
-        escape_csv_cell(&format_currency(view.lost_income_subtotal_won)).into_owned();
-    wtr.write_record([
+    write_segment_subtotal(
+        &mut wtr,
         "일실수입 소계 (생계비 공제 후)",
-        "",
-        "",
-        lost_income_cell.as_str(),
-    ])?;
+        dated,
+        0,
+        view.lost_income_subtotal_won,
+    )?;
 
     // 산재(유족급여) — 일실수입 한도 선공제 (2021다241618 전합). 자동차 결과는 skip (회귀 0).
     if let Some(ib) = &view.industrial_benefit {
@@ -573,7 +646,24 @@ pub fn render_compensation_death_csv_bytes(
     }
 
     let excess_key = format!("{}(원)", view.deduction_excess_label);
-    let summary_rows: [(&str, String); 12] = [
+    let heir_dropped =
+        heir_excess_dropped_row(&view.deductions).map(|(label, won)| (format!("{label}(원)"), won));
+    let heir_rounding =
+        heir_rounding_row(&view.deductions).map(|(label, won)| (format!("{label}(원)"), won));
+    let deduction_keys: Vec<(String, f64)> =
+        compensation_deduction_rows(&view.deductions, view.property_only_excess_won)
+            .into_iter()
+            .map(|(label, won)| (format!("{label}(원)"), won))
+            .collect();
+    let mut summary_rows: Vec<(&str, String)> = vec![
+        (
+            if view.labor_rate_timing_text.is_empty() {
+                ""
+            } else {
+                "노임 기준"
+            },
+            view.labor_rate_timing_text.clone(),
+        ),
         (
             "생계비 공제 비율",
             format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
@@ -592,6 +682,11 @@ pub fn render_compensation_death_csv_bytes(
             "과실상계 후(원)",
             format_currency(view.fault_offset.after_won),
         ),
+    ];
+    for (key, won) in &deduction_keys {
+        summary_rows.push((key.as_str(), format_currency(*won)));
+    }
+    summary_rows.extend([
         // legacy — ≤ v0.9.x 저장 결과(과실상계 후 총액 공제)만 해당. 신 결과·자동차는 skip.
         match view.deductions.industrial_benefit_won {
             Some(benefit) => ("산재보험급여 공제(유족급여)(원)", format_currency(benefit)),
@@ -610,14 +705,21 @@ pub fn render_compensation_death_csv_bytes(
         } else {
             ("", String::new())
         },
+        match &heir_dropped {
+            Some((label, won)) => (label.as_str(), format_currency(*won)),
+            None => ("", String::new()),
+        },
         if view.solatium_added_won > 0.0 {
             ("위자료 가산(원)", format_currency(view.solatium_added_won))
         } else {
             ("", String::new())
         },
+        match &heir_rounding {
+            Some((label, won)) => (label.as_str(), format_currency(*won)),
+            None => ("", String::new()),
+        },
         ("최종 합계(원)", format_currency(view.final_won)),
-        ("", String::new()),
-    ];
+    ]);
     for (key, value) in &summary_rows {
         if key.is_empty() {
             continue;
@@ -630,13 +732,28 @@ pub fn render_compensation_death_csv_bytes(
 
     if let Some(shares) = view.inheritance_shares.as_ref() {
         if !shares.is_empty() {
-            wtr.write_record(["상속인", "지분(약분)", "", "배정 금액(원)"])?;
+            // 수급권자별 유족급여 결과는 빈 셋째 열에 상속인별 공제액을 넣는다.
+            let survivor = shares_have_survivor_benefit(shares);
+            wtr.write_record([
+                "상속인",
+                "지분(약분)",
+                if survivor {
+                    "유족급여 공제(원)"
+                } else {
+                    ""
+                },
+                "배정 금액(원)",
+            ])?;
             for share in shares {
                 let row: [String; 4] = [
                     escape_csv_cell(&share.name).into_owned(),
                     escape_csv_cell(&format!("{}/{}", share.numerator, share.denominator))
                         .into_owned(),
-                    String::new(),
+                    if survivor {
+                        format_currency(share.survivor_benefit_deducted_won.unwrap_or(0.0))
+                    } else {
+                        String::new()
+                    },
                     escape_csv_cell(&format_currency(share.amount_won)).into_owned(),
                 ];
                 wtr.write_record(&row)?;
@@ -857,6 +974,8 @@ mod tests {
             segments: vec![CompensationSegmentView {
                 start_month: 0,
                 end_month: 360,
+                start_date: None,
+                end_date: None,
                 loss_rate: 0.3,
                 daily_wage_won: 172_068.0,
                 applied_hoffman: 219.610067,
@@ -872,6 +991,13 @@ mod tests {
             },
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
+                paid_treatment_subtotal_won: None,
+                legacy_ratio_subtotal_won: None,
+                property_only_applied_won: None,
+                property_only_discarded_won: None,
+                solatium_reduced_won: None,
+                absolute_excess_dropped_won: None,
+                rounding_won: None,
                 absolute_subtotal_won: 0.0,
                 industrial_benefit_won: None,
             },
@@ -885,6 +1011,8 @@ mod tests {
             solatium_added_won: 0.0,
             deduction_excess_won: 0.0,
             deduction_excess_label: String::new(),
+            property_only_excess_won: 0.0,
+            labor_rate_timing_text: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1090,6 +1218,8 @@ mod tests {
             segments: vec![CompensationSegmentView {
                 start_month: 0,
                 end_month: 360,
+                start_date: None,
+                end_date: None,
                 loss_rate: 1.0,
                 daily_wage_won: 172_068.0,
                 applied_hoffman: 219.610067,
@@ -1106,6 +1236,13 @@ mod tests {
             funeral_expense_won: 5_000_000.0,
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
+                paid_treatment_subtotal_won: None,
+                legacy_ratio_subtotal_won: None,
+                property_only_applied_won: None,
+                property_only_discarded_won: None,
+                solatium_reduced_won: None,
+                absolute_excess_dropped_won: None,
+                rounding_won: None,
                 absolute_subtotal_won: 0.0,
                 industrial_benefit_won: None,
             },
@@ -1117,12 +1254,14 @@ mod tests {
                     numerator: 3,
                     denominator: 7,
                     amount_won: 273_952_286.0,
+                    survivor_benefit_deducted_won: None,
                 },
                 CompensationInheritanceShareView {
                     name: "자녀1".into(),
                     numerator: 2,
                     denominator: 7,
                     amount_won: 182_634_857.0,
+                    survivor_benefit_deducted_won: None,
                 },
             ]),
             hoffman240_cap: CompensationHoffman240CapView {
@@ -1133,6 +1272,8 @@ mod tests {
             solatium_added_won: 0.0,
             deduction_excess_won: 0.0,
             deduction_excess_label: String::new(),
+            property_only_excess_won: 0.0,
+            labor_rate_timing_text: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1214,6 +1355,136 @@ mod tests {
         let bytes = render_compensation_death_csv_bytes(&compensation_death_sample()).unwrap();
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
         assert!(!body.contains("기타손해 소계"));
+    }
+
+    /// 계산 기준일을 넣은 결과는 구간표에 초일·말일 열이 붙고, 소계 금액은 금액 열에 남는다.
+    #[test]
+    fn compensation_csv_adds_segment_date_columns_when_dated() {
+        let mut view = compensation_sample();
+        let plain =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(plain.starts_with("기간(개월),상실률,"));
+        view.segments[0].start_date = Some("2020-01-01".into());
+        view.segments[0].end_date = Some("2049-12-31".into());
+        let body =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(body.starts_with("기간(개월),초일,말일,상실률,단가(원/일),호프만(적용),금액(원)\n"));
+        assert!(body.contains("0 ~ 360,2020-01-01,2049-12-31,30.00%,"));
+        assert!(body.contains("일실수입 소계,,,,,,\"249,399,909\""));
+
+        let mut death = compensation_death_sample();
+        death.segments[0].start_date = Some("2020-01-01".into());
+        death.segments[0].end_date = Some("2049-12-31".into());
+        let body =
+            String::from_utf8(render_compensation_death_csv_bytes(&death).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(body.starts_with("기간(개월),초일,말일,단가(원/일),호프만(적용),금액(원)\n"));
+        assert!(body.contains("일실수입 소계 (생계비 공제 후),,,,,\"554,222,020\""));
+    }
+
+    /// 새 공제 종류 소계와 재산상 손해 초과분 행을 부상·사망 모두 순서대로 쓴다.
+    #[test]
+    fn compensation_csv_writes_r2a_deduction_rows_in_order() {
+        let mut view = compensation_sample();
+        view.deductions.ratio_subtotal_won = 1_000.0;
+        view.deductions.paid_treatment_subtotal_won = Some(300.0);
+        view.deductions.legacy_ratio_subtotal_won = Some(50.0);
+        view.deductions.absolute_subtotal_won = 7.0;
+        view.property_only_excess_won = 120.0;
+        let body =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        let order = [
+            "비율공제 소계(원),\"1,000\"",
+            "지급치료비 공제 소계(원),300",
+            "이전 방식 비율공제 소계(원),50",
+            "전액공제 소계(원),7",
+            "비율공제·지급치료비 중 재산상 손해 초과분 (위자료에서 빼지 않음)(원),120",
+            "최종 합계(원)",
+        ];
+        let positions: Vec<usize> = order
+            .iter()
+            .map(|row| body.find(row).unwrap_or_else(|| panic!("missing {row}")))
+            .collect();
+        assert!(positions.windows(2).all(|w| w[0] < w[1]), "{body}");
+
+        // 사망 CSV 도 공제 소계 행을 쓴다 (종전에는 비율·전액 공제 행이 빠져 있었다).
+        let death = String::from_utf8(
+            render_compensation_death_csv_bytes(&compensation_death_sample()).unwrap()[3..]
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(death.contains("비율공제 소계(원),0"));
+        assert!(death.contains("전액공제 소계(원),0"));
+        assert!(!death.contains("지급치료비"));
+    }
+
+    /// 계산 기준일·규약 텍스트가 있으면 "노임 기준" 행을 쓰고, 없는 구 payload 는 행이 없다.
+    #[test]
+    fn compensation_csv_writes_labor_rate_timing_row_when_present() {
+        let mut view = compensation_sample();
+        let plain =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(!plain.contains("노임 기준"));
+        view.labor_rate_timing_text =
+            "계산 기준일 2026-10-04 · 노임 적용일 규약 조사 시점 (5/1·9/1)".into();
+        let body =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(body
+            .contains("노임 기준,계산 기준일 2026-10-04 · 노임 적용일 규약 조사 시점 (5/1·9/1)"));
+        let mut death = compensation_death_sample();
+        death.labor_rate_timing_text =
+            "계산 기준일 2026-10-04 · 노임 적용일 규약 조사 시점 (5/1·9/1)".into();
+        let body =
+            String::from_utf8(render_compensation_death_csv_bytes(&death).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(body.contains("노임 기준,"));
+    }
+
+    /// 상속인별 계산은 버린 초과분(위자료 가산 앞)과 절사 차이(뒤) 행을 써서 행 합이 최종액과 맞는다.
+    #[test]
+    fn compensation_death_csv_writes_heir_settlement_rows() {
+        let mut view = compensation_death_sample();
+        view.solatium_added_won = 100_000_000.0;
+        view.deductions.absolute_excess_dropped_won = Some(500.0);
+        view.deductions.rounding_won = Some(82.0);
+        view.deductions.property_only_discarded_won = Some(8_700_000.0);
+        let body =
+            String::from_utf8(render_compensation_death_csv_bytes(&view).unwrap()[3..].to_vec())
+                .unwrap();
+        let dropped = body
+            .find("\"전액공제 초과분 중 위자료로도 빼지 못한 금액 (상속인별 0원 하한, 차감하지 않음)(원)\",500")
+            .expect("dropped row");
+        let added = body.find("위자료 가산(원)").expect("added row");
+        let rounding = body
+            .find("상속분 나눗셈·상속인별 100원 미만 버림(원),'-82")
+            .expect("rounding row");
+        assert!(dropped < added && added < rounding, "{body}");
+        let plain = String::from_utf8(
+            render_compensation_death_csv_bytes(&compensation_death_sample()).unwrap()[3..]
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(!plain.contains("상속분 나눗셈"));
+    }
+
+    /// 수급권자별 유족급여 결과는 상속인 표 셋째 열에 공제액을 쓴다.
+    #[test]
+    fn compensation_death_csv_writes_survivor_benefit_column() {
+        let mut view = compensation_death_sample();
+        let plain =
+            String::from_utf8(render_compensation_death_csv_bytes(&view).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(plain.contains("상속인,지분(약분),,배정 금액(원)"));
+        if let Some(shares) = view.inheritance_shares.as_mut() {
+            shares[0].survivor_benefit_deducted_won = Some(150_000_000.0);
+            shares[1].survivor_benefit_deducted_won = Some(0.0);
+        }
+        let body =
+            String::from_utf8(render_compensation_death_csv_bytes(&view).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(body.contains("상속인,지분(약분),유족급여 공제(원),배정 금액(원)"));
+        assert!(body.contains("배우자,3/7,\"150,000,000\","));
+        assert!(body.contains("자녀1,2/7,0,"));
     }
 
     /// User-controlled heir name fields must not be evaluated as formulas in

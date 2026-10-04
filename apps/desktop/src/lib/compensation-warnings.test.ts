@@ -58,6 +58,23 @@ describe("buildCompensationExportWarnings", () => {
     expect(warnings[0]).toContain("나눠 입력");
   });
 
+  it("엔진의 대체 처리 경고(직종 조사 중단 등) 문구를 맨 앞에 그대로 싣는다", () => {
+    const warnings = buildCompensationExportWarnings(
+      result({
+        hoffman240Cap: { cappedAtIndex: 0 },
+        warnings: [
+          {
+            code: "laborRateCarriedForward",
+            occupation: "갱부",
+            message: "갱부 단가를 이어 썼습니다.",
+          },
+        ],
+      }),
+    );
+    expect(warnings[0]).toBe("갱부 단가를 이어 썼습니다.");
+    expect(warnings).toHaveLength(2);
+  });
+
   it("`cappedAtIndex: 0` 을 경고 없음으로 오판하지 않는다", () => {
     // falsy 검사로 짜면 첫 구간부터 한도가 걸린 사건이 통째로 조용해진다.
     expect(
@@ -66,9 +83,15 @@ describe("buildCompensationExportWarnings", () => {
   });
 
   it("withCompensationExportWarnings 는 결과를 보존한 채 필드만 덧붙인다", () => {
-    const base = result({ hoffman240Cap: { cappedAtIndex: 1 }, finalWon: 123 });
+    const base = result({
+      hoffman240Cap: { cappedAtIndex: 1 },
+      finalWon: 123,
+      faultOffset: { afterWon: 0 },
+      deductions: { ratioSubtotalWon: 0, absoluteSubtotalWon: 0, afterWon: 0 },
+    });
     const payload = withCompensationExportWarnings(base);
     expect(payload.finalWon).toBe(123);
     expect(payload.exportWarnings).toHaveLength(1);
+    expect(payload.propertyOnlyExcessWon).toBe(0);
   });
 });

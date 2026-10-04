@@ -96,16 +96,17 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
     expect(result.finalWon).toBe(0);
   });
 
-  it("공제 (전액공제 + 비율공제) 조합", () => {
+  it("공제 (전액공제 + 구 비율공제) 조합", () => {
     const input = baseInput();
     input.deductions = {
-      ratio: [{ label: "기여도", ratio: 0.1 }],
+      legacyRatio: [{ label: "기여도", ratio: 0.1 }],
       absolute: [{ label: "선급금", amount: 10000000 }],
     };
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     const afterFuneral = 605679360 + 5000000;
     const ratioSub = Math.floor(afterFuneral * 0.1);
-    expect(result.deductions.ratioSubtotalWon).toBe(ratioSub);
+    expect(result.deductions.legacyRatioSubtotalWon).toBe(ratioSub);
+    expect(result.deductions.ratioSubtotalWon).toBe(0);
     expect(result.deductions.absoluteSubtotalWon).toBe(10000000);
     const expectedFinal = Math.floor((afterFuneral - ratioSub - 10000000) / 100) * 100;
     expect(result.finalWon).toBe(expectedFinal);

@@ -79,6 +79,7 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "compensation@2",
   "compensation@3",
   "compensation@4",
+  "compensation@5",
   "period@1",
   "deadline@1",
   "case@1",

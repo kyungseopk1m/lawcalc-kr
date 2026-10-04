@@ -12,6 +12,7 @@ import { validateOtherDamagesInput } from "../other-damages/validators";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DEDUCTION_ITEMS = 50;
+const MAX_RECIPIENTS = 20;
 const PREFIX = "사망 손해배상 입력 검증 실패";
 
 function assertIsoDate(label: string, value: unknown): void {
@@ -54,6 +55,23 @@ function validateBase(base: CompensationDeathBaseInput): void {
   assertIsoDate("base.accidentDate", base.accidentDate);
   if (base.accidentDate < base.birthDate) {
     throw new RangeError(`${PREFIX}: base.accidentDate 는 base.birthDate 이상이어야 합니다.`);
+  }
+  if (base.calculationDate !== undefined) {
+    assertIsoDate("base.calculationDate", base.calculationDate);
+    if (base.calculationDate < base.accidentDate) {
+      throw new RangeError(
+        `${PREFIX}: base.calculationDate 는 base.accidentDate 이상이어야 합니다.`,
+      );
+    }
+  }
+  if (
+    base.laborRateEffectiveRule !== undefined &&
+    base.laborRateEffectiveRule !== "published" &&
+    base.laborRateEffectiveRule !== "survey"
+  ) {
+    throw new RangeError(
+      `${PREFIX}: base.laborRateEffectiveRule 는 "published" 또는 "survey" 여야 합니다.`,
+    );
   }
   if (base.sex !== "male" && base.sex !== "female") {
     throw new RangeError(`${PREFIX}: base.sex 는 "male" 또는 "female" 여야 합니다.`);
@@ -109,25 +127,39 @@ function validateDeductions(deductions: CompensationDeductionsInput): void {
   if (deductions === null || typeof deductions !== "object") {
     throw new RangeError(`${PREFIX}: deductions 객체가 필요합니다.`);
   }
-  const ratio = deductions.ratio ?? [];
-  const absolute = deductions.absolute ?? [];
-  if (!Array.isArray(ratio)) {
-    throw new RangeError(`${PREFIX}: deductions.ratio 는 배열이어야 합니다.`);
+  const lists = {
+    ratio: deductions.ratio ?? [],
+    paidTreatment: deductions.paidTreatment ?? [],
+    absolute: deductions.absolute ?? [],
+    legacyRatio: deductions.legacyRatio ?? [],
+  };
+  let count = 0;
+  for (const [key, list] of Object.entries(lists)) {
+    if (!Array.isArray(list)) {
+      throw new RangeError(`${PREFIX}: deductions.${key} 는 배열이어야 합니다.`);
+    }
+    count += list.length;
   }
-  if (!Array.isArray(absolute)) {
-    throw new RangeError(`${PREFIX}: deductions.absolute 는 배열이어야 합니다.`);
-  }
-  if (ratio.length + absolute.length > MAX_DEDUCTION_ITEMS) {
+  if (count > MAX_DEDUCTION_ITEMS) {
     throw new RangeError(`${PREFIX}: 공제 항목 합계는 ${MAX_DEDUCTION_ITEMS}건 이하여야 합니다.`);
   }
-  for (let i = 0; i < ratio.length; i++) {
-    const item = ratio[i]!;
-    assertRatio(`deductions.ratio[${i}].ratio`, item.ratio);
-  }
-  for (let i = 0; i < absolute.length; i++) {
-    const item = absolute[i]!;
-    assertNonNegativeInteger(`deductions.absolute[${i}].amount`, item.amount);
-  }
+  lists.ratio.forEach((item, i) => {
+    if ("ratio" in item && !("amount" in item)) {
+      throw new RangeError(
+        `${PREFIX}: deductions.ratio[${i}] 는 금액(amount) 항목입니다. 구 비율(ratio) 공제는 deductions.legacyRatio 로 옮겨 주세요.`,
+      );
+    }
+    assertNonNegativeInteger(`deductions.ratio[${i}].amount`, item.amount);
+  });
+  lists.paidTreatment.forEach((item, i) =>
+    assertNonNegativeInteger(`deductions.paidTreatment[${i}].amount`, item.amount),
+  );
+  lists.absolute.forEach((item, i) =>
+    assertNonNegativeInteger(`deductions.absolute[${i}].amount`, item.amount),
+  );
+  lists.legacyRatio.forEach((item, i) =>
+    assertRatio(`deductions.legacyRatio[${i}].ratio`, item.ratio),
+  );
 }
 
 /**
@@ -194,6 +226,52 @@ export function validateCompensationDeathInput(input: CompensationAutoDeathInput
         "industrialInsurance.survivorBenefitWon",
         input.industrialInsurance.survivorBenefitWon,
       );
+    }
+    const recipients = input.industrialInsurance.recipients;
+    if (recipients !== undefined) {
+      if (!Array.isArray(recipients) || recipients.length > MAX_RECIPIENTS) {
+        throw new RangeError(
+          `${PREFIX}: industrialInsurance.recipients 는 ${MAX_RECIPIENTS}개 이하 배열이어야 합니다.`,
+        );
+      }
+      if (input.industrialInsurance.survivorBenefitWon !== undefined) {
+        throw new RangeError(
+          `${PREFIX}: industrialInsurance 는 survivorBenefitWon 과 recipients 를 함께 지정할 수 없습니다.`,
+        );
+      }
+      if (input.heirs === undefined) {
+        throw new RangeError(
+          `${PREFIX}: industrialInsurance.recipients 는 heirs 가 있어야 상속인별로 공제할 수 있습니다.`,
+        );
+      }
+      // 수급권자는 상속인 이름으로 매칭하므로 이름이 겹치면 같은 유족급여를 두 번 공제하게 된다.
+      const names = calculateInheritance(input.heirs).shares.map((share) => share.name);
+      if (new Set(names).size !== names.length) {
+        throw new RangeError(
+          `${PREFIX}: industrialInsurance.recipients 를 쓰려면 상속인 이름이 서로 달라야 합니다.`,
+        );
+      }
+      recipients.forEach((r, i) => {
+        if (r === null || typeof r !== "object") {
+          throw new RangeError(
+            `${PREFIX}: industrialInsurance.recipients[${i}] 객체가 필요합니다.`,
+          );
+        }
+        if (r.heirName !== undefined && typeof r.heirName !== "string") {
+          throw new RangeError(
+            `${PREFIX}: industrialInsurance.recipients[${i}].heirName 은 문자열이어야 합니다.`,
+          );
+        }
+        if (r.heirName !== undefined && !names.includes(r.heirName)) {
+          throw new RangeError(
+            `${PREFIX}: 유족급여 수급권자 ${i + 1}번째 "${r.heirName}" 는 상속인 목록에 없는 이름입니다. 상속인이 아닌 수급권자는 이름을 비워 두세요.`,
+          );
+        }
+        assertNonNegativeInteger(
+          `industrialInsurance.recipients[${i}].survivorBenefitWon`,
+          r.survivorBenefitWon,
+        );
+      });
     }
   }
   if (input.otherDamages !== undefined) {

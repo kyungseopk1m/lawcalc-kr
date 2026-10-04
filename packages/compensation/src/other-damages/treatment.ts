@@ -2,8 +2,8 @@
  * 치료비(기왕 + 향후) + 보조구 계산. 매뉴얼 제6조-나·다.
  *
  * - 기왕치료비: 현가 없음. `Σ 비용 × (1 - 기왕증)`.
- * - 향후(치료비 향후 / 보조구): 일시금형. 발생시점별 단리 일시금 현가계수 합 = "수치합계" → 20 cap →
- *   `비용 × cappedSum × (1 - 기왕증)`.
+ * - 향후(치료비 향후 / 보조구): 일시금형. 발생시점별 단리 일시금 현가계수(항별 소수 4자리 절사)
+ *   합 = "수치합계" → 20 cap → `비용 × cappedSum × (1 - 기왕증)` 원 미만 절사.
  *   - `kind === "oneTime"`: firstDate 단일 발생 (수치 1개).
  *   - `kind === "recurring"`: firstDate ~ lastDate 를 lifespanMonths 주기로 발생.
  *
@@ -11,25 +11,37 @@
  */
 
 import type { TreatmentFutureInput, TreatmentInput, TreatmentResult } from "./types";
-import { applyValueSum20Cap, singlePaymentHoffman, VALUE_SUM_CAP } from "./caps";
+import { applyValueSum20Cap } from "./caps";
 import { monthsBetween, type OtherDamagesContext } from "./internal";
+import { floorTimesComplements, shiftMonths } from "../internal";
 
-/** 향후 일시금 항목 1건의 수치합계(단리 현가계수 합) raw 값. */
-function rawValueSum(item: TreatmentFutureInput, ctx: OtherDamagesContext): number {
-  const firstMonth = monthsBetween(ctx.accidentDate, item.firstDate);
+/**
+ * 지출 1회의 단리 일시금 현가계수를 소수 4자리에서 버린 값 (1e-4 단위 정수).
+ * `240 / (240 + m)` = `1 / (1 + 0.05 × m/12)` (연 5% 단리, `caps.ts` 의 할인율 전제).
+ * 부동소수 `Math.floor(v × 1e4)` 는 합에서 몇 단위 어긋나므로 정수 나눗셈으로 버린다.
+ */
+export function truncatedTermUnits(months: number): number {
+  return Math.floor(2_400_000 / (240 + months));
+}
+
+/**
+ * 향후 일시금 항목 1건의 수치합계(상한 전, 1e-4 단위 정수).
+ *
+ * 법원 손해배상 계산 프로그램 매뉴얼 그림값(0.7619, 3.4235, 20.2109)을 재현하는 산식이다:
+ * 지출일 = 최초필요일 + k × 수명(개월), 지출일 ≤ 필요최종일 동안 항별 4자리 절사 계수를 더한다.
+ */
+export function rawValueSumUnits(item: TreatmentFutureInput, ctx: OtherDamagesContext): number {
   if (item.kind === "oneTime") {
-    return singlePaymentHoffman(Math.max(0, firstMonth));
+    return truncatedTermUnits(Math.max(0, monthsBetween(ctx.accidentDate, item.firstDate)));
   }
-  // recurring: firstDate ~ lastDate 를 lifespanMonths 주기로 발생.
-  const lastMonth = monthsBetween(ctx.accidentDate, item.lastDate);
   const lifespan = item.lifespanMonths as number; // validator 가 recurring 필수 보장.
-  let sum = 0;
-  for (let m = firstMonth; m <= lastMonth; m += lifespan) {
-    sum += singlePaymentHoffman(Math.max(0, m));
-    // 어차피 20 cap 으로 clip 되므로, 초과 시 조기 종료 (장기/이상 입력의 과도 루프 방지).
-    if (sum > VALUE_SUM_CAP) break;
+  let units = 0;
+  for (let k = 0; ; k++) {
+    const spendDate = shiftMonths(item.firstDate, k * lifespan);
+    if (spendDate > item.lastDate) break;
+    units += truncatedTermUnits(Math.max(0, monthsBetween(ctx.accidentDate, spendDate)));
   }
-  return sum;
+  return units;
 }
 
 /**
@@ -75,10 +87,15 @@ function computeFutureList(
   let futureWon = 0;
   let anyCapped = false;
   for (const item of items) {
-    const raw = rawValueSum(item, ctx);
-    const cap = applyValueSum20Cap(raw);
+    const cap = applyValueSum20Cap(rawValueSumUnits(item, ctx) / 10_000);
     if (cap.capped) anyCapped = true;
-    futureWon += Math.floor(item.costWon * cap.appliedSum * (1 - (item.priorRatio ?? 0)));
+    // 1e-4 단위 정수와 BigInt 로 곱해 원 미만 절사가 부동소수 오차에 흔들리지 않게 한다 (800,000 × 4.3824).
+    const appliedUnits = Math.round(cap.appliedSum * 10_000);
+    futureWon += floorTimesComplements(
+      BigInt(item.costWon) * BigInt(appliedUnits),
+      [item.priorRatio ?? 0],
+      10_000,
+    );
   }
   return { futureWon, anyCapped, splitSuspected: detectSplitSuspicion(items) };
 }
@@ -96,7 +113,7 @@ export function computeTreatment(
 
   let pastWon = 0;
   for (const item of pastItems) {
-    pastWon += Math.floor(item.costWon * (1 - (item.priorRatio ?? 0)));
+    pastWon += floorTimesComplements(item.costWon, [item.priorRatio ?? 0]);
   }
 
   const { futureWon, anyCapped, splitSuspected } = computeFutureList(futureItems, ctx);

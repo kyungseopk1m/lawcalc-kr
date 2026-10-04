@@ -16,6 +16,8 @@ interface ExpectedInheritanceShare {
   numerator: number;
   denominator: number;
   amountWon: number;
+  /** 유족급여 수급권자 입력 골든에만 있다. */
+  survivorBenefitDeductedWon?: number;
 }
 
 interface ExpectedSegment {
@@ -68,6 +70,10 @@ interface ExpectedShape {
     ratioSubtotalWon: number;
     absoluteSubtotalWon: number;
     industrialBenefitWon?: number;
+    /** 상속인별 계산(recipients) 골든에만 있다. */
+    solatiumReducedWon?: number;
+    absoluteExcessDroppedWon?: number;
+    roundingWon?: number;
     afterWon: number;
   };
   finalWon: number;
@@ -151,6 +157,9 @@ const COVERAGE: GoldenCoverage = {
     "deductions.ratioSubtotalWon",
     "deductions.absoluteSubtotalWon",
     "deductions.afterWon",
+    "deductions.solatiumReducedWon",
+    "deductions.absoluteExcessDroppedWon",
+    "deductions.roundingWon",
     "industrialBenefit.benefitWon",
     "industrialBenefit.deductedWon",
     "industrialBenefit.lostIncomeAfterWon",
@@ -170,6 +179,7 @@ const COVERAGE: GoldenCoverage = {
     "inheritanceShares[].numerator",
     "inheritanceShares[].denominator",
     "inheritanceShares[].amountWon",
+    "inheritanceShares[].survivorBenefitDeductedWon",
     "rawInheritanceShares[].name",
     "rawInheritanceShares[].numerator",
     "rawInheritanceShares[].denominator",
@@ -186,8 +196,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사망 — derivation)", () => {
-  it("loads exactly 5 cases", () => {
-    expect(cases).toHaveLength(5);
+  it("loads exactly 6 cases", () => {
+    expect(cases).toHaveLength(6);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -238,6 +248,15 @@ describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사�
       expect(result.deductions.industrialBenefitWon, `${c.id} legacy industrialBenefitWon`).toBe(
         c.expected.deductions.industrialBenefitWon,
       );
+      for (const key of [
+        "solatiumReducedWon",
+        "absoluteExcessDroppedWon",
+        "roundingWon",
+      ] as const) {
+        expect(result.deductions[key], `${c.id} deductions.${key}`).toBe(
+          c.expected.deductions[key],
+        );
+      }
       expect(result.deductions.afterWon, `${c.id} deductionsAfter`).toBe(
         c.expected.deductions.afterWon,
       );
@@ -280,15 +299,9 @@ describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사�
       if (c.expected.inheritanceShares === null) {
         expect(result.inheritanceShares, `${c.id} inheritanceShares`).toBeUndefined();
       } else {
-        expect(
-          result.inheritanceShares?.map((s) => ({
-            name: s.name,
-            numerator: s.numerator,
-            denominator: s.denominator,
-            amountWon: s.amountWon,
-          })),
-          `${c.id} inheritanceShares`,
-        ).toEqual(c.expected.inheritanceShares);
+        expect(result.inheritanceShares, `${c.id} inheritanceShares`).toEqual(
+          c.expected.inheritanceShares,
+        );
         const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
         expect(sum, `${c.id} inheritance round-trip`).toBe(result.finalWon);
       }

@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-020-labor-rate-split-survey",
+  "title": "auto/injury 노임 시점 분할(조사 시점 규약): 2019나48259 별지 입력, 8구간",
+  "source": "manual-derivation",
+  "notes": "r2a-golden-derivation-2026-10-04.md 2절. 서울중앙지법 2020. 10. 21. 선고 2019나48259 별지(조사 시점 규약, 22일, 3%, 변론종결 2020. 7. 22.)의 입력을 쓴다. 판결 별지는 4자리 절사 호프만표로 14,831,344원이고, 이 골든은 데이터셋 8자리 호프만표라 행마다 몇 원 다르다(합계 14,831,350원). 4자리 표 재현은 tests/auto-injury/labor-rate-split.test.ts.",
+  "input": {
+    "base": {
+      "birthDate": "1972-01-07",
+      "accidentDate": "2016-07-08",
+      "treatmentEndDate": "2016-07-08",
+      "sex": "male",
+      "retirementAge": 65,
+      "calculationDate": "2020-07-22",
+      "laborRateEffectiveRule": "survey"
+    },
+    "lossRate": {
+      "permanent": [
+        {
+          "ratio": 0.03
+        }
+      ]
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "workingDaysPerMonth": 22
+    },
+    "solatiumWon": 10000000,
+    "faultRatio": 0.4
+  },
+  "expected": {
+    "lostIncomeSubtotalWon": 14831350,
+    "solatiumWon": 10000000,
+    "pecuniaryDamagesSubtotalWon": 14831350,
+    "faultOffset": {
+      "ratio": 0.4,
+      "beforeWon": 14831350,
+      "afterWon": 8898810
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 8898810
+    },
+    "finalWon": 18898800,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 1,
+        "startDate": "2016-07-08",
+        "endDate": "2016-08-31",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 99882,
+        "monthlyWageWon": 2197404,
+        "rawHoffman": 0.99585062,
+        "appliedHoffman": 0.99585062,
+        "amountFloorWon": 65648
+      },
+      {
+        "startMonth": 1,
+        "endMonth": 9,
+        "startDate": "2016-09-01",
+        "endDate": "2017-04-30",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 102628,
+        "monthlyWageWon": 2257816,
+        "rawHoffman": 7.82145529,
+        "appliedHoffman": 7.82145529,
+        "amountFloorWon": 529782
+      },
+      {
+        "startMonth": 9,
+        "endMonth": 13,
+        "startDate": "2017-05-01",
+        "endDate": "2017-08-31",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 106846,
+        "monthlyWageWon": 2350612,
+        "rawHoffman": 3.8171728500000004,
+        "appliedHoffman": 3.8171728500000004,
+        "amountFloorWon": 269180
+      },
+      {
+        "startMonth": 13,
+        "endMonth": 21,
+        "startDate": "2017-09-01",
+        "endDate": "2018-04-30",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 109819,
+        "monthlyWageWon": 2416018,
+        "rawHoffman": 7.456901139999999,
+        "appliedHoffman": 7.456901139999999,
+        "amountFloorWon": 540480
+      },
+      {
+        "startMonth": 21,
+        "endMonth": 25,
+        "startDate": "2018-05-01",
+        "endDate": "2018-08-31",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 118130,
+        "monthlyWageWon": 2598860,
+        "rawHoffman": 3.643329350000002,
+        "appliedHoffman": 3.643329350000002,
+        "amountFloorWon": 284055
+      },
+      {
+        "startMonth": 25,
+        "endMonth": 33,
+        "startDate": "2018-09-01",
+        "endDate": "2019-04-30",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 125427,
+        "monthlyWageWon": 2759394,
+        "rawHoffman": 7.124819299999999,
+        "appliedHoffman": 7.124819299999999,
+        "amountFloorWon": 589805
+      },
+      {
+        "startMonth": 33,
+        "endMonth": 37,
+        "startDate": "2019-05-01",
+        "endDate": "2019-08-31",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 130264,
+        "monthlyWageWon": 2865808,
+        "rawHoffman": 3.4846308899999983,
+        "appliedHoffman": 3.4846308899999983,
+        "amountFloorWon": 299588
+      },
+      {
+        "startMonth": 37,
+        "endMonth": 245,
+        "startDate": "2019-09-01",
+        "endDate": "2037-01-06",
+        "lossRate": 0.030000000000000027,
+        "dailyWageWon": 138290,
+        "monthlyWageWon": 3042380,
+        "rawHoffman": 134.24591766,
+        "appliedHoffman": 134.24591766,
+        "amountFloorWon": 12252812
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [
+      0.99585062, 7.82145529, 3.8171728500000004, 7.456901139999999, 3.643329350000002,
+      7.124819299999999, 3.4846308899999983, 134.24591766
+    ],
+    "combinedLossRate": 0.030000000000000027
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r2a-golden-derivation-2026-10-04.md (C3 노임 시점 분할, 공식 호프만표 8자리 손계산)"
+  }
+}

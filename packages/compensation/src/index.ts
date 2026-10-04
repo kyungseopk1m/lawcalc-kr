@@ -12,10 +12,13 @@ export type {
   CompensationLossRateInput,
   CompensationLostIncomeInput,
   CompensationRatioDeduction,
+  CompensationLegacyRatioDeduction,
   CompensationResult,
   CompensationSegment,
   ComputeCompensationDeps,
   Hoffman240CapTable,
+  LaborRateEffectiveRule,
+  CompensationWarning,
   PermanentDisabilityInput,
   TemporaryDisabilityInput,
 } from "./auto-injury";
@@ -28,6 +31,7 @@ export type {
   CompensationHeirsInput,
   CompensationIndustrialInsuranceDeath,
   CompensationInheritanceShare,
+  CompensationSurvivorBenefitRecipient,
 } from "./auto-death";
 export { computeCompensationDeath, validateCompensationDeathInput } from "./auto-death";
 

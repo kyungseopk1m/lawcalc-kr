@@ -236,3 +236,22 @@ export function validateOtherDamagesInput(input: OtherDamagesInput, accidentDate
     validateAppliance(input.appliance, accidentDate);
   }
 }
+
+/** 계산 기준일·노임 적용일 규약 검증. `computeOtherDamages` 를 직접 부르는 경로도 같은 규칙을 쓴다. */
+export function validateLaborRateOptions(
+  accidentDate: IsoDate,
+  calculationDate: unknown,
+  rule: unknown,
+): void {
+  if (calculationDate !== undefined) {
+    assertIsoDate("calculationDate", calculationDate);
+    if ((calculationDate as IsoDate) < accidentDate) {
+      throw new RangeError(`${PREFIX}: calculationDate 는 accidentDate 이상이어야 합니다.`);
+    }
+  }
+  if (rule !== undefined && rule !== "published" && rule !== "survey") {
+    throw new RangeError(
+      `${PREFIX}: laborRateEffectiveRule 는 "published" 또는 "survey" 여야 합니다.`,
+    );
+  }
+}

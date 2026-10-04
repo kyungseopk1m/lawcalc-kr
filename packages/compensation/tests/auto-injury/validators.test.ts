@@ -137,9 +137,9 @@ describe("validateCompensationInput — boundary 거부", () => {
     expect(() => validateCompensationInput(input)).toThrow(/solatiumWon/);
   });
 
-  it("rejects deductions.ratio[i].ratio outside [0, 1] and negative absolute.amount", () => {
+  it("rejects deductions.legacyRatio[i].ratio outside [0, 1] and negative absolute.amount", () => {
     const a = baseInput();
-    a.deductions = { ratio: [{ ratio: 1.5 }], absolute: [] };
+    a.deductions = { legacyRatio: [{ ratio: 1.5 }], absolute: [] };
     expect(() => validateCompensationInput(a)).toThrow();
     const b = baseInput();
     b.deductions = { ratio: [], absolute: [{ amount: -1 }] };

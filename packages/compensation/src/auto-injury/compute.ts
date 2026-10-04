@@ -1,7 +1,6 @@
-import { STANDARD_DISCLAIMER, addYears } from "@lawcalc-kr/core-engine";
+import { STANDARD_DISCLAIMER, addDays, addYears, type IsoDate } from "@lawcalc-kr/core-engine";
 import {
   applyHoffman240Cap,
-  getLaborRateAt,
   hoffmanDatasetVersionTag,
   laborRatesDatasetVersionTag,
   leibnizDatasetVersionTag,
@@ -34,7 +33,19 @@ const DEFAULT_WORKING_DAYS_PER_MONTH = 20;
 const DEFAULT_RETIREMENT_AGE = 65;
 const FINAL_FLOOR_UNIT = 100;
 
-import { getCumulativeHoffmanClamped, monthsBetween } from "../internal";
+import {
+  applyDeductions,
+  dropUnchangedLaborRates,
+  floorTimesComplements,
+  getCumulativeHoffmanClamped,
+  resolveOccupationRate,
+  type CompensationWarning,
+  laborRateChanges,
+  laborRateDateAt,
+  monthsBetween,
+  shiftMonths,
+  sumCourtDeductions,
+} from "../internal";
 
 /**
  * 자×부상 손해배상 계산. 10 단계 순서 (plan v2 6절 트랙 4 A):
@@ -49,7 +60,9 @@ import { getCumulativeHoffmanClamped, monthsBetween } from "../internal";
  *      (그 구간 동안 살아있는 한시장해만 영구분과 중복 합산). 한시 종료 후 segment 는 영구분만.
  *    - `combinedLossRate` = 첫 segment lossRate (한시기간 포함 최고율; 영구만일 때 = permanentTotal).
  * 3. segment 단가:
- *    - `directWageWon` override 우선, 없으면 `getLaborRateAt(dataset, occupation, accidentDate)`.
+ *    - `directWageWon` override 우선, 없으면 사고일 직종 단가(적용일 규약 반영).
+ *    - `base.calculationDate` 가 있으면 `(사고일, 기준일]` 안의 노임 변경일을 segment 경계로 더하고
+ *      segment 마다 그 시작 월수에 적용되는 단가를 쓴다. 기준일 이후 장래분은 기준일 단가.
  *    - lookup miss 시 RangeError (UI 측 트랙 U 5-1 에서 directWageWon override 노출).
  * 4. segment 호프만 = `H[endMonth] - H[startMonth]`. 240 cap = `applyHoffman240Cap` cumulative.
  * 5. segment 합산 = `Σ (monthlyWage × lossRate × appliedHoffman)`,
@@ -105,6 +118,9 @@ export function computeCompensation(
   interface SegmentPlan {
     startMonth: number;
     endMonth: number;
+    /** 표시용 초일·다음 구간 초일. 계산 기준일이 있을 때만 결과에 실린다. */
+    startDate: IsoDate;
+    nextDate: IsoDate;
     lossRate: number;
   }
   // 입원기간은 상실률 100% (외부 reference 매뉴얼 본문과 계산표 예시 1·2행).
@@ -118,31 +134,67 @@ export function computeCompensation(
     endMonth: Math.min(Math.round(item.years * 12), totalMonths),
     ratio: item.ratio,
   }));
-  // segment 경계 = 입원 종료월 + distinct 한시 종료월(0 초과 ~ totalMonths) + 가동연한 종료월.
+  // 노임단가 변경 경계. 계산 기준일이 있고 직종 단가일 때만 나눈다 (일당 직접 입력은 단가가 하나).
+  const accidentDate = input.base.accidentDate;
+  const calculationDate = input.base.calculationDate;
+  const rateRule = input.base.laborRateEffectiveRule ?? "published";
+  const warnings: CompensationWarning[] = [];
+  // 직종 단가가 직전과 같은 변경일은 뺀다 (직종이 뒤 조사에서 빠져 마지막 단가를 이어 쓸 때).
+  const laborOccupation = input.lostIncome.occupation;
+  const laborChanges =
+    calculationDate !== undefined &&
+    input.lostIncome.directWageWon === undefined &&
+    laborOccupation !== undefined
+      ? dropUnchangedLaborRates(
+          laborRateChanges(laborRates, accidentDate, calculationDate, rateRule).filter(
+            (c) => c.month < totalMonths,
+          ),
+          (date) =>
+            resolveOccupationRate(
+              laborRates,
+              laborOccupation,
+              date,
+              rateRule,
+              accidentDate,
+              warnings,
+            ),
+          accidentDate,
+        )
+      : [];
+  // segment 경계 = 입원 종료(다음 날) + 한시 종료 + 노임 변경일 + 가동연한 종료. 월수 순, 같은 월수면 날짜 순.
+  // 계산 기준일이 없으면 월수가 같은 경계를 하나로 합친다(이전 동작). 있으면 법원 계산표처럼 같은 월수
+  // 안의 경계도 따로 두어 월수 0 인 행(금액 0)이 생긴다 (사고일 ~ 노임 변경 전날 등).
   // 가동연한 경과 시 경계가 모두 걸러져 segmentPlans 가 빈 배열이 되고 일실수입은 0 이 된다.
-  const boundaries = Array.from(
-    new Set([hospitalMonths, ...temporaries.map((t) => t.endMonth), totalMonths]),
-  )
-    .filter((m) => m > 0 && m <= totalMonths)
-    .sort((a, b) => a - b);
+  const events = [
+    { month: hospitalMonths, date: addDays(input.base.treatmentEndDate, 1) },
+    ...temporaries.map((t) => ({ month: t.endMonth, date: shiftMonths(accidentDate, t.endMonth) })),
+    ...laborChanges,
+  ]
+    .filter((e) => (e.month > 0 || laborChanges.includes(e)) && e.month < totalMonths)
+    .sort((a, b) => a.month - b.month || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  if (totalMonths > 0) events.push({ month: totalMonths, date: retirementEndDate });
   const segmentPlans: SegmentPlan[] = [];
   let firstDisabilityRate: number | undefined;
-  let cursorMonth = 0;
-  for (const boundary of boundaries) {
-    if (boundary <= cursorMonth) continue;
-    // 이 구간 [cursorMonth, boundary) 동안 살아있는 한시장해(종료 ≥ boundary)만 영구분과 중복.
+  let cursor = { month: 0, date: accidentDate };
+  for (const event of events) {
+    // 월수가 줄지 않는 한 같은 월수의 다른 날짜도 따로 둔다 (기준일 있을 때만, 금액 0 인 행).
+    const sameMonth = event.month === cursor.month;
+    if (sameMonth && (calculationDate === undefined || event.date <= cursor.date)) continue;
+    // 이 구간 동안 살아있는 한시장해(종료월 > 시작월)만 영구분과 중복.
     let factor = permFactor;
     for (const t of temporaries) {
-      if (t.endMonth >= boundary) factor *= 1 - t.ratio;
+      if (t.endMonth > cursor.month) factor *= 1 - t.ratio;
     }
     const disabilityRate = (1 - factor) * priorImpairmentFactor;
     firstDisabilityRate ??= disabilityRate;
     segmentPlans.push({
-      startMonth: cursorMonth,
-      endMonth: boundary,
-      lossRate: boundary <= hospitalMonths ? 1 : disabilityRate,
+      startMonth: cursor.month,
+      endMonth: event.month,
+      startDate: cursor.date,
+      nextDate: event.date,
+      lossRate: cursor.month < hospitalMonths ? 1 : disabilityRate,
     });
-    cursorMonth = boundary;
+    cursor = event;
   }
   // combinedLossRate = 첫 segment 의 장해율(한시기간 포함 최고율, 입원 100% 제외). 영구만일 때 = permanentTotal.
   // 가동연한 경과로 segment 가 없으면 영구장해 병합률을 그대로 표시한다 (일실수입은 0 이지만
@@ -152,27 +204,31 @@ export function computeCompensation(
   // 3. segment 단가
   // 일실수입 기간이 없으면 단가는 결과에 쓰이지 않는다. 위자료만 청구하는 고령 사건에서
   // 직종 단가 조회 실패로 계산이 막히지 않도록 이 경우에만 조회를 건너뛴다.
-  let dailyWageWon: number;
-  if (retirementAgeReached && input.lostIncome.directWageWon === undefined) {
-    dailyWageWon = 0;
-  } else if (input.lostIncome.directWageWon !== undefined) {
-    dailyWageWon = input.lostIncome.directWageWon;
-  } else {
+  const resolveDailyWage = (date: IsoDate): number => {
+    if (retirementAgeReached && input.lostIncome.directWageWon === undefined) return 0;
+    if (input.lostIncome.directWageWon !== undefined) return input.lostIncome.directWageWon;
     const occupation = input.lostIncome.occupation;
     if (occupation === undefined) {
       throw new RangeError(
         "손해배상 계산 실패: lostIncome.occupation 또는 lostIncome.directWageWon 중 하나는 필요합니다.",
       );
     }
-    const rate = getLaborRateAt(laborRates, occupation, input.base.accidentDate);
+    const rate = resolveOccupationRate(
+      laborRates,
+      occupation,
+      date,
+      rateRule,
+      accidentDate,
+      warnings,
+    );
     if (rate === undefined) {
       throw new RangeError(
-        `손해배상 계산 실패: 직종 "${occupation}"의 단가를 사고일 ${input.base.accidentDate} 기준으로 찾을 수 없습니다. 일당을 직접 입력해 주세요.`,
+        `손해배상 계산 실패: 직종 "${occupation}"의 단가를 ${date === accidentDate ? "사고일 " : ""}${date} 기준으로 찾을 수 없습니다. 일당을 직접 입력해 주세요.`,
       );
     }
-    dailyWageWon = rate;
-  }
-  const monthlyWageWon = dailyWageWon * workingDays;
+    return rate;
+  };
+  const dailyWageWon = resolveDailyWage(accidentDate);
 
   // 4. segment 호프만 + 240 cap
   // coverage clamp — 만 25세 미만이면 가동연한까지 480개월을 넘는다.
@@ -193,12 +249,25 @@ export function computeCompensation(
   const segments: CompensationSegment[] = segmentPlans.map((plan, i) => {
     const rawHoffman = rawHoffmanList[i] as number;
     const appliedHoffman = capResult.appliedHoffman[i] as number;
+    // 구간 단가 = 구간 초일 이전 마지막 노임 변경일의 단가, 없으면 사고일 단가.
+    const segmentDailyWageWon =
+      laborChanges.length > 0
+        ? resolveDailyWage(laborRateDateAt(laborChanges, plan.startDate, accidentDate))
+        : dailyWageWon;
+    const monthlyWageWon = segmentDailyWageWon * workingDays;
     const amountFloorWon = Math.floor(monthlyWageWon * plan.lossRate * appliedHoffman);
     return {
       startMonth: plan.startMonth,
       endMonth: plan.endMonth,
+      // 계산 기준일 미지정 시 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
+      ...(calculationDate !== undefined
+        ? {
+            startDate: plan.startDate,
+            endDate: addDays(plan.nextDate, -1),
+          }
+        : {}),
       lossRate: plan.lossRate,
-      dailyWageWon,
+      dailyWageWon: segmentDailyWageWon,
       monthlyWageWon,
       rawHoffman,
       appliedHoffman,
@@ -212,6 +281,9 @@ export function computeCompensation(
     (input.otherDamages
       ? computeOtherDamages(input.otherDamages, {
           accidentDate: input.base.accidentDate,
+          ...(calculationDate !== undefined ? { calculationDate } : {}),
+          laborRateEffectiveRule: rateRule,
+          warnings,
           laborRates,
           hoffman,
         })
@@ -241,17 +313,32 @@ export function computeCompensation(
   // 8. 과실상계
   const faultRatio = input.faultRatio ?? 0;
   const faultBeforeWon = pecuniaryDamagesSubtotalWon;
-  const faultAfterWon = Math.floor(faultBeforeWon * (1 - faultRatio));
+  const faultAfterWon = floorTimesComplements(faultBeforeWon, [faultRatio]);
 
-  // 9. 공제 (과실상계 후) — 비율·전액 공제. 산재급여는 6.7 에서 선공제 (2021다241618 전합).
-  const ratioItems = input.deductions?.ratio ?? [];
-  const absoluteItems = input.deductions?.absolute ?? [];
-  let ratioSum = 0;
-  for (const item of ratioItems) ratioSum += item.ratio;
-  const ratioSubtotalWon = Math.floor(faultAfterWon * ratioSum);
+  // 9. 공제 (과실상계 후). 산재급여는 6.7 에서 선공제 (2021다241618 전합).
+  //    비율공제·지급치료비 = 항목 금액 × [1 - (1 - 기왕증)(1 - 과실)] (법원 계산 프로그램 방식).
+  const deductions = input.deductions ?? {};
+  const ratioSubtotalWon = sumCourtDeductions(deductions.ratio, priorImpairmentRatio, faultRatio);
+  const paidTreatmentSubtotalWon = sumCourtDeductions(
+    deductions.paidTreatment,
+    priorImpairmentRatio,
+    faultRatio,
+  );
+  let legacyRatioSum = 0;
+  for (const item of deductions.legacyRatio ?? []) legacyRatioSum += item.ratio;
+  // 구 파일 금액 유지(결정 5): 종전 실수식 그대로.
+  const legacyRatioSubtotalWon = Math.floor(faultAfterWon * legacyRatioSum);
   let absoluteSubtotalWon = 0;
-  for (const item of absoluteItems) absoluteSubtotalWon += item.amount;
-  const deductionsAfterWon = faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon;
+  for (const item of deductions.absolute ?? []) absoluteSubtotalWon += item.amount;
+  const propertyOnlyWon = ratioSubtotalWon + paidTreatmentSubtotalWon;
+  const { afterWon: deductionsAfterWon, propertyOnlyAppliedWon } = applyDeductions(
+    faultAfterWon,
+    legacyRatioSubtotalWon,
+    propertyOnlyWon,
+    absoluteSubtotalWon,
+  );
+  const hasPropertyOnly =
+    (deductions.ratio?.length ?? 0) + (deductions.paidTreatment?.length ?? 0) > 0;
 
   // 10. final
   // 공제 후 값이 음수(전액공제가 재산상 손해를 넘음)면 그 초과분이 위자료를 차감한다.
@@ -291,6 +378,15 @@ export function computeCompensation(
     },
     deductions: {
       ratioSubtotalWon,
+      // 입력 시에만 포함 → 기존 골든/.lcalc byte-identical (회귀 0).
+      ...(deductions.paidTreatment !== undefined ? { paidTreatmentSubtotalWon } : {}),
+      ...(deductions.legacyRatio !== undefined ? { legacyRatioSubtotalWon } : {}),
+      ...(hasPropertyOnly
+        ? {
+            propertyOnlyAppliedWon,
+            propertyOnlyDiscardedWon: propertyOnlyWon - propertyOnlyAppliedWon,
+          }
+        : {}),
       absoluteSubtotalWon,
       afterWon: deductionsAfterWon,
     },
@@ -305,6 +401,8 @@ export function computeCompensation(
       hoffman: hoffmanDatasetVersionTag(hoffman),
       leibniz: leibnizDatasetVersionTag(leibniz),
     },
+    // 대체 처리가 있을 때만 포함 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(warnings.length > 0 ? { warnings } : {}),
     disclaimer: STANDARD_DISCLAIMER,
     computedAt: computedAtIso,
   };

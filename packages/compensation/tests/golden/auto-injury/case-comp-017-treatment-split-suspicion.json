@@ -3,7 +3,7 @@
   "id": "case-comp-017-treatment-split-suspicion",
   "title": "auto/injury 기타손해 — 같은 지출을 두 항목으로 쪼갠 의심 조합 감지",
   "source": "manual-derivation",
-  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 226,727,190 + 기타손해 10,279,595(불변) = 237,006,785 → 절사 237,006,700. 아래는 2026-10-04 이전 값·산식이다. 향후 치료비 2건이 비용 2,400,000 과 주기 24개월이 같고, 앞 항목 종료(2030-01-01) 와 뒤 항목 시작(2031-01-01) 이 12개월 떨어져 한 주기 안에 든다. 수치합계 상한 20 이 항목별로 걸리는 탓에 한 건을 두 건으로 나누면 상한 여력이 두 배가 되므로, 계산은 그대로 두고 의심만 표시한다. 두 항목 모두 수치합계가 20 미만이라 상한은 발동하지 않아 splitSuspected 만 단독으로 검증된다. 일실수입은 case-001 baseline 재사용.",
+  "notes": "2026-10-04 C7 재유도 (r2a-golden-derivation-2026-10-04.md 10절): 전반기 m 0·24·48 계수 1.0000+0.9090+0.8333 = 2.7423 → 6,581,520, 후반기 m 60·84 0.8000+0.7407 = 1.5407 → 3,697,680. 기타손해 10,279,595 → 10,279,200, 최종 237,006,700 → 237,006,300. 이전: 2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 226,727,190 + 기타손해 10,279,595(불변) = 237,006,785 → 절사 237,006,700. 아래는 2026-10-04 이전 값·산식이다. 향후 치료비 2건이 비용 2,400,000 과 주기 24개월이 같고, 앞 항목 종료(2030-01-01) 와 뒤 항목 시작(2031-01-01) 이 12개월 떨어져 한 주기 안에 든다. 수치합계 상한 20 이 항목별로 걸리는 탓에 한 건을 두 건으로 나누면 상한 여력이 두 배가 되므로, 계산은 그대로 두고 의심만 표시한다. 두 항목 모두 수치합계가 20 미만이라 상한은 발동하지 않아 splitSuspected 만 단독으로 검증된다. 일실수입은 case-001 baseline 재사용.",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -75,30 +75,30 @@
     "hoffman240CapAppliedHoffman": [219.61006732],
     "lostIncomeSubtotalWon": 226727190,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 237006785,
+    "pecuniaryDamagesSubtotalWon": 237006390,
     "faultOffset": {
       "ratio": 0,
-      "beforeWon": 237006785,
-      "afterWon": 237006785
+      "beforeWon": 237006390,
+      "afterWon": 237006390
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 237006785
+      "afterWon": 237006390
     },
-    "finalWon": 237006700,
+    "finalWon": 237006300,
     "hoffman240CapCappedAtIndex": null,
-    "otherDamagesSubtotalWon": 10279595,
+    "otherDamagesSubtotalWon": 10279200,
     "otherDamages": {
       "attendantCareWon": 0,
-      "treatmentWon": 10279595,
+      "treatmentWon": 10279200,
       "applianceWon": 0,
-      "subtotalWon": 10279595,
+      "subtotalWon": 10279200,
       "attendantCare": null,
       "treatment": {
         "pastWon": 0,
-        "futureWon": 10279595,
-        "subtotalWon": 10279595,
+        "futureWon": 10279200,
+        "subtotalWon": 10279200,
         "valueSum20Capped": false,
         "splitSuspected": true
       },
@@ -114,6 +114,6 @@
   "metadata": {
     "oracle": "manual-derivation",
     "derivedAt": "2026-10-04",
-    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 golden-whitelist-2026-08-18 (s(m) = 1 / (1 + 0.05 x m / 12) 항별 손계산))"
+    "derivedBy": "r2a-golden-derivation-2026-10-04.md 10절 (C7 수치합계 절사)"
   }
 }

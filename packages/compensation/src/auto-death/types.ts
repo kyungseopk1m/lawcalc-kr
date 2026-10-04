@@ -28,6 +28,7 @@ import type {
   Hoffman240CapTable,
 } from "../auto-injury/types";
 import type { OtherDamagesInput, OtherDamagesResult } from "../other-damages/types";
+import type { CompensationWarning, LaborRateEffectiveRule } from "../internal";
 
 /** 사망 손해배상 기초사항. 부상 모드와 달리 입원치료 종료일이 없다. */
 export interface CompensationDeathBaseInput {
@@ -42,6 +43,20 @@ export interface CompensationDeathBaseInput {
    * default = 65 (대법원 2018다248909).
    */
   retirementAge?: number;
+  /**
+   * 계산 기준일(변론종결 예정일). 미지정이면 사고일 단가 하나 (이전 동작). 사고일 이상이어야 한다.
+   * - 구간 분할: 사고일부터 이 날까지의 노임단가 변경일마다 일실수입 구간을 나눈다 (판결 이유의
+   *   계산표, 예: 서울중앙지법 2020. 10. 21. 선고 2019나48259, 법원 손해배상 계산 프로그램 예시).
+   *   직종 단가일 때만 나누며 일당 직접 입력은 나누지 않는다.
+   * - 장래분 단가: 이 날 이후는 이 날까지 공표된 마지막 단가 (변론종결 당시의 일반노동임금,
+   *   대법원 1995. 2. 28. 선고 94다31334).
+   */
+  calculationDate?: IsoDate;
+  /**
+   * 노임단가 적용일 규약. default `"published"`(공표 적용일 1/1·9/1).
+   * `"survey"` 는 조사 시점(5/1·9/1)으로 같은 단가를 4개월 앞당긴다.
+   */
+  laborRateEffectiveRule?: LaborRateEffectiveRule;
 }
 
 /** 상속인 입력. inheritance 도메인 입력을 그대로 재사용한다 (1991-01-01 이후 사망 대상). */
@@ -54,6 +69,22 @@ export interface CompensationIndustrialInsuranceDeath {
    * 공제 (2021다241618 전합). default 0.
    */
   survivorBenefitWon?: number;
+  /**
+   * 유족급여 수급권자별 지급액. 지정하면 `heirs` 가 필요하고 `survivorBenefitWon` 은 쓰지 않는다.
+   * 대법원 2009. 5. 21. 선고 2008다13104 전원합의체: 유족급여는 수급권자가 상속한 일실수입
+   * 채권을 한도로 그 채권에서만 공제한다. `heirName` 이 없으면 (사실혼 배우자 등 상속인 아닌
+   * 수급권자) 어느 상속인 몫에서도 공제하지 않는다. `heirName` 이 상속인 이름과 맞지 않으면 거부한다.
+   * 장례비·위자료·전액공제는 상속분대로 나눈다 (유족 고유 위자료·장례비 부담자 귀속은 미지원).
+   */
+  recipients?: CompensationSurvivorBenefitRecipient[];
+}
+
+/** 유족급여 수급권자 1명. */
+export interface CompensationSurvivorBenefitRecipient {
+  /** `heirs` 결과의 상속인 이름. 없으면 상속인 아닌 수급권자(공제 없음), 목록에 없는 이름은 거부. */
+  heirName?: string;
+  /** 지급액 (원, ≥ 0 정수). */
+  survivorBenefitWon: number;
 }
 
 /**
@@ -91,7 +122,11 @@ export interface CompensationAutoDeathInput {
    * 미지정 시 기존 경로 byte-identical (회귀 0). 생계비공제 후 일실수입 + 장례비와 같이 과실상계 전 합산.
    */
   otherDamages?: OtherDamagesInput;
-  /** 상속인 입력 (선택). 지정 시 최종액을 상속분으로 분배한다. */
+  /**
+   * 상속인 입력 (선택). 지정 시 최종액을 상속분으로 분배한다.
+   * `industrialInsurance.recipients` 를 함께 주면 상속인별로 계산하는데, 이때도 장례비·위자료·
+   * 전액공제·비율공제는 상속분대로 나눈다. 유족 고유 위자료와 장례비 부담자 귀속은 지원하지 않는다.
+   */
   heirs?: CompensationHeirsInput;
 }
 
@@ -105,6 +140,8 @@ export interface CompensationInheritanceShare {
   denominator: number;
   /** 배정 금액 (원, 정수). 합계는 finalWon 과 일치한다. */
   amountWon: number;
+  /** 이 상속인 몫에서 공제한 유족급여 (원). `industrialInsurance.recipients` 입력 시에만 포함된다. */
+  survivorBenefitDeductedWon?: number;
 }
 
 /** 자×사망 손해배상 계산 결과. */
@@ -157,6 +194,11 @@ export interface CompensationAutoDeathResult {
   hoffman240Cap: Hoffman240CapTable;
   /** dataset 식별자 4종. */
   dataVersions: CompensationDataVersions;
+  /**
+   * 계산은 했지만 사용자가 알아야 할 대체 처리 (직종이 뒤 노임 조사에서 빠져 마지막 단가를 이어 씀,
+   * 조사 시점 규약 단가가 없어 공표 단가를 씀). 있을 때만 포함된다.
+   */
+  warnings?: CompensationWarning[];
   /** B11 단일 source — `STANDARD_DISCLAIMER`. */
   disclaimer: typeof STANDARD_DISCLAIMER;
   /** ISO 8601 datetime. */

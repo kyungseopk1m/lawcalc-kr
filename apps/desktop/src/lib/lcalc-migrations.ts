@@ -149,6 +149,12 @@ function normalizeV3LitigationCostFile(raw: LcalcFile): LcalcFile {
  *   가 합류하므로 기존 자동차 파일에 `accidentType: "auto"` 를 명시 주입한다. 이미 산재 파일
  *   (`accidentType: "industrial"`)은 변경하지 않는다.
  *
+ * - `@4 → @5`: 계산 기준일·노임 적용일 규약·공제 종류가 들어왔다. 금액이 저장 당시와 같게
+ *   열리도록 (1) 노임 규약 키가 없으면 엔진 기본과 같은 `"published"`(공표 적용일)를 명시하고,
+ *   (2) 비율만 있는 구 `deductions.ratio` 항목(과실상계 후 금액 × 비율)은 `legacyRatio` 로 옮긴다.
+ *   새 `ratio` 는 항목 금액이라 엔진이 옛 모양을 거부한다. 계산 기준일은 없으면 그대로 둔다
+ *   (사고일 단가 하나, 화면이 안내한다).
+ *
  * 나머지 필드는 그대로 보존하며, 이미 정규화된 파일은 그대로 둔다 (byte 변경 최소).
  */
 function normalizeV3CompensationFile(raw: LcalcFile): LcalcFile {
@@ -166,8 +172,32 @@ function normalizeV3CompensationFile(raw: LcalcFile): LcalcFile {
   if (nextInput.accidentType === undefined) {
     nextInput = { accidentType: "auto", ...nextInput };
   }
-  // 이미 정규화된 파일(mode·accidentType 둘 다 존재)은 nextInput 이 원본 input 참조 그대로이므로
-  // raw 를 손대지 않고 반환해 byte-identity 를 보장한다. nextInput 을 무조건 재할당하지 말 것.
+  const base = nextInput.base;
+  if (isRecord(base) && base.laborRateEffectiveRule === undefined) {
+    nextInput = { ...nextInput, base: { ...base, laborRateEffectiveRule: "published" } };
+  }
+  const deductions = nextInput.deductions;
+  if (isRecord(deductions) && Array.isArray(deductions.ratio)) {
+    const ratio: unknown[] = deductions.ratio;
+    const isLegacy = (item: unknown) => isRecord(item) && "ratio" in item && !("amount" in item);
+    const legacy = ratio.filter(isLegacy);
+    if (legacy.length > 0) {
+      const kept = ratio.filter((item) => !isLegacy(item));
+      const priorLegacy: unknown[] = Array.isArray(deductions.legacyRatio)
+        ? deductions.legacyRatio
+        : [];
+      const next: Record<string, unknown> = {
+        ...deductions,
+        legacyRatio: [...priorLegacy, ...legacy],
+      };
+      if (kept.length > 0) next.ratio = kept;
+      else delete next.ratio;
+      nextInput = { ...nextInput, deductions: next };
+    }
+  }
+  // 바꿀 것이 없는 파일(mode·accidentType·노임 규약 키가 있고 구 비율공제가 없는 파일, 곧 @5 로
+  // 저장한 파일)은 nextInput 이 원본 input 참조 그대로라 raw 를 그대로 반환한다(byte-identity).
+  // @4 이하 파일은 규약 키를 주입하므로 늘 새 객체로 다시 쓴다. nextInput 을 무조건 재할당하지 말 것.
   if (nextInput === input) {
     return raw;
   }

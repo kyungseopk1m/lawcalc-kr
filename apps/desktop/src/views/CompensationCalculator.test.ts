@@ -4,7 +4,9 @@ import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import {
   computeCompensation,
   computeCompensationDeath,
+  type CompensationAutoDeathResult,
   type CompensationInput,
+  type CompensationResult,
 } from "@lawcalc-kr/compensation";
 import { computeStaleBadge } from "@lawcalc-kr/datasets-compensation";
 
@@ -17,6 +19,7 @@ import {
   type OtherDamagesFormState,
 } from "../components/other-damages-form";
 import {
+  propertyOnlyExcessWon,
   solatiumAddedAfterDeductionsWon,
   solatiumSettlement,
   withCompensationExportWarnings,
@@ -35,6 +38,9 @@ import {
   formatCompensationDeathForClipboard,
   formatCompensationForClipboard,
   hospitalizationMonthsOf,
+  isLegacySurvivorTotal,
+  legacyCompensationNotice,
+  NON_HEIR_RECIPIENT,
   occupationHintAt,
   withAccidentDate,
   occupationOptionsAt,
@@ -134,9 +140,12 @@ describe("computeCompensation integration via builder", () => {
   });
 
   it("matches CAP fixture case-comp-001 expected finalWon (226,727,100) with 보통인부 + 30% + 가동 60세", () => {
+    // 픽스처는 사고일 단가 하나로 손계산했다: 기준일 = 사고일, 공표 적용일 규약.
     const state = override({
       retirementAgeText: "60",
       permanent: [{ uid: "p1", department: "정형외과", ratioText: "0.30" }],
+      calculationDate: "2026-01-01",
+      laborRateEffectiveRule: "published",
     });
     const result = computeCompensation(buildCompensationInput(state));
     // 골든 픽스처 case-comp-001 의 expected.finalWon (가동일수 20일 기준).
@@ -156,13 +165,13 @@ describe("formatCompensationForClipboard + buildCompensationLcalcFile", () => {
     expect(text.trim().endsWith(STANDARD_DISCLAIMER)).toBe(true);
   });
 
-  it("lcalc envelope = v3 + compensation kind + compensation@1 capability + 4 dataVersions", () => {
+  it("lcalc envelope = v3 + compensation kind + compensation@5 capability + 4 dataVersions", () => {
     const input = buildCompensationInput(defaultCompensationFormState());
     const result = computeCompensation(input);
     const file = buildCompensationLcalcFile(input, result, "메모");
     expect(file.schemaVersion).toBe("3");
     expect(file.kind).toBe("compensation");
-    expect(file.envelopeFeatures).toEqual(["compensation@1"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
     expect(file.dataVersions).toEqual({
       laborRates: result.dataVersions.laborRates,
       lifeExpectancy: result.dataVersions.lifeExpectancy,
@@ -309,13 +318,13 @@ describe("자×사망 clipboard + .lcalc (compensation@2)", () => {
     expect(text.trim().endsWith(STANDARD_DISCLAIMER)).toBe(true);
   });
 
-  it("death lcalc envelope = v3 + compensation kind + compensation@2 capability + 4 dataVersions", () => {
+  it("death lcalc envelope = v3 + compensation kind + compensation@5 capability + 4 dataVersions", () => {
     const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
     const result = computeCompensationDeath(input);
     const file = buildCompensationDeathLcalcFile(input, result, "사망 메모");
     expect(file.schemaVersion).toBe("3");
     expect(file.kind).toBe("compensation");
-    expect(file.envelopeFeatures).toEqual(["compensation@2"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
     expect(file.payload.disclaimer).toBe(STANDARD_DISCLAIMER);
     expect(file.payload.note).toBe("사망 메모");
   });
@@ -348,8 +357,11 @@ describe("compensation @1 → @2 migration + 부상 회귀", () => {
   it("@1 자×부상 파일(mode 없음)을 로드하면 mode:injury 가 주입되고 부상 입력이 그대로 복원된다", () => {
     const injuryInput = buildCompensationInput(defaultCompensationFormState());
     const injuryResult = computeCompensation(injuryInput);
-    const legacyFile = buildCompensationLcalcFile(injuryInput, injuryResult, "부상");
-    expect(legacyFile.envelopeFeatures).toEqual(["compensation@1"]);
+    // 새 저장은 @5 다. v0.5.x 파일 모양을 흉내 내려고 capability 만 @1 로 바꾼다.
+    const legacyFile = {
+      ...buildCompensationLcalcFile(injuryInput, injuryResult, "부상"),
+      envelopeFeatures: ["compensation@1"],
+    };
     if (legacyFile.kind !== "compensation") throw new Error("expected compensation");
     // payload.input 에 mode 가 없는 v0.5.x 형태
     expect("mode" in (legacyFile.payload.input as unknown as Record<string, unknown>)).toBe(false);
@@ -399,16 +411,16 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     expect(result.finalWon).toBe(141_381_700);
   });
 
-  it("산×부상 자동차 회귀: accidentType auto 면 산재 필드 미주입 + @1 envelope", () => {
+  it("산×부상 자동차 회귀: accidentType auto 면 산재 필드 미주입 + 새 저장은 @5 envelope", () => {
     const input = buildCompensationInput(defaultCompensationFormState());
     expect(input.accidentType).toBeUndefined();
     expect(input.industrialInsurance).toBeUndefined();
     const result = computeCompensation(input);
     const file = buildCompensationLcalcFile(input, result, "");
-    expect(file.envelopeFeatures).toEqual(["compensation@1"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
   });
 
-  it("산×부상 .lcalc 는 compensation@3 envelope + round-trip 복원", () => {
+  it("산×부상 .lcalc 는 compensation@5 envelope + round-trip 복원", () => {
     const state = override({
       accidentType: "industrial",
       disabilityBenefitWonText: "50000000",
@@ -416,7 +428,7 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     const input = buildCompensationInput(state);
     const result = computeCompensation(input);
     const file = buildCompensationLcalcFile(input, result, "산재 부상");
-    expect(file.envelopeFeatures).toEqual(["compensation@3"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
     validateLcalcEnvelope(file);
     const loaded = parseLoadedCompensationLcalcInput(file);
     if (loaded.input.mode === "death") throw new Error("expected injury");
@@ -464,7 +476,7 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     expect(sum).toBe(result.finalWon);
   });
 
-  it("산×사망 clipboard + .lcalc compensation@3 envelope + round-trip 복원", () => {
+  it("산×사망 clipboard + .lcalc compensation@5 envelope + round-trip 복원", () => {
     const state = overrideDeath({
       accidentType: "industrial",
       survivorBenefitWonText: "100000000",
@@ -473,7 +485,7 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     const result = computeCompensationDeath(input);
     expect(formatCompensationDeathForClipboard(result)).toContain("산재보험급여 공제 (유족급여)");
     const file = buildCompensationDeathLcalcFile(input, result, "산재 사망");
-    expect(file.envelopeFeatures).toEqual(["compensation@3"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
     validateLcalcEnvelope(file);
     const loaded = parseLoadedCompensationLcalcInput(file);
     if (loaded.input.mode !== "death") throw new Error("expected death");
@@ -482,12 +494,12 @@ describe("산재 (compensation@3) — 산×부상 / 산×사망", () => {
     expect(reapplied.survivorBenefitWonText).toBe("100000000");
   });
 
-  it("산×사망 자동차 회귀: accidentType auto 면 @2 envelope 유지", () => {
+  it("산×사망 자동차 회귀: accidentType auto 여도 새 저장은 @5 envelope", () => {
     const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
     expect(input.accidentType).toBeUndefined();
     const result = computeCompensationDeath(input);
     const file = buildCompensationDeathLcalcFile(input, result, "");
-    expect(file.envelopeFeatures).toEqual(["compensation@2"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
   });
 });
 
@@ -556,12 +568,12 @@ describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
     expect(result).not.toHaveProperty("otherDamagesSubtotalWon");
   });
 
-  it("자×부상 .lcalc 는 compensation@4 envelope + round-trip 복원", () => {
+  it("자×부상 .lcalc 는 compensation@5 envelope + round-trip 복원", () => {
     const state = override({ otherDamages: filledOtherDamages() });
     const input = buildCompensationInput(state);
     const result = computeCompensation(input);
     const file = buildCompensationLcalcFile(input, result, "기타손해 부상");
-    expect(file.envelopeFeatures).toEqual(["compensation@4"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
     validateLcalcEnvelope(file);
     const loaded = parseLoadedCompensationLcalcInput(file);
     if (loaded.input.mode === "death") throw new Error("expected injury");
@@ -575,7 +587,7 @@ describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
     ).toEqual(input.otherDamages);
   });
 
-  it("자×부상 기타손해 > 산재: otherDamages 있으면 산재여도 @4 envelope", () => {
+  it("자×부상 기타손해 + 산재도 새 저장은 @5 envelope", () => {
     const state = override({
       accidentType: "industrial",
       disabilityBenefitWonText: "50000000",
@@ -584,7 +596,7 @@ describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
     const input = buildCompensationInput(state);
     const result = computeCompensation(input);
     const file = buildCompensationLcalcFile(input, result, "");
-    expect(file.envelopeFeatures).toEqual(["compensation@4"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
   });
 
   it("자×부상 clipboard 에 개호비/치료비/보조구 라인 포함", () => {
@@ -599,15 +611,15 @@ describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
     expect(text.endsWith(STANDARD_DISCLAIMER)).toBe(true);
   });
 
-  it("자×부상 자동차 회귀: 기타손해 미입력 시 @1 envelope 유지", () => {
+  it("자×부상 자동차 회귀: 기타손해 미입력이어도 새 저장은 @5 envelope", () => {
     const input = buildCompensationInput(defaultCompensationFormState());
     expect(input.otherDamages).toBeUndefined();
     const result = computeCompensation(input);
     const file = buildCompensationLcalcFile(input, result, "");
-    expect(file.envelopeFeatures).toEqual(["compensation@1"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
   });
 
-  it("자×사망 builder + compute + @4 envelope + round-trip", () => {
+  it("자×사망 builder + compute + @5 envelope + round-trip", () => {
     const state = overrideDeath({ otherDamages: filledOtherDamages() });
     const input = buildCompensationDeathInput(state);
     expect(input.otherDamages).toBeDefined();
@@ -615,7 +627,7 @@ describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
     expect(result.otherDamages).toBeDefined();
     expect(result.otherDamagesSubtotalWon).toBe(result.otherDamages?.subtotalWon);
     const file = buildCompensationDeathLcalcFile(input, result, "기타손해 사망");
-    expect(file.envelopeFeatures).toEqual(["compensation@4"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
     validateLcalcEnvelope(file);
     const loaded = parseLoadedCompensationLcalcInput(file);
     if (loaded.input.mode !== "death") throw new Error("expected death");
@@ -637,13 +649,13 @@ describe("기타손해 (compensation@4) — 자×부상 / 자×사망", () => {
     expect(text).toContain("기타손해 소계:");
   });
 
-  it("자×사망 회귀: 기타손해 미입력 시 @2 envelope + 결과 키 생략", () => {
+  it("자×사망 회귀: 기타손해 미입력 시 @5 envelope + 결과 키 생략", () => {
     const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
     expect(input.otherDamages).toBeUndefined();
     const result = computeCompensationDeath(input);
     expect(result).not.toHaveProperty("otherDamages");
     const file = buildCompensationDeathLcalcFile(input, result, "");
-    expect(file.envelopeFeatures).toEqual(["compensation@2"]);
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
   });
 });
 
@@ -829,7 +841,7 @@ describe("위자료 가산 행 · 보험약관 기준 토글", () => {
   it("기본(꺼짐): 위자료는 과실상계·공제 뒤에 더하고, 행들의 합이 최종액과 맞는다", () => {
     const state = override({
       ...base,
-      ratioDeductions: [{ uid: "r1", label: "", ratioText: "0.1" }],
+      ratioDeductions: [{ uid: "r1", label: "", amountText: "5000000" }],
       absoluteDeductions: [{ uid: "a1", label: "", amountText: "1000000" }],
     });
     const input = buildCompensationInput(state);
@@ -1012,6 +1024,8 @@ describe("공제가 재산상 손해를 넘을 때 (공제 초과분은 위자�
       addedWon: 30_000_000,
       deductionExcessWon: 5_000_000,
       uncoveredExcessWon: 0,
+      heirExcessDroppedWon: 0,
+      heirRoundingWon: 0,
     });
     expect(result.finalWon).toBe(25_000_000);
     expect(0 - settlement.deductionExcessWon + settlement.addedWon).toBe(result.finalWon);
@@ -1031,6 +1045,8 @@ describe("공제가 재산상 손해를 넘을 때 (공제 초과분은 위자�
       addedWon: 3_000_000,
       deductionExcessWon: 3_000_000,
       uncoveredExcessWon: 2_000_000,
+      heirExcessDroppedWon: 0,
+      heirRoundingWon: 0,
     });
     expect(formatCompensationForClipboard(result)).toContain(
       "공제 초과분 (위자료에서 차감, 남은 2,000,000원은 최종액 0원 하한으로 차감하지 않음): -3,000,000원",
@@ -1042,5 +1058,512 @@ describe("공제가 재산상 손해를 넘을 때 (공제 초과분은 위자�
       buildCompensationInput(override({ solatiumWonText: "30000000" })),
     );
     expect(formatCompensationForClipboard(result)).not.toContain("공제 초과분");
+  });
+});
+
+/**
+ * 화면 행 합: 과실상계 후 − 공제 소계 + 재산상 손해 초과분 = 엔진 공제 후 금액, 그리고
+ * (공제 후 금액 또는 0원 → 공제 초과분) + 위자료 가산 = 최종액 (100원 미만 버림 전).
+ */
+function expectRowsMatchFinal(result: CompensationResult | CompensationAutoDeathResult) {
+  const d = result.deductions;
+  const afterDeductions =
+    result.faultOffset.afterWon -
+    d.ratioSubtotalWon -
+    (d.paidTreatmentSubtotalWon ?? 0) -
+    (d.legacyRatioSubtotalWon ?? 0) -
+    d.absoluteSubtotalWon +
+    propertyOnlyExcessWon(result);
+  expect(afterDeductions).toBe(d.afterWon);
+  const settlement = solatiumSettlement(result);
+  if (d.roundingWon !== undefined) {
+    // 상속인별 계산: 버린 초과분·절사 차이 행까지 더하면 원 단위로 최종액이다.
+    expect(
+      afterDeductions +
+        settlement.heirExcessDroppedWon +
+        settlement.addedWon -
+        settlement.heirRoundingWon,
+    ).toBe(result.finalWon);
+    return;
+  }
+  const shown =
+    (afterDeductions < 0 ? -settlement.deductionExcessWon : afterDeductions) + settlement.addedWon;
+  expect(Math.floor(Math.max(0, shown) / 100) * 100).toBe(result.finalWon);
+}
+
+describe("R2-a 입력: 계산 기준일 · 노임 적용일 규약 · 공제 종류", () => {
+  const timing = { accidentDate: "2020-03-01", treatmentEndDate: "2020-03-01" };
+
+  it("새 입력은 기준일·규약을 늘 명시하고, 기준일 > 사고일이면 노임 변경일마다 구간을 나눈다", () => {
+    const input = buildCompensationInput(
+      override({ ...timing, calculationDate: "2023-06-30", laborRateEffectiveRule: "survey" }),
+    );
+    expect(input.base.calculationDate).toBe("2023-06-30");
+    expect(input.base.laborRateEffectiveRule).toBe("survey");
+    const result = computeCompensation(input);
+    expect(result.segments.length).toBeGreaterThan(1);
+    expect(result.segments[0]?.startDate).toBe("2020-03-01");
+    const wages = result.segments.map((segment) => segment.dailyWageWon);
+    expect(new Set(wages).size).toBeGreaterThan(1);
+    const text = formatCompensationForClipboard(result);
+    expect(text).toContain("(2020-03-01 ~ ");
+  });
+
+  it("지급치료비: 기왕치료비에 넣지 않고 지급치료비 칸 = 기왕치료비 + 전액공제, 두 칸에 모두 넣으면 T(1 − 과실)만큼 더 나온다", () => {
+    const T = 1_000_000;
+    const withPast = (pastWon: number) => ({
+      ...defaultOtherDamagesFormState(),
+      treatmentPast: pastWon > 0 ? [{ ...emptyTreatmentPast(), costWonText: String(pastWon) }] : [],
+    });
+    const final = (patch: Partial<CompensationFormState>) =>
+      computeCompensation(
+        buildCompensationInput(
+          override({ solatiumWonText: "10000000", faultRatioText: "0.3", ...patch }),
+        ),
+      ).finalWon;
+    const paidOnly = final({
+      paidTreatmentDeductions: [{ uid: "p", label: "", amountText: String(T) }],
+    });
+    const pastAndAbsolute = final({
+      otherDamages: withPast(T),
+      absoluteDeductions: [{ uid: "a", label: "", amountText: String(T) }],
+    });
+    const mixed = final({
+      otherDamages: withPast(T),
+      paidTreatmentDeductions: [{ uid: "p", label: "", amountText: String(T) }],
+    });
+    // 원 미만 버림 위치만 달라 100원 단위 절사 후 한 단위까지 차이를 허용한다.
+    expect(Math.abs(paidOnly - pastAndAbsolute)).toBeLessThanOrEqual(100);
+    expect(Math.abs(mixed - paidOnly - 700_000)).toBeLessThanOrEqual(100);
+  });
+
+  it("클립보드·내보내기 payload 에 계산 기준일과 노임 적용일 규약을 적는다", () => {
+    const state = override({ ...timing, calculationDate: "2023-06-30" });
+    const result = computeCompensation(buildCompensationInput(state));
+    const timingInput = {
+      calculationDate: "2023-06-30",
+      laborRateEffectiveRule: "survey" as const,
+    };
+    expect(formatCompensationForClipboard(result, 0, timingInput)).toContain(
+      "노임 기준: 계산 기준일 2023-06-30 · 노임 적용일 규약 조사 시점 (5/1·9/1)",
+    );
+    expect(withCompensationExportWarnings(result, timingInput).laborRateTimingText).toBe(
+      "계산 기준일 2023-06-30 · 노임 적용일 규약 조사 시점 (5/1·9/1)",
+    );
+    expect(withCompensationExportWarnings(result).laborRateTimingText).toBe("");
+    const death = computeCompensationDeath(buildCompensationDeathInput(overrideDeath({})));
+    expect(
+      formatCompensationDeathForClipboard(death, { laborRateEffectiveRule: "published" }),
+    ).toContain("노임 기준: 계산 기준일 없음 (사고일 단가 하나) · 노임 적용일 규약 공표 적용일");
+  });
+
+  it("금액 0 인 0개월 구간(사고일 ~ 첫 노임 변경 전날)도 날짜·단가와 함께 그대로 보인다", () => {
+    const result = computeCompensation(
+      buildCompensationInput(override({ ...timing, calculationDate: "2023-06-30" })),
+    );
+    const zeroRow = {
+      ...result.segments[0]!,
+      startMonth: 0,
+      endMonth: 0,
+      startDate: "2020-03-01",
+      endDate: "2020-03-31",
+      appliedHoffman: 0,
+      amountFloorWon: 0,
+    };
+    const text = formatCompensationForClipboard({
+      ...result,
+      segments: [zeroRow, ...result.segments],
+    });
+    expect(text).toContain("1\t0~0개월 (2020-03-01 ~ 2020-03-31)\t");
+    expect(text).toMatch(/1\t0~0개월 \(2020-03-01 ~ 2020-03-31\)\t[^\n]*\t0원/);
+  });
+
+  it("기준일 = 사고일이면 기준일 없음(이전 동작)과 금액이 같다 (두 규약 모두)", () => {
+    for (const rule of ["published", "survey"] as const) {
+      const input = buildCompensationInput(
+        override({ ...timing, calculationDate: timing.accidentDate, laborRateEffectiveRule: rule }),
+      );
+      const baseWithoutDate = { ...input.base };
+      delete baseWithoutDate.calculationDate;
+      const withoutDate = computeCompensation({ ...input, base: baseWithoutDate });
+      expect(computeCompensation(input).finalWon).toBe(withoutDate.finalWon);
+    }
+  });
+
+  it("기준일이 비었거나 사고일보다 앞서면 한국어로 막는다", () => {
+    expect(() => buildCompensationInput(override({ ...timing, calculationDate: "" }))).toThrow(
+      "계산 기준일을 입력하세요.",
+    );
+    expect(() =>
+      buildCompensationDeathInput(overrideDeath({ ...timing, calculationDate: "2019-12-31" })),
+    ).toThrow("계산 기준일은 사고일과 같거나 그 뒤여야 합니다.");
+  });
+
+  it("사고일을 바꾸면 사고일과 같던 기준일(이전 버전 파일)만 따라간다", () => {
+    const legacy = override({ ...timing, calculationDate: timing.accidentDate });
+    expect(withAccidentDate(legacy, "2021-01-01").calculationDate).toBe("2021-01-01");
+    const fresh = override({ ...timing, calculationDate: "2026-10-04" });
+    expect(withAccidentDate(fresh, "2021-01-01").calculationDate).toBe("2026-10-04");
+    const death = overrideDeath({
+      accidentDate: timing.accidentDate,
+      calculationDate: timing.accidentDate,
+    });
+    expect(withAccidentDate(death, "2021-01-01").calculationDate).toBe("2021-01-01");
+    expect(withAccidentDate(death, "2021-01-01")).not.toHaveProperty("treatmentEndDate");
+  });
+
+  it("비율공제(금액)·지급치료비·전액공제·이전 방식 비율공제가 저장·불러오기 뒤에도 그대로다", () => {
+    const state = override({
+      ...timing,
+      calculationDate: "2023-06-30",
+      laborRateEffectiveRule: "published",
+      priorImpairmentRatioText: "0.2",
+      faultRatioText: "0.3",
+      ratioDeductions: [{ uid: "r", label: "보험사 지급분", amountText: "2000000" }],
+      paidTreatmentDeductions: [{ uid: "p", label: "", amountText: "5000000" }],
+      absoluteDeductions: [{ uid: "a", label: "선급금", amountText: "1000000" }],
+      legacyRatioDeductions: [{ uid: "l", label: "구", ratioText: "0.05" }],
+    });
+    const input = buildCompensationInput(state);
+    expect(input.deductions).toEqual({
+      ratio: [{ label: "보험사 지급분", amount: 2_000_000 }],
+      paidTreatment: [{ amount: 5_000_000 }],
+      absolute: [{ label: "선급금", amount: 1_000_000 }],
+      legacyRatio: [{ label: "구", ratio: 0.05 }],
+    });
+    const result = computeCompensation(input);
+    // 계수 1 − (1 − 0.2)(1 − 0.3) = 0.44.
+    expect(result.deductions.ratioSubtotalWon).toBe(880_000);
+    expect(result.deductions.paidTreatmentSubtotalWon).toBe(2_200_000);
+    const file = buildCompensationLcalcFile(input, result, "");
+    expect(file.envelopeFeatures).toEqual(["compensation@5"]);
+    const loaded = parseLoadedCompensationLcalcInput(migrateLcalcFile(file));
+    if (loaded.input.mode === "death") throw new Error("expected injury");
+    expect(buildCompensationInput(applyLoadedCompensationInput(loaded.input))).toEqual(input);
+    expect(legacyCompensationNotice(loaded.input)).toContain("이전 방식(과실상계 후 금액 × 비율)");
+    expectRowsMatchFinal(result);
+    const text = formatCompensationForClipboard(result);
+    expect(text).toContain("지급치료비 공제 소계: 2,200,000원");
+    expect(text).toContain("이전 방식 비율공제 소계: ");
+  });
+
+  it("비율공제가 재산상 손해를 넘으면 넘는 부분은 빼지 않고 위자료도 그대로다 (행 합 = 최종액)", () => {
+    const result = computeCompensation(
+      buildCompensationInput(
+        override({
+          solatiumWonText: "30000000",
+          faultRatioText: "0.5",
+          ratioDeductions: [{ uid: "r", label: "", amountText: "100000000000" }],
+        }),
+      ),
+    );
+    expect(propertyOnlyExcessWon(result)).toBeGreaterThan(0);
+    expect(result.finalWon).toBe(30_000_000);
+    expectRowsMatchFinal(result);
+    expect(formatCompensationForClipboard(result)).toContain(
+      "비율공제·지급치료비 중 재산상 손해 초과분 (위자료에서 빼지 않음): ",
+    );
+    expect(withCompensationExportWarnings(result).propertyOnlyExcessWon).toBe(
+      propertyOnlyExcessWon(result),
+    );
+  });
+
+  it("사망: 지급치료비·비율공제 계수는 과실비율이고 행 합 = 최종액", () => {
+    const result = computeCompensationDeath(
+      buildCompensationDeathInput(
+        overrideDeath({
+          solatiumWonText: "80000000",
+          faultRatioText: "0.3",
+          ratioDeductions: [{ uid: "r", label: "", amountText: "1000000" }],
+          paidTreatmentDeductions: [{ uid: "p", label: "", amountText: "2000000" }],
+          absoluteDeductions: [{ uid: "a", label: "", amountText: "500000" }],
+        }),
+      ),
+    );
+    expect(result.deductions.ratioSubtotalWon).toBe(300_000);
+    expect(result.deductions.paidTreatmentSubtotalWon).toBe(600_000);
+    expectRowsMatchFinal(result);
+  });
+});
+
+describe("R2-a 사망 산재: 유족급여 수급권자별 공제 (2008다13104 전합)", () => {
+  // 골든 case-comp-022 와 같은 사건 (배우자 수급 1.5억, 배우자 3/5 · 자녀 2/5).
+  const state = (): CompensationDeathFormState =>
+    overrideDeath({
+      accidentType: "industrial",
+      birthDate: "1980-05-10",
+      accidentDate: "2025-03-01",
+      calculationDate: "2025-03-01",
+      laborRateEffectiveRule: "published",
+      solatiumWonText: "100000000",
+      faultRatioText: "0.3",
+      includeHeirs: true,
+      decedent: { name: "", deceasedAt: "2025-03-01" },
+      spouse: { alive: true, name: "배우자" },
+      linealDescendants: [
+        { id: "c1", name: "자녀", deceasedBeforeOpening: false, representatives: [] },
+      ],
+      survivorRecipients: [{ uid: "s1", heirName: "배우자", amountText: "150000000" }],
+    });
+
+  it("수급권자 입력은 recipients 로 가고, 상속인별 공제액이 결과·클립보드에 나온다", () => {
+    const input = buildCompensationDeathInput(state());
+    expect(input.industrialInsurance).toEqual({
+      recipients: [{ heirName: "배우자", survivorBenefitWon: 150_000_000 }],
+    });
+    // 골든 022 는 생계비 공제 비율 기본값(1/3)이다. 화면 기본값은 "0.3333" 이라 그 키만 빼면
+    // 골든 입력과 같다.
+    const goldenInput = { ...input };
+    delete goldenInput.livingCostDeductionRatio;
+    expect(
+      computeCompensationDeath(goldenInput).inheritanceShares?.map((share) => share.amountWon),
+    ).toEqual([115_998_100, 147_332_000]);
+    const result = computeCompensationDeath(input);
+    expect(result.inheritanceShares?.map((share) => share.survivorBenefitDeductedWon)).toEqual([
+      150_000_000, 0,
+    ]);
+    // 위자료는 상속인별로 나눠 더해도 가산 행으로 잡힌다 (소계가 몫의 합이라도).
+    expect(solatiumAddedAfterDeductionsWon(result)).toBe(100_000_000);
+    const text = formatCompensationDeathForClipboard(result);
+    expect(text).toContain("상속인\t지분(약분)\t유족급여 공제\t배정 금액");
+    expect(text).toContain(
+      `배우자\t3/5\t150,000,000원\t${result.inheritanceShares?.[0]?.amountWon.toLocaleString("ko-KR")}원`,
+    );
+  });
+
+  it("수급권자 입력이 저장·불러오기 뒤에도 그대로이고, 상속인 없이 넣으면 막는다", () => {
+    const input = buildCompensationDeathInput(state());
+    const loaded = applyLoadedCompensationDeathInput(input);
+    expect(
+      loaded.survivorRecipients.map(({ heirName, amountText }) => [heirName, amountText]),
+    ).toEqual([["배우자", "150000000"]]);
+    expect(buildCompensationDeathInput(loaded)).toEqual(input);
+    expect(() => buildCompensationDeathInput({ ...state(), includeHeirs: false })).toThrow(
+      "수급권자별 유족급여는 상속인을 입력해야",
+    );
+  });
+
+  it("수급권자를 고르지 않은 줄은 오류, 총액만 넣은 상속인 사건은 이전 방식으로 표시한다", () => {
+    expect(() =>
+      buildCompensationDeathInput({
+        ...state(),
+        survivorRecipients: [{ uid: "s1", heirName: "", amountText: "150000000" }],
+      }),
+    ).toThrow("수급권자 1번째: 상속인을 고르세요");
+    const total = { ...state(), survivorRecipients: [], survivorBenefitWonText: "150000000" };
+    expect(isLegacySurvivorTotal(total)).toBe(true);
+    expect(buildCompensationDeathInput(total).industrialInsurance).toEqual({
+      survivorBenefitWon: 150_000_000,
+    });
+    expect(isLegacySurvivorTotal({ ...total, includeHeirs: false })).toBe(false);
+    expect(isLegacySurvivorTotal(state())).toBe(false);
+  });
+
+  it("수급권자별 계산의 공제 행은 실제로 뺀 금액이고, 절사 차이 행까지 더하면 최종액이다 (손계산 재현)", () => {
+    // 직접 일당 150,000, 위자료 1억, 과실 30%, 배우자 유족급여 9억, 지급치료비 6천만.
+    const form: CompensationDeathFormState = {
+      ...state(),
+      directWageWonText: "150000",
+      paidTreatmentDeductions: [{ uid: "p", label: "", amountText: "60000000" }],
+      survivorRecipients: [{ uid: "s1", heirName: "배우자", amountText: "900000000" }],
+    };
+    // 손계산은 생계비 공제 비율 기본값(1/3)이다. 화면 기본값 "0.3333" 키만 뺀다.
+    const input = buildCompensationDeathInput(form);
+    delete input.livingCostDeductionRatio;
+    const result = computeCompensationDeath(input);
+    expect(result.deductions.propertyOnlyAppliedWon).toBe(9_300_000);
+    expect(result.deductions.propertyOnlyDiscardedWon).toBe(8_700_000);
+    expect(result.deductions.afterWon).toBe(87_777_382);
+    expect(result.deductions.roundingWon).toBe(82);
+    expect(result.finalWon).toBe(187_777_300);
+    expect(result.inheritanceShares?.map((share) => share.amountWon)).toEqual([
+      60_000_000, 127_777_300,
+    ]);
+    expect(propertyOnlyExcessWon(result)).toBe(8_700_000);
+    expectRowsMatchFinal(result);
+    const text = formatCompensationDeathForClipboard(result);
+    expect(text).toContain(
+      "비율공제·지급치료비 중 재산상 손해 초과분 (위자료에서 빼지 않음) (상속분 원 미만 버림 포함): 8,700,000원",
+    );
+    expect(text).toContain("상속분 나눗셈·상속인별 100원 미만 버림: -82원");
+    expect(text).not.toContain("공제 후 재산상 손해: 0원");
+  });
+
+  it("지금 상속인 목록에 없는 수급권자를 고른 채로는 계산하지 않는다", () => {
+    expect(() =>
+      buildCompensationDeathInput({
+        ...state(),
+        survivorRecipients: [{ uid: "s1", heirName: "옛 배우자", amountText: "150000000" }],
+      }),
+    ).toThrow('수급권자 1번째: "옛 배우자"은(는) 지금 상속인 목록에 없습니다.');
+  });
+
+  it("상속인 아닌 수급권자(heirName 없음)는 어느 몫에서도 빼지 않는다", () => {
+    const input = buildCompensationDeathInput({
+      ...state(),
+      survivorRecipients: [{ uid: "s1", heirName: NON_HEIR_RECIPIENT, amountText: "150000000" }],
+    });
+    expect(input.industrialInsurance).toEqual({
+      recipients: [{ survivorBenefitWon: 150_000_000 }],
+    });
+    const result = computeCompensationDeath(input);
+    expect(result.inheritanceShares?.every((share) => share.survivorBenefitDeductedWon === 0)).toBe(
+      true,
+    );
+  });
+});
+
+describe("R2-a 이전 버전 파일 (@1~@4) 은 @5 로 열려 금액이 그대로다", () => {
+  const injuryBase = {
+    birthDate: "1990-01-01",
+    accidentDate: "2020-03-01",
+    treatmentEndDate: "2020-06-15",
+    sex: "male" as const,
+    retirementAge: 65,
+    legalRatePreset: "civil" as const,
+  };
+
+  function envelope(input: Record<string, unknown>, feature: string): unknown {
+    return {
+      schemaVersion: "3",
+      kind: "compensation",
+      envelopeFeatures: [feature],
+      dataVersions: {
+        laborRates: "labor-rates/v1.1.0",
+        lifeExpectancy: "life-expectancy/v1.1.0",
+        hoffman: "hoffman/v1.0.0",
+        leibniz: "leibniz/v1.0.0",
+      },
+      payload: {
+        appVersion: "0.12.2",
+        createdAt: "2026-10-01T00:00:00.000Z",
+        input,
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+  }
+
+  /** 화면 열기와 같은 경로: 마이그레이션 → 검증 → 폼 상태 → 다시 만든 입력. */
+  function reopen(file: unknown) {
+    const migrated = migrateLcalcFile(file);
+    validateLcalcEnvelope(migrated);
+    return parseLoadedCompensationLcalcInput(migrated).input;
+  }
+
+  const injuryCases: [string, Record<string, unknown>][] = [
+    [
+      "compensation@1",
+      {
+        base: injuryBase,
+        lossRate: { permanent: [{ ratio: 0.3 }], hospitalizationFullLoss: true },
+        lostIncome: { occupation: "보통인부", discountMethod: "hoffman", workingDaysPerMonth: 20 },
+        solatiumWon: 20_000_000,
+        faultRatio: 0.2,
+        deductions: { absolute: [{ amount: 3_000_000 }] },
+      },
+    ],
+    [
+      "compensation@3",
+      {
+        mode: "injury",
+        accidentType: "industrial",
+        base: injuryBase,
+        lossRate: { permanent: [{ ratio: 0.3 }], hospitalizationFullLoss: true },
+        lostIncome: { occupation: "보통인부", discountMethod: "hoffman", workingDaysPerMonth: 20 },
+        industrialInsurance: { disabilityBenefitWon: 30_000_000 },
+      },
+    ],
+    [
+      "compensation@4",
+      {
+        mode: "injury",
+        accidentType: "auto",
+        base: injuryBase,
+        lossRate: { permanent: [{ ratio: 0.3 }], hospitalizationFullLoss: true },
+        lostIncome: { occupation: "보통인부", discountMethod: "hoffman", workingDaysPerMonth: 20 },
+        otherDamages: {
+          attendantCare: {
+            future: [
+              {
+                occupation: "보통인부",
+                startDate: "2020-03-01",
+                endDate: "2030-02-28",
+                personCount: 1,
+              },
+            ],
+          },
+        },
+      },
+    ],
+  ];
+
+  for (const [feature, original] of injuryCases) {
+    it(`부상 ${feature}: 기준일 = 사고일·공표 적용일로 열려 최종액이 원본 입력 계산과 같다`, () => {
+      const loaded = reopen(envelope(original, feature));
+      if (loaded.mode === "death") throw new Error("expected injury");
+      expect(loaded.base.laborRateEffectiveRule).toBe("published");
+      const form = applyLoadedCompensationInput(loaded);
+      expect(form.calculationDate).toBe("2020-03-01");
+      const reopened = computeCompensation(buildCompensationInput(form));
+      const before = computeCompensation(original as unknown as CompensationInput);
+      expect(reopened.finalWon).toBe(before.finalWon);
+      expect(reopened.lostIncomeSubtotalWon).toBe(before.lostIncomeSubtotalWon);
+      expect(legacyCompensationNotice(loaded)).toContain(
+        "계산 기준일은 사고일(사고일 단가 하나로 계산)",
+      );
+      // 다시 저장하면 기준일·규약이 명시되고 @5 가 된다.
+      expect(buildCompensationInput(form).base).toMatchObject({
+        calculationDate: "2020-03-01",
+        laborRateEffectiveRule: "published",
+      });
+    });
+  }
+
+  it("부상 구 비율공제 [{ratio}]: 이전 방식으로 보존해 종전 산식(과실상계 후 × 비율) 금액이 그대로다", () => {
+    const original = {
+      ...injuryCases[0]![1],
+      deductions: { ratio: [{ label: "기타", ratio: 0.1 }], absolute: [{ amount: 3_000_000 }] },
+    };
+    const loaded = reopen(envelope(original, "compensation@1"));
+    if (loaded.mode === "death") throw new Error("expected injury");
+    const form = applyLoadedCompensationInput(loaded);
+    expect(form.ratioDeductions).toEqual([]);
+    expect(form.legacyRatioDeductions.map((item) => item.ratioText)).toEqual(["0.1"]);
+    const reopened = computeCompensation(buildCompensationInput(form));
+    // 손계산: 종전 비율공제 = floor(과실상계 후 × 0.1), 위자료는 공제 뒤 가산.
+    const after = reopened.faultOffset.afterWon;
+    const expected =
+      Math.floor((after - Math.floor(after * 0.1) - 3_000_000 + 20_000_000) / 100) * 100;
+    expect(reopened.deductions.legacyRatioSubtotalWon).toBe(Math.floor(after * 0.1));
+    expect(reopened.finalWon).toBe(expected);
+    expect(legacyCompensationNotice(loaded)).toContain("이전 방식 비율공제를 지우고");
+  });
+
+  it("사망 compensation@2: 같은 규칙으로 열려 최종액이 원본 입력 계산과 같다", () => {
+    const original = {
+      mode: "death",
+      base: { birthDate: "1980-05-10", accidentDate: "2020-03-01", sex: "male", retirementAge: 65 },
+      lostIncome: { occupation: "보통인부", discountMethod: "hoffman", workingDaysPerMonth: 20 },
+      // 화면이 저장한 파일은 생계비 공제 비율을 늘 담는다.
+      livingCostDeductionRatio: 0.3333,
+      funeralExpenseWon: 5_000_000,
+      solatiumWon: 80_000_000,
+      faultRatio: 0.2,
+    };
+    const loaded = reopen(envelope(original, "compensation@2"));
+    if (loaded.mode !== "death") throw new Error("expected death");
+    const form = applyLoadedCompensationDeathInput(loaded);
+    expect(form.calculationDate).toBe("2020-03-01");
+    expect(form.laborRateEffectiveRule).toBe("published");
+    const reopened = computeCompensationDeath(buildCompensationDeathInput(form));
+    const before = computeCompensationDeath(
+      original as unknown as Parameters<typeof computeCompensationDeath>[0],
+    );
+    expect(reopened.finalWon).toBe(before.finalWon);
+  });
+
+  it("새 파일은 이전 버전 안내를 띄우지 않는다", () => {
+    const input = buildCompensationInput(defaultCompensationFormState());
+    expect(legacyCompensationNotice(input)).toBeNull();
   });
 });

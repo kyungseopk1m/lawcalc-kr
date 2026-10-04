@@ -4,9 +4,17 @@
  * - 기왕: 현가 산정 없이 `일당 × 총일수` (실지출 입력 시 `min`) × `(1 - 기왕증)`.
  * - 향후: 연금형 → 월개호비 `round(일당 × daysPerMonth) × 인원` × 연금현가율(호프만 240 cap) × `(1 - 기왕증)`.
  *   240 cap 은 개호 향후 segment 전체에서 누적 (일실수입과 별개 독립 풀).
+ *   계산 기준일이 있으면 직종 단가 구간을 노임 변경일마다 나눈다 (일실수입과 같은 규칙).
  */
 
+import type { IsoDate } from "@lawcalc-kr/core-engine";
 import { applyHoffman240Cap } from "@lawcalc-kr/datasets-compensation";
+import {
+  dropUnchangedLaborRates,
+  floorTimesComplements,
+  laborRateChanges,
+  laborRateDateAt,
+} from "../internal";
 import type { AttendantCareInput, AttendantCareResult } from "./types";
 import {
   getCumulativeHoffmanClamped,
@@ -43,7 +51,7 @@ export function computeAttendantCare(
     const computed = dailyWage * item.totalDays;
     const base =
       item.actualSpentWon !== undefined ? Math.min(computed, item.actualSpentWon) : computed;
-    pastWon += Math.floor(base * (1 - (item.priorRatio ?? 0)));
+    pastWon += floorTimesComplements(base, [item.priorRatio ?? 0]);
   }
 
   // 2. 향후개호비 — 연금형, 240 cap 을 향후 segment 전체에서 누적.
@@ -51,23 +59,73 @@ export function computeAttendantCare(
   // coverage 로 clamp 한다 — 240 cap 이 이미 그 이전에 적용되므로 결과 영향 없음 + RangeError 방지.
   // clamp 는 일실수입과 같은 `getCumulativeHoffmanClamped` 를 쓴다. 여기에 로컬 clamp 를 두면
   // 같은 규칙이 두 벌이 되고, `internal.ts` 가 스스로를 단일 진입점이라 적은 것과도 어긋난다.
+  //
+  // 계산 기준일이 있으면 직종 단가 구간을 노임 변경일마다 나누고, 나뉜 조각은 그 초일에 적용되는
+  // 단가(기준일 이후면 기준일까지 공표된 마지막 단가)를 쓴다. 일당 직접 입력 구간은 나누지 않는다.
+  // 기준일이 없으면 사고일 단가 하나.
+  const changes =
+    ctx.calculationDate === undefined
+      ? []
+      : laborRateChanges(
+          ctx.laborRates,
+          ctx.accidentDate,
+          ctx.calculationDate,
+          ctx.laborRateEffectiveRule,
+        );
+  const parts: { itemIndex: number; startMonth: number; endMonth: number; rateDate: IsoDate }[] =
+    [];
+  for (let i = 0; i < futureItems.length; i++) {
+    const seg = futureItems[i]!;
+    const split = changes.length > 0 && seg.directDailyWageWon === undefined;
+    // 단가가 직전과 같은 변경일은 나누지 않는다 (직종이 뒤 조사에서 빠져 마지막 단가를 이어 쓸 때).
+    const rateAt = (date: IsoDate) =>
+      resolveDailyWage(
+        ctx,
+        seg.occupation,
+        undefined,
+        `개호비 향후[${i}]`,
+        laborRateDateAt(changes, date, ctx.accidentDate),
+      );
+    const points = [
+      seg.startDate,
+      ...(split
+        ? dropUnchangedLaborRates(
+            changes.filter((c) => c.date > seg.startDate && c.date < seg.endDate),
+            rateAt,
+            seg.startDate,
+          ).map((c) => c.date)
+        : []),
+      seg.endDate,
+    ];
+    for (let k = 0; k < points.length - 1; k++) {
+      parts.push({
+        itemIndex: i,
+        startMonth: monthsBetween(ctx.accidentDate, points[k]!),
+        endMonth: monthsBetween(ctx.accidentDate, points[k + 1]!),
+        rateDate: split ? laborRateDateAt(changes, points[k]!, ctx.accidentDate) : ctx.accidentDate,
+      });
+    }
+  }
+
   const rawHoffmanList: number[] = [];
-  for (const seg of futureItems) {
+  for (const part of parts) {
     const raw =
-      getCumulativeHoffmanClamped(ctx.hoffman, monthsBetween(ctx.accidentDate, seg.endDate)) -
-      getCumulativeHoffmanClamped(ctx.hoffman, monthsBetween(ctx.accidentDate, seg.startDate));
+      getCumulativeHoffmanClamped(ctx.hoffman, part.endMonth) -
+      getCumulativeHoffmanClamped(ctx.hoffman, part.startMonth);
     rawHoffmanList.push(Math.max(0, raw));
   }
   const capResult = applyHoffman240Cap(rawHoffmanList);
 
   let futureWon = 0;
-  for (let i = 0; i < futureItems.length; i++) {
-    const seg = futureItems[i]!;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]!;
+    const seg = futureItems[part.itemIndex]!;
     const dailyWage = resolveDailyWage(
       ctx,
       seg.occupation,
       seg.directDailyWageWon,
-      `개호비 향후[${i}]`,
+      `개호비 향후[${part.itemIndex}]`,
+      part.rateDate,
     );
     const daysPerMonth = seg.daysPerMonth ?? DEFAULT_ATTENDANT_DAYS_PER_MONTH;
     // 365/12 환산은 원 미만이 생기므로 1인 월 개호비를 원 단위로 반올림한다 (매뉴얼 계산표 기준).
@@ -76,11 +134,14 @@ export function computeAttendantCare(
     const appliedHoffman = capResult.appliedHoffman[i] as number;
     futureWon += Math.floor(monthlyAttendant * appliedHoffman * (1 - (seg.priorRatio ?? 0)));
   }
+  // cap 인덱스는 입력 구간 기준으로 돌려준다 (나뉜 조각 인덱스가 아니다).
+  const cappedAtIndex =
+    capResult.cappedAtIndex === null ? null : parts[capResult.cappedAtIndex]!.itemIndex;
 
   return {
     pastWon,
     futureWon,
     subtotalWon: pastWon + futureWon,
-    hoffman240CappedAtIndex: capResult.cappedAtIndex,
+    hoffman240CappedAtIndex: cappedAtIndex,
   };
 }

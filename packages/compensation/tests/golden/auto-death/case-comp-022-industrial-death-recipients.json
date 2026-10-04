@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-022-industrial-death-recipients",
+  "title": "industrial/death 유족급여 수급권자별 공제(2008다13104 전합): 배우자 수급 1.5억, 배우자 3/5·자녀 2/5",
+  "source": "manual-derivation",
+  "notes": "r2a-golden-derivation-2026-10-04.md 8절. r2a-research-2026-10-04.md 3.4절 예시를 현재 엔진 조건(20일, 위자료 과실상계 밖)으로 다시 손계산. 일실수입 L = floor(169,804×20 × 167.10246956 × 2/3) = 378,328,903. 배우자 L_i 226,997,341 - 유족급여 150,000,000 + 장례비 몫 3,000,000 = 79,997,341 → ×0.7 = 55,998,138 + 위자료 몫 60,000,000 → 115,998,100. 자녀 151,331,561 + 2,000,000 = 153,331,561 → ×0.7 = 107,332,092 + 40,000,000 → 147,332,000. 종전(총액 공제) 263,330,200 을 배우자 157,998,120·자녀 105,332,080 으로 나누던 것과 비교해 배우자 -42,000,020, 자녀 +41,999,920. 상속인별 합계: 위자료 차감 0, 버려진 전액공제 0, 절사 차이 = 163,330,230 + 100,000,000 - 263,330,100 = 130 (배우자 38 + 자녀 92, 100원 미만 절사).",
+  "input": {
+    "mode": "death",
+    "accidentType": "industrial",
+    "base": {
+      "birthDate": "1980-05-10",
+      "accidentDate": "2025-03-01",
+      "sex": "male"
+    },
+    "lostIncome": {
+      "occupation": "보통인부"
+    },
+    "funeralExpenseWon": 5000000,
+    "solatiumWon": 100000000,
+    "faultRatio": 0.3,
+    "industrialInsurance": {
+      "recipients": [
+        {
+          "heirName": "배우자",
+          "survivorBenefitWon": 150000000
+        }
+      ]
+    },
+    "heirs": {
+      "decedent": {
+        "deceasedAt": "2025-03-01"
+      },
+      "spouse": {
+        "name": "배우자",
+        "alive": true
+      },
+      "linealDescendants": [
+        {
+          "name": "자녀",
+          "deceasedBeforeOpening": false
+        }
+      ]
+    }
+  },
+  "expected": {
+    "accidentType": "industrial",
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "lostIncomeSubtotalWon": 378328903,
+    "solatiumWon": 100000000,
+    "industrialBenefit": {
+      "benefitWon": 150000000,
+      "deductedWon": 150000000,
+      "lostIncomeAfterWon": 228328903
+    },
+    "pecuniaryDamagesSubtotalWon": 233328902,
+    "faultOffset": {
+      "ratio": 0.3,
+      "beforeWon": 233328902,
+      "afterWon": 163330230
+    },
+    "funeralExpenseWon": 5000000,
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 163330230,
+      "solatiumReducedWon": 0,
+      "absoluteExcessDroppedWon": 0,
+      "roundingWon": 130
+    },
+    "finalWon": 263330100,
+    "inheritanceShares": [
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 5,
+        "amountWon": 115998100,
+        "survivorBenefitDeductedWon": 150000000
+      },
+      {
+        "name": "자녀",
+        "numerator": 2,
+        "denominator": 5,
+        "amountWon": 147332000,
+        "survivorBenefitDeductedWon": 0
+      }
+    ],
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 242,
+        "lossRate": 1,
+        "dailyWageWon": 169804,
+        "monthlyWageWon": 3396080,
+        "rawHoffman": 167.10246956,
+        "appliedHoffman": 167.10246956,
+        "amountFloorWon": 378328903
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [167.10246956],
+    "mode": "death",
+    "rawInheritanceShares": [
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 5,
+        "rawNumerator": 3,
+        "rawDenominator": 5
+      },
+      {
+        "name": "자녀",
+        "numerator": 2,
+        "denominator": 5,
+        "rawNumerator": 2,
+        "rawDenominator": 5
+      }
+    ]
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r2a-golden-derivation-2026-10-04.md 8절 (C5 상속인별 유족급여 공제)"
+  }
+}

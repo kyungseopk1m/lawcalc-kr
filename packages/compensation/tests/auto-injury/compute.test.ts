@@ -452,13 +452,13 @@ describe("2026-10-04 정확성 정정", () => {
       expect(result.finalWon).toBe(102_208_100);
     });
 
-    it("비율공제도 위자료에 걸리지 않는다", () => {
+    it("구 비율공제도 위자료에 걸리지 않는다", () => {
       // 88,208,162 - floor(88,208,162 × 0.1) = 88,208,162 - 8,820,816 = 79,387,346, + 20,000,000
       const input = r1Input();
       input.lossRate.hospitalizationFullLoss = false;
-      input.deductions = { ratio: [{ ratio: 0.1 }] };
+      input.deductions = { legacyRatio: [{ ratio: 0.1 }] };
       const result = computeCompensation(input, { now: FIXED_NOW });
-      expect(result.deductions.ratioSubtotalWon).toBe(8_820_816);
+      expect(result.deductions.legacyRatioSubtotalWon).toBe(8_820_816);
       expect(result.finalWon).toBe(99_387_300);
     });
   });

@@ -984,6 +984,21 @@ describe("v3 compensation envelope", () => {
     return file.payload;
   }
 
+  /** `base.laborRateEffectiveRule: "published"` 만 더한 사본 (@4 → @5 정규화 기대값). */
+  function withPublishedRule(file: LcalcFile): LcalcFile {
+    const input = compensationPayload(file).input as unknown as Record<string, unknown>;
+    return {
+      ...file,
+      payload: {
+        ...compensationPayload(file),
+        input: {
+          ...input,
+          base: { ...(input.base as object), laborRateEffectiveRule: "published" },
+        },
+      },
+    } as LcalcFile;
+  }
+
   function buildCompensationFile(): LcalcFile {
     const input: CompensationInput = {
       base: {
@@ -1134,7 +1149,8 @@ describe("v3 compensation envelope", () => {
     expect((compensationPayload(migrated).input as { accidentType?: string }).accidentType).toBe(
       "industrial",
     );
-    expect(migrated).toEqual(industrialFile);
+    // @4 → @5 는 노임 규약 키만 명시한다 (엔진 기본과 같은 공표 적용일, 금액 불변).
+    expect(migrated).toEqual(withPublishedRule(industrialFile));
   });
 
   it("migrateLcalcFile leaves a compensation@4 file with otherDamages untouched (주입 없음)", () => {
@@ -1157,10 +1173,101 @@ describe("v3 compensation envelope", () => {
 
     const migrated = migrateLcalcFile(otherDamagesFile);
 
-    // mode·accidentType 이 이미 있으므로 @3→@4 는 어떤 필드도 주입하지 않는다 (byte-identity).
-    expect(migrated).toEqual(otherDamagesFile);
+    // mode·accidentType 이 이미 있으므로 @3→@4 는 어떤 필드도 주입하지 않는다. @4 → @5 는
+    // 노임 규약 키만 명시한다.
+    expect(migrated).toEqual(withPublishedRule(otherDamagesFile));
     expect(
       (compensationPayload(migrated).input as { otherDamages?: unknown }).otherDamages,
     ).toBeDefined();
+  });
+});
+
+describe("compensation @4 → @5 정규화", () => {
+  function legacyFile(input: Record<string, unknown>, features = ["compensation@4"]): LcalcFile {
+    return {
+      schemaVersion: "3",
+      kind: "compensation",
+      envelopeFeatures: features,
+      dataVersions: {
+        laborRates: "labor-rates/v1.1.0",
+        lifeExpectancy: "life-expectancy/v1.1.0",
+        hoffman: "hoffman/v1.0.0",
+        leibniz: "leibniz/v1.0.0",
+      },
+      payload: {
+        appVersion: "0.12.2",
+        createdAt: "2026-10-01T00:00:00.000Z",
+        input,
+        disclaimer: "본 결과는 검토용 계산이며, 사건별 특수성은 전문가 확인이 필요합니다.",
+      },
+    } as unknown as LcalcFile;
+  }
+
+  const base = {
+    birthDate: "1996-01-01",
+    accidentDate: "2020-03-01",
+    treatmentEndDate: "2020-03-01",
+    sex: "male",
+    retirementAge: 65,
+  };
+
+  function inputOf(file: LcalcFile): Record<string, unknown> {
+    if (file.kind !== "compensation") throw new Error("expected compensation");
+    return file.payload.input as unknown as Record<string, unknown>;
+  }
+
+  it("구 비율공제 [{ratio}] 는 legacyRatio 로 옮기고, 규약 키 없음은 published 로 명시한다", () => {
+    const migrated = migrateLcalcFile(
+      legacyFile({
+        mode: "injury",
+        accidentType: "auto",
+        base,
+        lossRate: { permanent: [{ ratio: 0.3 }] },
+        lostIncome: { occupation: "보통인부", discountMethod: "hoffman" },
+        deductions: { ratio: [{ label: "기타", ratio: 0.1 }], absolute: [{ amount: 1_000 }] },
+      }),
+    );
+    const input = inputOf(migrated);
+    expect(input.base).toEqual({ ...base, laborRateEffectiveRule: "published" });
+    // 계산 기준일은 없으면 그대로 둔다 (사고일 단가 하나 = 저장 당시 금액).
+    expect(input.base).not.toHaveProperty("calculationDate");
+    expect(input.deductions).toEqual({
+      absolute: [{ amount: 1_000 }],
+      legacyRatio: [{ label: "기타", ratio: 0.1 }],
+    });
+    expect(() => validateLcalcEnvelope(migrated)).not.toThrow();
+    expect(() => parseLoadedCompensationLcalcInput(migrated)).not.toThrow();
+  });
+
+  it("사망 파일도 같은 규칙이고, 새 모양 비율공제(amount)는 ratio 에 남긴다", () => {
+    const migrated = migrateLcalcFile(
+      legacyFile({
+        mode: "death",
+        accidentType: "auto",
+        base: { birthDate: base.birthDate, accidentDate: base.accidentDate, sex: "male" },
+        lostIncome: { occupation: "보통인부", discountMethod: "hoffman" },
+        deductions: { ratio: [{ ratio: 0.2 }, { amount: 500 }] },
+      }),
+    );
+    const input = inputOf(migrated);
+    expect(input.deductions).toEqual({ ratio: [{ amount: 500 }], legacyRatio: [{ ratio: 0.2 }] });
+    expect((input.base as Record<string, unknown>).laborRateEffectiveRule).toBe("published");
+    expect(() => parseLoadedCompensationLcalcInput(migrated)).not.toThrow();
+  });
+
+  it("새 저장(@5: 규약·기준일 명시) 파일은 손대지 않는다 (같은 참조)", () => {
+    const file = legacyFile(
+      {
+        mode: "injury",
+        accidentType: "auto",
+        base: { ...base, calculationDate: "2026-10-04", laborRateEffectiveRule: "survey" },
+        lossRate: { permanent: [{ ratio: 0.3 }] },
+        lostIncome: { occupation: "보통인부", discountMethod: "hoffman" },
+        deductions: { ratio: [{ amount: 500 }] },
+      },
+      ["compensation@5"],
+    );
+    expect(migrateLcalcFile(file)).toBe(file);
+    expect(() => validateLcalcEnvelope(file)).not.toThrow();
   });
 });

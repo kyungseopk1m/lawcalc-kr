@@ -124,8 +124,8 @@ describe("치료비 / 보조구 (treatment / appliance)", () => {
         ],
       },
     });
-    // month 12, spf = 1/1.05 → 1,050,000 × (1/1.05) = 1,000,000
-    expect(r.treatment?.futureWon).toBe(1000000);
+    // month 12, 계수 1/1.05 를 4자리 절사 = floor(2,400,000 / 252)/1e4 = 0.9523 → 1,050,000 × 0.9523 = 999,915
+    expect(r.treatment?.futureWon).toBe(999915);
     expect(r.treatment?.valueSum20Capped).toBe(false);
   });
 
@@ -143,8 +143,8 @@ describe("치료비 / 보조구 (treatment / appliance)", () => {
         ],
       },
     });
-    // 발생 month 0, 12 → spf 합 = 1 + 1/1.05 = 1.95238 → floor(1,000,000 × 1.95238)
-    expect(r.treatment?.futureWon).toBe(1952380);
+    // 발생 month 0, 12 → 4자리 절사 합 = 1 + 0.9523 = 1.9523 → 1,000,000 × 1.9523
+    expect(r.treatment?.futureWon).toBe(1952300);
     expect(r.treatment?.valueSum20Capped).toBe(false);
   });
 
@@ -240,8 +240,8 @@ describe("치료비 / 보조구 (treatment / appliance)", () => {
       ],
     });
     expect(r.appliance?.pastWon).toBe(0);
-    expect(r.appliance?.futureWon).toBe(1000000);
-    expect(r.applianceWon).toBe(1000000);
+    expect(r.appliance?.futureWon).toBe(999915);
+    expect(r.applianceWon).toBe(999915);
   });
 });
 
@@ -256,8 +256,8 @@ describe("합산 + 회귀", () => {
     });
     expect(r.attendantCareWon).toBe(1000000);
     expect(r.treatmentWon).toBe(2000000);
-    expect(r.applianceWon).toBe(1000000);
-    expect(r.subtotalWon).toBe(4000000);
+    expect(r.applianceWon).toBe(999915);
+    expect(r.subtotalWon).toBe(3999915);
   });
 
   it("빈 입력 → null 반환 (회귀 0)", () => {

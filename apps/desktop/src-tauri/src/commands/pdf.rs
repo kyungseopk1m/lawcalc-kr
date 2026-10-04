@@ -25,9 +25,11 @@ use tauri_plugin_dialog::DialogExt;
 use crate::error::Error;
 
 use super::result_view::{
-    disclaimer_text, format_currency, format_rate_percent, industrial_benefit_value_text,
-    options_summary, CompensationDeathResultView, CompensationOtherDamagesView,
-    CompensationResultView, InheritanceResultView, LitigationCostResultView, ResultView,
+    compensation_deduction_rows, disclaimer_text, format_currency, format_rate_percent,
+    heir_excess_dropped_row, heir_rounding_row, industrial_benefit_value_text, options_summary,
+    segments_have_dates, shares_have_survivor_benefit, CompensationDeathResultView,
+    CompensationDeductionsView, CompensationOtherDamagesView, CompensationResultView,
+    InheritanceResultView, LitigationCostResultView, ResultView,
 };
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
@@ -749,7 +751,9 @@ impl<'a> PageWriter<'a> {
 
     /// 요약 행 목록. 그리기와 분리해 테스트가 행 구성을 직접 확인할 수 있게 한다.
     fn compensation_summary_lines(view: &CompensationResultView) -> Vec<(String, String)> {
-        let mut lines: Vec<(String, String)> = vec![
+        let mut lines: Vec<(String, String)> =
+            Self::labor_rate_timing_line(&view.labor_rate_timing_text);
+        lines.extend([
             (
                 "중복 노동능력상실률".into(),
                 format!("{:.2}%", view.combined_loss_rate * 100.0),
@@ -758,7 +762,7 @@ impl<'a> PageWriter<'a> {
                 "일실수입 소계".into(),
                 format!("{}원", format_currency(view.lost_income_subtotal_won)),
             ),
-        ];
+        ]);
         // 산재보험급여 (장해급여) — 일실수입 한도 선공제 (2021다241618 전합).
         if let Some(ib) = &view.industrial_benefit {
             lines.push((
@@ -783,27 +787,11 @@ impl<'a> PageWriter<'a> {
                 format!("과실상계 ({:.0}%)", view.fault_offset.ratio * 100.0),
                 format!("{}원", format_currency(view.fault_offset.after_won)),
             ),
-            (
-                if view.deductions.industrial_benefit_won.is_some() {
-                    "공제 (비율 + 전액 + 산재급여)".into()
-                } else {
-                    "공제 (비율 + 전액)".into()
-                },
-                match view.deductions.industrial_benefit_won {
-                    Some(benefit) => format!(
-                        "{}원 + {}원 + {}원",
-                        format_currency(view.deductions.ratio_subtotal_won),
-                        format_currency(view.deductions.absolute_subtotal_won),
-                        format_currency(benefit)
-                    ),
-                    None => format!(
-                        "{}원 + {}원",
-                        format_currency(view.deductions.ratio_subtotal_won),
-                        format_currency(view.deductions.absolute_subtotal_won)
-                    ),
-                },
-            ),
         ]);
+        lines.extend(Self::deduction_lines(
+            &view.deductions,
+            view.property_only_excess_won,
+        ));
         if view.deduction_excess_won > 0.0 {
             lines.push(("공제 후 재산상 손해".into(), "0원".into()));
             lines.push((
@@ -811,11 +799,17 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(-view.deduction_excess_won)),
             ));
         }
+        if let Some((label, won)) = heir_excess_dropped_row(&view.deductions) {
+            lines.push((label.into(), format!("{}원", format_currency(won))));
+        }
         if view.solatium_added_won > 0.0 {
             lines.push((
                 "위자료 가산".into(),
                 format!("{}원", format_currency(view.solatium_added_won)),
             ));
+        }
+        if let Some((label, won)) = heir_rounding_row(&view.deductions) {
+            lines.push((label.into(), format!("{}원", format_currency(won))));
         }
         lines.extend([
             (
@@ -827,15 +821,51 @@ impl<'a> PageWriter<'a> {
         lines
     }
 
-    fn draw_compensation_summary(&mut self, view: &CompensationResultView) {
-        let lines = Self::compensation_summary_lines(view);
-        let label_w = 38.0;
-        for (label, value) in &lines {
+    /// "노임 기준" 줄 (계산 기준일·규약). 값이 없는 구 payload 는 줄을 내지 않는다.
+    fn labor_rate_timing_line(text: &str) -> Vec<(String, String)> {
+        if text.is_empty() {
+            Vec::new()
+        } else {
+            vec![("노임 기준".into(), text.to_string())]
+        }
+    }
+
+    /// 공제 행 (`compensation_deduction_rows`). 구 결과의 산재보험급여(≤ v0.9.x)는 뒤에 붙인다.
+    fn deduction_lines(
+        deductions: &CompensationDeductionsView,
+        property_only_excess_won: f64,
+    ) -> Vec<(String, String)> {
+        let mut lines: Vec<(String, String)> =
+            compensation_deduction_rows(deductions, property_only_excess_won)
+                .into_iter()
+                .map(|(label, won)| (label.to_string(), format!("{}원", format_currency(won))))
+                .collect();
+        if let Some(benefit) = deductions.industrial_benefit_won {
+            lines.push((
+                "산재보험급여 공제 (구 방식)".into(),
+                format!("{}원", format_currency(benefit)),
+            ));
+        }
+        lines
+    }
+
+    /// 요약 (라벨, 값) 줄. 라벨이 값 열까지 넘치면 값을 다음 줄에 쓴다.
+    fn draw_summary_lines(&mut self, lines: &[(String, String)], label_w: f32) {
+        for (label, value) in lines {
             self.text(label, 10.0, self.left(), self.y - 4.0);
+            // 10pt 한글 한 글자 ≈ 3.6mm.
+            if label.chars().count() as f32 * 3.6 > label_w - 2.0 {
+                self.advance(5.6);
+            }
             self.text(value, 10.0, self.left() + label_w, self.y - 4.0);
             self.advance(5.6);
         }
         self.advance(2.0);
+    }
+
+    fn draw_compensation_summary(&mut self, view: &CompensationResultView) {
+        let lines = Self::compensation_summary_lines(view);
+        self.draw_summary_lines(&lines, 38.0);
     }
 
     /// 기타손해(개호비·치료비·보조구 + 소계) PDF 블록. `None` (미입력) 이면 한 줄도
@@ -895,19 +925,23 @@ impl<'a> PageWriter<'a> {
     }
 
     fn draw_compensation_segments_table(&mut self, view: &CompensationResultView) {
-        let widths: [f32; 5] = [30.0, 22.0, 30.0, 36.0, 36.0];
+        // 계산 기준일을 넣은 결과는 기간 뒤에 초일·말일 열을 둔다.
+        let dated = segments_have_dates(&view.segments);
+        let widths: Vec<f32> = if dated {
+            vec![20.0, 22.0, 22.0, 16.0, 24.0, 26.0, 30.0]
+        } else {
+            vec![30.0, 22.0, 30.0, 36.0, 36.0]
+        };
         let inner_w: f32 = widths.iter().sum();
         let right = self.left() + inner_w;
 
         self.hline(self.left(), right, self.y);
         self.advance(5.0);
-        let headers = [
-            "기간(개월)",
-            "상실률",
-            "단가(원/일)",
-            "호프만(적용)",
-            "금액(원)",
-        ];
+        let mut headers = vec!["기간(개월)"];
+        if dated {
+            headers.extend(["초일", "말일"]);
+        }
+        headers.extend(["상실률", "단가(원/일)", "호프만(적용)", "금액(원)"]);
         let mut x = self.left();
         for (header, width) in headers.iter().zip(widths.iter()) {
             self.text(header, 9.0, x + 1.0, self.y - 3.5);
@@ -923,13 +957,17 @@ impl<'a> PageWriter<'a> {
             } else {
                 ""
             };
-            let cells = [
-                format!("{} ~ {}", segment.start_month, segment.end_month),
+            let mut cells = vec![format!("{} ~ {}", segment.start_month, segment.end_month)];
+            if dated {
+                cells.push(segment.start_date.clone().unwrap_or_default());
+                cells.push(segment.end_date.clone().unwrap_or_default());
+            }
+            cells.extend([
                 format!("{:.2}%", segment.loss_rate * 100.0),
                 format_currency(segment.daily_wage_won),
                 format!("{:.6}{}", segment.applied_hoffman, cap_marker),
                 format_currency(segment.amount_floor_won),
-            ];
+            ]);
             let mut x = self.left();
             for (cell, width) in cells.iter().zip(widths.iter()) {
                 self.text(cell, 8.5, x + 1.0, self.y - 1.0);
@@ -940,7 +978,7 @@ impl<'a> PageWriter<'a> {
         self.advance(5.4);
         self.hline(self.left(), right, self.y + 4.0);
         self.text("일실수입 소계", 9.0, self.left() + 1.0, self.y - 1.0);
-        let total_x = self.left() + widths[..4].iter().sum::<f32>() + 1.0;
+        let total_x = self.left() + widths[..widths.len() - 1].iter().sum::<f32>() + 1.0;
         self.text(
             &format_currency(view.lost_income_subtotal_won),
             9.0,
@@ -984,7 +1022,9 @@ impl<'a> PageWriter<'a> {
     fn compensation_death_summary_lines(
         view: &CompensationDeathResultView,
     ) -> Vec<(String, String)> {
-        let mut lines: Vec<(String, String)> = vec![
+        let mut lines: Vec<(String, String)> =
+            Self::labor_rate_timing_line(&view.labor_rate_timing_text);
+        lines.extend([
             (
                 "생계비 공제 비율".into(),
                 format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
@@ -993,7 +1033,7 @@ impl<'a> PageWriter<'a> {
                 "일실수입 소계 (생계비 공제 후)".into(),
                 format!("{}원", format_currency(view.lost_income_subtotal_won)),
             ),
-        ];
+        ]);
         // 산재보험급여 (유족급여) — 일실수입 한도 선공제 (2021다241618 전합).
         if let Some(ib) = &view.industrial_benefit {
             lines.push((
@@ -1022,27 +1062,11 @@ impl<'a> PageWriter<'a> {
                 format!("과실상계 ({:.0}%)", view.fault_offset.ratio * 100.0),
                 format!("{}원", format_currency(view.fault_offset.after_won)),
             ),
-            (
-                if view.deductions.industrial_benefit_won.is_some() {
-                    "공제 (비율 + 전액 + 산재급여)".into()
-                } else {
-                    "공제 (비율 + 전액)".into()
-                },
-                match view.deductions.industrial_benefit_won {
-                    Some(benefit) => format!(
-                        "{}원 + {}원 + {}원",
-                        format_currency(view.deductions.ratio_subtotal_won),
-                        format_currency(view.deductions.absolute_subtotal_won),
-                        format_currency(benefit)
-                    ),
-                    None => format!(
-                        "{}원 + {}원",
-                        format_currency(view.deductions.ratio_subtotal_won),
-                        format_currency(view.deductions.absolute_subtotal_won)
-                    ),
-                },
-            ),
         ]);
+        lines.extend(Self::deduction_lines(
+            &view.deductions,
+            view.property_only_excess_won,
+        ));
         if view.deduction_excess_won > 0.0 {
             lines.push(("공제 후 재산상 손해".into(), "0원".into()));
             lines.push((
@@ -1050,11 +1074,17 @@ impl<'a> PageWriter<'a> {
                 format!("{}원", format_currency(-view.deduction_excess_won)),
             ));
         }
+        if let Some((label, won)) = heir_excess_dropped_row(&view.deductions) {
+            lines.push((label.into(), format!("{}원", format_currency(won))));
+        }
         if view.solatium_added_won > 0.0 {
             lines.push((
                 "위자료 가산".into(),
                 format!("{}원", format_currency(view.solatium_added_won)),
             ));
+        }
+        if let Some((label, won)) = heir_rounding_row(&view.deductions) {
+            lines.push((label.into(), format!("{}원", format_currency(won))));
         }
         lines.extend([
             (
@@ -1068,23 +1098,26 @@ impl<'a> PageWriter<'a> {
 
     fn draw_compensation_death_summary(&mut self, view: &CompensationDeathResultView) {
         let lines = Self::compensation_death_summary_lines(view);
-        let label_w = 46.0;
-        for (label, value) in &lines {
-            self.text(label, 10.0, self.left(), self.y - 4.0);
-            self.text(value, 10.0, self.left() + label_w, self.y - 4.0);
-            self.advance(5.6);
-        }
-        self.advance(2.0);
+        self.draw_summary_lines(&lines, 46.0);
     }
 
     fn draw_compensation_death_segments_table(&mut self, view: &CompensationDeathResultView) {
-        let widths: [f32; 4] = [34.0, 36.0, 40.0, 44.0];
+        let dated = segments_have_dates(&view.segments);
+        let widths: Vec<f32> = if dated {
+            vec![22.0, 24.0, 24.0, 26.0, 30.0, 34.0]
+        } else {
+            vec![34.0, 36.0, 40.0, 44.0]
+        };
         let inner_w: f32 = widths.iter().sum();
         let right = self.left() + inner_w;
 
         self.hline(self.left(), right, self.y);
         self.advance(5.0);
-        let headers = ["기간(개월)", "단가(원/일)", "호프만(적용)", "금액(원)"];
+        let mut headers = vec!["기간(개월)"];
+        if dated {
+            headers.extend(["초일", "말일"]);
+        }
+        headers.extend(["단가(원/일)", "호프만(적용)", "금액(원)"]);
         let mut x = self.left();
         for (header, width) in headers.iter().zip(widths.iter()) {
             self.text(header, 9.0, x + 1.0, self.y - 3.5);
@@ -1100,12 +1133,16 @@ impl<'a> PageWriter<'a> {
             } else {
                 ""
             };
-            let cells = [
-                format!("{} ~ {}", segment.start_month, segment.end_month),
+            let mut cells = vec![format!("{} ~ {}", segment.start_month, segment.end_month)];
+            if dated {
+                cells.push(segment.start_date.clone().unwrap_or_default());
+                cells.push(segment.end_date.clone().unwrap_or_default());
+            }
+            cells.extend([
                 format_currency(segment.daily_wage_won),
                 format!("{:.6}{}", segment.applied_hoffman, cap_marker),
                 format_currency(segment.amount_floor_won),
-            ];
+            ]);
             let mut x = self.left();
             for (cell, width) in cells.iter().zip(widths.iter()) {
                 self.text(cell, 8.5, x + 1.0, self.y - 1.0);
@@ -1121,7 +1158,7 @@ impl<'a> PageWriter<'a> {
             self.left() + 1.0,
             self.y - 1.0,
         );
-        let total_x = self.left() + widths[..3].iter().sum::<f32>() + 1.0;
+        let total_x = self.left() + widths[..widths.len() - 1].iter().sum::<f32>() + 1.0;
         self.text(
             &format_currency(view.lost_income_subtotal_won),
             9.0,
@@ -1140,7 +1177,13 @@ impl<'a> PageWriter<'a> {
         if shares.is_empty() {
             return;
         }
-        let widths: [f32; 3] = [60.0, 40.0, 54.0];
+        // 수급권자별 유족급여 결과는 상속인별 공제액 열을 더한다 (2008다13104 전합).
+        let survivor = shares_have_survivor_benefit(shares);
+        let widths: Vec<f32> = if survivor {
+            vec![50.0, 30.0, 40.0, 44.0]
+        } else {
+            vec![60.0, 40.0, 54.0]
+        };
         let inner_w: f32 = widths.iter().sum();
         let right = self.left() + inner_w;
 
@@ -1149,7 +1192,11 @@ impl<'a> PageWriter<'a> {
         self.advance(5.6);
         self.hline(self.left(), right, self.y);
         self.advance(5.0);
-        let headers = ["상속인", "지분(약분)", "배정 금액(원)"];
+        let headers: Vec<&str> = if survivor {
+            vec!["상속인", "지분(약분)", "유족급여 공제(원)", "배정 금액(원)"]
+        } else {
+            vec!["상속인", "지분(약분)", "배정 금액(원)"]
+        };
         let mut x = self.left();
         for (header, width) in headers.iter().zip(widths.iter()) {
             self.text(header, 9.0, x + 1.0, self.y - 3.5);
@@ -1160,11 +1207,16 @@ impl<'a> PageWriter<'a> {
 
         for share in shares {
             self.advance(5.4);
-            let cells = [
+            let mut cells = vec![
                 share.name.clone(),
                 format!("{}/{}", share.numerator, share.denominator),
-                format_currency(share.amount_won),
             ];
+            if survivor {
+                cells.push(format_currency(
+                    share.survivor_benefit_deducted_won.unwrap_or(0.0),
+                ));
+            }
+            cells.push(format_currency(share.amount_won));
             let mut x = self.left();
             for (cell, width) in cells.iter().zip(widths.iter()) {
                 self.text(cell, 8.5, x + 1.0, self.y - 1.0);
@@ -1396,6 +1448,8 @@ mod tests {
             segments: vec![CompensationSegmentView {
                 start_month: 0,
                 end_month: 360,
+                start_date: None,
+                end_date: None,
                 loss_rate: 0.3,
                 daily_wage_won: 172_068.0,
                 applied_hoffman: 219.610067,
@@ -1411,6 +1465,13 @@ mod tests {
             },
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
+                paid_treatment_subtotal_won: None,
+                legacy_ratio_subtotal_won: None,
+                property_only_applied_won: None,
+                property_only_discarded_won: None,
+                solatium_reduced_won: None,
+                absolute_excess_dropped_won: None,
+                rounding_won: None,
                 absolute_subtotal_won: 0.0,
                 industrial_benefit_won: None,
             },
@@ -1424,6 +1485,8 @@ mod tests {
             solatium_added_won: 0.0,
             deduction_excess_won: 0.0,
             deduction_excess_label: String::new(),
+            property_only_excess_won: 0.0,
+            labor_rate_timing_text: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1465,6 +1528,8 @@ mod tests {
             segments: vec![CompensationSegmentView {
                 start_month: 0,
                 end_month: 360,
+                start_date: None,
+                end_date: None,
                 loss_rate: 1.0,
                 daily_wage_won: 172_068.0,
                 applied_hoffman: 219.610067,
@@ -1481,6 +1546,13 @@ mod tests {
             funeral_expense_won: 5_000_000.0,
             deductions: CompensationDeductionsView {
                 ratio_subtotal_won: 0.0,
+                paid_treatment_subtotal_won: None,
+                legacy_ratio_subtotal_won: None,
+                property_only_applied_won: None,
+                property_only_discarded_won: None,
+                solatium_reduced_won: None,
+                absolute_excess_dropped_won: None,
+                rounding_won: None,
                 absolute_subtotal_won: 0.0,
                 industrial_benefit_won: None,
             },
@@ -1492,12 +1564,14 @@ mod tests {
                     numerator: 3,
                     denominator: 7,
                     amount_won: 273_952_286.0,
+                    survivor_benefit_deducted_won: None,
                 },
                 CompensationInheritanceShareView {
                     name: "자녀1".into(),
                     numerator: 2,
                     denominator: 7,
                     amount_won: 182_634_857.0,
+                    survivor_benefit_deducted_won: None,
                 },
             ]),
             hoffman240_cap: CompensationHoffman240CapView {
@@ -1508,6 +1582,8 @@ mod tests {
             solatium_added_won: 0.0,
             deduction_excess_won: 0.0,
             deduction_excess_label: String::new(),
+            property_only_excess_won: 0.0,
+            labor_rate_timing_text: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1546,7 +1622,7 @@ mod tests {
             .position(|l| *l == "위자료 가산")
             .expect("row");
         assert_eq!(lines[at].1, "30,000,000원");
-        assert!(lines[at - 1].0.starts_with("공제 ("));
+        assert_eq!(lines[at - 1].0, "전액공제 소계");
         assert_eq!(lines[at + 1].0, "최종 합계");
         let bytes = render_compensation_pdf_bytes(&view).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
@@ -1562,7 +1638,7 @@ mod tests {
             .position(|l| *l == "위자료 가산")
             .expect("row");
         assert_eq!(lines[at].1, "80,000,000원");
-        assert!(lines[at - 1].0.starts_with("공제 ("));
+        assert_eq!(lines[at - 1].0, "전액공제 소계");
         assert_eq!(lines[at + 1].0, "최종 합계");
         let bytes = render_compensation_death_pdf_bytes(&death).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
@@ -1588,6 +1664,93 @@ mod tests {
         assert_eq!(lines[at + 1].1, "-3,000,000원");
         assert_eq!(lines[at + 2].0, "위자료 가산");
         let bytes = render_compensation_death_pdf_bytes(&view).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+    }
+
+    #[test]
+    fn compensation_summary_lines_list_r2a_deduction_rows() {
+        let mut view = compensation_sample();
+        view.deductions.paid_treatment_subtotal_won = Some(300.0);
+        view.deductions.legacy_ratio_subtotal_won = Some(50.0);
+        view.property_only_excess_won = 120.0;
+        view.solatium_added_won = 1_000.0;
+        let lines = PageWriter::compensation_summary_lines(&view);
+        let labels: Vec<&str> = lines.iter().map(|(label, _)| label.as_str()).collect();
+        let at = labels
+            .iter()
+            .position(|l| *l == "비율공제 소계")
+            .expect("ratio row");
+        assert_eq!(
+            labels[at..at + 6],
+            [
+                "비율공제 소계",
+                "지급치료비 공제 소계",
+                "이전 방식 비율공제 소계",
+                "전액공제 소계",
+                "비율공제·지급치료비 중 재산상 손해 초과분 (위자료에서 빼지 않음)",
+                "위자료 가산",
+            ]
+        );
+        assert_eq!(lines[at + 4].1, "120원");
+        let bytes = render_compensation_pdf_bytes(&view).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+    }
+
+    #[test]
+    fn compensation_summary_lines_lead_with_labor_rate_timing_when_present() {
+        let mut view = compensation_sample();
+        assert_ne!(
+            PageWriter::compensation_summary_lines(&view)[0].0,
+            "노임 기준"
+        );
+        view.labor_rate_timing_text =
+            "계산 기준일 2026-10-04 · 노임 적용일 규약 조사 시점 (5/1·9/1)".into();
+        let lines = PageWriter::compensation_summary_lines(&view);
+        assert_eq!(lines[0].0, "노임 기준");
+        let mut death = compensation_death_sample();
+        death.labor_rate_timing_text = view.labor_rate_timing_text.clone();
+        assert_eq!(
+            PageWriter::compensation_death_summary_lines(&death)[0].0,
+            "노임 기준"
+        );
+        let bytes = render_compensation_death_pdf_bytes(&death).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+    }
+
+    #[test]
+    fn compensation_death_summary_lines_place_heir_settlement_rows() {
+        let mut death = compensation_death_sample();
+        death.solatium_added_won = 100_000_000.0;
+        death.deductions.absolute_excess_dropped_won = Some(500.0);
+        death.deductions.rounding_won = Some(82.0);
+        let lines = PageWriter::compensation_death_summary_lines(&death);
+        let at = lines
+            .iter()
+            .position(|(label, _)| label == "위자료 가산")
+            .expect("added row");
+        assert!(lines[at - 1].0.starts_with("전액공제 초과분 중 위자료로도"));
+        assert_eq!(lines[at - 1].1, "500원");
+        assert_eq!(lines[at + 1].0, "상속분 나눗셈·상속인별 100원 미만 버림");
+        assert_eq!(lines[at + 1].1, "-82원");
+        assert_eq!(lines[at + 2].0, "최종 합계");
+    }
+
+    /// 초일·말일 열과 상속인별 유족급여 공제 열이 있어도 PDF 가 그려진다.
+    #[test]
+    fn compensation_pdf_renders_dated_segments_and_survivor_column() {
+        let mut view = compensation_sample();
+        view.segments[0].start_date = Some("2020-01-01".into());
+        view.segments[0].end_date = Some("2049-12-31".into());
+        let bytes = render_compensation_pdf_bytes(&view).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+
+        let mut death = compensation_death_sample();
+        death.segments[0].start_date = Some("2020-01-01".into());
+        death.segments[0].end_date = Some("2049-12-31".into());
+        if let Some(shares) = death.inheritance_shares.as_mut() {
+            shares[0].survivor_benefit_deducted_won = Some(150_000_000.0);
+        }
+        let bytes = render_compensation_death_pdf_bytes(&death).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
     }
 

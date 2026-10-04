@@ -12,9 +12,12 @@ export type {
   CompensationLossRateInput,
   CompensationLostIncomeInput,
   CompensationRatioDeduction,
+  CompensationLegacyRatioDeduction,
   CompensationResult,
   CompensationSegment,
   Hoffman240CapTable,
+  LaborRateEffectiveRule,
+  CompensationWarning,
   PermanentDisabilityInput,
   TemporaryDisabilityInput,
 } from "./types";

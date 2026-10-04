@@ -10,6 +10,9 @@
 
 import type { STANDARD_DISCLAIMER, IsoDate, LegalRatePreset } from "@lawcalc-kr/core-engine";
 import type { OtherDamagesInput, OtherDamagesResult } from "../other-damages/types";
+import type { CompensationWarning, LaborRateEffectiveRule } from "../internal";
+
+export type { CompensationWarning, LaborRateEffectiveRule } from "../internal";
 
 /** 노동능력상실률 영구장해 항목. `ratio` 는 0~1. `department` 는 표시용. */
 export interface PermanentDisabilityInput {
@@ -50,6 +53,20 @@ export interface CompensationBaseInput {
   retirementAge?: number;
   /** 법정이율 프리셋. default "civil" (호프만 5%/년 정합). */
   legalRatePreset?: LegalRatePreset;
+  /**
+   * 계산 기준일(변론종결 예정일). 미지정이면 사고일 단가 하나 (이전 동작). 사고일 이상이어야 한다.
+   * - 구간 분할: 사고일부터 이 날까지의 노임단가 변경일마다 일실수입 구간을 나눈다 (판결 이유의
+   *   계산표, 예: 서울중앙지법 2020. 10. 21. 선고 2019나48259, 법원 손해배상 계산 프로그램 예시).
+   *   직종 단가일 때만 나누며 일당 직접 입력은 나누지 않는다.
+   * - 장래분 단가: 이 날 이후는 이 날까지 공표된 마지막 단가 (변론종결 당시의 일반노동임금,
+   *   대법원 1995. 2. 28. 선고 94다31334).
+   */
+  calculationDate?: IsoDate;
+  /**
+   * 노임단가 적용일 규약. default `"published"`(공표 적용일 1/1·9/1).
+   * `"survey"` 는 조사 시점(5/1·9/1)으로 같은 단가를 4개월 앞당긴다.
+   */
+  laborRateEffectiveRule?: LaborRateEffectiveRule;
 }
 
 /** 노동능력상실률 입력. 영구 + 한시 + 기왕증. */
@@ -87,8 +104,21 @@ export interface CompensationLostIncomeInput {
   workingDaysPerMonth?: number;
 }
 
-/** 비율공제 항목 (기왕증 + 과실비율 외 추가 비율공제). */
+/**
+ * 비율공제 항목 (법원 손해배상 계산 프로그램 방식).
+ * 공제액 = `floor(amount × [1 - (1 - 기왕증)(1 - 과실)])`. 재산상 손해에서만 빼고 위자료를 잠식하지 않는다.
+ */
 export interface CompensationRatioDeduction {
+  label?: string;
+  /** 항목 금액 (원, ≥ 0 정수). */
+  amount: number;
+}
+
+/**
+ * 구 비율공제 (`compensation@4` 이하의 `ratio`). 공제액 = `floor(과실상계 후 금액 × Σ ratio)`.
+ * 법원 산식 근거가 없어 새 입력에는 쓰지 않고, 저장 파일의 금액을 그대로 재현하기 위해 남긴다.
+ */
+export interface CompensationLegacyRatioDeduction {
   label?: string;
   /** 0~1. */
   ratio: number;
@@ -102,8 +132,18 @@ export interface CompensationAbsoluteDeduction {
 }
 
 export interface CompensationDeductionsInput {
+  /** 비율공제 (항목 금액 × 기왕증·과실 계수). */
   ratio?: CompensationRatioDeduction[];
+  /**
+   * 지급치료비 (보험사가 직접 낸 치료비). 공제액 = `floor(amount × [1 - (1 - 기왕증)(1 - 과실)])`.
+   * 이 금액을 기왕치료비에 넣지 않은 채 공제하는 방식이다 (서울고법 2022. 2. 18. 선고
+   * 2020나2039267: 치료비 중 원고 과실비율 해당액 공제). 재산상 손해에서만 빼고 위자료를 잠식하지 않는다.
+   */
+  paidTreatment?: CompensationAbsoluteDeduction[];
+  /** 전액공제 (선급금 등). 손해 전체 변제라 재산상 손해를 넘는 부분은 위자료에서 뺀다. */
   absolute?: CompensationAbsoluteDeduction[];
+  /** 구 비율공제 (`compensation@4` 의 `ratio`). */
+  legacyRatio?: CompensationLegacyRatioDeduction[];
 }
 
 /**
@@ -157,6 +197,12 @@ export interface CompensationSegment {
   startMonth: number;
   /** segment 종료 월수 (사고일 기준, exclusive 의미상 H[end] - H[start] cumulative). */
   endMonth: number;
+  /**
+   * 구간 초일·말일 (판결 별지형 표용). `base.calculationDate` 를 지정했을 때만 포함된다.
+   * 같은 월수에 겹친 경계는 가장 늦은 날짜를 초일로 쓴다.
+   */
+  startDate?: IsoDate;
+  endDate?: IsoDate;
   /** 적용 lossRate (0~1). */
   lossRate: number;
   /** 일당 (원/일). */
@@ -178,7 +224,28 @@ export interface CompensationFaultOffset {
 }
 
 export interface CompensationDeductionsResult {
+  /** 비율공제 소계 (항목별 floor 합, 재산상 손해 한도 적용 전). */
   ratioSubtotalWon: number;
+  /** 지급치료비 공제 소계 (입력 시에만, 재산상 손해 한도 적용 전). */
+  paidTreatmentSubtotalWon?: number;
+  /** 구 비율공제 소계 (입력 시에만). */
+  legacyRatioSubtotalWon?: number;
+  /**
+   * 비율공제·지급치료비 중 실제 공제된 합 (남은 재산상 손해 한도 적용 후, 상속인별 계산이면 상속인별 합).
+   * 비율공제나 지급치료비 항목이 있을 때만 포함된다.
+   */
+  propertyOnlyAppliedWon?: number;
+  /** 비율공제·지급치료비 중 재산상 손해 한도를 넘어 버린 합 (= 두 소계 합 - 실제 공제). */
+  propertyOnlyDiscardedWon?: number;
+  /**
+   * 상속인별 계산(사망 `industrialInsurance.recipients`)일 때만: 전액공제 초과분이 위자료에서 빠진 합.
+   * 최종액 = `afterWon + 위자료 + absoluteExcessDroppedWon - roundingWon`.
+   */
+  solatiumReducedWon?: number;
+  /** 상속인별 계산일 때만: 전액공제가 위자료까지 넘어 버려진 합 (상속인 몫은 0 아래로 내려가지 않는다). */
+  absoluteExcessDroppedWon?: number;
+  /** 상속인별 계산일 때만: 상속분 나눗셈과 상속인별 100원 미만 절사로 생긴 차이 합. */
+  roundingWon?: number;
   absoluteSubtotalWon: number;
   /**
    * legacy (≤ v0.9.x 저장 결과 표시 전용) — 과실상계 후 총액에서 차감하던 구 방식의
@@ -266,6 +333,11 @@ export interface CompensationResult {
   hoffman240Cap: Hoffman240CapTable;
   /** dataset 식별자 4종. */
   dataVersions: CompensationDataVersions;
+  /**
+   * 계산은 했지만 사용자가 알아야 할 대체 처리 (직종이 뒤 노임 조사에서 빠져 마지막 단가를 이어 씀,
+   * 조사 시점 규약 단가가 없어 공표 단가를 씀). 있을 때만 포함된다.
+   */
+  warnings?: CompensationWarning[];
   /** B11 단일 source — `STANDARD_DISCLAIMER`. */
   disclaimer: typeof STANDARD_DISCLAIMER;
   /** ISO 8601 datetime. */

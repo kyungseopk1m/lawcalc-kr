@@ -14,6 +14,9 @@ const FIXED_NOW = () => new Date("2026-05-18T00:00:00.000Z");
 interface ExpectedSegment {
   startMonth: number;
   endMonth: number;
+  /** 계산 기준일 입력 골든에만 있다. */
+  startDate?: string;
+  endDate?: string;
   lossRate: number;
   dailyWageWon: number;
   monthlyWageWon: number;
@@ -117,6 +120,8 @@ const COVERAGE: GoldenCoverage = {
     "disclaimer",
     "segments[].startMonth",
     "segments[].endMonth",
+    "segments[].startDate",
+    "segments[].endDate",
     "segments[].lossRate",
     "segments[].dailyWageWon",
     "segments[].monthlyWageWon",
@@ -162,8 +167,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴얼 derivation)", () => {
-  it("loads exactly 12 cases", () => {
-    expect(cases).toHaveLength(12);
+  it("loads exactly 14 cases", () => {
+    expect(cases).toHaveLength(14);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {

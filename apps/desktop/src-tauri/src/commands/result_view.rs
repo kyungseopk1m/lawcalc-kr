@@ -143,6 +143,14 @@ pub struct CompensationResultView {
     /// "공제 초과분" 행 라벨. 0원 하한 설명까지 frontend 가 만들어 넘긴다.
     #[serde(default)]
     pub deduction_excess_label: String,
+    /// 비율공제·지급치료비 중 재산상 손해를 넘어 빼지 않은 금액 (frontend
+    /// `propertyOnlyExcessWon`). 0 보다 크면 공제 행 뒤에 되돌림 행을 낸다.
+    #[serde(default)]
+    pub property_only_excess_won: f64,
+    /// "노임 기준" 행 값 (계산 기준일·노임 적용일 규약). frontend `laborRateTimingText` 가
+    /// 만들어 넘긴다. 비어 있으면 행을 내지 않는다.
+    #[serde(default)]
+    pub labor_rate_timing_text: String,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,
@@ -153,6 +161,11 @@ pub struct CompensationResultView {
 pub struct CompensationSegmentView {
     pub start_month: i64,
     pub end_month: i64,
+    /// 구간 초일·말일. 계산 기준일을 넣은 결과에만 있다 (구 결과는 키 없음).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<String>,
     pub loss_rate: f64,
     pub daily_wage_won: f64,
     pub applied_hoffman: f64,
@@ -169,7 +182,28 @@ pub struct CompensationFaultOffsetView {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompensationDeductionsView {
+    /// 비율공제 소계 (항목 금액 × 기왕증·과실 계수).
     pub ratio_subtotal_won: f64,
+    /// 지급치료비 공제 소계. 입력한 결과에만 있다.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paid_treatment_subtotal_won: Option<f64>,
+    /// 이전 방식 비율공제 소계 (과실상계 후 금액 × 비율). 이전 버전 파일에만 있다.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub legacy_ratio_subtotal_won: Option<f64>,
+    /// 비율공제·지급치료비 중 재산상 손해 한도 안에서 실제로 뺀 합 / 넘어서 버린 합.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub property_only_applied_won: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub property_only_discarded_won: Option<f64>,
+    /// 상속인별(유족급여 수급권자별) 계산에서만: 위자료에서 뺀 전액공제 초과분, 위자료로도 못 빼
+    /// 버린 초과분, 상속분 나눗셈·상속인별 100원 절사 차이. 최종액 = afterWon + 위자료 +
+    /// absolute_excess_dropped − rounding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub solatium_reduced_won: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub absolute_excess_dropped_won: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rounding_won: Option<f64>,
     pub absolute_subtotal_won: f64,
     /// legacy — ≤ v0.9.x 저장 결과(과실상계 후 총액 공제)의 산재보험급여
     /// (부상=장해급여 / 사망=유족급여). 신 결과는 이 키 대신 최상위
@@ -261,6 +295,14 @@ pub struct CompensationDeathResultView {
     /// "공제 초과분" 행 라벨. 0원 하한 설명까지 frontend 가 만들어 넘긴다.
     #[serde(default)]
     pub deduction_excess_label: String,
+    /// 비율공제·지급치료비 중 재산상 손해를 넘어 빼지 않은 금액 (frontend
+    /// `propertyOnlyExcessWon`). 0 보다 크면 공제 행 뒤에 되돌림 행을 낸다.
+    #[serde(default)]
+    pub property_only_excess_won: f64,
+    /// "노임 기준" 행 값 (계산 기준일·노임 적용일 규약). frontend `laborRateTimingText` 가
+    /// 만들어 넘긴다. 비어 있으면 행을 내지 않는다.
+    #[serde(default)]
+    pub labor_rate_timing_text: String,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,
@@ -273,6 +315,84 @@ pub struct CompensationInheritanceShareView {
     pub numerator: i64,
     pub denominator: i64,
     pub amount_won: f64,
+    /// 이 상속인 몫에서 공제한 유족급여 (수급권자별 입력 결과에만, 2008다13104 전합).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub survivor_benefit_deducted_won: Option<f64>,
+}
+
+/// 비율공제·지급치료비 재산상 손해 초과분 행 라벨 (frontend `PROPERTY_ONLY_EXCESS_LABEL` 과 같다).
+pub const PROPERTY_ONLY_EXCESS_LABEL: &str =
+    "비율공제·지급치료비 중 재산상 손해 초과분 (위자료에서 빼지 않음)";
+
+/// 공제 행 (라벨, 금액). PDF·CSV 공용이며 화면 `deductionRows` 와 순서·라벨이 같다.
+/// 과실상계 후 금액에서 소계를 빼고 초과분 행을 되돌리면 공제 후 금액이 된다.
+pub fn compensation_deduction_rows(
+    deductions: &CompensationDeductionsView,
+    property_only_excess_won: f64,
+) -> Vec<(String, f64)> {
+    let mut rows = vec![("비율공제 소계".to_string(), deductions.ratio_subtotal_won)];
+    if let Some(won) = deductions.paid_treatment_subtotal_won {
+        rows.push(("지급치료비 공제 소계".to_string(), won));
+    }
+    if let Some(won) = deductions.legacy_ratio_subtotal_won {
+        rows.push(("이전 방식 비율공제 소계".to_string(), won));
+    }
+    // 상속인별 계산은 이 두 금액이 상속인별 몫(원 미만 버림)의 합이라 그 사실을 붙인다.
+    let suffix = if deductions.rounding_won.is_some() {
+        HEIR_SHARE_FLOOR_SUFFIX
+    } else {
+        ""
+    };
+    rows.push((
+        format!("전액공제 소계{suffix}"),
+        deductions.absolute_subtotal_won,
+    ));
+    if property_only_excess_won > 0.0 {
+        rows.push((
+            format!("{PROPERTY_ONLY_EXCESS_LABEL}{suffix}"),
+            property_only_excess_won,
+        ));
+    }
+    rows
+}
+
+/// 상속인별(수급권자별) 계산의 공제 행 라벨 꼬리 (frontend `HEIR_SHARE_FLOOR_SUFFIX`).
+pub const HEIR_SHARE_FLOOR_SUFFIX: &str = " (상속분 원 미만 버림 포함)";
+
+/// 상속인별 계산의 버린 초과분 행 라벨 (frontend `HEIR_EXCESS_DROPPED_LABEL`).
+pub const HEIR_EXCESS_DROPPED_LABEL: &str =
+    "전액공제 초과분 중 위자료로도 빼지 못한 금액 (상속인별 0원 하한, 차감하지 않음)";
+/// 상속인별 계산의 절사 차이 행 라벨 (frontend `HEIR_ROUNDING_LABEL`).
+pub const HEIR_ROUNDING_LABEL: &str = "상속분 나눗셈·상속인별 100원 미만 버림";
+
+/// 상속인별 계산의 버린 초과분 행 (위자료 가산 앞, 되돌림 양수). 0 이거나 총액 계산이면 없음.
+pub fn heir_excess_dropped_row(
+    deductions: &CompensationDeductionsView,
+) -> Option<(&'static str, f64)> {
+    deductions
+        .absolute_excess_dropped_won
+        .filter(|won| *won > 0.0)
+        .map(|won| (HEIR_EXCESS_DROPPED_LABEL, won))
+}
+
+/// 상속인별 계산의 절사 차이 행 (위자료 가산 뒤, 음수). 0 이거나 총액 계산이면 없음.
+pub fn heir_rounding_row(deductions: &CompensationDeductionsView) -> Option<(&'static str, f64)> {
+    deductions
+        .rounding_won
+        .filter(|won| *won > 0.0)
+        .map(|won| (HEIR_ROUNDING_LABEL, -won))
+}
+
+/// 계산 기준일을 넣은 결과인지 (구간표에 초일·말일 열을 낸다).
+pub fn segments_have_dates(segments: &[CompensationSegmentView]) -> bool {
+    segments.iter().any(|segment| segment.start_date.is_some())
+}
+
+/// 상속인별 유족급여 공제 열을 낼지 (수급권자별 입력 결과).
+pub fn shares_have_survivor_benefit(shares: &[CompensationInheritanceShareView]) -> bool {
+    shares
+        .iter()
+        .any(|share| share.survivor_benefit_deducted_won.is_some())
 }
 
 /// Disclaimer copy that must accompany every exported artifact.
@@ -453,6 +573,69 @@ mod tests {
         assert_eq!(view.delivery_fee.amount as i64, 165000);
         assert_eq!(view.lawyer_fee.amount as i64, 2800000);
         assert_eq!(view.distribution.unwrap().per_party.len(), 2);
+    }
+
+    #[test]
+    fn compensation_r2a_fields_default_for_old_payload_and_parse_for_new() {
+        let old: CompensationDeductionsView =
+            serde_json::from_value(json!({ "ratioSubtotalWon": 0, "absoluteSubtotalWon": 0 }))
+                .unwrap();
+        assert_eq!(old.paid_treatment_subtotal_won, None);
+        assert_eq!(old.legacy_ratio_subtotal_won, None);
+        assert_eq!(
+            compensation_deduction_rows(&old, 0.0)
+                .iter()
+                .map(|(label, _)| label.as_str())
+                .collect::<Vec<_>>(),
+            vec!["비율공제 소계", "전액공제 소계"]
+        );
+
+        let new: CompensationDeductionsView = serde_json::from_value(json!({
+            "ratioSubtotalWon": 1000, "paidTreatmentSubtotalWon": 300,
+            "legacyRatioSubtotalWon": 50, "absoluteSubtotalWon": 7
+        }))
+        .unwrap();
+        let rows = compensation_deduction_rows(&new, 120.0);
+        assert_eq!(
+            rows,
+            vec![
+                ("비율공제 소계".to_string(), 1000.0),
+                ("지급치료비 공제 소계".to_string(), 300.0),
+                ("이전 방식 비율공제 소계".to_string(), 50.0),
+                ("전액공제 소계".to_string(), 7.0),
+                (PROPERTY_ONLY_EXCESS_LABEL.to_string(), 120.0),
+            ]
+        );
+        let mut heir = new.clone();
+        heir.rounding_won = Some(82.0);
+        let labels: Vec<String> = compensation_deduction_rows(&heir, 120.0)
+            .into_iter()
+            .map(|(label, _)| label)
+            .collect();
+        assert_eq!(labels[3], "전액공제 소계 (상속분 원 미만 버림 포함)");
+        assert_eq!(
+            labels[4],
+            format!("{PROPERTY_ONLY_EXCESS_LABEL} (상속분 원 미만 버림 포함)")
+        );
+
+        let old_segment: CompensationSegmentView = serde_json::from_value(json!({
+            "startMonth": 0, "endMonth": 12, "lossRate": 1, "dailyWageWon": 1,
+            "appliedHoffman": 1, "amountFloorWon": 1
+        }))
+        .unwrap();
+        assert!(!segments_have_dates(&[old_segment]));
+        let dated: CompensationSegmentView = serde_json::from_value(json!({
+            "startMonth": 0, "endMonth": 12, "startDate": "2020-01-01", "endDate": "2020-12-31",
+            "lossRate": 1, "dailyWageWon": 1, "appliedHoffman": 1, "amountFloorWon": 1
+        }))
+        .unwrap();
+        assert!(segments_have_dates(&[dated]));
+
+        let share: CompensationInheritanceShareView = serde_json::from_value(json!({
+            "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 100
+        }))
+        .unwrap();
+        assert!(!shares_have_survivor_benefit(&[share]));
     }
 
     #[test]
