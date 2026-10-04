@@ -2,7 +2,6 @@ import type { LegalRatePresetOption } from "../form/LegalRatePreset";
 
 interface LegalCitationProps {
   preset: LegalRatePresetOption;
-  dataVersion: string;
 }
 
 const citations: Record<LegalRatePresetOption, string> = {
@@ -12,13 +11,11 @@ const citations: Record<LegalRatePresetOption, string> = {
   custom: "사용자 직접 입력 이율",
 };
 
-export function LegalCitation({ preset, dataVersion }: LegalCitationProps) {
+export function LegalCitation({ preset }: LegalCitationProps) {
   return (
     <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm leading-6">
       <p className="font-medium">적용 근거</p>
-      <p className="text-muted-foreground">
-        {citations[preset]} · 데이터 버전 {dataVersion}
-      </p>
+      <p className="text-muted-foreground">{citations[preset]}</p>
     </div>
   );
 }

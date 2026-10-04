@@ -3,7 +3,7 @@
   "id": "case-comp-007-fault-offset",
   "title": "case-comp-001 + 과실 30% + 전액공제 8M (치료비 5M + 선급금 3M)",
   "source": "manual-derivation",
-  "notes": "compensation-golden-capture-result-2026-05-18.md 6절. compute.ts 단계 8 (과실상계) + 단계 9 (공제) + 단계 10 (100원 절사) 정원 검증.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 226,727,190 × 0.7 = floor 158,709,033 - 8,000,000 = 150,709,033 → 절사 150,709,000. 아래는 2026-10-04 이전 값·산식이다. compensation-golden-capture-result-2026-05-18.md 6절. compute.ts 단계 8 (과실상계) + 단계 9 (공제) + 단계 10 (100원 절사) 정원 검증.",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -44,20 +44,20 @@
     }
   },
   "expected": {
-    "lostIncomeSubtotalWon": 249399909,
+    "lostIncomeSubtotalWon": 226727190,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 249399909,
+    "pecuniaryDamagesSubtotalWon": 226727190,
     "faultOffset": {
       "ratio": 0.3,
-      "afterWon": 174579936,
-      "beforeWon": 249399909
+      "afterWon": 158709033,
+      "beforeWon": 226727190
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 8000000,
-      "afterWon": 166579936
+      "afterWon": 150709033
     },
-    "finalWon": 166579900,
+    "finalWon": 150709000,
     "hoffman240CapCappedAtIndex": null,
     "dataVersions": {
       "laborRates": "labor-rates/v1.1.0",
@@ -71,10 +71,10 @@
         "endMonth": 360,
         "lossRate": 0.30000000000000004,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 219.61006732,
         "appliedHoffman": 219.61006732,
-        "amountFloorWon": 249399909
+        "amountFloorWon": 226727190
       }
     ],
     "hoffman240CapAppliedHoffman": [219.61006732],
@@ -82,7 +82,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-05-18",
-    "derivedBy": "compensation-golden-capture-result-2026-05-18.md 6절"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-golden-capture-result-2026-05-18.md 6절)"
   }
 }

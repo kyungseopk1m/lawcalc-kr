@@ -55,6 +55,26 @@ describe("validateOtherDamagesInput", () => {
     ).toThrow(/personCount/);
   });
 
+  it("개호비 향후: daysPerMonth 는 소수(365/12) 허용, 1~31 밖은 거부", () => {
+    const withDays = (daysPerMonth: number) => ({
+      attendantCare: {
+        future: [
+          {
+            directDailyWageWon: 100000,
+            startDate: "2026-01-01",
+            endDate: "2030-01-01",
+            personCount: 1,
+            daysPerMonth,
+          },
+        ],
+      },
+    });
+    expect(() => validateOtherDamagesInput(withDays(365 / 12))).not.toThrow();
+    expect(() => validateOtherDamagesInput(withDays(0.5))).toThrow(/daysPerMonth/);
+    expect(() => validateOtherDamagesInput(withDays(32))).toThrow(/daysPerMonth/);
+    expect(() => validateOtherDamagesInput(withDays(Number.NaN))).toThrow(/daysPerMonth/);
+  });
+
   it("치료비 향후: recurring 인데 lifespanMonths 없으면 거부", () => {
     expect(() =>
       validateOtherDamagesInput({

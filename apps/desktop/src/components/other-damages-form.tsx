@@ -9,6 +9,12 @@ import type {
 } from "@lawcalc-kr/compensation";
 
 import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
+import {
+  parseNumberText,
+  parseRatioText,
+  readNumber,
+  type ParsedNumber,
+} from "../lib/parse-number";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
@@ -128,32 +134,25 @@ export function defaultOtherDamagesFormState(): OtherDamagesFormState {
   };
 }
 
-function parseRatio(text: string): number | undefined {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return undefined;
-  const value = Number(trimmed);
-  return Number.isFinite(value) ? value : undefined;
+const TOTAL_DAYS_FORMAT = { unit: "일" } as const;
+const PERSON_COUNT_FORMAT = { unit: "명" } as const;
+// 엔진은 1~31 사이 소수를 받는다. 비우면 엔진 기본 365/12 일.
+const DAYS_PER_MONTH_FORMAT = { unit: "일", min: 1, max: 31 } as const;
+// 엔진 validator 가 정수를 요구한다. 반올림하지 않고 오류로 알린다.
+const LIFESPAN_FORMAT = { unit: "개월", integer: true, min: 1 } as const;
+
+function readPrior(rowLabel: string, text: string): number | undefined {
+  const prior = readNumber(`${rowLabel} 기왕증`, parseRatioText(text));
+  return prior !== undefined && prior > 0 ? prior : undefined;
 }
 
-function parsePositiveNumber(text: string): number {
-  const trimmed = text.replaceAll(",", "").trim();
-  if (trimmed.length === 0) return 0;
-  const value = Number(trimmed);
-  return Number.isFinite(value) ? value : 0;
-}
-
-/**
- * 정수 필수 필드(수명 월/월 개호일수)용. 엔진 validator 가 `Number.isInteger` 를 요구하므로
- * 반올림해 UI 출력이 항상 validator 를 통과하도록 보장한다 (예: "1.5" → 2).
- */
-function parsePositiveInteger(text: string): number {
-  const value = parsePositiveNumber(text);
-  return value > 0 ? Math.round(value) : 0;
-}
-
-function buildTreatmentFuture(rows: TreatmentFutureRow[]): TreatmentFutureInput[] {
+function buildTreatmentFuture(
+  rows: TreatmentFutureRow[],
+  sectionLabel: string,
+): TreatmentFutureInput[] {
   return rows
-    .map((row) => {
+    .map((row, i) => {
+      const rowLabel = `${sectionLabel} ${i + 1}번째`;
       const costWon = parseWonAmount(row.costWonText, 0);
       const node: TreatmentFutureInput = {
         costWon,
@@ -164,11 +163,14 @@ function buildTreatmentFuture(rows: TreatmentFutureRow[]): TreatmentFutureInput[
       const label = row.label.trim();
       if (label.length > 0) node.label = label;
       if (row.kind === "recurring") {
-        const lifespan = parsePositiveInteger(row.lifespanMonthsText);
-        if (lifespan > 0) node.lifespanMonths = lifespan;
+        const lifespan = readNumber(
+          `${rowLabel} 수명 주기`,
+          parseNumberText(row.lifespanMonthsText, LIFESPAN_FORMAT),
+        );
+        if (lifespan !== undefined) node.lifespanMonths = lifespan;
       }
-      const prior = parseRatio(row.priorRatioText);
-      if (prior !== undefined && prior > 0) node.priorRatio = prior;
+      const prior = readPrior(rowLabel, row.priorRatioText);
+      if (prior !== undefined) node.priorRatio = prior;
       return node;
     })
     .filter((node) => node.costWon > 0 && node.firstDate.length > 0 && node.lastDate.length > 0);
@@ -179,8 +181,13 @@ export function buildOtherDamagesInput(
   state: OtherDamagesFormState,
 ): OtherDamagesInput | undefined {
   const attendantPast: AttendantPastInput[] = state.attendantPast
-    .map((row) => {
-      const totalDays = parsePositiveNumber(row.totalDaysText);
+    .map((row, i) => {
+      const rowLabel = `기왕개호비 ${i + 1}번째`;
+      const totalDays =
+        readNumber(
+          `${rowLabel} 총 개호일수`,
+          parseNumberText(row.totalDaysText, TOTAL_DAYS_FORMAT),
+        ) ?? 0;
       const node: AttendantPastInput = { totalDays };
       const occupation = row.occupation.trim();
       if (occupation.length > 0) node.occupation = occupation;
@@ -188,8 +195,8 @@ export function buildOtherDamagesInput(
       if (directWage > 0) node.directDailyWageWon = directWage;
       const actual = parseWonAmount(row.actualSpentWonText, -1);
       if (actual >= 0) node.actualSpentWon = actual;
-      const prior = parseRatio(row.priorRatioText);
-      if (prior !== undefined && prior > 0) node.priorRatio = prior;
+      const prior = readPrior(rowLabel, row.priorRatioText);
+      if (prior !== undefined) node.priorRatio = prior;
       return node;
     })
     .filter(
@@ -199,20 +206,28 @@ export function buildOtherDamagesInput(
     );
 
   const attendantFuture: AttendantFutureSegmentInput[] = state.attendantFuture
-    .map((row) => {
+    .map((row, i) => {
+      const rowLabel = `향후개호비 ${i + 1}번째`;
       const node: AttendantFutureSegmentInput = {
         startDate: row.startDate,
         endDate: row.endDate,
-        personCount: parsePositiveNumber(row.personCountText),
+        personCount:
+          readNumber(
+            `${rowLabel} 인원`,
+            parseNumberText(row.personCountText, PERSON_COUNT_FORMAT),
+          ) ?? 0,
       };
       const occupation = row.occupation.trim();
       if (occupation.length > 0) node.occupation = occupation;
       const directWage = parseWonAmount(row.directDailyWageWonText, 0);
       if (directWage > 0) node.directDailyWageWon = directWage;
-      const daysPerMonth = parsePositiveInteger(row.daysPerMonthText);
-      if (daysPerMonth > 0) node.daysPerMonth = daysPerMonth;
-      const prior = parseRatio(row.priorRatioText);
-      if (prior !== undefined && prior > 0) node.priorRatio = prior;
+      const daysPerMonth = readNumber(
+        `${rowLabel} 월 개호일수`,
+        parseNumberText(row.daysPerMonthText, DAYS_PER_MONTH_FORMAT),
+      );
+      if (daysPerMonth !== undefined) node.daysPerMonth = daysPerMonth;
+      const prior = readPrior(rowLabel, row.priorRatioText);
+      if (prior !== undefined) node.priorRatio = prior;
       return node;
     })
     .filter(
@@ -224,18 +239,18 @@ export function buildOtherDamagesInput(
     );
 
   const treatmentPast: TreatmentPastInput[] = state.treatmentPast
-    .map((row) => {
+    .map((row, i) => {
       const node: TreatmentPastInput = { costWon: parseWonAmount(row.costWonText, 0) };
       const label = row.label.trim();
       if (label.length > 0) node.label = label;
-      const prior = parseRatio(row.priorRatioText);
-      if (prior !== undefined && prior > 0) node.priorRatio = prior;
+      const prior = readPrior(`기왕치료비 ${i + 1}번째`, row.priorRatioText);
+      if (prior !== undefined) node.priorRatio = prior;
       return node;
     })
     .filter((node) => node.costWon > 0);
 
-  const treatmentFuture = buildTreatmentFuture(state.treatmentFuture);
-  const appliance = buildTreatmentFuture(state.appliance);
+  const treatmentFuture = buildTreatmentFuture(state.treatmentFuture, "향후치료비");
+  const appliance = buildTreatmentFuture(state.appliance, "보조구");
 
   const input: OtherDamagesInput = {};
   if (attendantPast.length > 0 || attendantFuture.length > 0) {
@@ -312,7 +327,27 @@ export function applyOtherDamagesInput(
 
 /** dirty tracker 비교용 정규화 객체 (uid 의존 없음, build 결과와 동치). */
 export function otherDamagesForDirtySnapshot(state: OtherDamagesFormState) {
-  return buildOtherDamagesInput(state) ?? null;
+  try {
+    return buildOtherDamagesInput(state) ?? null;
+  } catch {
+    // 잘못된 입력은 계산 때 오류로 막는다. dirty 비교는 입력 원문으로 계속한다.
+    return state;
+  }
+}
+
+/** 행 아래 한국어 오류. 잘못된 입력은 기본값으로 바꾸지 않고 여기 보이며 계산을 막는다. */
+function RowErrors({ fields }: { fields: [string, ParsedNumber][] }) {
+  const messages = fields.flatMap(([label, parsed]) =>
+    parsed.error === undefined ? [] : [`${label}: ${parsed.error}`],
+  );
+  if (messages.length === 0) return null;
+  return (
+    <div role="alert" className="col-span-full grid text-xs text-red-700 dark:text-red-300">
+      {messages.map((message) => (
+        <span key={message}>{message}</span>
+      ))}
+    </div>
+  );
 }
 
 interface RatioCellProps {
@@ -418,7 +453,7 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
                   }
                 />
                 <Input
-                  inputMode="numeric"
+                  inputMode="decimal"
                   placeholder="총 개호일수"
                   value={row.totalDaysText}
                   onChange={(e) => updateAttendantPast(row.uid, { totalDaysText: e.target.value })}
@@ -438,6 +473,12 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
                   onChange={(next) => updateAttendantPast(row.uid, { priorRatioText: next })}
                 />
               </div>
+              <RowErrors
+                fields={[
+                  ["총 개호일수", parseNumberText(row.totalDaysText, TOTAL_DAYS_FORMAT)],
+                  ["기왕증", parseRatioText(row.priorRatioText)],
+                ]}
+              />
               <Button
                 variant="ghost"
                 size="icon"
@@ -477,6 +518,10 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
               추가
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            월 개호일수를 비우면 매일 개호로 보아 365/12일(약 30.42일)로 계산합니다. 소수도 넣을 수
+            있습니다.
+          </p>
           {value.attendantFuture.map((row) => (
             <div key={row.uid} className="grid gap-2 rounded-md border border-input p-3">
               <div className="grid gap-2 sm:grid-cols-2">
@@ -520,8 +565,8 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
                   }
                 />
                 <Input
-                  inputMode="numeric"
-                  placeholder="월 개호일수 (기본 30일)"
+                  inputMode="decimal"
+                  placeholder="월 개호일수 (비우면 365/12일)"
                   value={row.daysPerMonthText}
                   onChange={(e) =>
                     updateAttendantFuture(row.uid, { daysPerMonthText: e.target.value })
@@ -532,6 +577,13 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
                   onChange={(next) => updateAttendantFuture(row.uid, { priorRatioText: next })}
                 />
               </div>
+              <RowErrors
+                fields={[
+                  ["인원", parseNumberText(row.personCountText, PERSON_COUNT_FORMAT)],
+                  ["월 개호일수", parseNumberText(row.daysPerMonthText, DAYS_PER_MONTH_FORMAT)],
+                  ["기왕증", parseRatioText(row.priorRatioText)],
+                ]}
+              />
               <Button
                 variant="ghost"
                 size="icon"
@@ -602,6 +654,7 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+              <RowErrors fields={[["기왕증", parseRatioText(row.priorRatioText)]]} />
             </div>
           ))}
         </div>
@@ -747,6 +800,19 @@ function TreatmentFutureRowEditor({
           onChange={(next) => onPatch({ priorRatioText: next })}
         />
       </div>
+      <RowErrors
+        fields={[
+          ...(row.kind === "recurring"
+            ? [
+                ["수명 주기", parseNumberText(row.lifespanMonthsText, LIFESPAN_FORMAT)] as [
+                  string,
+                  ParsedNumber,
+                ],
+              ]
+            : []),
+          ["기왕증", parseRatioText(row.priorRatioText)],
+        ]}
+      />
       <Button
         variant="ghost"
         size="icon"

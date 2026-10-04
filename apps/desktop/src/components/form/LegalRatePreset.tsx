@@ -1,7 +1,7 @@
 import { loadLegalRates, rateHistoryFor } from "@lawcalc-kr/core-engine";
 
 import { Select } from "../ui/select";
-import { Input } from "../ui/input";
+import { PercentInput } from "./PercentInput";
 
 export type LegalRatePresetOption = "civil" | "commercial" | "promotion" | "custom";
 
@@ -88,16 +88,14 @@ export function LegalRatePreset({
       {value === "custom" ? (
         <label className="grid gap-2 text-sm font-medium">
           직접 입력 이율 (%)
-          <Input
+          <PercentInput
             aria-describedby={error ? errorId : undefined}
             aria-invalid={Boolean(error)}
-            inputMode="decimal"
             min="0"
             placeholder="예: 7.5"
             step="0.1"
-            type="number"
-            value={customRate > 0 ? customRate * 100 : ""}
-            onChange={(event) => onCustomRateChange(Number(event.target.value) / 100)}
+            value={customRate}
+            onValueChange={onCustomRateChange}
           />
         </label>
       ) : null}

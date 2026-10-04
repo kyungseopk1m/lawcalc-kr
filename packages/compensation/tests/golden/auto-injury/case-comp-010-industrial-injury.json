@@ -3,7 +3,7 @@
   "id": "case-comp-010-industrial-injury",
   "title": "industrial/injury — 산재 부상, 장해급여 5천만 선공제(일실수입 한도) 후 과실 20%",
   "source": "manual-derivation",
-  "notes": "compensation-industrial-golden-derivation-2026-06-02.md 2절 (2026-07-02 COMP-6 재도출). case-001 baseline(보통인부 360개월 영구장해 30%, 일실수입 249,399,909) 위에 사건종류 산재 + 과실 20% + 장해급여 50,000,000. 대법원 2022. 3. 24. 선고 2021다241618 전원합의체 — 산재급여는 같은 성질(일실수입) 한도에서 먼저 공제 후 과실상계: (249,399,909 − 50,000,000) × 0.8 = floor(159,519,927.2) = 159,519,927 → 100원 절사 159,519,900.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): (226,727,190 - 50,000,000) × 0.8 = floor 141,381,752 → 절사 141,381,700. 아래는 2026-10-04 이전 값·산식이다. compensation-industrial-golden-derivation-2026-06-02.md 2절 (2026-07-02 COMP-6 재도출). case-001 baseline(보통인부 360개월 영구장해 30%, 일실수입 249,399,909) 위에 사건종류 산재 + 과실 20% + 장해급여 50,000,000. 대법원 2022. 3. 24. 선고 2021다241618 전원합의체 — 산재급여는 같은 성질(일실수입) 한도에서 먼저 공제 후 과실상계: (249,399,909 − 50,000,000) × 0.8 = floor(159,519,927.2) = 159,519,927 → 100원 절사 159,519,900.",
   "input": {
     "accidentType": "industrial",
     "base": {
@@ -40,25 +40,25 @@
   },
   "expected": {
     "accidentType": "industrial",
-    "lostIncomeSubtotalWon": 249399909,
+    "lostIncomeSubtotalWon": 226727190,
     "solatiumWon": 0,
     "industrialBenefit": {
       "benefitWon": 50000000,
       "deductedWon": 50000000,
-      "lostIncomeAfterWon": 199399909
+      "lostIncomeAfterWon": 176727190
     },
-    "pecuniaryDamagesSubtotalWon": 199399909,
+    "pecuniaryDamagesSubtotalWon": 176727190,
     "faultOffset": {
       "ratio": 0.2,
-      "afterWon": 159519927,
-      "beforeWon": 199399909
+      "afterWon": 141381752,
+      "beforeWon": 176727190
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 159519927
+      "afterWon": 141381752
     },
-    "finalWon": 159519900,
+    "finalWon": 141381700,
     "hoffman240CapCappedAtIndex": null,
     "dataVersions": {
       "laborRates": "labor-rates/v1.1.0",
@@ -72,10 +72,10 @@
         "endMonth": 360,
         "lossRate": 0.30000000000000004,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 219.61006732,
         "appliedHoffman": 219.61006732,
-        "amountFloorWon": 249399909
+        "amountFloorWon": 226727190
       }
     ],
     "hoffman240CapAppliedHoffman": [219.61006732],
@@ -83,7 +83,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-07-02",
-    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md 2절 (COMP-6 공제 후 과실상계 재도출)"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-industrial-golden-derivation-2026-06-02.md 2절 (COMP-6 공제 후 과실상계 재도출))"
   }
 }

@@ -4,12 +4,18 @@ import type {
   AppropriationInput,
   AppropriationResult,
   CalcOptions,
+  DateSpanInput,
+  DateSpanResult,
+  DeadlineInput,
+  DeadlineResult,
   InheritanceInput,
   InheritanceResult,
   InterestInput,
   InterestResult,
   LitigationCostInput,
   LitigationCostResult,
+  PeriodInput,
+  PeriodResult,
 } from "@lawcalc-kr/core-engine";
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import type {
@@ -123,6 +129,63 @@ export interface LcalcCompensationPayload {
   disclaimer: string;
 }
 
+/** 기간 계산 탭이 화면에 띄우고 있는 계산. 두 산식이 입력을 공유한다. */
+export type PeriodMode = "expiry" | "span";
+
+/**
+ * 기간 계산 탭의 `.lcalc` 입력.
+ *
+ * 화면이 만료일 산식과 일수 산식의 입력을 함께 들고 있으므로 둘 다 담고 `mode` 로
+ * 어느 쪽을 계산했는지 남긴다. 저장 당시 보고 있지 않던 쪽 입력도 살아남아야
+ * 파일을 다시 열었을 때 모드를 바꿔도 값이 그대로다.
+ */
+export interface PeriodTabInput {
+  mode: PeriodMode;
+  period: PeriodInput;
+  span: DateSpanInput;
+}
+
+interface LcalcPeriodResultMeta {
+  /** 공휴일 dataset 식별자 (`holidays/vX.Y.Z`). 제161조 판정의 근거 데이터. */
+  dataVersion: string;
+  computedAt: string;
+  disclaimer: string;
+}
+
+/** 저장된 계산 결과. `mode` 로 만료일 결과와 일수 결과를 가른다. */
+export type LcalcPeriodResult =
+  | ({ mode: "expiry" } & PeriodResult & LcalcPeriodResultMeta)
+  | ({ mode: "span" } & DateSpanResult & LcalcPeriodResultMeta);
+
+export interface LcalcPeriodPayload {
+  appVersion: string;
+  createdAt: string;
+  input: PeriodTabInput;
+  result?: LcalcPeriodResult;
+  note?: string;
+  disclaimer: string;
+}
+
+interface LcalcDeadlineResultMeta {
+  /** 공휴일 dataset 식별자 (`holidays/vX.Y.Z`). 말일 조정 판정의 근거 데이터.
+   *  법정기한 dataset 식별자는 엔진 결과의 `dataVersion` 에 이미 들어 있다. */
+  holidaysVersion: string;
+  computedAt: string;
+  disclaimer: string;
+}
+
+/** 불변기한 탭이 저장하는 계산 결과. 엔진 결과 원본에 메타만 얹는다. */
+export type LcalcDeadlineResult = DeadlineResult & LcalcDeadlineResultMeta;
+
+export interface LcalcDeadlinePayload {
+  appVersion: string;
+  createdAt: string;
+  input: DeadlineInput;
+  result?: LcalcDeadlineResult;
+  note?: string;
+  disclaimer: string;
+}
+
 /** 사건 파일(case@1)의 사건 식별 정보. 모든 필드 선택. */
 export interface LcalcCaseInfo {
   caseNumber?: string;
@@ -132,7 +195,13 @@ export interface LcalcCaseInfo {
 
 /** 사건 파일이 담을 수 있는 계산 슬롯 키 (도메인 kind 와 1:1). */
 export type LcalcCaseCalculationKey =
-  "interest" | "inheritance" | "litigation-cost" | "appropriation" | "compensation";
+  | "interest"
+  | "inheritance"
+  | "litigation-cost"
+  | "appropriation"
+  | "compensation"
+  | "period"
+  | "deadline";
 
 /**
  * 사건 파일(case@1) payload.
@@ -200,6 +269,20 @@ export type LcalcFile =
       envelopeFeatures: string[];
       dataVersions: Record<string, string>;
       payload: LcalcCompensationPayload;
+    }
+  | {
+      schemaVersion: "3";
+      kind: "period";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcPeriodPayload;
+    }
+  | {
+      schemaVersion: "3";
+      kind: "deadline";
+      envelopeFeatures: string[];
+      dataVersions: Record<string, string>;
+      payload: LcalcDeadlinePayload;
     }
   | {
       schemaVersion: "3";

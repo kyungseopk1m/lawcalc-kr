@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
 export type LcalcDocumentKey =
-  "interest" | "inheritance" | "litigation-cost" | "appropriation" | "compensation";
+  | "interest"
+  | "inheritance"
+  | "litigation-cost"
+  | "appropriation"
+  | "compensation"
+  // 손해배상 사망 view. 부상 view 와 함께 마운트돼 있으므로 미저장 추적을 따로 둔다.
+  | "compensation-death"
+  | "period"
+  | "deadline";
 
 type Listener = () => void;
 

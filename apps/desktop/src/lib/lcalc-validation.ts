@@ -1,15 +1,19 @@
 import {
   appliedDomains,
   CASE_VALUE_BASES,
+  computeDateSpan,
   PROVISIONAL_MEASURE_TYPES,
   validateAppropriationInput,
+  validateDeadlineInput,
   validateDeliveryFeeInput,
   validateLawyerFeeInput,
+  validatePeriodInput,
   validateStampDutyInput,
   type AppropriationInput,
   type AppropriationResult,
   type CalcOptions,
   type CaseType,
+  type DeadlineInput,
   type HeirNode,
   type InheritanceInput,
   type InheritanceResult,
@@ -36,10 +40,15 @@ import type {
   LcalcCompensationInput,
   LcalcCompensationPayload,
   LcalcCompensationResult,
+  LcalcDeadlinePayload,
+  LcalcDeadlineResult,
   LcalcFile,
   LcalcInheritancePayload,
   LcalcInterestPayload,
   LcalcLitigationCostPayload,
+  LcalcPeriodPayload,
+  LcalcPeriodResult,
+  PeriodTabInput,
 } from "./ipc";
 
 export type LoadedLegalRatePreset = LegalRateCode | "custom";
@@ -70,6 +79,8 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "compensation@2",
   "compensation@3",
   "compensation@4",
+  "period@1",
+  "deadline@1",
   "case@1",
 ]);
 
@@ -80,6 +91,8 @@ const CASE_CALCULATION_KINDS = new Set<LcalcCaseCalculationKey>([
   "litigation-cost",
   "appropriation",
   "compensation",
+  "period",
+  "deadline",
 ]);
 
 /** 사건번호·사건명 등 짧은 식별 텍스트 길이 가드 (메모는 MAX_NOTE_LENGTH). */
@@ -112,6 +125,18 @@ interface ParsedLitigationCostLcalcInput {
 interface ParsedAppropriationLcalcInput {
   input: AppropriationInput;
   result?: AppropriationResult;
+  note?: string;
+}
+
+interface ParsedPeriodLcalcInput {
+  input: PeriodTabInput;
+  result?: LcalcPeriodResult;
+  note?: string;
+}
+
+interface ParsedDeadlineLcalcInput {
+  input: DeadlineInput;
+  result?: LcalcDeadlineResult;
   note?: string;
 }
 
@@ -895,6 +920,151 @@ function parseCompensationPayload(
   };
 }
 
+function parsePeriodInput(value: unknown): PeriodTabInput {
+  const input = requireRecord(value, "payload.input");
+  if (input.mode !== "expiry" && input.mode !== "span") {
+    throw new Error('.lcalc 파일의 payload.input.mode 필드는 "expiry" 또는 "span" 이어야 합니다.');
+  }
+  // 필드별 재조립 대신 도메인 validator (한국어 RangeError) 에 위임하고 원본을 그대로
+  // 돌려준다. 입력에 필드가 늘어도 여기서 한 줄을 빠뜨려 값이 조용히 기본값으로
+  // 되돌아가는 사고가 나지 않는다.
+  const typed = input as unknown as PeriodTabInput;
+  validatePeriodInput(typed.period);
+  // 일수 산식에는 별도 validator 가 없다. computeDateSpan 자체가 같은 RangeError 계약을
+  // 가진 검증이라 계산 결과를 버리고 검증으로만 쓴다.
+  computeDateSpan(typed.span);
+  return typed;
+}
+
+function parsePeriodResult(value: unknown): LcalcPeriodResult {
+  const result = requireRecord(value, "payload.result");
+  if (result.mode !== "expiry" && result.mode !== "span") {
+    throw new Error('.lcalc 파일의 payload.result.mode 필드는 "expiry" 또는 "span" 이어야 합니다.');
+  }
+  return {
+    ...(result as unknown as LcalcPeriodResult),
+    disclaimer: requireString(result.disclaimer, "payload.result.disclaimer"),
+    dataVersion: requireString(result.dataVersion, "payload.result.dataVersion"),
+    computedAt: requireString(result.computedAt, "payload.result.computedAt"),
+  };
+}
+
+function parsePeriodPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcPeriodPayload {
+  if (file.kind !== "period") {
+    if (file.kind === "interest") {
+      throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "inheritance") {
+      throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "litigation-cost") {
+      throw new Error("소송비용 .lcalc 파일은 소송비용 탭에서 열어 주세요.");
+    }
+    if (file.kind === "appropriation") {
+      throw new Error("변제충당 .lcalc 파일은 변제충당 탭에서 열어 주세요.");
+    }
+    if (file.kind === "compensation") {
+      throw new Error("손해배상 .lcalc 파일은 손해배상 탭에서 열어 주세요.");
+    }
+    if (file.kind === "deadline") {
+      throw new Error("불변기한 .lcalc 파일은 불변기한 탭에서 열어 주세요.");
+    }
+    if (file.kind === "case") {
+      throw new Error(caseFileInWrongTabMessage);
+    }
+
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
+  }
+
+  const dataVersions = validateDataVersions(file.dataVersions);
+  if (typeof dataVersions.holidays !== "string" || dataVersions.holidays.length === 0) {
+    throw new Error(
+      '.lcalc 파일의 dataVersions["holidays"] 필드는 비어 있지 않은 문자열이어야 합니다.',
+    );
+  }
+  const payload = requireRecord(file.payload, "payload");
+  const note = requireBoundedNote(payload.note, "payload.note");
+
+  return {
+    appVersion: requireString(payload.appVersion, "payload.appVersion"),
+    createdAt: requireString(payload.createdAt, "payload.createdAt"),
+    input: parsePeriodInput(payload.input),
+    ...(payload.result === undefined ? {} : { result: parsePeriodResult(payload.result) }),
+    ...(note === undefined ? {} : { note }),
+    disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
+  };
+}
+
+function parseDeadlineInput(value: unknown): DeadlineInput {
+  const input = requireRecord(value, "payload.input");
+  // period 와 같은 이유로 필드별 재조립을 하지 않는다 (통합 스펙 2-2절). `validateDeadlineInput`
+  // 은 기한 id 존재·기산일 형식·alternate 유무까지 한국어 RangeError 로 보고, 공휴일 deps 를
+  // 요구하지 않으므로 파서 자리에서 그대로 쓸 수 있다.
+  const typed = input as unknown as DeadlineInput;
+  validateDeadlineInput(typed);
+  return typed;
+}
+
+function parseDeadlineResult(value: unknown): LcalcDeadlineResult {
+  const result = requireRecord(value, "payload.result");
+  return {
+    ...(result as unknown as LcalcDeadlineResult),
+    disclaimer: requireString(result.disclaimer, "payload.result.disclaimer"),
+    dataVersion: requireString(result.dataVersion, "payload.result.dataVersion"),
+    holidaysVersion: requireString(result.holidaysVersion, "payload.result.holidaysVersion"),
+    computedAt: requireString(result.computedAt, "payload.result.computedAt"),
+  };
+}
+
+function parseDeadlinePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcDeadlinePayload {
+  if (file.kind !== "deadline") {
+    if (file.kind === "interest") {
+      throw new Error("이자 .lcalc 파일은 이자 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "inheritance") {
+      throw new Error("상속 .lcalc 파일은 상속분 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "litigation-cost") {
+      throw new Error("소송비용 .lcalc 파일은 소송비용 탭에서 열어 주세요.");
+    }
+    if (file.kind === "appropriation") {
+      throw new Error("변제충당 .lcalc 파일은 변제충당 탭에서 열어 주세요.");
+    }
+    if (file.kind === "compensation") {
+      throw new Error("손해배상 .lcalc 파일은 손해배상 탭에서 열어 주세요.");
+    }
+    if (file.kind === "period") {
+      throw new Error("기간 .lcalc 파일은 기간 계산 탭에서 열어 주세요.");
+    }
+    if (file.kind === "case") {
+      throw new Error(caseFileInWrongTabMessage);
+    }
+
+    throw new Error(unsupportedCapabilityMessage(`${file.kind}@1`));
+  }
+
+  // 만료일이 두 데이터셋에 걸린다. 기한 자체(길이·기산점)는 deadlines, 말일 조정은 holidays.
+  const dataVersions = validateDataVersions(file.dataVersions);
+  for (const key of ["deadlines", "holidays"]) {
+    if (typeof dataVersions[key] !== "string" || dataVersions[key].length === 0) {
+      throw new Error(
+        `.lcalc 파일의 dataVersions["${key}"] 필드는 비어 있지 않은 문자열이어야 합니다.`,
+      );
+    }
+  }
+  const payload = requireRecord(file.payload, "payload");
+  const note = requireBoundedNote(payload.note, "payload.note");
+
+  return {
+    appVersion: requireString(payload.appVersion, "payload.appVersion"),
+    createdAt: requireString(payload.createdAt, "payload.createdAt"),
+    input: parseDeadlineInput(payload.input),
+    ...(payload.result === undefined ? {} : { result: parseDeadlineResult(payload.result) }),
+    ...(note === undefined ? {} : { note }),
+    disclaimer: requireString(payload.disclaimer, "payload.disclaimer"),
+  };
+}
+
 function requireBoundedCaseText(value: unknown, field: string): string | undefined {
   if (value === undefined) {
     return undefined;
@@ -1041,6 +1211,16 @@ export function validateLcalcEnvelope(file: LcalcFile | UnknownLcalcEnvelope): v
 
   if (file.kind === "compensation") {
     void parseCompensationPayload(file);
+    return;
+  }
+
+  if (file.kind === "period") {
+    void parsePeriodPayload(file);
+    return;
+  }
+
+  if (file.kind === "deadline") {
+    void parseDeadlinePayload(file);
     return;
   }
 
@@ -1203,6 +1383,24 @@ export function parseLoadedAppropriationLcalcInput(file: LcalcFile): ParsedAppro
 
 export function parseLoadedCompensationLcalcInput(file: LcalcFile): ParsedCompensationLcalcInput {
   const payload = parseCompensationPayload(file);
+  return {
+    input: payload.input,
+    ...(payload.result === undefined ? {} : { result: payload.result }),
+    ...(payload.note === undefined ? {} : { note: payload.note }),
+  };
+}
+
+export function parseLoadedPeriodLcalcInput(file: LcalcFile): ParsedPeriodLcalcInput {
+  const payload = parsePeriodPayload(file);
+  return {
+    input: payload.input,
+    ...(payload.result === undefined ? {} : { result: payload.result }),
+    ...(payload.note === undefined ? {} : { note: payload.note }),
+  };
+}
+
+export function parseLoadedDeadlineLcalcInput(file: LcalcFile): ParsedDeadlineLcalcInput {
+  const payload = parseDeadlinePayload(file);
   return {
     input: payload.input,
     ...(payload.result === undefined ? {} : { result: payload.result }),

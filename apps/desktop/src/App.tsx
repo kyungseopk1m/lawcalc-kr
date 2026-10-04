@@ -37,6 +37,7 @@ import {
 import { formatWon } from "./lib/format-won";
 
 import { Footer } from "./components/layout/Footer";
+import { ResetHint } from "./components/layout/ResetHint";
 import { Header } from "./components/layout/Header";
 import { DateRangeInput } from "./components/form/DateRangeInput";
 import {
@@ -48,12 +49,14 @@ import { OptionsPanel } from "./components/form/OptionsPanel";
 import { PrincipalInput } from "./components/form/PrincipalInput";
 import { RateSegmentInput } from "./components/form/RateSegmentInput";
 import { LegalCitation } from "./components/result/LegalCitation";
+import { ResultFreshnessNotice } from "./components/result/ResultFreshnessNotice";
 import { SegmentTable } from "./components/result/SegmentTable";
 import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { useFormShortcuts } from "./hooks/use-form-shortcuts";
+import { useResultFingerprint } from "./hooks/use-result-fingerprint";
 import { useUpdater } from "./hooks/useUpdater";
 import {
   ipc,
@@ -76,14 +79,17 @@ import {
   CASE_CALCULATION_LABELS,
   applyCaseCalculations,
   buildCaseLcalcFile,
+  caseMismatchNotice,
   collectCaseCalculations,
   markCaseCalculationsSaved,
   useCaseSlot,
 } from "./lib/case-file";
 import { AppropriationCalculator } from "./views/AppropriationCalculator";
 import { CompensationCalculator } from "./views/CompensationCalculator";
+import { DeadlineCalculator } from "./views/DeadlineCalculator";
 import { InheritanceCalculator } from "./views/InheritanceCalculator";
 import { LitigationCostCalculator } from "./views/LitigationCostCalculator";
+import { PeriodCalculator } from "./views/PeriodCalculator";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
@@ -105,7 +111,14 @@ const APP_VERSION = __APP_VERSION__;
 
 type ActionName = "pdf" | "csv" | "copy" | "claim" | "save" | "load" | "caseSave" | "caseLoad";
 
-type TabId = "interest" | "inheritance" | "litigationCost" | "appropriation" | "compensation";
+type TabId =
+  | "interest"
+  | "inheritance"
+  | "litigationCost"
+  | "appropriation"
+  | "compensation"
+  | "period"
+  | "deadline";
 
 /**
  * 상단 탭. 종전에는 `<Button>` 다섯 개라 스크린리더가 탭으로 인식하지 못했고, 활성 탭이
@@ -117,6 +130,8 @@ const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: "litigationCost", label: "소송비용" },
   { id: "appropriation", label: "변제충당" },
   { id: "compensation", label: "손해배상" },
+  { id: "period", label: "기간 계산" },
+  { id: "deadline", label: "불변기한" },
 ];
 
 const TAB_BY_CALCULATION: Record<LcalcCaseCalculationKey, TabId> = {
@@ -125,6 +140,8 @@ const TAB_BY_CALCULATION: Record<LcalcCaseCalculationKey, TabId> = {
   "litigation-cost": "litigationCost",
   appropriation: "appropriation",
   compensation: "compensation",
+  period: "period",
+  deadline: "deadline",
 };
 
 interface ToastState {
@@ -288,6 +305,40 @@ function buildLcalcFile(input: InterestInput, result: InterestResult): LcalcFile
   };
 }
 
+interface InterestFormValues {
+  principal: number;
+  startDate: string;
+  endDate: string;
+  segments: RateSegment[];
+  options: CalcOptions;
+  preset: LegalRatePresetOption;
+  customRate: number;
+  note: string;
+}
+
+function buildInterestInput({
+  principal,
+  startDate,
+  endDate,
+  segments,
+  options,
+  preset,
+  customRate,
+  note,
+}: InterestFormValues): InterestInput {
+  const legalRatePreset = toLegalRatePreset(preset, customRate);
+
+  return {
+    principal,
+    startDate,
+    endDate,
+    ...(segments.length > 0 ? { segments } : {}),
+    ...(legalRatePreset === undefined ? {} : { legalRatePreset }),
+    options,
+    note,
+  };
+}
+
 function buildInterestDirtySnapshot({
   principal,
   startDate,
@@ -297,16 +348,7 @@ function buildInterestDirtySnapshot({
   preset,
   customRate,
   note,
-}: {
-  principal: number;
-  startDate: string;
-  endDate: string;
-  segments: RateSegment[];
-  options: CalcOptions;
-  preset: LegalRatePresetOption;
-  customRate: number;
-  note: string;
-}): string {
+}: InterestFormValues): string {
   return createLcalcDirtySnapshot({
     principal,
     startDate,
@@ -387,25 +429,36 @@ export function App() {
     };
   }, []);
 
-  const input = useMemo<InterestInput>(() => {
-    const legalRatePreset = toLegalRatePreset(preset, customRate);
-
-    return {
-      principal,
-      startDate,
-      endDate,
-      ...(segments.length > 0 ? { segments } : {}),
-      ...(legalRatePreset === undefined ? {} : { legalRatePreset }),
-      options,
-      note,
-    };
-  }, [customRate, endDate, note, options, preset, principal, segments, startDate]);
+  const input = useMemo<InterestInput>(
+    () =>
+      buildInterestInput({
+        principal,
+        startDate,
+        endDate,
+        segments,
+        options,
+        preset,
+        customRate,
+        note,
+      }),
+    [customRate, endDate, note, options, preset, principal, segments, startDate],
+  );
   const errors = validateInput(input, preset, customRate);
   const hasErrors = Boolean(
     errors.principal || errors.dateRange || errors.customRate || errors.segments || errors.preset,
   );
   const [calculationError, setCalculationError] = useState("");
-  const [result, setResult] = useState<InterestResult>(() => calculateInterest(defaultInput));
+  const {
+    value: currentResult,
+    setValue: setResult,
+    setLoaded: setLoadedResult,
+    stale: resultFingerprintStale,
+    notice: resultNotice,
+  } = useResultFingerprint<InterestResult>(dirtySnapshot, () => calculateInterest(defaultInput));
+  // 초기값이 있고 null 을 넣는 곳이 없으므로 늘 있다.
+  const result = currentResult!;
+  // 입력 오류 중에는 자동 계산이 멈춰 화면 결과가 옛 입력의 것이다.
+  const resultStale = resultFingerprintStale || hasErrors;
   const [claimEnding, setClaimEnding] = useState<ClaimTextEnding>("untilFullPayment");
   const claimText = useMemo(
     () => buildInterestClaimText(result, { ending: claimEnding }),
@@ -495,6 +548,9 @@ export function App() {
       if (hasErrors) {
         throw new Error("입력 오류를 먼저 수정한 뒤 .lcalc 파일을 저장해 주세요.");
       }
+      if (resultStale) {
+        throw new Error("다시 계산한 뒤 .lcalc 파일을 저장해 주세요.");
+      }
 
       const path = await ipc.saveLcalc(buildLcalcFile(input, result));
       if (path) {
@@ -512,7 +568,7 @@ export function App() {
       rounding: loaded.input.options.rounding ?? "floor",
     };
     const loadedNote = loaded.input.note ?? loaded.note ?? "";
-    const cleanSnapshot = buildInterestDirtySnapshot({
+    const loadedValues: InterestFormValues = {
       principal: loaded.input.principal,
       startDate: loaded.input.startDate,
       endDate: loaded.input.endDate,
@@ -521,7 +577,8 @@ export function App() {
       preset: loaded.preset,
       customRate: loaded.customRate,
       note: loadedNote,
-    });
+    };
+    const cleanSnapshot = buildInterestDirtySnapshot(loadedValues);
     skipAutoCalculateRef.current = true;
     setPrincipal(loaded.input.principal);
     setStartDate(loaded.input.startDate);
@@ -531,9 +588,14 @@ export function App() {
     setPreset(loaded.preset);
     setCustomRate(loaded.customRate);
     setNote(loadedNote);
-    setResult(loaded.result);
+    const differs = setLoadedResult(
+      loaded.result,
+      () => calculateInterest(buildInterestInput(loadedValues)),
+      (r) => formatWon(r.grandTotal),
+    );
     setCalculationError("");
     markInterestClean(cleanSnapshot);
+    return differs;
   };
 
   const handleLoadLcalc = () =>
@@ -553,7 +615,7 @@ export function App() {
       if (dirtySnapshot === interestPristineSnapshotRef.current) {
         return { status: "pristine" };
       }
-      if (hasErrors) {
+      if (resultStale) {
         return { status: "invalid" };
       }
       return { status: "ok", file: buildLcalcFile(input, result) };
@@ -587,7 +649,7 @@ export function App() {
 
   const handleSaveCase = () =>
     runCaseAction("caseSave", async () => {
-      const { calculations, included, invalid } = collectCaseCalculations();
+      const { calculations, included, invalid, notices } = collectCaseCalculations();
       if (invalid.length > 0) {
         throw new Error(
           `${invalid.map((key) => CASE_CALCULATION_LABELS[key]).join(", ")} 탭의 입력 오류를 수정한 뒤 사건 파일을 저장해 주세요.`,
@@ -609,7 +671,7 @@ export function App() {
       }
       markCaseCalculationsSaved(included);
       const labels = included.map((key) => CASE_CALCULATION_LABELS[key]).join(", ");
-      return `사건 파일을 저장했습니다 (${labels}): ${path}`;
+      return [`사건 파일을 저장했습니다 (${labels}): ${path}`, ...notices].join(" ");
     });
 
   const handleLoadCase = () =>
@@ -624,26 +686,32 @@ export function App() {
 
       if (migratedFile.kind !== "case") {
         // 단일 계산 파일도 사건 열기에서 해당 탭으로 바로 불러온다.
-        const applied = applyCaseCalculations({ [migratedFile.kind]: migratedFile });
+        const mismatched: LcalcCaseCalculationKey[] = [];
+        const applied = applyCaseCalculations(
+          { [migratedFile.kind]: migratedFile },
+          false,
+          mismatched,
+        );
         const first = applied[0];
         if (!first) {
           throw new Error("이 파일의 계산 유형을 여는 탭이 없습니다.");
         }
         setActiveTab(TAB_BY_CALCULATION[first]);
-        return `${CASE_CALCULATION_LABELS[first]} 계산을 불러왔습니다.`;
+        return `${CASE_CALCULATION_LABELS[first]} 계산을 불러왔습니다.${caseMismatchNotice(mismatched)}`;
       }
 
       const loaded = parseLoadedCaseLcalcInput(migratedFile);
       setCaseTitle(loaded.caseInfo.title ?? loaded.caseInfo.caseNumber ?? "");
       // 완결된 사건 파일 로드 = 워크스페이스 교체. 이 사건에 없는 탭은 초기화해
       // 직전 사건의 잔여 입력이 다음 저장에 섞이는 교차 오염을 막는다.
-      const applied = applyCaseCalculations(loaded.calculations, true);
+      const mismatched: LcalcCaseCalculationKey[] = [];
+      const applied = applyCaseCalculations(loaded.calculations, true, mismatched);
       const first = applied[0];
       if (first) {
         setActiveTab(TAB_BY_CALCULATION[first]);
       }
       const labels = applied.map((key) => CASE_CALCULATION_LABELS[key]).join(", ");
-      return `사건 파일을 불러왔습니다 (${labels}).`;
+      return `사건 파일을 불러왔습니다 (${labels}).${caseMismatchNotice(mismatched)}`;
     });
 
   const handleCopy = () =>
@@ -690,7 +758,10 @@ export function App() {
       />
 
       <nav className="border-b border-border bg-background">
-        <div className="mx-auto flex w-full max-w-6xl gap-1 px-4 py-2 sm:px-6" role="tablist">
+        <div
+          className="mx-auto flex w-full max-w-6xl flex-wrap gap-1 px-4 py-2 sm:px-6"
+          role="tablist"
+        >
           {TABS.map((tab) => (
             <Button
               key={tab.id}
@@ -708,7 +779,7 @@ export function App() {
               {tab.label}
             </Button>
           ))}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <input
               aria-label="사건번호·사건명"
               className="h-8 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -781,6 +852,22 @@ export function App() {
         aria-labelledby="tab-compensation"
       >
         <CompensationCalculator active={activeTab === "compensation"} />
+      </div>
+      <div
+        className={activeTab === "period" ? "contents" : "hidden"}
+        role="tabpanel"
+        id="tabpanel-period"
+        aria-labelledby="tab-period"
+      >
+        <PeriodCalculator active={activeTab === "period"} />
+      </div>
+      <div
+        className={activeTab === "deadline" ? "contents" : "hidden"}
+        role="tabpanel"
+        id="tabpanel-deadline"
+        aria-labelledby="tab-deadline"
+      >
+        <DeadlineCalculator active={activeTab === "deadline"} />
       </div>
       {/* 이자 탭의 패널은 이 `main` 자체다. `role="tabpanel"` 을 씌우면 main 랜드마크가
           사라지므로 id 와 라벨만 연결한다 (탭의 `aria-controls` 는 그대로 가리킨다). */}
@@ -862,6 +949,7 @@ export function App() {
           aria-labelledby="result-title"
           tabIndex={-1}
         >
+          <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
           <SummaryCard result={result} />
 
           <Card>
@@ -873,7 +961,7 @@ export function App() {
             </CardHeader>
             <CardContent className="space-y-4">
               <SegmentTable result={result} />
-              <LegalCitation dataVersion={result.dataVersion} preset={preset} />
+              <LegalCitation preset={preset} />
             </CardContent>
           </Card>
 
@@ -915,6 +1003,7 @@ export function App() {
                 </fieldset>
                 <ActionButton
                   action="claim"
+                  disabled={resultStale}
                   icon={Clipboard}
                   label="복사"
                   loadingAction={loadingAction}
@@ -944,6 +1033,7 @@ export function App() {
               <div className="flex flex-wrap gap-2">
                 <ActionButton
                   action="pdf"
+                  disabled={resultStale}
                   icon={FileDown}
                   label="PDF"
                   loadingAction={loadingAction}
@@ -952,6 +1042,7 @@ export function App() {
                 />
                 <ActionButton
                   action="csv"
+                  disabled={resultStale}
                   icon={FileSpreadsheet}
                   label="CSV"
                   loadingAction={loadingAction}
@@ -960,6 +1051,7 @@ export function App() {
                 />
                 <ActionButton
                   action="copy"
+                  disabled={resultStale}
                   icon={Clipboard}
                   label="복사"
                   loadingAction={loadingAction}
@@ -968,6 +1060,7 @@ export function App() {
                 />
                 <ActionButton
                   action="save"
+                  disabled={resultStale}
                   icon={FileJson}
                   label=".lcalc 저장"
                   loadingAction={loadingAction}
@@ -990,6 +1083,7 @@ export function App() {
       </main>
 
       <Footer />
+      <ResetHint />
       <UpdateDialog api={updaterApi} />
     </div>
   );
@@ -1001,6 +1095,7 @@ interface ActionButtonProps {
   label: string;
   loadingAction: ActionName | null;
   variant: "secondary" | "outline";
+  disabled?: boolean;
   onClick: () => Promise<void>;
 }
 
@@ -1011,6 +1106,7 @@ function ActionButton({
   loadingAction,
   onClick,
   variant,
+  disabled = false,
 }: ActionButtonProps) {
   const isLoading = loadingAction === action;
   const isBusy = loadingAction !== null;
@@ -1019,7 +1115,7 @@ function ActionButton({
     <Button
       type="button"
       variant={variant}
-      disabled={isBusy}
+      disabled={isBusy || disabled}
       onClick={() => {
         void onClick();
       }}

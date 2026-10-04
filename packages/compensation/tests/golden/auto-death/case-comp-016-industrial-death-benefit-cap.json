@@ -3,7 +3,7 @@
   "id": "case-comp-016-industrial-death-benefit-cap",
   "title": "industrial/death — 유족급여가 일실수입을 초과: 일실수입 한도 공제, 위자료·장례비 보존",
   "source": "manual-derivation",
-  "notes": "COMP-6 capping 검산 (2026-07-02). case-011 과 동일 base(생계비 공제 후 일실수입 605,679,360)에 위자료 10,000,000 + 유족급여 700,000,000(> 일실수입), 상속인 없음. 2021다241618 전합 — deducted = 605,679,360, 초과분은 위자료·장례비를 잠식하지 않는다. pecuniary = 0 + 10,000,000 + 5,000,000 → × 0.9 = 13,500,000 = final. 구 방식이었다면 0원.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 550,617,600 전액 공제, 과실상계 대상 = 장례비 5,000,000 × 0.9 = 4,500,000, + 위자료 10,000,000 = final 14,500,000. 아래는 2026-10-04 이전 값·산식이다. COMP-6 capping 검산 (2026-07-02). case-011 과 동일 base(생계비 공제 후 일실수입 605,679,360)에 위자료 10,000,000 + 유족급여 700,000,000(> 일실수입), 상속인 없음. 2021다241618 전합 — deducted = 605,679,360, 초과분은 위자료·장례비를 잠식하지 않는다. pecuniary = 0 + 10,000,000 + 5,000,000 → × 0.9 = 13,500,000 = final. 구 방식이었다면 0원.",
   "input": {
     "mode": "death",
     "accidentType": "industrial",
@@ -28,26 +28,26 @@
   "expected": {
     "accidentType": "industrial",
     "livingCostDeductionRatio": 0.3333333333333333,
-    "lostIncomeSubtotalWon": 605679360,
+    "lostIncomeSubtotalWon": 550617600,
     "solatiumWon": 10000000,
     "industrialBenefit": {
       "benefitWon": 700000000,
-      "deductedWon": 605679360,
+      "deductedWon": 550617600,
       "lostIncomeAfterWon": 0
     },
-    "pecuniaryDamagesSubtotalWon": 15000000,
+    "pecuniaryDamagesSubtotalWon": 5000000,
     "faultOffset": {
       "ratio": 0.1,
-      "afterWon": 13500000,
-      "beforeWon": 15000000
+      "afterWon": 4500000,
+      "beforeWon": 5000000
     },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 13500000
+      "afterWon": 4500000
     },
-    "finalWon": 13500000,
+    "finalWon": 14500000,
     "inheritanceShares": null,
     "hoffman240CapCappedAtIndex": 0,
     "dataVersions": {
@@ -62,10 +62,10 @@
         "endMonth": 420,
         "lossRate": 1,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 242.46633829,
         "appliedHoffman": 240,
-        "amountFloorWon": 605679360
+        "amountFloorWon": 550617600
       }
     ],
     "hoffman240CapAppliedHoffman": [240],
@@ -74,7 +74,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-07-02",
-    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md D절 (COMP-6 capping 손계산)"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 v0.10.0-completeness-cycle-2026-07-02.md D절 (COMP-6 capping 손계산))"
   }
 }

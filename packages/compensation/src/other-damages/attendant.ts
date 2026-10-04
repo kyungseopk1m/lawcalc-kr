@@ -2,7 +2,7 @@
  * 개호비(기왕 + 향후) 계산. 매뉴얼 제6조-가.
  *
  * - 기왕: 현가 산정 없이 `일당 × 총일수` (실지출 입력 시 `min`) × `(1 - 기왕증)`.
- * - 향후: 연금형 → 월개호비 `일당 × daysPerMonth × 인원` × 연금현가율(호프만 240 cap) × `(1 - 기왕증)`.
+ * - 향후: 연금형 → 월개호비 `round(일당 × daysPerMonth) × 인원` × 연금현가율(호프만 240 cap) × `(1 - 기왕증)`.
  *   240 cap 은 개호 향후 segment 전체에서 누적 (일실수입과 별개 독립 풀).
  */
 
@@ -15,7 +15,9 @@ import {
   type OtherDamagesContext,
 } from "./internal";
 
-const DEFAULT_ATTENDANT_DAYS_PER_MONTH = 30;
+// 매일 개호의 월 환산은 365/12 일이다. 광주고법(전주) 2016. 7. 21. 선고 2015나100421 의
+// 월 개호비 2,636,699원 = 일용노임 86,686원 × 365/12 (외부 reference 매뉴얼 개호비 계산표도 같음).
+const DEFAULT_ATTENDANT_DAYS_PER_MONTH = 365 / 12;
 
 /** 개호비 항목이 비었으면 (기왕·향후 모두 없음) null 반환. */
 export function computeAttendantCare(
@@ -68,7 +70,9 @@ export function computeAttendantCare(
       `개호비 향후[${i}]`,
     );
     const daysPerMonth = seg.daysPerMonth ?? DEFAULT_ATTENDANT_DAYS_PER_MONTH;
-    const monthlyAttendant = dailyWage * daysPerMonth * seg.personCount;
+    // 365/12 환산은 원 미만이 생기므로 1인 월 개호비를 원 단위로 반올림한다 (매뉴얼 계산표 기준).
+    // 정수 일수 입력은 반올림해도 값이 같다.
+    const monthlyAttendant = Math.round(dailyWage * daysPerMonth) * seg.personCount;
     const appliedHoffman = capResult.appliedHoffman[i] as number;
     futureWon += Math.floor(monthlyAttendant * appliedHoffman * (1 - (seg.priorRatio ?? 0)));
   }

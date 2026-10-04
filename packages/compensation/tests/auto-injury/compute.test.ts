@@ -19,7 +19,8 @@ function baseInput(): CompensationInput {
       temporary: [],
       priorImpairmentRatio: 0,
     },
-    lostIncome: { occupation: "보통인부", discountMethod: "hoffman" },
+    // 이 파일의 기대값은 월 가동일수 22일로 손계산했다. 기본값(20) 회귀는 별도 describe 에서 본다.
+    lostIncome: { occupation: "보통인부", discountMethod: "hoffman", workingDaysPerMonth: 22 },
     solatiumWon: 0,
     faultRatio: 0,
     deductions: { ratio: [], absolute: [] },
@@ -114,7 +115,7 @@ describe("computeCompensation — 10 단계 path", () => {
 
   it("directWageWon override path: occupation lookup 없이도 계산", () => {
     const input = baseInput();
-    input.lostIncome = { directWageWon: 200_000 };
+    input.lostIncome = { directWageWon: 200_000, workingDaysPerMonth: 22 };
     const result = computeCompensation(input, { now: FIXED_NOW });
     expect(result.segments[0]!.dailyWageWon).toBe(200_000);
     expect(result.segments[0]!.monthlyWageWon).toBe(200_000 * 22);
@@ -321,7 +322,8 @@ describe("computeCompensation — 산재(산×부상) 장해급여 공제 (2021�
       deductedWon: 249_399_909,
       lostIncomeAfterWon: 0,
     });
-    expect(result.pecuniaryDamagesSubtotalWon).toBe(5_000_000);
+    // 위자료는 과실상계 대상 소계에 들어가지 않고 최종액에 그대로 더해진다.
+    expect(result.pecuniaryDamagesSubtotalWon).toBe(0);
     expect(result.finalWon).toBe(5_000_000);
   });
 
@@ -360,7 +362,7 @@ describe("computeCompensation — 과거 사고일 노임단가", () => {
     input.base.birthDate = "1980-01-01";
     input.base.accidentDate = accidentDate;
     input.base.treatmentEndDate = accidentDate;
-    input.lostIncome = { occupation, discountMethod: "hoffman" };
+    input.lostIncome = { occupation, discountMethod: "hoffman", workingDaysPerMonth: 22 };
     return input;
   }
 
@@ -400,5 +402,113 @@ describe("computeCompensation — 과거 사고일 노임단가", () => {
     expect(() => computeCompensation(pastInput("2015-01-01", "갱부"), { now: FIXED_NOW })).toThrow(
       RangeError,
     );
+  });
+});
+
+/**
+ * 2026-10-04 정확성 정정 (C1 위자료, C2 가동일수, C4 입원기간). 기대값은 손계산이다
+ * (for-claude `personal/lawcalc-kr/docs/plans/r1-golden-rederivation-2026-10-04.md` 2절).
+ * 남 1980-05-10생, 사고 2024-03-01, 보통인부 165,545원(2024-01-01 적용), 영구 20%,
+ * 가동 254개월, H[254] = 172.99836277, H[2] = 1.98758616.
+ */
+describe("2026-10-04 정확성 정정", () => {
+  function r1Input(): CompensationInput {
+    return {
+      base: {
+        birthDate: "1980-05-10",
+        accidentDate: "2024-03-01",
+        treatmentEndDate: "2024-05-31",
+        sex: "male",
+      },
+      lossRate: { permanent: [{ ratio: 0.2 }] },
+      lostIncome: { occupation: "보통인부", workingDaysPerMonth: 22 },
+      solatiumWon: 20_000_000,
+      faultRatio: 0.3,
+    };
+  }
+
+  describe("C1 위자료는 과실상계·비율공제 뒤에 더한다", () => {
+    it("재산상 손해 × (1 - 과실) + 위자료 = 108,208,100원", () => {
+      // 일실수입 floor(3,641,990 × 0.2 × 172.99836277) = 126,011,661
+      // 과실상계 floor(126,011,661 × 0.7) = 88,208,162, + 위자료 20,000,000 → 100원 절사
+      const input = r1Input();
+      input.lossRate.hospitalizationFullLoss = false;
+      const result = computeCompensation(input, { now: FIXED_NOW });
+      expect(result.lostIncomeSubtotalWon).toBe(126_011_661);
+      expect(result.pecuniaryDamagesSubtotalWon).toBe(126_011_661);
+      expect(result.faultOffset.afterWon).toBe(88_208_162);
+      expect(result.deductions.afterWon).toBe(88_208_162);
+      expect(result.finalWon).toBe(108_208_100);
+    });
+
+    it("보험약관 기준(applyFaultToSolatium)은 이전처럼 위자료에도 과실상계 → 102,208,100원", () => {
+      // floor((126,011,661 + 20,000,000) × 0.7) = 102,208,162 → 100원 절사
+      const input = r1Input();
+      input.lossRate.hospitalizationFullLoss = false;
+      input.applyFaultToSolatium = true;
+      const result = computeCompensation(input, { now: FIXED_NOW });
+      expect(result.pecuniaryDamagesSubtotalWon).toBe(146_011_661);
+      expect(result.faultOffset.afterWon).toBe(102_208_162);
+      expect(result.finalWon).toBe(102_208_100);
+    });
+
+    it("비율공제도 위자료에 걸리지 않는다", () => {
+      // 88,208,162 - floor(88,208,162 × 0.1) = 88,208,162 - 8,820,816 = 79,387,346, + 20,000,000
+      const input = r1Input();
+      input.lossRate.hospitalizationFullLoss = false;
+      input.deductions = { ratio: [{ ratio: 0.1 }] };
+      const result = computeCompensation(input, { now: FIXED_NOW });
+      expect(result.deductions.ratioSubtotalWon).toBe(8_820_816);
+      expect(result.finalWon).toBe(99_387_300);
+    });
+  });
+
+  it("C2 월 가동일수 기본값은 20일 (대법원 2020다271650)", () => {
+    const input = baseInput();
+    delete input.lostIncome.workingDaysPerMonth;
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.segments[0]!.monthlyWageWon).toBe(172068 * 20);
+  });
+
+  describe("C4 입원기간은 상실률 100%", () => {
+    it("사고일 ~ 입원 종료일(2개월)을 100% 로 따로 계산한다", () => {
+      // [0,2): floor(3,641,990 × 1 × 1.98758616) = 7,238,768
+      // [2,254): floor(3,641,990 × 0.2 × (172.99836277 - 1.98758616)) = 124,563,907
+      const input = r1Input();
+      input.solatiumWon = 0;
+      input.faultRatio = 0;
+      const result = computeCompensation(input, { now: FIXED_NOW });
+      expect(result.segments.map((s) => [s.startMonth, s.endMonth])).toEqual([
+        [0, 2],
+        [2, 254],
+      ]);
+      expect(result.segments[0]!.lossRate).toBe(1);
+      expect(result.segments[1]!.lossRate).toBeCloseTo(0.2, 12);
+      expect(result.segments.map((s) => s.amountFloorWon)).toEqual([7_238_768, 124_563_907]);
+      expect(result.lostIncomeSubtotalWon).toBe(131_802_675);
+      // 표시용 병합 상실률은 장해율 그대로다.
+      expect(result.combinedLossRate).toBeCloseTo(0.2, 12);
+    });
+
+    it("입원기간 행에는 기왕증 기여도를 곱하지 않는다", () => {
+      // [2,254): floor(3,641,990 × 0.14 × 171.01077661) = 87,194,735
+      const input = r1Input();
+      input.solatiumWon = 0;
+      input.faultRatio = 0;
+      input.lossRate.priorImpairmentRatio = 0.3;
+      const result = computeCompensation(input, { now: FIXED_NOW });
+      expect(result.segments[0]!.lossRate).toBe(1);
+      expect(result.segments.map((s) => s.amountFloorWon)).toEqual([7_238_768, 87_194_735]);
+    });
+
+    it("hospitalizationFullLoss = false 면 이전처럼 장해율만 적용한다", () => {
+      const input = r1Input();
+      input.solatiumWon = 0;
+      input.faultRatio = 0;
+      input.lossRate.hospitalizationFullLoss = false;
+      const result = computeCompensation(input, { now: FIXED_NOW });
+      expect(result.segments).toHaveLength(1);
+      expect(result.lostIncomeSubtotalWon).toBe(126_011_661);
+    });
   });
 });

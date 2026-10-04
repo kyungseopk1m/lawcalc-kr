@@ -73,7 +73,7 @@ describe("상단 탭 접근성", () => {
     renderApp();
     expect(screen.getByRole("tablist")).toBeTruthy();
     const tabs = screen.getAllByRole("tab");
-    expect(tabs).toHaveLength(5);
+    expect(tabs).toHaveLength(7);
 
     const interest = screen.getByRole("tab", { name: "이자 계산" });
     expect(interest.getAttribute("aria-selected")).toBe("true");

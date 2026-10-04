@@ -87,6 +87,37 @@ const captures = [
       await card.getByPlaceholder("비용 (원)").fill("3000000");
     },
   },
+  {
+    tab: "기간 계산",
+    file: "readme-period.png",
+    assertDisclaimer: true,
+    assertText: "제161조 적용: 2026-01-02",
+    // 기본값(오늘 + 14일)으로 찍으면 제161조가 걸리지 않아 만료일 한 줄만 남는다.
+    // 2025-12-01 부터 1개월은 제160조의 역법적 계산으로 2026-01-01 에 만료하고,
+    // 그날이 신정이라 제161조로 하루 밀린다. 두 규정이 한 화면에 함께 보인다.
+    setup: async (page) => {
+      const panel = page.locator("#tabpanel-period");
+      await panel.getByLabel("기산의 기초가 되는 날").fill("2025-12-01");
+      await panel.getByLabel("단위").selectOption("month");
+      await panel.getByLabel("기간 수량").fill("1");
+    },
+  },
+  {
+    tab: "불변기한",
+    file: "readme-deadline.png",
+    assertDisclaimer: true,
+    assertText: "2026-09-28",
+    // 결과·근거 두 카드가 viewport 높이를 넘어 근거 카드가 잘린다.
+    fullPage: true,
+    // 민사 항소기간 2주. 판결서 송달일이 2026-09-11 이면 만료일이 추석(2026-09-25)에
+    // 걸려 다음 근무일인 2026-09-28 로 밀린다. 근거 조문과 불변기간 표시가 결과와
+    // 함께 보이는 사례라 화면 하나로 탭의 기능이 전달된다.
+    setup: async (page) => {
+      const panel = page.locator("#tabpanel-deadline");
+      await panel.getByLabel("기한 항목").selectOption("civilAppeal");
+      await panel.getByLabel("기산 사건일").fill("2026-09-11");
+    },
+  },
 ];
 
 function waitForServerReady(child) {

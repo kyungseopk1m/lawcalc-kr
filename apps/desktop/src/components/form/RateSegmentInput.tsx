@@ -4,6 +4,7 @@ import type { RateSegment } from "@lawcalc-kr/core-engine";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { PercentInput } from "./PercentInput";
 
 interface RateSegmentInputProps {
   fallbackLabel: string;
@@ -84,19 +85,13 @@ export function RateSegmentInput({ fallbackLabel, value, error, onChange }: Rate
               <div className="flex items-end gap-3">
                 <label className="grid flex-1 gap-1 text-xs font-medium">
                   연이율(%)
-                  <Input
+                  <PercentInput
                     aria-describedby={error ? errorId : undefined}
                     aria-invalid={Boolean(error)}
-                    inputMode="decimal"
                     min="0"
                     step="0.1"
-                    type="number"
-                    value={segment.rate > 0 ? segment.rate * 100 : ""}
-                    onChange={(event) =>
-                      onChange(
-                        updateSegment(value, index, "rate", Number(event.target.value) / 100),
-                      )
-                    }
+                    value={segment.rate}
+                    onValueChange={(rate) => onChange(updateSegment(value, index, "rate", rate))}
                   />
                 </label>
                 <Button

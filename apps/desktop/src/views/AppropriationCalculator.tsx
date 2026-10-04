@@ -12,7 +12,6 @@ import {
 import { useMemo, useRef, useState } from "react";
 
 import {
-  APPROPRIATION_DATA_VERSION,
   STANDARD_DISCLAIMER,
   computeAppropriation,
   type AllocationTarget,
@@ -23,11 +22,13 @@ import {
   type AppropriationResult,
 } from "@lawcalc-kr/core-engine";
 
+import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { useResultFingerprint } from "../hooks/use-result-fingerprint";
 import { useCaseSlot } from "../lib/case-file";
 import { formatWon, formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcAppropriationPayload, type LcalcFile } from "../lib/ipc";
@@ -296,8 +297,6 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
     targets: [],
   }));
   const [note, setNote] = useState("");
-  const [result, setResult] = useState<AppropriationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -309,6 +308,20 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
   );
   const markAppropriationClean = useLcalcDirtyTracker("appropriation", dirtySnapshot);
   const pristineSnapshotRef = useRef(dirtySnapshot);
+  const resultFingerprint = buildAppropriationDirtySnapshot({ claims, payment, note: "" });
+  const {
+    value: result,
+    setValue: setResult,
+    setLoaded: setLoadedResult,
+    stale: resultStale,
+    notice: resultNotice,
+  } = useResultFingerprint<AppropriationResult>(resultFingerprint);
+  const {
+    value: error,
+    setValue: setError,
+    stale: errorStale,
+  } = useResultFingerprint<string>(resultFingerprint);
+  const resultReady = result !== null && !resultStale;
 
   const handleCalculate = () => {
     try {
@@ -389,14 +402,14 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
 
   const handleCopy = () =>
     runAction("copy", async () => {
-      if (!result) throw new Error("계산 후 복사해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 복사해 주세요.");
       await ipc.copyToClipboard(formatAppropriationForClipboard(result));
       return "변제충당 계산 결과를 클립보드에 복사했습니다.";
     });
 
   const handleSaveLcalc = () =>
     runAction("save", async () => {
-      if (!result) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       const path = await ipc.saveLcalc(buildAppropriationLcalcFile(input, result, note));
       if (path) {
         markAppropriationClean();
@@ -413,9 +426,14 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
     setClaims(applied.claims);
     setPayment(applied.payment);
     setNote(loadedNote);
-    setResult(loaded.result ?? computeAppropriation(loaded.input));
+    const differs = setLoadedResult(
+      loaded.result,
+      () => computeAppropriation(loaded.input),
+      (r) => formatWon(r.totals.remainingGrandTotal),
+    );
     setError(null);
     markAppropriationClean(buildLoadedAppropriationDirtySnapshot(applied, loadedNote));
+    return differs;
   };
 
   useCaseSlot("appropriation", {
@@ -669,12 +687,14 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
       </div>
 
       <div className="grid gap-4">
-        {error ? (
+        {error && !errorStale ? (
           <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
             <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
         ) : null}
+
+        <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
         {result ? (
           <>
@@ -746,7 +766,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 label="복사"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleCopy}
               />
               <ActionButton
@@ -755,7 +775,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 label=".lcalc 저장"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleSaveLcalc}
               />
               <ActionButton
@@ -764,7 +784,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 label=".lcalc 열기"
                 loadingAction={loadingAction}
                 requiresResult={false}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleLoadLcalc}
               />
             </div>
@@ -780,11 +800,10 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                근거: 민법 제476조 (지정충당) / 제477조 (법정충당) / 제479조 (비용·이자·원본 순). 본
-                도메인은 v0.4 사이클에서 도입된 초기 범위입니다. 단일 변제 이벤트와 여러 채권의 잔액
-                분배만 지원하며, 이자 누적과 이자제한법 제한이율 검토는 후속 버전 범위입니다.
+                근거: 민법 제476조 (지정충당) / 제477조 (법정충당) / 제479조 (비용·이자·원본 순).
+                현재 단일 변제 이벤트와 여러 채권의 잔액 분배만 지원하며, 이자 누적과 이자제한법
+                제한이율 검토는 지원하지 않습니다.
               </p>
-              <p className="text-xs">데이터 버전: {APPROPRIATION_DATA_VERSION}</p>
             </CardContent>
           </Card>
         ) : null}

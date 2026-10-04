@@ -1,6 +1,15 @@
 import type { CalcOptions } from "@lawcalc-kr/core-engine";
 
 import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
+
+/** 법원 이자계산 매뉴얼 방식: 기간식, 윤년 366 분모, 초일 산입, 끝수 절사. */
+export const COURT_STYLE_OPTIONS: CalcOptions = {
+  mode: "period",
+  leapYear: "actual",
+  includeFirstDay: true,
+  rounding: "floor",
+};
 
 interface OptionsPanelProps {
   value: CalcOptions;
@@ -38,6 +47,19 @@ function RadioOption({
 export function OptionsPanel({ value, onChange }: OptionsPanelProps) {
   return (
     <div className="grid gap-4 rounded-md border border-border bg-muted/40 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onChange(COURT_STYLE_OPTIONS)}
+        >
+          법원 방식 적용
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          기간식 · 실제 일수(윤년 366) · 초일 산입 · 절사를 한 번에 맞춥니다.
+        </span>
+      </div>
       <fieldset className="grid gap-2">
         <legend className="text-sm font-medium">계산 방식</legend>
         <div className="grid gap-2 sm:grid-cols-2">

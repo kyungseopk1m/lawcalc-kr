@@ -11,7 +11,7 @@ import type { CaseType, DeliveryFormula } from "./types";
  *   - 「송달료규칙의 시행에 따른 업무처리요령 (재일 87-4)」 별표 1 — 사건구분별 송달 횟수 매트릭스 위임.
  *
  * 본 dataset 의 구조 (2 축 분리):
- *   - `unitPriceHistory`: 시기별 회당 단가 슬라이스 (현행 5,500원 / 2025-06-01 시행 외 3 시점 보존).
+ *   - `unitPriceHistory`: 시기별 회당 단가 슬라이스 (현행 5,640원 / 2026-07-01 시행 외 4 시점 보존).
  *   - `countMatrix`: 사건구분별 송달 횟수 + 산식 분기 (PR 1 의 `DeliveryFormula` 4 kind).
  *
  * `previousVersions` 패턴 (stamp-duty / interest-limits) 대신 본 v1.0.0 은
@@ -305,7 +305,7 @@ export function getDeliveryCount(
  * 지정 시 `effectiveFrom <= filingDate` 의 최신 슬라이스 반환.
  *
  * @example
- *   getDeliveryUnitPriceAt(dataset)                  // → 5500 (현행)
+ *   getDeliveryUnitPriceAt(dataset)                  // → 5640 (현행)
  *   getDeliveryUnitPriceAt(dataset, "2025-06-01")    // → 5500
  *   getDeliveryUnitPriceAt(dataset, "2024-12-31")    // → 5200 (2021-09-01 시행 슬라이스)
  *   getDeliveryUnitPriceAt(dataset, "2019-04-30")    // → throw (모든 슬라이스보다 이른 시점)

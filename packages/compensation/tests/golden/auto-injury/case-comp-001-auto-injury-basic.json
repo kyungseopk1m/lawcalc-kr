@@ -3,7 +3,7 @@
   "id": "case-comp-001-auto-injury-basic",
   "title": "auto/injury basic — 영구장해 30% 단독, 가동 60세 30년",
   "source": "manual-derivation",
-  "notes": "compensation-golden-capture-result-2026-05-18.md 2절. 단일 segment 360개월, H[360]=219.610067, 100원 절사.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 월 3,441,360 × 0.3 × 219.61006732 → 226,727,190 → 절사 226,727,100. 아래는 2026-10-04 이전 값·산식이다. compensation-golden-capture-result-2026-05-18.md 2절. 단일 segment 360개월, H[360]=219.610067, 100원 절사.",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -35,20 +35,20 @@
     }
   },
   "expected": {
-    "lostIncomeSubtotalWon": 249399909,
+    "lostIncomeSubtotalWon": 226727190,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 249399909,
+    "pecuniaryDamagesSubtotalWon": 226727190,
     "faultOffset": {
       "ratio": 0,
-      "afterWon": 249399909,
-      "beforeWon": 249399909
+      "afterWon": 226727190,
+      "beforeWon": 226727190
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 249399909
+      "afterWon": 226727190
     },
-    "finalWon": 249399900,
+    "finalWon": 226727100,
     "hoffman240CapCappedAtIndex": null,
     "dataVersions": {
       "laborRates": "labor-rates/v1.1.0",
@@ -62,10 +62,10 @@
         "endMonth": 360,
         "lossRate": 0.30000000000000004,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 219.61006732,
         "appliedHoffman": 219.61006732,
-        "amountFloorWon": 249399909
+        "amountFloorWon": 226727190
       }
     ],
     "hoffman240CapAppliedHoffman": [219.61006732],
@@ -73,7 +73,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-05-18",
-    "derivedBy": "compensation-golden-capture-result-2026-05-18.md 2절"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-golden-capture-result-2026-05-18.md 2절)"
   }
 }

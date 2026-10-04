@@ -34,7 +34,11 @@ export interface CompensationBaseInput {
   birthDate: IsoDate;
   /** 사고일자. */
   accidentDate: IsoDate;
-  /** 입원치료 종료일. 사고일 이상이어야 함. v0.5.0 은 일실수입 segment 계산에 직접 영향 없음 (가동연한까지 segment). */
+  /**
+   * 입원치료 종료일. 사고일 이상이어야 함.
+   * 사고일부터 이 날까지(월 단위 내림)는 노동능력상실률 100% 로 일실수입을 계산한다
+   * (`lossRate.hospitalizationFullLoss === false` 이면 적용하지 않는다).
+   */
   treatmentEndDate: IsoDate;
   /** 성별. 가동연한 default + 향후 생명표 lookup. */
   sex: "male" | "female";
@@ -54,6 +58,12 @@ export interface CompensationLossRateInput {
   temporary?: TemporaryDisabilityInput[];
   /** 기왕증 기여도 (0~1). default 0. 본 v0.5.0 정원 안에서는 deduction 산출에 사용 안 함 (별 항). */
   priorImpairmentRatio?: number;
+  /**
+   * 입원기간(사고일 ~ `base.treatmentEndDate`) 상실률 100% 적용 여부. default true.
+   * `false` 면 입원기간에도 장해율을 적용한다 (이전 동작).
+   * 입원기간 행에는 기왕증 기여도를 곱하지 않는다.
+   */
+  hospitalizationFullLoss?: boolean;
 }
 
 /** 일실수입 입력. occupation lookup 또는 directWageWon raw override. */
@@ -70,7 +80,10 @@ export interface CompensationLostIncomeInput {
   directWageWon?: number;
   /** 할인 방식. v0.5.0 = "hoffman" only. 라이프니츠는 v0.6+ wire-up 정원. */
   discountMethod?: "hoffman";
-  /** 월 가동일수. default 22 (대법원 표준 일실수입 산정 정원). 1~31 정수. */
+  /**
+   * 월 가동일수. 1~31 정수. default 20 (대법원 2024. 4. 25. 선고 2020다271650:
+   * 도시 일용근로자의 월 가동일수를 20일을 초과하여 인정하기 어렵다).
+   */
   workingDaysPerMonth?: number;
 }
 
@@ -123,6 +136,11 @@ export interface CompensationInput {
   solatiumWon?: number;
   /** 과실비율 (0~1). default 0. */
   faultRatio?: number;
+  /**
+   * 보험약관 지급기준. `true` 면 위자료도 과실상계·비율공제 대상에 넣는다 (이전 동작).
+   * default false: 위자료는 과실상계·공제 뒤에 그대로 더한다 (재산상 손해 × (1 - 과실) - 공제 + 위자료).
+   */
+  applyFaultToSolatium?: boolean;
   deductions?: CompensationDeductionsInput;
   /** 산재보험급여(장해급여). `accidentType === "industrial"` 일 때만 적용. */
   industrialInsurance?: CompensationIndustrialInsuranceInjury;
@@ -234,7 +252,7 @@ export interface CompensationResult {
    */
   industrialBenefit?: CompensationIndustrialBenefitResult;
   /**
-   * 과실상계 대상 소계 (위자료 포함) = `일실수입 + otherDamagesSubtotalWon + solatiumWon`.
+   * 과실상계 대상 소계 = `일실수입 + otherDamagesSubtotalWon` (`applyFaultToSolatium` 이면 `+ solatiumWon`).
    * 산재는 산재보험급여 공제 후 일실수입 (`industrialBenefit.lostIncomeAfterWon`) 기준.
    */
   pecuniaryDamagesSubtotalWon: number;

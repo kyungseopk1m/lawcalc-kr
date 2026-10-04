@@ -3,7 +3,7 @@
   "id": "case-comp-012-attendant-care",
   "title": "auto/injury 기타손해 — 개호비(기왕 실지출 + 향후 인원 1→0.5, 호프만 240 cap)",
   "source": "manual-derivation",
-  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md 2절. 일실수입 baseline = case-001(보통인부 일당 172,068, 가동 60세 360개월, 영구 30%, H[360]=219.610067 → 249,399,909). 개호비 기왕 = min(172068×21, 800000)=800,000. 향후 seg1[0,48] 인원1 + seg2[48,420] 인원0.5, 월개호 일당×30×인원, 누적 호프만 H[420]=242.466>240 → seg2 cap(240-H[48]=196.326054, cappedAtIndex 1).",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 226,727,190 + 개호비 732,968,128(일수 30 명시라 불변) = 959,695,318 → 절사 959,695,300. 아래는 2026-10-04 이전 값·산식이다. compensation-other-damages-golden-derivation-2026-06-03.md 2절. 일실수입 baseline = case-001(보통인부 일당 172,068, 가동 60세 360개월, 영구 30%, H[360]=219.610067 → 249,399,909). 개호비 기왕 = min(172068×21, 800000)=800,000. 향후 seg1[0,48] 인원1 + seg2[48,420] 인원0.5, 월개호 일당×30×인원, 누적 호프만 H[420]=242.466>240 → seg2 cap(240-H[48]=196.326054, cappedAtIndex 1).",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -65,20 +65,20 @@
     }
   },
   "expected": {
-    "lostIncomeSubtotalWon": 249399909,
+    "lostIncomeSubtotalWon": 226727190,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 982368037,
+    "pecuniaryDamagesSubtotalWon": 959695318,
     "faultOffset": {
       "ratio": 0,
-      "afterWon": 982368037,
-      "beforeWon": 982368037
+      "afterWon": 959695318,
+      "beforeWon": 959695318
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 982368037
+      "afterWon": 959695318
     },
-    "finalWon": 982368000,
+    "finalWon": 959695300,
     "hoffman240CapCappedAtIndex": null,
     "otherDamagesSubtotalWon": 732968128,
     "otherDamages": {
@@ -108,10 +108,10 @@
         "endMonth": 360,
         "lossRate": 0.30000000000000004,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 219.61006732,
         "appliedHoffman": 219.61006732,
-        "amountFloorWon": 249399909
+        "amountFloorWon": 226727190
       }
     ],
     "hoffman240CapAppliedHoffman": [219.61006732],
@@ -119,7 +119,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-06-03",
-    "derivedBy": "compensation-other-damages-golden-derivation-2026-06-03.md 2절"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-other-damages-golden-derivation-2026-06-03.md 2절)"
   }
 }

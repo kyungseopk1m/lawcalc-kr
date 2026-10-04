@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-018-hospitalization-full-loss",
+  "title": "auto/injury 입원기간 100%: 입원 3개월 [0,3) 상실률 1 + 이후 영구 30% × (1-기왕증 20%)",
+  "source": "manual-derivation",
+  "notes": "r1-golden-rederivation-2026-10-04.md 5.1절. case-001 base 에 입원치료 종료일 2026-04-01(3개월), 기왕증 20%. [0,3) lossRate 1(기왕증 미적용): floor(3,441,360 × 2.97524048) = 10,238,873. [3,360) lossRate (1-0.7)×0.8 = 0.24: floor(3,441,360 × 0.24 × (219.61006732 - 2.97524048)) = 178,924,422. 합계 189,163,295 → 100원 절사 189,163,200. combinedLossRate 는 장해율 0.24.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-04-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [
+        {
+          "department": "정형외과",
+          "ratio": 0.3
+        }
+      ],
+      "temporary": [],
+      "priorImpairmentRatio": 0.2
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    }
+  },
+  "expected": {
+    "lostIncomeSubtotalWon": 189163295,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 189163295,
+    "faultOffset": {
+      "ratio": 0,
+      "afterWon": 189163295,
+      "beforeWon": 189163295
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 189163295
+    },
+    "finalWon": 189163200,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 3,
+        "lossRate": 1,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3441360,
+        "rawHoffman": 2.97524048,
+        "appliedHoffman": 2.97524048,
+        "amountFloorWon": 10238873
+      },
+      {
+        "startMonth": 3,
+        "endMonth": 360,
+        "lossRate": 0.24000000000000005,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3441360,
+        "rawHoffman": 216.63482684000002,
+        "appliedHoffman": 216.63482684000002,
+        "amountFloorWon": 178924422
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [2.97524048, 216.63482684000002],
+    "combinedLossRate": 0.24000000000000005
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md 5절"
+  }
+}

@@ -62,6 +62,24 @@ describe("개호비 (attendant care)", () => {
     expect(r.attendantCare?.hoffman240CappedAtIndex).toBeNull();
   });
 
+  it("향후개호비 월 환산 기본값은 365/12일, 월 개호비는 원 단위 반올림", () => {
+    // 광주고법(전주) 2015나100421: 86,686 × 365/12 = 2,636,699.17 → 2,636,699
+    // 12개월: floor(2,636,699 × H[12] 11.68586216) = 30,812,101 (30일이면 30,390,019)
+    const r = run({
+      attendantCare: {
+        future: [
+          {
+            directDailyWageWon: 86686,
+            startDate: "2026-01-01",
+            endDate: "2027-01-01",
+            personCount: 1,
+          },
+        ],
+      },
+    });
+    expect(r.attendantCare?.futureWon).toBe(30812101);
+  });
+
   it("향후개호비 240 cap 누적 (장기 + 다segment)", () => {
     const r = run({
       attendantCare: {

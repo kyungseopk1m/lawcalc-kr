@@ -13,7 +13,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import {
@@ -59,21 +59,27 @@ import {
   otherDamagesForDirtySnapshot,
   type OtherDamagesFormState,
 } from "../components/other-damages-form";
+import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { useResultFingerprint } from "../hooks/use-result-fingerprint";
 import {
   buildCompensationExportWarnings,
+  deductionExcessLabel,
+  solatiumSettlement,
   withCompensationExportWarnings,
 } from "../lib/compensation-warnings";
 import { formatWon, formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcCompensationPayload, type LcalcFile } from "../lib/ipc";
-import { useCaseSlot } from "../lib/case-file";
+import { type CaseSlot, useCaseSlot } from "../lib/case-file";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
+import { FieldError, parseNumberText, parseRatioText, readNumber } from "../lib/parse-number";
+import { todayIso } from "../lib/today";
 
 const APP_VERSION = __APP_VERSION__;
 
@@ -126,6 +132,10 @@ export interface CompensationFormState {
   workingDaysPerMonthText: string;
   solatiumWonText: string;
   faultRatioText: string;
+  /** 보험약관 지급기준: 위자료에도 과실상계 적용. 기본 꺼짐 (판결 실무). */
+  applyFaultToSolatium: boolean;
+  /** 입원기간(사고일 ~ 입원치료 종료일) 노동능력상실률 100%. 기본 켜짐. */
+  hospitalizationFullLoss: boolean;
   ratioDeductions: RatioDeductionInputState[];
   absoluteDeductions: AbsoluteDeductionInputState[];
   /** 산재(산×부상) 장해급여 (원). accidentType === "industrial" 일 때만 적용. */
@@ -136,7 +146,7 @@ export interface CompensationFormState {
 
 const DEFAULT_OCCUPATION = "보통인부";
 const DEFAULT_RETIREMENT_AGE = 65;
-const DEFAULT_WORKING_DAYS = 22;
+const DEFAULT_WORKING_DAYS = 20;
 
 const LABOR_RATES_DATASET = loadLaborRatesTable();
 const LABOR_RATES_VERSION_TAG = laborRatesDatasetVersionTag(LABOR_RATES_DATASET);
@@ -223,22 +233,28 @@ function newUid(): string {
   return crypto.randomUUID();
 }
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+function readRatio(label: string, text: string): number | undefined {
+  return readNumber(label, parseRatioText(text));
 }
 
-function parseRatio(text: string, fallback = 0): number {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return fallback;
-  const value = Number(trimmed);
-  return Number.isFinite(value) ? value : fallback;
-}
+const RETIREMENT_AGE_FORMAT = { unit: "세", integer: true, min: 1, max: 120 } as const;
+const WORKING_DAYS_FORMAT = { unit: "일", integer: true, min: 1, max: 31 } as const;
+const YEARS_FORMAT = { unit: "년" } as const;
 
-function parsePositiveIntText(text: string, fallback: number): number {
-  const digits = text.replaceAll(",", "").trim();
-  if (digits.length === 0) return fallback;
-  const value = Number(digits);
-  return Number.isInteger(value) && value > 0 ? value : fallback;
+function readRetirementAndWorkingDays(state: {
+  retirementAgeText: string;
+  workingDaysPerMonthText: string;
+}): { retirementAge: number; workingDaysPerMonth: number } {
+  return {
+    retirementAge:
+      readNumber("가동연한", parseNumberText(state.retirementAgeText, RETIREMENT_AGE_FORMAT)) ??
+      DEFAULT_RETIREMENT_AGE,
+    workingDaysPerMonth:
+      readNumber(
+        "월 가동일수",
+        parseNumberText(state.workingDaysPerMonthText, WORKING_DAYS_FORMAT),
+      ) ?? DEFAULT_WORKING_DAYS,
+  };
 }
 
 export function emptyPermanent(): PermanentInputState {
@@ -273,6 +289,8 @@ export function defaultCompensationFormState(): CompensationFormState {
     workingDaysPerMonthText: String(DEFAULT_WORKING_DAYS),
     solatiumWonText: "",
     faultRatioText: "",
+    applyFaultToSolatium: false,
+    hospitalizationFullLoss: true,
     ratioDeductions: [],
     absoluteDeductions: [],
     disabilityBenefitWonText: "",
@@ -282,29 +300,32 @@ export function defaultCompensationFormState(): CompensationFormState {
 
 export function buildCompensationInput(state: CompensationFormState): CompensationInput {
   const permanent: PermanentDisabilityInput[] = state.permanent
-    .map((item) => {
-      const ratio = parseRatio(item.ratioText, 0);
+    .map((item, i) => {
+      const ratio = readRatio(`영구장해 ${i + 1}번째 비율`, item.ratioText) ?? 0;
       const node: PermanentDisabilityInput = { ratio };
       const department = item.department.trim();
       if (department.length > 0) node.department = department;
       return node;
     })
-    .filter((item) => item.ratio > 0 && item.ratio <= 1);
+    .filter((item) => item.ratio > 0);
 
   const temporary: TemporaryDisabilityInput[] = state.temporary
-    .map((item) => {
-      const ratio = parseRatio(item.ratioText, 0);
-      const years = parseRatio(item.yearsText, 0);
+    .map((item, i) => {
+      const ratio = readRatio(`한시장해 ${i + 1}번째 비율`, item.ratioText) ?? 0;
+      const yearsLabel = `한시장해 ${i + 1}번째 년수`;
+      const years = readNumber(yearsLabel, parseNumberText(item.yearsText, YEARS_FORMAT)) ?? 0;
+      // 비율만 넣고 년수를 비우면 행이 소리 없이 빠져 장해가 사라진다.
+      if (ratio > 0 && years === 0) throw new Error(`${yearsLabel}: 0보다 큰 년수를 입력하세요.`);
       const node: TemporaryDisabilityInput = { ratio, years };
       const department = item.department.trim();
       if (department.length > 0) node.department = department;
       return node;
     })
-    .filter((item) => item.ratio > 0 && item.ratio <= 1 && item.years > 0);
+    .filter((item) => item.ratio > 0);
 
   const ratioDeductions: CompensationRatioDeduction[] = state.ratioDeductions
-    .map((item) => {
-      const ratio = parseRatio(item.ratioText, 0);
+    .map((item, i) => {
+      const ratio = readRatio(`비율공제 ${i + 1}번째 비율`, item.ratioText) ?? 0;
       const node: CompensationRatioDeduction = { ratio };
       const label = item.label.trim();
       if (label.length > 0) node.label = label;
@@ -322,11 +343,7 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
     })
     .filter((item) => item.amount > 0);
 
-  const retirementAge = parsePositiveIntText(state.retirementAgeText, DEFAULT_RETIREMENT_AGE);
-  const workingDaysPerMonth = parsePositiveIntText(
-    state.workingDaysPerMonthText,
-    DEFAULT_WORKING_DAYS,
-  );
+  const { retirementAge, workingDaysPerMonth } = readRetirementAndWorkingDays(state);
 
   const occupation = state.occupation.trim();
   const directWageWon = parseWonAmount(state.directWageWonText, 0);
@@ -340,8 +357,11 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
   const lossRate: CompensationInput["lossRate"] = {};
   if (permanent.length > 0) lossRate.permanent = permanent;
   if (temporary.length > 0) lossRate.temporary = temporary;
-  const priorImpairment = parseRatio(state.priorImpairmentRatioText, 0);
+  const priorImpairment = readRatio("기왕증 기여도", state.priorImpairmentRatioText) ?? 0;
   if (priorImpairment > 0) lossRate.priorImpairmentRatio = priorImpairment;
+  // 늘 명시한다. 키가 없는 파일은 이 토글이 없던 이전 버전 파일이라 "끔" 으로 연다
+  // (`applyLoadedCompensationInput`). 엔진 API 는 키 없음 = 적용이지만 화면은 구분해야 한다.
+  lossRate.hospitalizationFullLoss = state.hospitalizationFullLoss;
 
   const input: CompensationInput = {
     base: {
@@ -358,8 +378,9 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
 
   const solatium = parseWonAmount(state.solatiumWonText, 0);
   if (solatium > 0) input.solatiumWon = solatium;
-  const fault = parseRatio(state.faultRatioText, 0);
+  const fault = readRatio("과실비율", state.faultRatioText) ?? 0;
   if (fault > 0) input.faultRatio = fault;
+  if (state.applyFaultToSolatium) input.applyFaultToSolatium = true;
   if (ratioDeductions.length > 0 || absoluteDeductions.length > 0) {
     input.deductions = {};
     if (ratioDeductions.length > 0) input.deductions.ratio = ratioDeductions;
@@ -405,6 +426,10 @@ export function applyLoadedCompensationInput(input: CompensationInput): Compensa
     workingDaysPerMonthText: String(input.lostIncome.workingDaysPerMonth ?? DEFAULT_WORKING_DAYS),
     solatiumWonText: input.solatiumWon === undefined ? "" : String(input.solatiumWon),
     faultRatioText: input.faultRatio === undefined ? "" : String(input.faultRatio),
+    applyFaultToSolatium: input.applyFaultToSolatium === true,
+    // 키가 없으면 이 토글이 없던 이전 버전 파일이다. 그때는 입원기간도 장해율로 계산했으므로
+    // 끈 상태로 연다 (화면이 안내를 띄운다).
+    hospitalizationFullLoss: input.lossRate.hospitalizationFullLoss === true,
     ratioDeductions: (input.deductions?.ratio ?? []).map((item) => ({
       uid: newUid(),
       label: item.label ?? "",
@@ -420,6 +445,65 @@ export function applyLoadedCompensationInput(input: CompensationInput): Compensa
         ? ""
         : String(input.industrialInsurance.disabilityBenefitWon),
     otherDamages: applyOtherDamagesInput(input.otherDamages),
+  };
+}
+
+/**
+ * 위자료 가산·공제 초과분 (라벨, 금액) 행. 화면 카드와 클립보드가 같이 쓴다.
+ * 공제가 재산상 손해를 넘으면 "공제 후 재산상 손해 0원 → 공제 초과분 → 위자료 가산" 순으로
+ * 보여, 이 행들의 합이 최종액(100원 미만 버림 전)과 맞는다.
+ */
+function solatiumSettlementRows(
+  result: CompensationResult | CompensationAutoDeathResult,
+): [string, string][] {
+  const settlement = solatiumSettlement(result);
+  const rows: [string, string][] = [];
+  if (settlement.deductionExcessWon > 0) {
+    rows.push(
+      ["공제 후 재산상 손해", formatWon(0)],
+      [deductionExcessLabel(settlement), formatWon(-settlement.deductionExcessWon)],
+    );
+  }
+  if (settlement.addedWon > 0) rows.push(["위자료 가산", formatWon(settlement.addedWon)]);
+  return rows;
+}
+
+function hospitalizationLine(months: number): string {
+  return `입원기간 ${months}개월 상실률 100% (월 단위 내림)`;
+}
+
+/**
+ * 입원기간 상실률 100% 를 적용한 개월 수. 결과의 앞쪽 상실률 1 구간이 끝나는 달이다
+ * (엔진은 입원 종료월을 구간 경계로 두고 그 앞 구간을 상실률 1 로 계산한다). 입력이 아니라
+ * 결과에서 구해, 계산 뒤 입력을 바꿔도 표시가 계산 당시와 어긋나지 않는다.
+ *
+ * 장해율 자체가 100% 인 결과(`combinedLossRate` 1)는 입원 구간을 구별할 수 없고 전 기간이
+ * 100% 라 0 으로 둔다. 입원 100% 를 끄면 장해율이 100% 미만인 한 상실률 1 구간이 없어 0 이다.
+ */
+export function hospitalizationMonthsOf(result: CompensationResult): number {
+  if (result.combinedLossRate >= 1) return 0;
+  let months = 0;
+  for (const segment of result.segments) {
+    if (segment.lossRate !== 1) break;
+    months = segment.endMonth;
+  }
+  return months;
+}
+
+/**
+ * 사고일을 바꾼다. 입원치료 종료일을 사용자가 따로 고치지 않았으면(= 사고일과 같으면)
+ * 함께 옮긴다. 기본값 종료일이 옛 사고일에 남아 그 사이 전체가 상실률 100% 로 계산되는
+ * 일을 막는다.
+ */
+export function withAccidentDate(
+  state: CompensationFormState,
+  accidentDate: string,
+): CompensationFormState {
+  return {
+    ...state,
+    accidentDate,
+    treatmentEndDate:
+      state.treatmentEndDate === state.accidentDate ? accidentDate : state.treatmentEndDate,
   };
 }
 
@@ -455,11 +539,13 @@ function stateForDirtySnapshot(state: CompensationFormState) {
       yearsText: item.yearsText,
     })),
     priorImpairmentRatioText: state.priorImpairmentRatioText,
+    hospitalizationFullLoss: state.hospitalizationFullLoss,
     occupation: state.occupation,
     directWageWonText: state.directWageWonText,
     workingDaysPerMonthText: state.workingDaysPerMonthText,
     solatiumWonText: state.solatiumWonText,
     faultRatioText: state.faultRatioText,
+    applyFaultToSolatium: state.applyFaultToSolatium,
     ratioDeductions: state.ratioDeductions.map((item) => ({
       label: item.label,
       ratioText: item.ratioText,
@@ -481,7 +567,7 @@ function buildCompensationDirtySnapshot(state: CompensationFormState, note: stri
  */
 function buildIndustrialBenefitLines(
   industrialBenefit: NonNullable<CompensationResult["industrialBenefit"]>,
-  benefitLabel: "장해급여" | "유족급여",
+  benefitLabel: "장해급여·휴업급여" | "유족급여",
 ): string[] {
   const capSuffix =
     industrialBenefit.deductedWon < industrialBenefit.benefitWon
@@ -500,7 +586,10 @@ function clipboardWarningLines(result: CompensationResult | CompensationAutoDeat
   return ["", "확인이 필요한 사항", ...warnings.map((w) => `- ${w}`)];
 }
 
-export function formatCompensationForClipboard(result: CompensationResult): string {
+export function formatCompensationForClipboard(
+  result: CompensationResult,
+  hospitalMonths = 0,
+): string {
   const segmentRows = result.segments
     .map(
       (segment, i) =>
@@ -517,10 +606,11 @@ export function formatCompensationForClipboard(result: CompensationResult): stri
       ? "LawCalc Korea 산재 사고 부상 손해배상 계산 결과"
       : "LawCalc Korea 자동차 사고 부상 손해배상 계산 결과",
     `중복장해율: ${formatRatioPercent(result.combinedLossRate)}`,
+    ...(hospitalMonths > 0 ? [hospitalizationLine(hospitalMonths)] : []),
     `일실수입 소계: ${formatWon(result.lostIncomeSubtotalWon)}`,
   ];
   if (result.industrialBenefit !== undefined) {
-    lines.push(...buildIndustrialBenefitLines(result.industrialBenefit, "장해급여"));
+    lines.push(...buildIndustrialBenefitLines(result.industrialBenefit, "장해급여·휴업급여"));
   }
   lines.push(
     `위자료: ${formatWon(result.solatiumWon)}`,
@@ -535,6 +625,7 @@ export function formatCompensationForClipboard(result: CompensationResult): stri
       `산재보험급여 공제 (장해급여): ${formatWon(result.deductions.industrialBenefitWon)}`,
     );
   }
+  for (const [label, value] of solatiumSettlementRows(result)) lines.push(`${label}: ${value}`);
   if (result.otherDamages !== undefined) {
     lines.push(
       `개호비: ${formatWon(result.otherDamages.attendantCareWon)}`,
@@ -604,6 +695,8 @@ export interface CompensationDeathFormState {
   funeralExpenseWonText: string;
   solatiumWonText: string;
   faultRatioText: string;
+  /** 보험약관 지급기준: 위자료에도 과실상계 적용. 기본 꺼짐 (판결 실무). */
+  applyFaultToSolatium: boolean;
   ratioDeductions: RatioDeductionInputState[];
   absoluteDeductions: AbsoluteDeductionInputState[];
   /** 산재(산×사망) 유족급여 (원). accidentType === "industrial" 일 때만 적용. */
@@ -635,6 +728,7 @@ export function defaultCompensationDeathFormState(): CompensationDeathFormState 
     funeralExpenseWonText: String(DEFAULT_FUNERAL_EXPENSE),
     solatiumWonText: "",
     faultRatioText: "",
+    applyFaultToSolatium: false,
     ratioDeductions: [],
     absoluteDeductions: [],
     survivorBenefitWonText: "",
@@ -652,11 +746,7 @@ export function defaultCompensationDeathFormState(): CompensationDeathFormState 
 export function buildCompensationDeathInput(
   state: CompensationDeathFormState,
 ): CompensationAutoDeathInput {
-  const retirementAge = parsePositiveIntText(state.retirementAgeText, DEFAULT_RETIREMENT_AGE);
-  const workingDaysPerMonth = parsePositiveIntText(
-    state.workingDaysPerMonthText,
-    DEFAULT_WORKING_DAYS,
-  );
+  const { retirementAge, workingDaysPerMonth } = readRetirementAndWorkingDays(state);
 
   const occupation = state.occupation.trim();
   const directWageWon = parseWonAmount(state.directWageWonText, 0);
@@ -668,8 +758,8 @@ export function buildCompensationDeathInput(
   if (directWageWon > 0) lostIncome.directWageWon = directWageWon;
 
   const ratioDeductions: CompensationRatioDeduction[] = state.ratioDeductions
-    .map((item) => {
-      const ratio = parseRatio(item.ratioText, 0);
+    .map((item, i) => {
+      const ratio = readRatio(`비율공제 ${i + 1}번째 비율`, item.ratioText) ?? 0;
       const node: CompensationRatioDeduction = { ratio };
       const label = item.label.trim();
       if (label.length > 0) node.label = label;
@@ -698,14 +788,15 @@ export function buildCompensationDeathInput(
     lostIncome,
   };
 
-  const livingCost = parseRatio(state.livingCostDeductionRatioText, -1);
-  if (livingCost >= 0 && livingCost <= 1) input.livingCostDeductionRatio = livingCost;
+  const livingCost = readRatio("생계비 공제 비율", state.livingCostDeductionRatioText);
+  if (livingCost !== undefined) input.livingCostDeductionRatio = livingCost;
   const funeral = parseWonAmount(state.funeralExpenseWonText, DEFAULT_FUNERAL_EXPENSE);
   input.funeralExpenseWon = funeral;
   const solatium = parseWonAmount(state.solatiumWonText, 0);
   if (solatium > 0) input.solatiumWon = solatium;
-  const fault = parseRatio(state.faultRatioText, 0);
+  const fault = readRatio("과실비율", state.faultRatioText) ?? 0;
   if (fault > 0) input.faultRatio = fault;
+  if (state.applyFaultToSolatium) input.applyFaultToSolatium = true;
   if (ratioDeductions.length > 0 || absoluteDeductions.length > 0) {
     input.deductions = {};
     if (ratioDeductions.length > 0) input.deductions.ratio = ratioDeductions;
@@ -758,6 +849,7 @@ export function applyLoadedCompensationDeathInput(
     funeralExpenseWonText: String(input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE),
     solatiumWonText: input.solatiumWon === undefined ? "" : String(input.solatiumWon),
     faultRatioText: input.faultRatio === undefined ? "" : String(input.faultRatio),
+    applyFaultToSolatium: input.applyFaultToSolatium === true,
     ratioDeductions: (input.deductions?.ratio ?? []).map((item) => ({
       uid: newUid(),
       label: item.label ?? "",
@@ -817,6 +909,7 @@ export function formatCompensationDeathForClipboard(result: CompensationAutoDeat
       `산재보험급여 공제 (유족급여): ${formatWon(result.deductions.industrialBenefitWon)}`,
     );
   }
+  for (const [label, value] of solatiumSettlementRows(result)) lines.push(`${label}: ${value}`);
   if (result.otherDamages !== undefined) {
     lines.push(
       `개호비: ${formatWon(result.otherDamages.attendantCareWon)}`,
@@ -901,6 +994,7 @@ function deathStateForDirtySnapshot(state: CompensationDeathFormState) {
     funeralExpenseWonText: state.funeralExpenseWonText,
     solatiumWonText: state.solatiumWonText,
     faultRatioText: state.faultRatioText,
+    applyFaultToSolatium: state.applyFaultToSolatium,
     ratioDeductions: state.ratioDeductions.map((item) => ({
       label: item.label,
       ratioText: item.ratioText,
@@ -931,6 +1025,14 @@ type CompensationMode = "injury" | "death";
  * 전체 5탭 구조는 유지하며, 6번째 탭을 만들지 않는다 (plan 4절 결정 3).
  */
 /** 사건 파일에서 꺼낸 compensation envelope 가 사망 모드인지 판별한다. */
+/**
+ * `.lcalc` 열기 비교용 세부 키. 최종액이 같아도 소계·과실상계 후 값이 바뀌면(예: 과실 0% 에
+ * 위자료가 있는 구 파일은 위자료가 소계에서 빠져도 최종액이 같다) 세부 구성 안내를 낸다.
+ */
+function compensationResultDetailKey(result: CompensationResult | CompensationAutoDeathResult) {
+  return `${result.pecuniaryDamagesSubtotalWon}/${result.faultOffset.afterWon}`;
+}
+
 function isDeathCompensationLcalcFile(file: LcalcFile): boolean {
   if (file.kind !== "compensation") {
     return false;
@@ -942,24 +1044,67 @@ function isDeathCompensationLcalcFile(file: LcalcFile): boolean {
 }
 
 /**
- * 부상/사망 inner view 공용 props. 사건 파일 적용 시 모드가 다르면
- * `onApplyOtherMode` 로 wrapper 에 모드 전환을 요청하고, 전환된 view 가
- * mount 시점에 `pendingCaseFileRef` 를 소비한다.
+ * 부상/사망 inner view 공용 props. 두 view 는 늘 마운트해 두고 고르지 않은 쪽은 숨긴다.
+ * 모드를 오가도 입력이 남고, 미저장 추적도 view 별 키로 따로 유지된다. 사건 파일 슬롯은
+ * wrapper 가 하나만 등록하고 `caseSlotRef` 로 각 view 의 최신 슬롯에 위임한다.
  */
 interface CompensationViewProps {
   active?: boolean;
-  pendingCaseFileRef?: React.MutableRefObject<LcalcFile | null>;
-  onApplyOtherMode?: (target: CompensationMode, file: LcalcFile) => void;
+  caseSlotRef?: React.MutableRefObject<CaseSlot | null>;
 }
+
+const COMPENSATION_MODE_LABELS: Record<CompensationMode, string> = {
+  injury: "부상",
+  death: "사망",
+};
 
 export function CompensationCalculator({ active = true }: { active?: boolean }) {
   const [mode, setMode] = useState<CompensationMode>("injury");
-  const pendingCaseFileRef = useRef<LcalcFile | null>(null);
+  const injurySlotRef = useRef<CaseSlot | null>(null);
+  const deathSlotRef = useRef<CaseSlot | null>(null);
+  const slotOf = (target: CompensationMode) =>
+    (target === "death" ? deathSlotRef : injurySlotRef).current;
+  // 마지막 collect 가 실제로 담은 모드. markSaved 는 그 모드만 저장 완료로 둔다.
+  const collectedModeRef = useRef<CompensationMode | null>(null);
 
-  const requestModeForCaseFile = (target: CompensationMode, file: LcalcFile) => {
-    pendingCaseFileRef.current = file;
-    setMode(target);
-  };
+  useCaseSlot("compensation", {
+    // 사건 파일에는 손해배상 계산이 하나만 들어간다. 지금 모드에 내용이 있으면 그것을,
+    // 없으면 다른 모드를 담는다. 둘 다 있으면 지금 모드를 담고 빠진 쪽을 알린다.
+    collect: () => {
+      const other: CompensationMode = mode === "death" ? "injury" : "death";
+      const current = slotOf(mode)?.collect() ?? { status: "pristine" };
+      const fallback = slotOf(other)?.collect() ?? { status: "pristine" };
+      if (current.status === "pristine") {
+        collectedModeRef.current = fallback.status === "ok" ? other : null;
+        return fallback;
+      }
+      collectedModeRef.current = current.status === "ok" ? mode : null;
+      if (current.status === "ok" && fallback.status !== "pristine") {
+        return {
+          ...current,
+          notice: `손해배상 ${COMPENSATION_MODE_LABELS[other]} 입력은 이 사건 파일에 들어가지 않습니다.`,
+        };
+      }
+      return current;
+    },
+    apply: (file) => {
+      const target = isDeathCompensationLcalcFile(file) ? "death" : "injury";
+      // 대상 모드에 먼저 적용한다. 파일이 깨져 실패하면 여기서 throw 되어 다른 모드 입력은
+      // 그대로 남는다. 성공한 뒤에만 다른 모드에 남은 이전 사건 입력을 비워, 다음 사건
+      // 저장에 섞이지 않게 한다.
+      const differs = slotOf(target)?.apply(file);
+      slotOf(target === "death" ? "injury" : "death")?.reset();
+      setMode(target);
+      return differs;
+    },
+    markSaved: () => {
+      if (collectedModeRef.current) slotOf(collectedModeRef.current)?.markSaved();
+    },
+    reset: () => {
+      injurySlotRef.current?.reset();
+      deathSlotRef.current?.reset();
+    },
+  });
 
   return (
     <div className="flex w-full flex-1 flex-col">
@@ -983,32 +1128,27 @@ export function CompensationCalculator({ active = true }: { active?: boolean }) 
           자동차 사고 · 사망
         </Button>
       </div>
-      {mode === "injury" ? (
-        <InjuryCompensationView
-          active={active}
-          pendingCaseFileRef={pendingCaseFileRef}
-          onApplyOtherMode={requestModeForCaseFile}
-        />
-      ) : (
-        <DeathCompensationView
-          active={active}
-          pendingCaseFileRef={pendingCaseFileRef}
-          onApplyOtherMode={requestModeForCaseFile}
-        />
-      )}
+      <div
+        className={mode === "injury" ? "contents" : "hidden"}
+        data-testid="compensation-injury-panel"
+      >
+        <InjuryCompensationView active={active && mode === "injury"} caseSlotRef={injurySlotRef} />
+      </div>
+      <div
+        className={mode === "death" ? "contents" : "hidden"}
+        data-testid="compensation-death-panel"
+      >
+        <DeathCompensationView active={active && mode === "death"} caseSlotRef={deathSlotRef} />
+      </div>
     </div>
   );
 }
 
-function InjuryCompensationView({
-  active = true,
-  pendingCaseFileRef,
-  onApplyOtherMode,
-}: CompensationViewProps) {
+function InjuryCompensationView({ active = true, caseSlotRef }: CompensationViewProps) {
   const [state, setState] = useState<CompensationFormState>(defaultCompensationFormState);
+  // 입원기간 100% 토글이 없던 이전 버전 파일을 열었는지. 끈 상태로 연 이유를 알린다.
+  const [legacyHospitalNotice, setLegacyHospitalNotice] = useState(false);
   const [note, setNote] = useState("");
-  const [result, setResult] = useState<CompensationResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -1020,6 +1160,20 @@ function InjuryCompensationView({
   const dirtySnapshot = useMemo(() => buildCompensationDirtySnapshot(state, note), [state, note]);
   const markCompensationClean = useLcalcDirtyTracker("compensation", dirtySnapshot);
   const pristineSnapshotRef = useRef(dirtySnapshot);
+  const resultFingerprint = buildCompensationDirtySnapshot(state, "");
+  const {
+    value: result,
+    setValue: setResult,
+    setLoaded: setLoadedResult,
+    stale: resultStale,
+    notice: resultNotice,
+  } = useResultFingerprint<CompensationResult>(resultFingerprint);
+  const {
+    value: error,
+    setValue: setError,
+    stale: errorStale,
+  } = useResultFingerprint<string>(resultFingerprint);
+  const resultReady = result !== null && !resultStale;
 
   const update = (patch: Partial<CompensationFormState>) =>
     setState((prev) => ({ ...prev, ...patch }));
@@ -1039,6 +1193,7 @@ function InjuryCompensationView({
 
   const handleReset = () => {
     setState(defaultCompensationFormState());
+    setLegacyHospitalNotice(false);
     setNote("");
     setResult(null);
     setError(null);
@@ -1064,28 +1219,30 @@ function InjuryCompensationView({
 
   const handleCopy = () =>
     runAction("copy", async () => {
-      if (!result) throw new Error("계산 후 복사해 주세요.");
-      await ipc.copyToClipboard(formatCompensationForClipboard(result));
+      if (!result || resultStale) throw new Error("계산 후 복사해 주세요.");
+      await ipc.copyToClipboard(
+        formatCompensationForClipboard(result, hospitalizationMonthsOf(result)),
+      );
       return "손해배상 계산 결과를 클립보드에 복사했습니다.";
     });
 
   const handleExportPdf = () =>
     runAction("pdf", async () => {
-      if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 PDF를 저장해 주세요.");
       const path = await ipc.exportCompensationPdf(withCompensationExportWarnings(result));
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
-      if (!result) throw new Error("계산 후 CSV를 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 CSV를 저장해 주세요.");
       const path = await ipc.exportCompensationCsv(withCompensationExportWarnings(result));
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleSaveLcalc = () =>
     runAction("save", async () => {
-      if (!result) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       const input = buildCompensationInput(state);
       const path = await ipc.saveLcalc(buildCompensationLcalcFile(input, result, note));
       if (path) {
@@ -1103,31 +1260,31 @@ function InjuryCompensationView({
     }
     const injuryInput = loaded.input;
     const appliedState = applyLoadedCompensationInput(injuryInput);
+    setLegacyHospitalNotice(injuryInput.lossRate.hospitalizationFullLoss === undefined);
     const loadedNote = loaded.note ?? "";
     setState(appliedState);
     setNote(loadedNote);
-    const loadedResult =
-      loaded.result !== undefined && loaded.result.mode !== "death"
-        ? loaded.result
-        : computeCompensation(injuryInput);
-    setResult(loadedResult);
+    const differs = setLoadedResult(
+      loaded.result !== undefined && loaded.result.mode !== "death" ? loaded.result : undefined,
+      // 화면에 연 상태 그대로 다시 계산한다. 키가 없는 구 파일은 엔진 기본(적용)이 아니라
+      // 화면 기본(끔)으로 연다.
+      () =>
+        computeCompensation({
+          ...injuryInput,
+          lossRate: {
+            ...injuryInput.lossRate,
+            hospitalizationFullLoss: appliedState.hospitalizationFullLoss,
+          },
+        }),
+      (r) => formatWon(r.finalWon),
+      compensationResultDetailKey,
+    );
     setError(null);
     markCompensationClean(buildCompensationDirtySnapshot(appliedState, loadedNote));
+    return differs;
   };
 
-  const applyLoadedFileRef = useRef(applyLoadedFile);
-  useEffect(() => {
-    applyLoadedFileRef.current = applyLoadedFile;
-  });
-  useEffect(() => {
-    const pending = pendingCaseFileRef?.current;
-    if (pending && !isDeathCompensationLcalcFile(pending)) {
-      pendingCaseFileRef.current = null;
-      applyLoadedFileRef.current(pending);
-    }
-  }, [pendingCaseFileRef]);
-
-  useCaseSlot("compensation", {
+  const caseSlot: CaseSlot = {
     collect: () => {
       if (dirtySnapshot === pristineSnapshotRef.current) {
         return { status: "pristine" };
@@ -1142,15 +1299,12 @@ function InjuryCompensationView({
         return { status: "invalid" };
       }
     },
-    apply: (file) => {
-      if (isDeathCompensationLcalcFile(file) && onApplyOtherMode) {
-        onApplyOtherMode("death", file);
-        return;
-      }
-      applyLoadedFile(file);
-    },
+    apply: applyLoadedFile,
     markSaved: () => markCompensationClean(),
     reset: handleReset,
+  };
+  useEffect(() => {
+    if (caseSlotRef) caseSlotRef.current = caseSlot;
   });
 
   const handleLoadLcalc = () =>
@@ -1262,16 +1416,20 @@ function InjuryCompensationView({
                 <Input
                   type="date"
                   value={state.accidentDate}
-                  onChange={(e) => update({ accidentDate: e.target.value })}
+                  onChange={(e) => setState((prev) => withAccidentDate(prev, e.target.value))}
                 />
               </label>
               <label className="grid gap-2 text-sm font-medium">
-                치료종료일
+                입원치료 종료일
                 <Input
                   type="date"
                   value={state.treatmentEndDate}
                   onChange={(e) => update({ treatmentEndDate: e.target.value })}
                 />
+                <span className="text-xs font-normal text-muted-foreground">
+                  따로 고치기 전에는 사고일을 따라갑니다. 월 단위로 내림하여 1개월 미만은 반영되지
+                  않습니다.
+                </span>
               </label>
               <label className="grid gap-2 text-sm font-medium">
                 가동연한 (만 나이)
@@ -1279,6 +1437,9 @@ function InjuryCompensationView({
                   inputMode="numeric"
                   value={state.retirementAgeText}
                   onChange={(e) => update({ retirementAgeText: e.target.value })}
+                />
+                <FieldError
+                  message={parseNumberText(state.retirementAgeText, RETIREMENT_AGE_FORMAT).error}
                 />
               </label>
             </div>
@@ -1323,6 +1484,9 @@ function InjuryCompensationView({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                  <div className="col-span-3 empty:hidden">
+                    <FieldError message={parseRatioText(item.ratioText).error} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -1366,6 +1530,10 @@ function InjuryCompensationView({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                  <div className="col-span-4 grid empty:hidden">
+                    <FieldError message={parseRatioText(item.ratioText).error} />
+                    <FieldError message={parseNumberText(item.yearsText, YEARS_FORMAT).error} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -1377,7 +1545,30 @@ function InjuryCompensationView({
                 value={state.priorImpairmentRatioText}
                 onChange={(e) => update({ priorImpairmentRatioText: e.target.value })}
               />
+              <FieldError message={parseRatioText(state.priorImpairmentRatioText).error} />
             </label>
+
+            <label className="flex items-center gap-2 border-t border-border pt-3 text-sm">
+              <input
+                type="checkbox"
+                checked={state.hospitalizationFullLoss}
+                onChange={(e) => update({ hospitalizationFullLoss: e.target.checked })}
+              />
+              입원기간 노동능력상실률 100% 적용
+            </label>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              사고일부터 입원치료 종료일까지는 장해율 대신 100%로 일실수입을 계산합니다.
+            </p>
+            {legacyHospitalNotice ? (
+              <p
+                role="status"
+                className="-mt-1 text-xs text-amber-700 dark:text-amber-300"
+                data-testid="compensation-legacy-hospitalization-notice"
+              >
+                이전 버전 파일이라 입원기간 100% 적용을 끈 상태로 열었습니다. 켜면 사고일부터
+                입원치료 종료일까지 100%로 계산합니다.
+              </p>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -1428,6 +1619,14 @@ function InjuryCompensationView({
                 value={state.workingDaysPerMonthText}
                 onChange={(e) => update({ workingDaysPerMonthText: e.target.value })}
               />
+              <FieldError
+                message={parseNumberText(state.workingDaysPerMonthText, WORKING_DAYS_FORMAT).error}
+              />
+              <span className="text-xs font-normal text-muted-foreground">
+                대법원 2024. 4. 25. 선고 2020다271650: 2014년 사고 당시 도시 일용근로자는 특별한
+                사정이 없는 한 월 20일 초과 인정이 어렵다고 보았습니다. 이 앱은 사고 시기와 무관하게
+                20일을 기본값으로 둡니다 (직접 바꿀 수 있습니다).
+              </span>
             </label>
           </CardContent>
         </Card>
@@ -1466,7 +1665,7 @@ function InjuryCompensationView({
               </div>
               {state.accidentType === "industrial" ? (
                 <label className="grid gap-2 text-sm font-medium">
-                  장해급여 (원, 과실상계 후 공제)
+                  장해급여 (원, 과실상계 전에 일실수입에서 공제)
                   <Input
                     inputMode="numeric"
                     placeholder="예: 50,000,000"
@@ -1476,6 +1675,11 @@ function InjuryCompensationView({
                     }
                     data-testid="compensation-disability-benefit-input"
                   />
+                  <span className="text-xs font-normal text-muted-foreground">
+                    휴업급여를 받았다면 함께 더해 넣으세요. 입원기간 일실수입과 같은 성질의 손해라
+                    일실수입 한도에서 먼저 공제한 뒤 과실상계합니다 (대법원 2022. 3. 24. 선고
+                    2021다241618 전원합의체).
+                  </span>
                 </label>
               ) : null}
             </div>
@@ -1498,8 +1702,20 @@ function InjuryCompensationView({
                   value={state.faultRatioText}
                   onChange={(e) => update({ faultRatioText: e.target.value })}
                 />
+                <FieldError message={parseRatioText(state.faultRatioText).error} />
               </label>
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={state.applyFaultToSolatium}
+                onChange={(e) => update({ applyFaultToSolatium: e.target.checked })}
+              />
+              위자료에도 과실상계 적용 (보험약관 기준)
+            </label>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              끄면 판결 실무대로 재산상 손해에만 과실상계·공제를 하고 위자료는 그 뒤에 더합니다.
+            </p>
 
             <div className="grid gap-2 border-t border-border pt-3">
               <div className="flex items-center justify-between">
@@ -1509,6 +1725,11 @@ function InjuryCompensationView({
                   추가
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                항목 금액이 아니라 과실상계 후{" "}
+                {state.applyFaultToSolatium ? "위자료를 포함한 손해 전체" : "재산상 손해 전체"}에
+                비율을 곱해 뺍니다.
+              </p>
               {state.ratioDeductions.map((item) => (
                 <div key={item.uid} className="grid grid-cols-[1fr_120px_auto] items-center gap-2">
                   <Input
@@ -1531,6 +1752,9 @@ function InjuryCompensationView({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                  <div className="col-span-3 empty:hidden">
+                    <FieldError message={parseRatioText(item.ratioText).error} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -1538,13 +1762,18 @@ function InjuryCompensationView({
             <div className="grid gap-2 border-t border-border pt-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">
-                  전액공제 (치료비 · 선급금 등)
+                  전액공제 (지급치료비 · 선급금 등)
                 </span>
                 <Button variant="outline" size="sm" type="button" onClick={addAbsoluteDeduction}>
                   <Plus className="mr-1 h-3 w-3" />
                   추가
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                보험사 등이 이미 지급한 치료비는 기타손해의 기왕치료비에도 넣은 뒤 여기서 빼야
+                합니다. 손해액에 넣지 않고 여기에만 넣으면 지급치료비 × (1 − 기왕증) × (1 − 과실)
+                만큼 더 공제됩니다.
+              </p>
               {state.absoluteDeductions.map((item) => (
                 <div key={item.uid} className="grid grid-cols-[1fr_140px_auto] items-center gap-2">
                   <Input
@@ -1604,7 +1833,7 @@ function InjuryCompensationView({
           version={LABOR_RATES_VERSION_TAG}
         />
 
-        {error ? (
+        {error && !errorStale ? (
           <div
             className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
             role="alert"
@@ -1614,7 +1843,11 @@ function InjuryCompensationView({
           </div>
         ) : null}
 
-        {result ? <ResultCards result={result} /> : null}
+        <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
+
+        {result ? (
+          <ResultCards result={result} hospitalMonths={hospitalizationMonthsOf(result)} />
+        ) : null}
 
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -1628,7 +1861,7 @@ function InjuryCompensationView({
                 label="PDF"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportPdf}
               />
               <ActionButton
@@ -1637,7 +1870,7 @@ function InjuryCompensationView({
                 label="CSV"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportCsv}
               />
               <ActionButton
@@ -1646,7 +1879,7 @@ function InjuryCompensationView({
                 label="복사"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleCopy}
               />
               <ActionButton
@@ -1655,7 +1888,7 @@ function InjuryCompensationView({
                 label=".lcalc 저장"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleSaveLcalc}
               />
               <ActionButton
@@ -1664,7 +1897,7 @@ function InjuryCompensationView({
                 label=".lcalc 열기"
                 loadingAction={loadingAction}
                 requiresResult={false}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleLoadLcalc}
               />
             </div>
@@ -1692,15 +1925,9 @@ function InjuryCompensationView({
   );
 }
 
-function DeathCompensationView({
-  active = true,
-  pendingCaseFileRef,
-  onApplyOtherMode,
-}: CompensationViewProps) {
+function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewProps) {
   const [state, setState] = useState<CompensationDeathFormState>(defaultCompensationDeathFormState);
   const [note, setNote] = useState("");
-  const [result, setResult] = useState<CompensationAutoDeathResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -1713,8 +1940,22 @@ function DeathCompensationView({
     () => buildCompensationDeathDirtySnapshot(state, note),
     [state, note],
   );
-  const markCompensationClean = useLcalcDirtyTracker("compensation", dirtySnapshot);
+  const markCompensationClean = useLcalcDirtyTracker("compensation-death", dirtySnapshot);
   const pristineSnapshotRef = useRef(dirtySnapshot);
+  const resultFingerprint = buildCompensationDeathDirtySnapshot(state, "");
+  const {
+    value: result,
+    setValue: setResult,
+    setLoaded: setLoadedResult,
+    stale: resultStale,
+    notice: resultNotice,
+  } = useResultFingerprint<CompensationAutoDeathResult>(resultFingerprint);
+  const {
+    value: error,
+    setValue: setError,
+    stale: errorStale,
+  } = useResultFingerprint<string>(resultFingerprint);
+  const resultReady = result !== null && !resultStale;
 
   const update = (patch: Partial<CompensationDeathFormState>) =>
     setState((prev) => ({ ...prev, ...patch }));
@@ -1759,28 +2000,28 @@ function DeathCompensationView({
 
   const handleCopy = () =>
     runAction("copy", async () => {
-      if (!result) throw new Error("계산 후 복사해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 복사해 주세요.");
       await ipc.copyToClipboard(formatCompensationDeathForClipboard(result));
       return "사망 손해배상 계산 결과를 클립보드에 복사했습니다.";
     });
 
   const handleExportPdf = () =>
     runAction("pdf", async () => {
-      if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 PDF를 저장해 주세요.");
       const path = await ipc.exportCompensationDeathPdf(withCompensationExportWarnings(result));
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
-      if (!result) throw new Error("계산 후 CSV를 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 CSV를 저장해 주세요.");
       const path = await ipc.exportCompensationDeathCsv(withCompensationExportWarnings(result));
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleSaveLcalc = () =>
     runAction("save", async () => {
-      if (!result) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       const input = buildCompensationDeathInput(state);
       const path = await ipc.saveLcalc(buildCompensationDeathLcalcFile(input, result, note));
       if (path) {
@@ -1800,26 +2041,19 @@ function DeathCompensationView({
     const loadedNote = loaded.note ?? "";
     setState(appliedState);
     setNote(loadedNote);
-    const loadedResult =
-      loaded.result?.mode === "death" ? loaded.result : computeCompensationDeath(loaded.input);
-    setResult(loadedResult);
+    const deathInput = loaded.input;
+    const differs = setLoadedResult(
+      loaded.result?.mode === "death" ? loaded.result : undefined,
+      () => computeCompensationDeath(deathInput),
+      (r) => formatWon(r.finalWon),
+      compensationResultDetailKey,
+    );
     setError(null);
     markCompensationClean(buildCompensationDeathDirtySnapshot(appliedState, loadedNote));
+    return differs;
   };
 
-  const applyLoadedFileRef = useRef(applyLoadedFile);
-  useEffect(() => {
-    applyLoadedFileRef.current = applyLoadedFile;
-  });
-  useEffect(() => {
-    const pending = pendingCaseFileRef?.current;
-    if (pending && isDeathCompensationLcalcFile(pending)) {
-      pendingCaseFileRef.current = null;
-      applyLoadedFileRef.current(pending);
-    }
-  }, [pendingCaseFileRef]);
-
-  useCaseSlot("compensation", {
+  const caseSlot: CaseSlot = {
     collect: () => {
       if (dirtySnapshot === pristineSnapshotRef.current) {
         return { status: "pristine" };
@@ -1834,15 +2068,12 @@ function DeathCompensationView({
         return { status: "invalid" };
       }
     },
-    apply: (file) => {
-      if (!isDeathCompensationLcalcFile(file) && onApplyOtherMode) {
-        onApplyOtherMode("injury", file);
-        return;
-      }
-      applyLoadedFile(file);
-    },
+    apply: applyLoadedFile,
     markSaved: () => markCompensationClean(),
     reset: handleReset,
+  };
+  useEffect(() => {
+    if (caseSlotRef) caseSlotRef.current = caseSlot;
   });
 
   const handleLoadLcalc = () =>
@@ -1950,6 +2181,9 @@ function DeathCompensationView({
                   value={state.retirementAgeText}
                   onChange={(e) => update({ retirementAgeText: e.target.value })}
                 />
+                <FieldError
+                  message={parseNumberText(state.retirementAgeText, RETIREMENT_AGE_FORMAT).error}
+                />
               </label>
             </div>
           </CardContent>
@@ -2003,6 +2237,16 @@ function DeathCompensationView({
                   value={state.workingDaysPerMonthText}
                   onChange={(e) => update({ workingDaysPerMonthText: e.target.value })}
                 />
+                <FieldError
+                  message={
+                    parseNumberText(state.workingDaysPerMonthText, WORKING_DAYS_FORMAT).error
+                  }
+                />
+                <span className="text-xs font-normal text-muted-foreground">
+                  대법원 2024. 4. 25. 선고 2020다271650: 2014년 사고 당시 도시 일용근로자는 특별한
+                  사정이 없는 한 월 20일 초과 인정이 어렵다고 보았습니다. 이 앱은 사고 시기와
+                  무관하게 20일을 기본값으로 둡니다 (직접 바꿀 수 있습니다).
+                </span>
               </label>
               <label className="grid gap-2 text-sm font-medium">
                 생계비 공제 비율 (0~1)
@@ -2012,6 +2256,7 @@ function DeathCompensationView({
                   value={state.livingCostDeductionRatioText}
                   onChange={(e) => update({ livingCostDeductionRatioText: e.target.value })}
                 />
+                <FieldError message={parseRatioText(state.livingCostDeductionRatioText).error} />
               </label>
             </div>
           </CardContent>
@@ -2051,7 +2296,7 @@ function DeathCompensationView({
               </div>
               {state.accidentType === "industrial" ? (
                 <label className="grid gap-2 text-sm font-medium">
-                  유족급여 (원, 과실상계 후 공제)
+                  유족급여 (원, 과실상계 전에 일실수입에서 공제)
                   <Input
                     inputMode="numeric"
                     placeholder="예: 100,000,000"
@@ -2092,8 +2337,20 @@ function DeathCompensationView({
                   value={state.faultRatioText}
                   onChange={(e) => update({ faultRatioText: e.target.value })}
                 />
+                <FieldError message={parseRatioText(state.faultRatioText).error} />
               </label>
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={state.applyFaultToSolatium}
+                onChange={(e) => update({ applyFaultToSolatium: e.target.checked })}
+              />
+              위자료에도 과실상계 적용 (보험약관 기준)
+            </label>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              끄면 판결 실무대로 재산상 손해에만 과실상계·공제를 하고 위자료는 그 뒤에 더합니다.
+            </p>
 
             <div className="grid gap-2 border-t border-border pt-3">
               <div className="flex items-center justify-between">
@@ -2103,6 +2360,11 @@ function DeathCompensationView({
                   추가
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                항목 금액이 아니라 과실상계 후{" "}
+                {state.applyFaultToSolatium ? "위자료를 포함한 손해 전체" : "재산상 손해 전체"}에
+                비율을 곱해 뺍니다.
+              </p>
               {state.ratioDeductions.map((item) => (
                 <div key={item.uid} className="grid grid-cols-[1fr_120px_auto] items-center gap-2">
                   <Input
@@ -2125,6 +2387,9 @@ function DeathCompensationView({
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                  <div className="col-span-3 empty:hidden">
+                    <FieldError message={parseRatioText(item.ratioText).error} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -2295,7 +2560,7 @@ function DeathCompensationView({
           version={LABOR_RATES_VERSION_TAG}
         />
 
-        {error ? (
+        {error && !errorStale ? (
           <div
             className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
             role="alert"
@@ -2304,6 +2569,8 @@ function DeathCompensationView({
             <span>{error}</span>
           </div>
         ) : null}
+
+        <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
         {result ? <DeathResultCards result={result} /> : null}
 
@@ -2319,7 +2586,7 @@ function DeathCompensationView({
                 label="PDF"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportPdf}
               />
               <ActionButton
@@ -2328,7 +2595,7 @@ function DeathCompensationView({
                 label="CSV"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportCsv}
               />
               <ActionButton
@@ -2337,7 +2604,7 @@ function DeathCompensationView({
                 label="복사"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleCopy}
               />
               <ActionButton
@@ -2346,7 +2613,7 @@ function DeathCompensationView({
                 label=".lcalc 저장"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleSaveLcalc}
               />
               <ActionButton
@@ -2355,7 +2622,7 @@ function DeathCompensationView({
                 label=".lcalc 열기"
                 loadingAction={loadingAction}
                 requiresResult={false}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleLoadLcalc}
               />
             </div>
@@ -2429,6 +2696,7 @@ function DeathResultCards({ result }: { result: CompensationAutoDeathResult }) {
                 </span>
               </>
             ) : null}
+            <SolatiumAddedRow result={result} />
             {result.otherDamages !== undefined ? (
               <OtherDamagesResultRows otherDamages={result.otherDamages} />
             ) : null}
@@ -2643,7 +2911,7 @@ function IndustrialBenefitResultRows({
   benefitLabel,
 }: {
   industrialBenefit: NonNullable<CompensationResult["industrialBenefit"]>;
-  benefitLabel: "장해급여" | "유족급여";
+  benefitLabel: "장해급여·휴업급여" | "유족급여";
 }) {
   const capped = industrialBenefit.deductedWon < industrialBenefit.benefitWon;
   return (
@@ -2665,7 +2933,36 @@ function IndustrialBenefitResultRows({
   );
 }
 
-function ResultCards({ result }: { result: CompensationResult }) {
+/** 위자료 가산·공제 초과분 행. 이 행들까지 더하면 최종 합계(100원 미만 버림 전)가 된다. */
+function SolatiumAddedRow({
+  result,
+}: {
+  result: CompensationResult | CompensationAutoDeathResult;
+}) {
+  return (
+    <>
+      {solatiumSettlementRows(result).map(([label, value]) => (
+        <Fragment key={label}>
+          <span className="text-muted-foreground">{label}</span>
+          <span
+            className="text-right"
+            data-testid={label === "위자료 가산" ? "compensation-solatium-added" : undefined}
+          >
+            {value}
+          </span>
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+function ResultCards({
+  result,
+  hospitalMonths,
+}: {
+  result: CompensationResult;
+  hospitalMonths: number;
+}) {
   return (
     <>
       <Card>
@@ -2676,12 +2973,20 @@ function ResultCards({ result }: { result: CompensationResult }) {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <span className="text-muted-foreground">중복 노동능력상실률</span>
             <span className="text-right">{formatRatioPercent(result.combinedLossRate)}</span>
+            {hospitalMonths > 0 ? (
+              <span
+                className="col-span-2 text-xs text-muted-foreground"
+                data-testid="compensation-hospitalization-months"
+              >
+                {hospitalizationLine(hospitalMonths)}
+              </span>
+            ) : null}
             <span className="text-muted-foreground">일실수입 소계</span>
             <span className="text-right">{formatWon(result.lostIncomeSubtotalWon)}</span>
             {result.industrialBenefit !== undefined ? (
               <IndustrialBenefitResultRows
                 industrialBenefit={result.industrialBenefit}
-                benefitLabel="장해급여"
+                benefitLabel="장해급여·휴업급여"
               />
             ) : null}
             <span className="text-muted-foreground">위자료</span>
@@ -2705,6 +3010,7 @@ function ResultCards({ result }: { result: CompensationResult }) {
                 </span>
               </>
             ) : null}
+            <SolatiumAddedRow result={result} />
             {result.otherDamages !== undefined ? (
               <OtherDamagesResultRows otherDamages={result.otherDamages} />
             ) : null}

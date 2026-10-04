@@ -111,12 +111,12 @@ function validateAttendantFuture(
   if (item.daysPerMonth !== undefined) {
     if (
       typeof item.daysPerMonth !== "number" ||
-      !Number.isInteger(item.daysPerMonth) ||
+      !Number.isFinite(item.daysPerMonth) ||
       item.daysPerMonth < 1 ||
       item.daysPerMonth > 31
     ) {
       throw new RangeError(
-        `${PREFIX}: attendantCare.future[${i}].daysPerMonth 는 1~31 정수여야 합니다.`,
+        `${PREFIX}: attendantCare.future[${i}].daysPerMonth 는 1~31 사이 수여야 합니다.`,
       );
     }
   }

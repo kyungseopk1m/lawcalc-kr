@@ -747,7 +747,8 @@ impl<'a> PageWriter<'a> {
         );
     }
 
-    fn draw_compensation_summary(&mut self, view: &CompensationResultView) {
+    /// 요약 행 목록. 그리기와 분리해 테스트가 행 구성을 직접 확인할 수 있게 한다.
+    fn compensation_summary_lines(view: &CompensationResultView) -> Vec<(String, String)> {
         let mut lines: Vec<(String, String)> = vec![
             (
                 "중복 노동능력상실률".into(),
@@ -761,7 +762,7 @@ impl<'a> PageWriter<'a> {
         // 산재보험급여 (장해급여) — 일실수입 한도 선공제 (2021다241618 전합).
         if let Some(ib) = &view.industrial_benefit {
             lines.push((
-                "산재급여 공제 (장해급여)".into(),
+                "산재급여 공제 (장해급여·휴업급여)".into(),
                 industrial_benefit_value_text(ib),
             ));
             lines.push((
@@ -802,12 +803,32 @@ impl<'a> PageWriter<'a> {
                     ),
                 },
             ),
+        ]);
+        if view.deduction_excess_won > 0.0 {
+            lines.push(("공제 후 재산상 손해".into(), "0원".into()));
+            lines.push((
+                view.deduction_excess_label.clone(),
+                format!("{}원", format_currency(-view.deduction_excess_won)),
+            ));
+        }
+        if view.solatium_added_won > 0.0 {
+            lines.push((
+                "위자료 가산".into(),
+                format!("{}원", format_currency(view.solatium_added_won)),
+            ));
+        }
+        lines.extend([
             (
                 "최종 합계".into(),
                 format!("{}원", format_currency(view.final_won)),
             ),
             ("계산 시각".into(), view.computed_at.clone()),
         ]);
+        lines
+    }
+
+    fn draw_compensation_summary(&mut self, view: &CompensationResultView) {
+        let lines = Self::compensation_summary_lines(view);
         let label_w = 38.0;
         for (label, value) in &lines {
             self.text(label, 10.0, self.left(), self.y - 4.0);
@@ -959,7 +980,10 @@ impl<'a> PageWriter<'a> {
         );
     }
 
-    fn draw_compensation_death_summary(&mut self, view: &CompensationDeathResultView) {
+    /// 요약 행 목록. 그리기와 분리해 테스트가 행 구성을 직접 확인할 수 있게 한다.
+    fn compensation_death_summary_lines(
+        view: &CompensationDeathResultView,
+    ) -> Vec<(String, String)> {
         let mut lines: Vec<(String, String)> = vec![
             (
                 "생계비 공제 비율".into(),
@@ -1018,12 +1042,32 @@ impl<'a> PageWriter<'a> {
                     ),
                 },
             ),
+        ]);
+        if view.deduction_excess_won > 0.0 {
+            lines.push(("공제 후 재산상 손해".into(), "0원".into()));
+            lines.push((
+                view.deduction_excess_label.clone(),
+                format!("{}원", format_currency(-view.deduction_excess_won)),
+            ));
+        }
+        if view.solatium_added_won > 0.0 {
+            lines.push((
+                "위자료 가산".into(),
+                format!("{}원", format_currency(view.solatium_added_won)),
+            ));
+        }
+        lines.extend([
             (
                 "최종 합계".into(),
                 format!("{}원", format_currency(view.final_won)),
             ),
             ("계산 시각".into(), view.computed_at.clone()),
         ]);
+        lines
+    }
+
+    fn draw_compensation_death_summary(&mut self, view: &CompensationDeathResultView) {
+        let lines = Self::compensation_death_summary_lines(view);
         let label_w = 46.0;
         for (label, value) in &lines {
             self.text(label, 10.0, self.left(), self.y - 4.0);
@@ -1377,6 +1421,9 @@ mod tests {
                 capped_at_index: None,
             },
             export_warnings: Vec::new(),
+            solatium_added_won: 0.0,
+            deduction_excess_won: 0.0,
+            deduction_excess_label: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1458,6 +1505,9 @@ mod tests {
                 capped_at_index: None,
             },
             export_warnings: Vec::new(),
+            solatium_added_won: 0.0,
+            deduction_excess_won: 0.0,
+            deduction_excess_label: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1479,6 +1529,66 @@ mod tests {
             "pdf suspiciously small: {}",
             bytes.len()
         );
+    }
+
+    /// "위자료 가산" 행은 0 보다 클 때만, 공제 행 바로 뒤·최종 합계 바로 앞에 온다.
+    #[test]
+    fn compensation_summary_lines_place_solatium_added_row() {
+        fn labels(lines: &[(String, String)]) -> Vec<&str> {
+            lines.iter().map(|(label, _)| label.as_str()).collect()
+        }
+        let mut view = compensation_sample();
+        assert!(!labels(&PageWriter::compensation_summary_lines(&view)).contains(&"위자료 가산"));
+        view.solatium_added_won = 30_000_000.0;
+        let lines = PageWriter::compensation_summary_lines(&view);
+        let at = labels(&lines)
+            .iter()
+            .position(|l| *l == "위자료 가산")
+            .expect("row");
+        assert_eq!(lines[at].1, "30,000,000원");
+        assert!(lines[at - 1].0.starts_with("공제 ("));
+        assert_eq!(lines[at + 1].0, "최종 합계");
+        let bytes = render_compensation_pdf_bytes(&view).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+
+        let mut death = compensation_death_sample();
+        assert!(
+            !labels(&PageWriter::compensation_death_summary_lines(&death)).contains(&"위자료 가산")
+        );
+        death.solatium_added_won = 80_000_000.0;
+        let lines = PageWriter::compensation_death_summary_lines(&death);
+        let at = labels(&lines)
+            .iter()
+            .position(|l| *l == "위자료 가산")
+            .expect("row");
+        assert_eq!(lines[at].1, "80,000,000원");
+        assert!(lines[at - 1].0.starts_with("공제 ("));
+        assert_eq!(lines[at + 1].0, "최종 합계");
+        let bytes = render_compensation_death_pdf_bytes(&death).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
+    }
+
+    #[test]
+    fn compensation_summary_lines_place_deduction_excess_rows() {
+        let mut view = compensation_death_sample();
+        view.solatium_added_won = 3_000_000.0;
+        view.deduction_excess_won = 3_000_000.0;
+        view.deduction_excess_label =
+            "공제 초과분 (위자료에서 차감, 남은 2,000,000원은 최종액 0원 하한으로 차감하지 않음)"
+                .into();
+        let lines = PageWriter::compensation_death_summary_lines(&view);
+        let at = lines
+            .iter()
+            .position(|(label, _)| label == "공제 후 재산상 손해")
+            .expect("zero row");
+        assert_eq!(lines[at].1, "0원");
+        assert!(lines[at + 1]
+            .0
+            .starts_with("공제 초과분 (위자료에서 차감, 남은 2,000,000원"));
+        assert_eq!(lines[at + 1].1, "-3,000,000원");
+        assert_eq!(lines[at + 2].0, "위자료 가산");
+        let bytes = render_compensation_death_pdf_bytes(&view).expect("render pdf");
+        assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
     }
 
     #[test]

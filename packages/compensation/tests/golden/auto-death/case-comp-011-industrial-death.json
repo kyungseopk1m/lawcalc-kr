@@ -3,7 +3,7 @@
   "id": "case-comp-011-industrial-death",
   "title": "industrial/death — 산재 사망, 유족급여 1억 선공제(일실수입 한도) 후 과실 10% + 상속분배",
   "source": "manual-derivation",
-  "notes": "compensation-industrial-golden-derivation-2026-06-02.md 3절 (2026-07-02 COMP-6 재도출). 2021다241618 전합 — 유족급여는 생계비 공제 후 일실수입 한도에서 먼저 공제 후 과실상계: (605,679,360 − 100,000,000 + 장례비 5,000,000) × 0.9 = 459,611,424 → 절사 459,611,400. 상속: 배우자 3/5 = 275,766,840 / 자녀1 2/5 = 183,844,560 (합계 보존).",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): (550,617,600 - 100,000,000 + 5,000,000) × 0.9 = 410,055,840 → 절사 410,055,800. 상속 246,033,480 / 164,022,320. 아래는 2026-10-04 이전 값·산식이다. compensation-industrial-golden-derivation-2026-06-02.md 3절 (2026-07-02 COMP-6 재도출). 2021다241618 전합 — 유족급여는 생계비 공제 후 일실수입 한도에서 먼저 공제 후 과실상계: (605,679,360 − 100,000,000 + 장례비 5,000,000) × 0.9 = 459,611,424 → 절사 459,611,400. 상속: 배우자 3/5 = 275,766,840 / 자녀1 2/5 = 183,844,560 (합계 보존).",
   "input": {
     "mode": "death",
     "accidentType": "industrial",
@@ -43,39 +43,39 @@
   "expected": {
     "accidentType": "industrial",
     "livingCostDeductionRatio": 0.3333333333333333,
-    "lostIncomeSubtotalWon": 605679360,
+    "lostIncomeSubtotalWon": 550617600,
     "solatiumWon": 0,
     "industrialBenefit": {
       "benefitWon": 100000000,
       "deductedWon": 100000000,
-      "lostIncomeAfterWon": 505679360
+      "lostIncomeAfterWon": 450617600
     },
-    "pecuniaryDamagesSubtotalWon": 510679360,
+    "pecuniaryDamagesSubtotalWon": 455617600,
     "faultOffset": {
       "ratio": 0.1,
-      "afterWon": 459611424,
-      "beforeWon": 510679360
+      "afterWon": 410055840,
+      "beforeWon": 455617600
     },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 459611424
+      "afterWon": 410055840
     },
-    "finalWon": 459611400,
+    "finalWon": 410055800,
     "hoffman240CapCappedAtIndex": 0,
     "inheritanceShares": [
       {
         "name": "배우자",
         "numerator": 3,
         "denominator": 5,
-        "amountWon": 275766840
+        "amountWon": 246033480
       },
       {
         "name": "자녀1",
         "numerator": 2,
         "denominator": 5,
-        "amountWon": 183844560
+        "amountWon": 164022320
       }
     ],
     "dataVersions": {
@@ -90,10 +90,10 @@
         "endMonth": 420,
         "lossRate": 1,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 242.46633829,
         "appliedHoffman": 240,
-        "amountFloorWon": 605679360
+        "amountFloorWon": 550617600
       }
     ],
     "hoffman240CapAppliedHoffman": [240],
@@ -117,7 +117,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-07-02",
-    "derivedBy": "compensation-industrial-golden-derivation-2026-06-02.md 3절 (COMP-6 공제 후 과실상계 재도출)"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-industrial-golden-derivation-2026-06-02.md 3절 (COMP-6 공제 후 과실상계 재도출))"
   }
 }

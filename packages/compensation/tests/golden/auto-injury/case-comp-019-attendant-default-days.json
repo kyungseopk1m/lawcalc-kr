@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-019-attendant-default-days",
+  "title": "auto/injury 개호 월 환산 기본값 365/12: 일수 미입력, 인원 1 → 0.5",
+  "source": "manual-derivation",
+  "notes": "r1-golden-rederivation-2026-10-04.md 5.2절. 일실수입 baseline = case-001(226,727,190). 향후개호 일당 86,686(직접입력), daysPerMonth 생략. 1인 월 개호비 round(86,686 × 365/12 = 2,636,699.17) = 2,636,699. seg1 [0,120) 인원 1: floor(2,636,699 × 97.14515218) = 256,142,525. seg2 [120,240) 인원 0.5: floor(2,636,699 × 0.5 × (166.10558375 - 97.14515218)) = 90,913,950 (반올림 후 인원을 곱한다. 인원을 곱한 뒤 반올림하면 90,913,984). 개호 합계 347,056,475, 총 573,783,665 → 100원 절사 573,783,600.",
+  "input": {
+    "base": {
+      "birthDate": "1996-01-01",
+      "accidentDate": "2026-01-01",
+      "treatmentEndDate": "2026-01-01",
+      "sex": "male",
+      "retirementAge": 60,
+      "legalRatePreset": "civil"
+    },
+    "lossRate": {
+      "permanent": [
+        {
+          "department": "정형외과",
+          "ratio": 0.3
+        }
+      ],
+      "temporary": [],
+      "priorImpairmentRatio": 0
+    },
+    "lostIncome": {
+      "occupation": "보통인부",
+      "discountMethod": "hoffman"
+    },
+    "solatiumWon": 0,
+    "faultRatio": 0,
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    },
+    "otherDamages": {
+      "attendantCare": {
+        "future": [
+          {
+            "directDailyWageWon": 86686,
+            "startDate": "2026-01-01",
+            "endDate": "2036-01-01",
+            "personCount": 1
+          },
+          {
+            "directDailyWageWon": 86686,
+            "startDate": "2036-01-01",
+            "endDate": "2046-01-01",
+            "personCount": 0.5
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "lostIncomeSubtotalWon": 226727190,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 573783665,
+    "faultOffset": {
+      "ratio": 0,
+      "afterWon": 573783665,
+      "beforeWon": 573783665
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 573783665
+    },
+    "finalWon": 573783600,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.0.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 360,
+        "lossRate": 0.30000000000000004,
+        "dailyWageWon": 172068,
+        "monthlyWageWon": 3441360,
+        "rawHoffman": 219.61006732,
+        "appliedHoffman": 219.61006732,
+        "amountFloorWon": 226727190
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [219.61006732],
+    "combinedLossRate": 0.30000000000000004,
+    "otherDamagesSubtotalWon": 347056475,
+    "otherDamages": {
+      "attendantCareWon": 347056475,
+      "treatmentWon": 0,
+      "applianceWon": 0,
+      "subtotalWon": 347056475,
+      "attendantCare": {
+        "pastWon": 0,
+        "futureWon": 347056475,
+        "subtotalWon": 347056475,
+        "hoffman240CappedAtIndex": null
+      },
+      "treatment": null,
+      "appliance": null
+    }
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md 5절"
+  }
+}

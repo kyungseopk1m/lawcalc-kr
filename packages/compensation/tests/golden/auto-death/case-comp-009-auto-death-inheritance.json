@@ -3,7 +3,7 @@
   "id": "case-comp-009-auto-death-inheritance",
   "title": "auto/death inheritance — 40세男 사망, 배우자+자녀2 분배 (3:2:2), 잔여원 선순위",
   "source": "manual-derivation",
-  "notes": "compensation-death-golden-derivation-2026-06-02.md 3절. 가동연한 65세(300개월), rawHoffman H[300]=194.34575275 < 240 → cap 미적용, 일실수입 490,463,379 + 위자료 8천만 + 장례비 500만(적극손해 → 과실상계 대상) = 소계 575,463,379, 과실 20% → 460,370,703, 절대공제 12,345,678원 → 448,025,025 → 100원 절사 448,025,000. 상속 배우자 3/7 자녀 2/7 × 2, floor 후 잔여 2원 배우자·자녀1 배정.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 floor(3,441,360 × 194.34575275 × 2/3) = 445,875,799, + 장례비 = 450,875,799 × 0.8 = floor 360,700,639 - 12,345,678 = 348,354,961, + 위자료 80,000,000 = 428,354,961 → 절사 428,354,900. 상속 183,580,672 / 122,387,114 / 122,387,114 (잔여 1원 배우자). 아래는 2026-10-04 이전 값·산식이다. compensation-death-golden-derivation-2026-06-02.md 3절. 가동연한 65세(300개월), rawHoffman H[300]=194.34575275 < 240 → cap 미적용, 일실수입 490,463,379 + 위자료 8천만 + 장례비 500만(적극손해 → 과실상계 대상) = 소계 575,463,379, 과실 20% → 460,370,703, 절대공제 12,345,678원 → 448,025,025 → 100원 절사 448,025,000. 상속 배우자 3/7 자녀 2/7 × 2, floor 후 잔여 2원 배우자·자녀1 배정.",
   "input": {
     "mode": "death",
     "base": {
@@ -51,40 +51,40 @@
   },
   "expected": {
     "livingCostDeductionRatio": 0.3333333333333333,
-    "lostIncomeSubtotalWon": 490463379,
+    "lostIncomeSubtotalWon": 445875799,
     "solatiumWon": 80000000,
-    "pecuniaryDamagesSubtotalWon": 575463379,
+    "pecuniaryDamagesSubtotalWon": 450875799,
     "faultOffset": {
       "ratio": 0.2,
-      "afterWon": 460370703,
-      "beforeWon": 575463379
+      "afterWon": 360700639,
+      "beforeWon": 450875799
     },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 12345678,
-      "afterWon": 448025025
+      "afterWon": 348354961
     },
-    "finalWon": 448025000,
+    "finalWon": 428354900,
     "hoffman240CapCappedAtIndex": null,
     "inheritanceShares": [
       {
         "name": "배우자",
         "numerator": 3,
         "denominator": 7,
-        "amountWon": 192010715
+        "amountWon": 183580672
       },
       {
         "name": "자녀1",
         "numerator": 2,
         "denominator": 7,
-        "amountWon": 128007143
+        "amountWon": 122387114
       },
       {
         "name": "자녀2",
         "numerator": 2,
         "denominator": 7,
-        "amountWon": 128007142
+        "amountWon": 122387114
       }
     ],
     "dataVersions": {
@@ -99,10 +99,10 @@
         "endMonth": 300,
         "lossRate": 1,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 194.34575275,
         "appliedHoffman": 194.34575275,
-        "amountFloorWon": 490463379
+        "amountFloorWon": 445875799
       }
     ],
     "hoffman240CapAppliedHoffman": [194.34575275],
@@ -133,7 +133,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-06-02",
-    "derivedBy": "compensation-death-golden-derivation-2026-06-02.md 3절"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-death-golden-derivation-2026-06-02.md 3절)"
   }
 }

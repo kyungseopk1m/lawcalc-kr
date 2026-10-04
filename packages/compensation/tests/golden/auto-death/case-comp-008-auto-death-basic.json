@@ -3,7 +3,7 @@
   "id": "case-comp-008-auto-death-basic",
   "title": "auto/death basic — 30세男 사망, 생계비 1/3 + 장례비 500만, 상속 없음",
   "source": "manual-derivation",
-  "notes": "compensation-death-golden-derivation-2026-06-02.md 2절. 가동연한 65세(420개월), rawHoffman H[420]=242.46633829 > 240 → appliedHoffman 240 cap, 생계비 1/3 공제, 장례비 500만을 과실상계 대상(적극손해)에 포함(과실 0이라 finalWon 불변), 100원 절사.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): floor(3,441,360 × 240 × 2/3) = 550,617,600 + 장례비 5,000,000 = 555,617,600 (절사 후 동일). 아래는 2026-10-04 이전 값·산식이다. compensation-death-golden-derivation-2026-06-02.md 2절. 가동연한 65세(420개월), rawHoffman H[420]=242.46633829 > 240 → appliedHoffman 240 cap, 생계비 1/3 공제, 장례비 500만을 과실상계 대상(적극손해)에 포함(과실 0이라 finalWon 불변), 100원 절사.",
   "input": {
     "mode": "death",
     "base": {
@@ -23,21 +23,21 @@
   },
   "expected": {
     "livingCostDeductionRatio": 0.3333333333333333,
-    "lostIncomeSubtotalWon": 605679360,
+    "lostIncomeSubtotalWon": 550617600,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 610679360,
+    "pecuniaryDamagesSubtotalWon": 555617600,
     "faultOffset": {
       "ratio": 0,
-      "afterWon": 610679360,
-      "beforeWon": 610679360
+      "afterWon": 555617600,
+      "beforeWon": 555617600
     },
     "funeralExpenseWon": 5000000,
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 610679360
+      "afterWon": 555617600
     },
-    "finalWon": 610679300,
+    "finalWon": 555617600,
     "hoffman240CapCappedAtIndex": 0,
     "inheritanceShares": null,
     "dataVersions": {
@@ -52,10 +52,10 @@
         "endMonth": 420,
         "lossRate": 1,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 242.46633829,
         "appliedHoffman": 240,
-        "amountFloorWon": 605679360
+        "amountFloorWon": 550617600
       }
     ],
     "hoffman240CapAppliedHoffman": [240],
@@ -64,7 +64,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-06-02",
-    "derivedBy": "compensation-death-golden-derivation-2026-06-02.md 2절"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-death-golden-derivation-2026-06-02.md 2절)"
   }
 }

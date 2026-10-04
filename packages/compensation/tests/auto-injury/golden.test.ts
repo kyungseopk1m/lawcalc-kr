@@ -162,8 +162,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴얼 derivation)", () => {
-  it("loads exactly 10 cases", () => {
-    expect(cases).toHaveLength(10);
+  it("loads exactly 12 cases", () => {
+    expect(cases).toHaveLength(12);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {

@@ -12,6 +12,7 @@ import {
   buildStampDutyInput,
   hasLegacyPaymentOrderFlag,
   parseProportionalValues,
+  proportionalValuesError,
 } from "./LitigationCostCalculator";
 
 /**
@@ -519,5 +520,20 @@ describe("항고 원신청서 인지액 (제11조 제1항)", () => {
       underlyingApplicationStampDutyWon: 10_000,
     });
     expect(built.underlyingApplicationStampDutyWon).toBeUndefined();
+  });
+});
+
+describe("proportionalValuesError (읽지 못한 당사자 소가를 건너뛰지 않는다)", () => {
+  it("정상 값은 오류 없음", () => {
+    expect(proportionalValuesError("10,000,000 / 20,000,000")).toBeUndefined();
+  });
+
+  it("읽지 못한 토큰과 0 을 짚어 낸다", () => {
+    expect(proportionalValuesError("10,000,000 / 1억")).toBe("읽지 못한 값이 있습니다: 1억");
+    expect(proportionalValuesError("10,000,00, 0")).toBe("읽지 못한 값이 있습니다: 10,000,00, 0");
+  });
+
+  it("빈칸은 하나 이상 입력하라고 한다", () => {
+    expect(proportionalValuesError("  ")).toBe("당사자별 소가를 하나 이상 입력하세요.");
   });
 });

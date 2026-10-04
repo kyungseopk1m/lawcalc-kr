@@ -38,7 +38,7 @@ export interface AttendantFutureSegmentInput {
   endDate: IsoDate;
   /** 인원 (예: 1 / 1.5 / 0.5). 양수. */
   personCount: number;
-  /** 월 개호일수. default 30 (매일 개호 월환산). 1~31. */
+  /** 월 개호일수. default 365/12 (매일 개호 월환산). 1~31, 소수 허용. */
   daysPerMonth?: number;
   /** 기왕증 기여도 (0~1). default 0. */
   priorRatio?: number;

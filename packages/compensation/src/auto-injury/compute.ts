@@ -28,7 +28,9 @@ export interface ComputeCompensationDeps {
   now?: () => Date;
 }
 
-const DEFAULT_WORKING_DAYS_PER_MONTH = 22;
+// 대법원 2024. 4. 25. 선고 2020다271650: 도시 일용근로자의 월 가동일수를 20일을 초과하여
+// 인정하기 어렵다. 사고 시기와 무관하게 기본값은 20 이고, 달리 볼 사정은 직접 입력한다.
+const DEFAULT_WORKING_DAYS_PER_MONTH = 20;
 const DEFAULT_RETIREMENT_AGE = 65;
 const FINAL_FLOOR_UNIT = 100;
 
@@ -51,13 +53,14 @@ import { getCumulativeHoffmanClamped, monthsBetween } from "../internal";
  *    - lookup miss 시 RangeError (UI 측 트랙 U 5-1 에서 directWageWon override 노출).
  * 4. segment 호프만 = `H[endMonth] - H[startMonth]`. 240 cap = `applyHoffman240Cap` cumulative.
  * 5. segment 합산 = `Σ (monthlyWage × lossRate × appliedHoffman)`,
- *    `monthlyWage = dailyWage × workingDaysPerMonth` (default 22).
+ *    `monthlyWage = dailyWage × workingDaysPerMonth` (default 20).
  * 6. 원 단위 절사: segment amount = `Math.floor(...)`, 최종 합 후 100원 미만 절사.
- * 7. 위자료: 입력 그대로 합산.
- * 8. 과실상계: `Math.floor((재산상 + 위자료) × (1 - 과실비율))`.
+ * 2.5. 입원기간 `[0, monthsBetween(사고일, 입원치료 종료일))` 은 lossRate 1 (기왕증 미적용).
+ * 7. 위자료: 과실상계 대상에서 뺀다 (`applyFaultToSolatium` 이면 이전처럼 포함).
+ * 8. 과실상계: `Math.floor(재산상 손해 × (1 - 과실비율))`.
  * 9. 공제: 비율공제소계 = `Math.floor(afterFault × Σ ratio_i)`, 전액공제소계 = `Σ amount_i`.
  *    afterDeduction = `afterFault - ratioSubtotal - absoluteSubtotal`.
- * 10. 최종 = `max(0, afterDeduction)` → 100원 미만 절사.
+ * 10. 최종 = `max(0, afterDeduction + 위자료)` → 100원 미만 절사.
  */
 export function computeCompensation(
   input: CompensationInput,
@@ -104,17 +107,26 @@ export function computeCompensation(
     endMonth: number;
     lossRate: number;
   }
+  // 입원기간은 상실률 100% (외부 reference 매뉴얼 본문과 계산표 예시 1·2행).
+  // 기왕증 기여도를 입원기간에도 곱할지는 원문으로 확인하지 못해 곱하지 않는다.
+  const hospitalMonths =
+    input.lossRate.hospitalizationFullLoss === false
+      ? 0
+      : Math.min(monthsBetween(input.base.accidentDate, input.base.treatmentEndDate), totalMonths);
   // 각 한시장해는 [0, 종료월) 적용. 가동연한 초과분은 clamp.
   const temporaries = temporaryItems.map((item) => ({
     endMonth: Math.min(Math.round(item.years * 12), totalMonths),
     ratio: item.ratio,
   }));
-  // segment 경계 = distinct 한시 종료월(0 초과 ~ totalMonths) + 가동연한 종료월.
+  // segment 경계 = 입원 종료월 + distinct 한시 종료월(0 초과 ~ totalMonths) + 가동연한 종료월.
   // 가동연한 경과 시 경계가 모두 걸러져 segmentPlans 가 빈 배열이 되고 일실수입은 0 이 된다.
-  const boundaries = Array.from(new Set([...temporaries.map((t) => t.endMonth), totalMonths]))
+  const boundaries = Array.from(
+    new Set([hospitalMonths, ...temporaries.map((t) => t.endMonth), totalMonths]),
+  )
     .filter((m) => m > 0 && m <= totalMonths)
     .sort((a, b) => a - b);
   const segmentPlans: SegmentPlan[] = [];
+  let firstDisabilityRate: number | undefined;
   let cursorMonth = 0;
   for (const boundary of boundaries) {
     if (boundary <= cursorMonth) continue;
@@ -123,17 +135,19 @@ export function computeCompensation(
     for (const t of temporaries) {
       if (t.endMonth >= boundary) factor *= 1 - t.ratio;
     }
+    const disabilityRate = (1 - factor) * priorImpairmentFactor;
+    firstDisabilityRate ??= disabilityRate;
     segmentPlans.push({
       startMonth: cursorMonth,
       endMonth: boundary,
-      lossRate: (1 - factor) * priorImpairmentFactor,
+      lossRate: boundary <= hospitalMonths ? 1 : disabilityRate,
     });
     cursorMonth = boundary;
   }
-  // combinedLossRate = 첫 segment(한시기간 포함 최고율). 영구만일 때 = permanentTotal.
+  // combinedLossRate = 첫 segment 의 장해율(한시기간 포함 최고율, 입원 100% 제외). 영구만일 때 = permanentTotal.
   // 가동연한 경과로 segment 가 없으면 영구장해 병합률을 그대로 표시한다 (일실수입은 0 이지만
   // 상실률 자체는 위자료 산정 참고치로 의미가 있다).
-  const combinedLossRate = segmentPlans[0]?.lossRate ?? (1 - permFactor) * priorImpairmentFactor;
+  const combinedLossRate = firstDisabilityRate ?? (1 - permFactor) * priorImpairmentFactor;
 
   // 3. segment 단가
   // 일실수입 기간이 없으면 단가는 결과에 쓰이지 않는다. 위자료만 청구하는 고령 사건에서
@@ -214,10 +228,15 @@ export function computeCompensation(
   const industrialDeductedWon = Math.min(industrialBenefitInputWon, lostIncomeSubtotalWon);
   const lostIncomeAfterIndustrialWon = lostIncomeSubtotalWon - industrialDeductedWon;
 
-  // 7. 위자료
+  // 7. 위자료. 법원은 과실 정도 등을 참작해 위자료를 정하고 과실상계·공제 뒤에 더한다
+  //    (서울고법 2022. 2. 18. 선고 2020나2039267, 광주고법(전주) 2016. 7. 21. 선고 2015나100421).
+  //    위자료에도 과실을 곱하는 것은 보험약관 지급기준(`applyFaultToSolatium`)일 때뿐이다.
   const solatiumWon = input.solatiumWon ?? 0;
+  const solatiumInFaultBase = input.applyFaultToSolatium === true;
   const pecuniaryDamagesSubtotalWon =
-    lostIncomeAfterIndustrialWon + otherDamagesSubtotalWon + solatiumWon;
+    lostIncomeAfterIndustrialWon +
+    otherDamagesSubtotalWon +
+    (solatiumInFaultBase ? solatiumWon : 0);
 
   // 8. 과실상계
   const faultRatio = input.faultRatio ?? 0;
@@ -235,7 +254,10 @@ export function computeCompensation(
   const deductionsAfterWon = faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon;
 
   // 10. final
-  const finalRawWon = Math.max(0, deductionsAfterWon);
+  // 공제 후 값이 음수(전액공제가 재산상 손해를 넘음)면 그 초과분이 위자료를 차감한다.
+  // 2020나2039267 은 선급금·치료비를 재산상 손해에서만 공제했고, 산재 급여도 위자료를
+  // 잠식하지 않는다(6.7). 이와 다른 동작이며 정책은 미확정이다.
+  const finalRawWon = Math.max(0, deductionsAfterWon + (solatiumInFaultBase ? 0 : solatiumWon));
   const finalWon = Math.floor(finalRawWon / FINAL_FLOOR_UNIT) * FINAL_FLOOR_UNIT;
 
   const computedAtIso = (deps.now ?? (() => new Date()))().toISOString();

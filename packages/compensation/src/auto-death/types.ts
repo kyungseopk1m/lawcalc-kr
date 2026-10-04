@@ -78,12 +78,17 @@ export interface CompensationAutoDeathInput {
   solatiumWon?: number;
   /** 과실비율 (0~1). default 0. */
   faultRatio?: number;
+  /**
+   * 보험약관 지급기준. `true` 면 위자료도 과실상계·비율공제 대상에 넣는다 (이전 동작).
+   * default false: 위자료는 과실상계·공제 뒤에 그대로 더한다.
+   */
+  applyFaultToSolatium?: boolean;
   deductions?: CompensationDeductionsInput;
   /** 산재보험급여(유족급여). `accidentType === "industrial"` 일 때만 적용. */
   industrialInsurance?: CompensationIndustrialInsuranceDeath;
   /**
    * 기타손해(개호비·치료비·보조구). v0.8.0 `compensation@4`.
-   * 미지정 시 기존 경로 byte-identical (회귀 0). 생계비공제 후 일실수입 + 위자료와 같이 과실상계 전 합산.
+   * 미지정 시 기존 경로 byte-identical (회귀 0). 생계비공제 후 일실수입 + 장례비와 같이 과실상계 전 합산.
    */
   otherDamages?: OtherDamagesInput;
   /** 상속인 입력 (선택). 지정 시 최종액을 상속분으로 분배한다. */
@@ -131,7 +136,8 @@ export interface CompensationAutoDeathResult {
    */
   industrialBenefit?: CompensationIndustrialBenefitResult;
   /**
-   * 과실상계 대상 소계 (위자료·장례비 포함) = `일실수입 + otherDamagesSubtotalWon + solatiumWon + funeralExpenseWon`.
+   * 과실상계 대상 소계 = `일실수입 + otherDamagesSubtotalWon + funeralExpenseWon`
+   * (`applyFaultToSolatium` 이면 `+ solatiumWon`).
    * 산재는 유족급여 공제 후 일실수입 (`industrialBenefit.lostIncomeAfterWon`) 기준.
    */
   pecuniaryDamagesSubtotalWon: number;

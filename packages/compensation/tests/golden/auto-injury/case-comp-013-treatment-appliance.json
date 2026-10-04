@@ -3,7 +3,7 @@
   "id": "case-comp-013-treatment-appliance",
   "title": "auto/injury 기타손해 — 치료비(기왕+1회성+반복) + 보조구, 수치합계 20 cap",
   "source": "manual-derivation",
-  "notes": "compensation-other-damages-golden-derivation-2026-06-03.md 3절. 일실수입 baseline = case-001(249,399,909). 치료비 기왕 3,000,000×(1-0.1)=2,700,000. 1회성(6개월, 단리계수 0.975610)=4,878,048. 반복 4,200,000(0/120/240/360개월 합 2.566667)×0.75=8,084,999. 반복 1,000,000(0~240 매월 합 167.1>20→20 cap)=20,000,000. 보조구 기저귀 500,000(0~60 매월 54.45>20→20 cap)=10,000,000, 휠체어 800,000(0~360 60개월주기 합 4.382540)=3,506,031.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 226,727,190 + 기타손해 49,169,078(불변) = 275,896,268 → 절사 275,896,200. 아래는 2026-10-04 이전 값·산식이다. compensation-other-damages-golden-derivation-2026-06-03.md 3절. 일실수입 baseline = case-001(249,399,909). 치료비 기왕 3,000,000×(1-0.1)=2,700,000. 1회성(6개월, 단리계수 0.975610)=4,878,048. 반복 4,200,000(0/120/240/360개월 합 2.566667)×0.75=8,084,999. 반복 1,000,000(0~240 매월 합 167.1>20→20 cap)=20,000,000. 보조구 기저귀 500,000(0~60 매월 54.45>20→20 cap)=10,000,000, 휠체어 800,000(0~360 60개월주기 합 4.382540)=3,506,031.",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -94,20 +94,20 @@
     }
   },
   "expected": {
-    "lostIncomeSubtotalWon": 249399909,
+    "lostIncomeSubtotalWon": 226727190,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 298568987,
+    "pecuniaryDamagesSubtotalWon": 275896268,
     "faultOffset": {
       "ratio": 0,
-      "afterWon": 298568987,
-      "beforeWon": 298568987
+      "afterWon": 275896268,
+      "beforeWon": 275896268
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 298568987
+      "afterWon": 275896268
     },
-    "finalWon": 298568900,
+    "finalWon": 275896200,
     "hoffman240CapCappedAtIndex": null,
     "otherDamagesSubtotalWon": 49169078,
     "otherDamages": {
@@ -143,10 +143,10 @@
         "endMonth": 360,
         "lossRate": 0.30000000000000004,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 219.61006732,
         "appliedHoffman": 219.61006732,
-        "amountFloorWon": 249399909
+        "amountFloorWon": 226727190
       }
     ],
     "hoffman240CapAppliedHoffman": [219.61006732],
@@ -154,7 +154,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-06-03",
-    "derivedBy": "compensation-other-damages-golden-derivation-2026-06-03.md 3절"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-other-damages-golden-derivation-2026-06-03.md 3절)"
   }
 }

@@ -3,7 +3,7 @@
   "id": "case-comp-003-hoffman-240-cap",
   "title": "영구 30% 가동 65세 480개월 → H[480]=263.33 > 240 → cap 적용",
   "source": "manual-derivation",
-  "notes": "compensation-golden-capture-result-2026-05-18.md 4절. applyHoffman240Cap 의 cumulative clip path. cappedAtIndex = 0.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): floor(3,441,360 × 0.3 × 240) = 247,777,920 → 절사 247,777,900. 아래는 2026-10-04 이전 값·산식이다. compensation-golden-capture-result-2026-05-18.md 4절. applyHoffman240Cap 의 cumulative clip path. cappedAtIndex = 0.",
   "input": {
     "base": {
       "birthDate": "2001-01-01",
@@ -35,20 +35,20 @@
     }
   },
   "expected": {
-    "lostIncomeSubtotalWon": 272555712,
+    "lostIncomeSubtotalWon": 247777920,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 272555712,
+    "pecuniaryDamagesSubtotalWon": 247777920,
     "faultOffset": {
       "ratio": 0,
-      "afterWon": 272555712,
-      "beforeWon": 272555712
+      "afterWon": 247777920,
+      "beforeWon": 247777920
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 272555712
+      "afterWon": 247777920
     },
-    "finalWon": 272555700,
+    "finalWon": 247777900,
     "hoffman240CapCappedAtIndex": 0,
     "dataVersions": {
       "laborRates": "labor-rates/v1.1.0",
@@ -62,10 +62,10 @@
         "endMonth": 480,
         "lossRate": 0.30000000000000004,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 263.33392459,
         "appliedHoffman": 240,
-        "amountFloorWon": 272555712
+        "amountFloorWon": 247777920
       }
     ],
     "hoffman240CapAppliedHoffman": [240],
@@ -73,7 +73,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-05-18",
-    "derivedBy": "compensation-golden-capture-result-2026-05-18.md 4절"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 compensation-golden-capture-result-2026-05-18.md 4절)"
   }
 }

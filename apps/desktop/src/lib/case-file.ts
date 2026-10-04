@@ -12,6 +12,8 @@ export const CASE_CALCULATION_LABELS: Record<LcalcCaseCalculationKey, string> = 
   "litigation-cost": "소송비용",
   appropriation: "변제충당",
   compensation: "손해배상",
+  period: "기간 계산",
+  deadline: "불변기한",
 };
 
 export const CASE_CALCULATION_KEYS = Object.keys(
@@ -19,7 +21,9 @@ export const CASE_CALCULATION_KEYS = Object.keys(
 ) as LcalcCaseCalculationKey[];
 
 export type CaseCollectOutcome =
-  { status: "ok"; file: LcalcFile } | { status: "pristine" } | { status: "invalid" };
+  | { status: "ok"; file: LcalcFile; notice?: string }
+  | { status: "pristine" }
+  | { status: "invalid" };
 
 /**
  * 각 calculator 탭이 사건 파일 저장/열기에 참여하기 위해 등록하는 인터페이스.
@@ -33,7 +37,8 @@ export type CaseCollectOutcome =
  */
 export interface CaseSlot {
   collect: () => CaseCollectOutcome;
-  apply: (file: LcalcFile) => void;
+  /** 재계산 결과가 저장 당시와 다르면 true 를 돌려준다 (사건 파일 열기 토스트 안내용). */
+  apply: (file: LcalcFile) => boolean | void;
   markSaved: () => void;
   reset: () => void;
 }
@@ -76,12 +81,15 @@ export interface CollectedCaseCalculations {
   calculations: Partial<Record<LcalcCaseCalculationKey, LcalcFile>>;
   included: LcalcCaseCalculationKey[];
   invalid: LcalcCaseCalculationKey[];
+  /** 저장은 되지만 사용자에게 알릴 것 (예: 손해배상 다른 모드 입력이 빠짐). */
+  notices: string[];
 }
 
 export function collectCaseCalculations(): CollectedCaseCalculations {
   const calculations: Partial<Record<LcalcCaseCalculationKey, LcalcFile>> = {};
   const included: LcalcCaseCalculationKey[] = [];
   const invalid: LcalcCaseCalculationKey[] = [];
+  const notices: string[] = [];
 
   for (const key of CASE_CALCULATION_KEYS) {
     const slot = slots.get(key);
@@ -92,12 +100,13 @@ export function collectCaseCalculations(): CollectedCaseCalculations {
     if (outcome.status === "ok") {
       calculations[key] = outcome.file;
       included.push(key);
+      if (outcome.notice) notices.push(outcome.notice);
     } else if (outcome.status === "invalid") {
       invalid.push(key);
     }
   }
 
-  return { calculations, included, invalid };
+  return { calculations, included, invalid, notices };
 }
 
 /**
@@ -110,6 +119,8 @@ export function collectCaseCalculations(): CollectedCaseCalculations {
 export function applyCaseCalculations(
   calculations: Partial<Record<LcalcCaseCalculationKey, LcalcFile>>,
   resetAbsent = false,
+  /** 넘기면 재계산 결과가 저장 당시와 다른 탭 키를 여기에 담는다. */
+  mismatched?: LcalcCaseCalculationKey[],
 ): LcalcCaseCalculationKey[] {
   const applied: LcalcCaseCalculationKey[] = [];
   for (const key of CASE_CALCULATION_KEYS) {
@@ -119,13 +130,22 @@ export function applyCaseCalculations(
       continue;
     }
     if (file) {
-      slot.apply(file);
+      if (slot.apply(file) === true) mismatched?.push(key);
       applied.push(key);
     } else if (resetAbsent) {
       slot.reset();
     }
   }
   return applied;
+}
+
+/**
+ * 열기 토스트에 덧붙일 안내. 재계산 결과가 저장 당시와 다른 탭은 그 탭 안에만 안내가 있어
+ * 숨은 탭이면 사용자가 모르고 지나간다.
+ */
+export function caseMismatchNotice(keys: LcalcCaseCalculationKey[]): string {
+  if (keys.length === 0) return "";
+  return ` 결과가 저장 당시와 다른 탭: ${keys.map((key) => CASE_CALCULATION_LABELS[key]).join(", ")}.`;
 }
 
 export function markCaseCalculationsSaved(keys: LcalcCaseCalculationKey[]): void {

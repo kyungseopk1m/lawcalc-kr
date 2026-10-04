@@ -3,7 +3,7 @@
   "id": "case-comp-015-industrial-injury-benefit-cap",
   "title": "industrial/injury — 장해급여가 일실수입을 초과: 일실수입 한도 공제, 위자료 보존",
   "source": "manual-derivation",
-  "notes": "COMP-6 capping 검산 (2026-07-02). case-010 과 동일 base(일실수입 249,399,909)에 위자료 5,000,000 + 장해급여 300,000,000(> 일실수입). 2021다241618 전합 — 공제는 같은 성질(일실수입) 한도: deducted = 249,399,909, 초과분 50,600,091 은 위자료를 잠식하지 않는다. pecuniary = 0 + 5,000,000 → × 0.8 = 4,000,000 = final. 구 방식(총액 공제)이었다면 0원.",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): 일실수입 226,727,190 전액 공제, 과실상계 대상 0. 위자료 5,000,000 은 과실상계 밖이라 그대로 → final 5,000,000. 아래는 2026-10-04 이전 값·산식이다. COMP-6 capping 검산 (2026-07-02). case-010 과 동일 base(일실수입 249,399,909)에 위자료 5,000,000 + 장해급여 300,000,000(> 일실수입). 2021다241618 전합 — 공제는 같은 성질(일실수입) 한도: deducted = 249,399,909, 초과분 50,600,091 은 위자료를 잠식하지 않는다. pecuniary = 0 + 5,000,000 → × 0.8 = 4,000,000 = final. 구 방식(총액 공제)이었다면 0원.",
   "input": {
     "accidentType": "industrial",
     "base": {
@@ -40,25 +40,25 @@
   },
   "expected": {
     "accidentType": "industrial",
-    "lostIncomeSubtotalWon": 249399909,
+    "lostIncomeSubtotalWon": 226727190,
     "solatiumWon": 5000000,
     "industrialBenefit": {
       "benefitWon": 300000000,
-      "deductedWon": 249399909,
+      "deductedWon": 226727190,
       "lostIncomeAfterWon": 0
     },
-    "pecuniaryDamagesSubtotalWon": 5000000,
+    "pecuniaryDamagesSubtotalWon": 0,
     "faultOffset": {
       "ratio": 0.2,
-      "afterWon": 4000000,
-      "beforeWon": 5000000
+      "afterWon": 0,
+      "beforeWon": 0
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 4000000
+      "afterWon": 0
     },
-    "finalWon": 4000000,
+    "finalWon": 5000000,
     "hoffman240CapCappedAtIndex": null,
     "dataVersions": {
       "laborRates": "labor-rates/v1.1.0",
@@ -72,10 +72,10 @@
         "endMonth": 360,
         "lossRate": 0.30000000000000004,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 219.61006732,
         "appliedHoffman": 219.61006732,
-        "amountFloorWon": 249399909
+        "amountFloorWon": 226727190
       }
     ],
     "hoffman240CapAppliedHoffman": [219.61006732],
@@ -83,7 +83,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-07-02",
-    "derivedBy": "v0.10.0-completeness-cycle-2026-07-02.md D절 (COMP-6 capping 손계산)"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 v0.10.0-completeness-cycle-2026-07-02.md D절 (COMP-6 capping 손계산))"
   }
 }

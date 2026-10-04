@@ -414,12 +414,16 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
     // 산재(장해급여) — 일실수입 한도 선공제 (2021다241618 전합). 자동차 결과는 skip (회귀 0).
     if let Some(ib) = &view.industrial_benefit {
         let deducted_cell = escape_csv_cell(&industrial_benefit_value_text(ib)).into_owned();
-        wtr.write_record(["산재보험급여 공제(장해급여)(원)", deducted_cell.as_str()])?;
+        wtr.write_record([
+            "산재보험급여 공제(장해급여·휴업급여)(원)",
+            deducted_cell.as_str(),
+        ])?;
         let after_cell = escape_csv_cell(&format_currency(ib.lost_income_after_won)).into_owned();
         wtr.write_record(["공제 후 일실수입(원)", after_cell.as_str()])?;
     }
 
-    let summary_rows: [(&str, String); 9] = [
+    let excess_key = format!("{}(원)", view.deduction_excess_label);
+    let summary_rows: [(&str, String); 12] = [
         (
             "중복 노동능력상실률",
             format!("{:.2}%", view.combined_loss_rate * 100.0),
@@ -449,6 +453,24 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         match view.deductions.industrial_benefit_won {
             Some(benefit) => ("산재보험급여 공제(장해급여)(원)", format_currency(benefit)),
             None => ("", String::new()),
+        },
+        if view.deduction_excess_won > 0.0 {
+            ("공제 후 재산상 손해(원)", "0".to_string())
+        } else {
+            ("", String::new())
+        },
+        if view.deduction_excess_won > 0.0 {
+            (
+                excess_key.as_str(),
+                format_currency(-view.deduction_excess_won),
+            )
+        } else {
+            ("", String::new())
+        },
+        if view.solatium_added_won > 0.0 {
+            ("위자료 가산(원)", format_currency(view.solatium_added_won))
+        } else {
+            ("", String::new())
         },
         ("최종 합계(원)", format_currency(view.final_won)),
     ];
@@ -550,7 +572,8 @@ pub fn render_compensation_death_csv_bytes(
         wtr.write_record(["공제 후 일실수입(원)", after_cell.as_str()])?;
     }
 
-    let summary_rows: [(&str, String); 9] = [
+    let excess_key = format!("{}(원)", view.deduction_excess_label);
+    let summary_rows: [(&str, String); 12] = [
         (
             "생계비 공제 비율",
             format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
@@ -573,6 +596,24 @@ pub fn render_compensation_death_csv_bytes(
         match view.deductions.industrial_benefit_won {
             Some(benefit) => ("산재보험급여 공제(유족급여)(원)", format_currency(benefit)),
             None => ("", String::new()),
+        },
+        if view.deduction_excess_won > 0.0 {
+            ("공제 후 재산상 손해(원)", "0".to_string())
+        } else {
+            ("", String::new())
+        },
+        if view.deduction_excess_won > 0.0 {
+            (
+                excess_key.as_str(),
+                format_currency(-view.deduction_excess_won),
+            )
+        } else {
+            ("", String::new())
+        },
+        if view.solatium_added_won > 0.0 {
+            ("위자료 가산(원)", format_currency(view.solatium_added_won))
+        } else {
+            ("", String::new())
         },
         ("최종 합계(원)", format_currency(view.final_won)),
         ("", String::new()),
@@ -841,6 +882,9 @@ mod tests {
                 capped_at_index: None,
             },
             export_warnings: Vec::new(),
+            solatium_added_won: 0.0,
+            deduction_excess_won: 0.0,
+            deduction_excess_label: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -884,6 +928,56 @@ mod tests {
         assert!(body.contains("확인 필요"));
         assert!(body.contains("치료비에 수치합계 20 한도"));
         assert!(body.contains("보조구에 수치합계 20 한도"));
+    }
+
+    /// 위자료를 과실상계·공제 뒤에 더한 결과는 "위자료 가산" 행이 있어야 표시된 행들의 합이
+    /// 최종액과 맞는다. 0(보험약관 기준·구 결과)이면 행을 내지 않는다.
+    #[test]
+    fn compensation_csv_solatium_added_row_only_when_positive() {
+        let body_of = |view: &CompensationResultView| {
+            let bytes = render_compensation_csv_bytes(view).unwrap();
+            String::from_utf8(bytes[3..].to_vec()).unwrap()
+        };
+        assert!(!body_of(&compensation_sample()).contains("위자료 가산"));
+        let mut view = compensation_sample();
+        view.solatium_added_won = 30_000_000.0;
+        assert!(body_of(&view).contains("위자료 가산(원),\"30,000,000\""));
+
+        let mut death = compensation_death_sample();
+        let death_bytes = render_compensation_death_csv_bytes(&death).unwrap();
+        assert!(!std::str::from_utf8(&death_bytes[3..])
+            .unwrap()
+            .contains("위자료 가산"));
+        death.solatium_added_won = 80_000_000.0;
+        let death_bytes = render_compensation_death_csv_bytes(&death).unwrap();
+        assert!(std::str::from_utf8(&death_bytes[3..])
+            .unwrap()
+            .contains("위자료 가산(원),\"80,000,000\""));
+    }
+
+    /// 공제가 재산상 손해를 넘으면 "공제 후 재산상 손해 0" → 공제 초과분(음수) → 위자료 가산
+    /// 순으로 내야 세 행의 합이 최종액과 맞는다. 라벨은 frontend 가 넘긴 그대로 쓴다.
+    #[test]
+    fn compensation_csv_deduction_excess_rows_precede_solatium_added() {
+        let mut view = compensation_sample();
+        view.solatium_added_won = 30_000_000.0;
+        view.deduction_excess_won = 5_000_000.0;
+        view.deduction_excess_label = "공제 초과분 (위자료에서 차감)".into();
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = String::from_utf8(bytes[3..].to_vec()).unwrap();
+        let zero = body.find("공제 후 재산상 손해(원),0").expect("zero row");
+        let excess = body
+            // 음수 셀은 수식 주입 방지로 작은따옴표가 붙는다 (escape_csv_cell).
+            .find("공제 초과분 (위자료에서 차감)(원),\"'-5,000,000\"")
+            .expect("excess row");
+        let added = body.find("위자료 가산(원)").expect("added row");
+        assert!(zero < excess && excess < added);
+
+        view.deduction_excess_won = 0.0;
+        let bytes = render_compensation_csv_bytes(&view).unwrap();
+        let body = String::from_utf8(bytes[3..].to_vec()).unwrap();
+        assert!(!body.contains("공제 후 재산상 손해"));
+        assert!(!body.contains("공제 초과분"));
     }
 
     /// 경고가 없으면 행 자체가 없어야 한다 (빈 "확인 필요" 행이 생기면 안 된다).
@@ -932,7 +1026,7 @@ mod tests {
         });
         let bytes = render_compensation_csv_bytes(&view).unwrap();
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
-        assert!(body.contains("산재보험급여 공제(장해급여)(원)"));
+        assert!(body.contains("산재보험급여 공제(장해급여·휴업급여)(원)"));
         assert!(body.contains("공제 후 일실수입(원)"));
         assert!(body.contains("\"199,399,909\""));
         // 급여 전액 공제 (한도 미발동) — 한도 안내 문구 없음.
@@ -1036,6 +1130,9 @@ mod tests {
                 capped_at_index: None,
             },
             export_warnings: Vec::new(),
+            solatium_added_won: 0.0,
+            deduction_excess_won: 0.0,
+            deduction_excess_label: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),

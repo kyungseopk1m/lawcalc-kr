@@ -26,7 +26,8 @@ import type {
 import { computeOtherDamages } from "../other-damages/compute";
 import { validateCompensationDeathInput } from "./validators";
 
-const DEFAULT_WORKING_DAYS_PER_MONTH = 22;
+// 대법원 2024. 4. 25. 선고 2020다271650 (월 가동일수 20일 초과 인정 곤란). 부상 엔진과 같다.
+const DEFAULT_WORKING_DAYS_PER_MONTH = 20;
 const DEFAULT_RETIREMENT_AGE = 65;
 const DEFAULT_LIVING_COST_DEDUCTION_RATIO = 1 / 3;
 const DEFAULT_FUNERAL_EXPENSE_WON = 5_000_000;
@@ -64,8 +65,9 @@ function distributeFinal(
  *
  * 1. 노동능력 100% 상실 전제 → 단일 segment `[0, totalMonths)` lossRate = 1.
  * 2. 일실수입 = `floor(월급여 × appliedHoffman × (1 - 생계비비율))` (default 생계비 1/3).
- * 3. 위자료 + 장례비(default 5,000,000) 합산 → 과실상계 (장례비도 적극손해로 과실상계 대상, 대법원 판례).
- * 4. 공제(비율/전액) 적용 → `max(0, ...)` → 100원 미만 절사 = finalWon.
+ * 3. 장례비(default 5,000,000) 합산 → 과실상계 (장례비도 적극손해로 과실상계 대상).
+ *    위자료는 과실상계 대상이 아니다 (`applyFaultToSolatium` 이면 이전처럼 포함).
+ * 4. 공제(비율/전액) 적용 → 위자료 가산 → `max(0, ...)` → 100원 미만 절사 = finalWon.
  * 5. heirs 입력 시 finalWon 을 상속분(numerator/denominator)으로 분배 (floor + 잔여원 선순위).
  */
 export function computeCompensationDeath(
@@ -162,15 +164,20 @@ export function computeCompensationDeath(
   const industrialDeductedWon = Math.min(industrialBenefitInputWon, lostIncomeSubtotalWon);
   const lostIncomeAfterIndustrialWon = lostIncomeSubtotalWon - industrialDeductedWon;
 
-  // 5. 위자료 + 장례비 (장례비도 적극적 손해 → 과실상계 대상. 대법원 판례:
-  //    "{(재산상 손해[소극손해=일실수입 + 적극손해=장례비·기타손해] + 위자료) × (1 − 과실비율)} − 공제".
-  //    종전엔 장례비를 과실상계 후 전액 가산해 과실 사건에서 과다 산정됐다.)
+  // 5. 장례비는 적극적 손해라 과실상계 대상이다. 위자료는 과실 정도 등을 참작해 정하고
+  //    과실상계·공제 뒤에 더한다 (서울고법 2022. 2. 18. 선고 2020나2039267,
+  //    광주고법(전주) 2016. 7. 21. 선고 2015나100421). 위자료에 과실을 곱하는 것은
+  //    보험약관 지급기준(`applyFaultToSolatium`)일 때뿐이다.
   const solatiumWon = input.solatiumWon ?? 0;
+  const solatiumInFaultBase = input.applyFaultToSolatium === true;
   const funeralExpenseWon = input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE_WON;
   const pecuniaryDamagesSubtotalWon =
-    lostIncomeAfterIndustrialWon + otherDamagesSubtotalWon + solatiumWon + funeralExpenseWon;
+    lostIncomeAfterIndustrialWon +
+    otherDamagesSubtotalWon +
+    funeralExpenseWon +
+    (solatiumInFaultBase ? solatiumWon : 0);
 
-  // 6. 과실상계 (장례비 포함 전체에 적용)
+  // 6. 과실상계 (장례비 포함 재산상 손해에 적용)
   const faultRatio = input.faultRatio ?? 0;
   const faultBeforeWon = pecuniaryDamagesSubtotalWon;
   const faultAfterWon = Math.floor(faultBeforeWon * (1 - faultRatio));
@@ -186,7 +193,10 @@ export function computeCompensationDeath(
   const deductionsAfterWon = faultAfterWon - ratioSubtotalWon - absoluteSubtotalWon;
 
   // 9. final
-  const finalRawWon = Math.max(0, deductionsAfterWon);
+  // 공제 후 값이 음수(전액공제가 재산상 손해를 넘음)면 그 초과분이 위자료를 차감한다.
+  // 2020나2039267 은 선급금·치료비를 재산상 손해에서만 공제했고, 산재 급여도 위자료를
+  // 잠식하지 않는다(4.7). 이와 다른 동작이며 정책은 미확정이다.
+  const finalRawWon = Math.max(0, deductionsAfterWon + (solatiumInFaultBase ? 0 : solatiumWon));
   const finalWon = Math.floor(finalRawWon / FINAL_FLOOR_UNIT) * FINAL_FLOOR_UNIT;
 
   // 10. 상속분 분배 (heirs 입력 시)

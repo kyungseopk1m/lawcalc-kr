@@ -131,6 +131,18 @@ pub struct CompensationResultView {
     /// `default` 로 빈 목록이 된다 (회귀 0).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub export_warnings: Vec<String>,
+    /// 과실상계·공제 뒤에 더한 위자료. frontend 가 단일 출처
+    /// (`solatiumAddedAfterDeductionsWon`)에서 계산해 넘긴다. 0 이면 위자료가 과실상계
+    /// 대상 소계에 들어간 결과(보험약관 기준·구 결과)라 행을 내지 않는다.
+    #[serde(default)]
+    pub solatium_added_won: f64,
+    /// 공제가 재산상 손해를 넘은 금액 중 위자료에서 뺀 금액 (frontend `solatiumSettlement`).
+    /// 0 보다 크면 "공제 후 재산상 손해 0원" 과 이 행을 위자료 가산 앞에 낸다.
+    #[serde(default)]
+    pub deduction_excess_won: f64,
+    /// "공제 초과분" 행 라벨. 0원 하한 설명까지 frontend 가 만들어 넘긴다.
+    #[serde(default)]
+    pub deduction_excess_label: String,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,
@@ -237,6 +249,18 @@ pub struct CompensationDeathResultView {
     /// `default` 로 빈 목록이 된다 (회귀 0).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub export_warnings: Vec<String>,
+    /// 과실상계·공제 뒤에 더한 위자료. frontend 가 단일 출처
+    /// (`solatiumAddedAfterDeductionsWon`)에서 계산해 넘긴다. 0 이면 위자료가 과실상계
+    /// 대상 소계에 들어간 결과(보험약관 기준·구 결과)라 행을 내지 않는다.
+    #[serde(default)]
+    pub solatium_added_won: f64,
+    /// 공제가 재산상 손해를 넘은 금액 중 위자료에서 뺀 금액 (frontend `solatiumSettlement`).
+    /// 0 보다 크면 "공제 후 재산상 손해 0원" 과 이 행을 위자료 가산 앞에 낸다.
+    #[serde(default)]
+    pub deduction_excess_won: f64,
+    /// "공제 초과분" 행 라벨. 0원 하한 설명까지 frontend 가 만들어 넘긴다.
+    #[serde(default)]
+    pub deduction_excess_label: String,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,

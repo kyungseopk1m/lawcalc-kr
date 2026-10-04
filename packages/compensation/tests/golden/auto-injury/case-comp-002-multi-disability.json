@@ -3,7 +3,7 @@
   "id": "case-comp-002-multi-disability",
   "title": "한시 5y×20% + 영구 58% → [0,60) 0.664 + [60,360) 0.58 (Option B 기간식, 2 segment)",
   "source": "manual-derivation",
-  "notes": "COMP-2 기간식. 한시장해 raw 0.20 을 실제 한시기간 [0,60) 에만 적용: [0,60) lossRate = 1-(1-0.58)(1-0.20) = 0.664, [60,360) = 영구분 0.58. segA floor(3785496×0.664×H[60]) + segB floor(3785496×0.58×(H[360]-H[60])) = 134361786 + 364808946 = 499170732. (종전 /10 환산 0.622 단일 segment 517089145 는 한시를 360개월에 잘못 희석.)",
+  "notes": "2026-10-04 재유도 (r1-golden-rederivation-2026-10-04.md, 월 가동일수 20·위자료 과실상계 밖): floor(3,441,360 × 0.664 × H[60]) + floor(3,441,360 × 0.58 × (H[360]-H[60])) = 122,147,078 + 331,644,497 = 453,791,575 → 절사 453,791,500. 아래는 2026-10-04 이전 값·산식이다. COMP-2 기간식. 한시장해 raw 0.20 을 실제 한시기간 [0,60) 에만 적용: [0,60) lossRate = 1-(1-0.58)(1-0.20) = 0.664, [60,360) = 영구분 0.58. segA floor(3785496×0.664×H[60]) + segB floor(3785496×0.58×(H[360]-H[60])) = 134361786 + 364808946 = 499170732. (종전 /10 환산 0.622 단일 segment 517089145 는 한시를 360개월에 잘못 희석.)",
   "input": {
     "base": {
       "birthDate": "1996-01-01",
@@ -41,20 +41,20 @@
     }
   },
   "expected": {
-    "lostIncomeSubtotalWon": 499170732,
+    "lostIncomeSubtotalWon": 453791575,
     "solatiumWon": 0,
-    "pecuniaryDamagesSubtotalWon": 499170732,
+    "pecuniaryDamagesSubtotalWon": 453791575,
     "faultOffset": {
       "ratio": 0,
-      "afterWon": 499170732,
-      "beforeWon": 499170732
+      "afterWon": 453791575,
+      "beforeWon": 453791575
     },
     "deductions": {
       "ratioSubtotalWon": 0,
       "absoluteSubtotalWon": 0,
-      "afterWon": 499170732
+      "afterWon": 453791575
     },
-    "finalWon": 499170700,
+    "finalWon": 453791500,
     "hoffman240CapCappedAtIndex": null,
     "dataVersions": {
       "laborRates": "labor-rates/v1.1.0",
@@ -68,20 +68,20 @@
         "endMonth": 60,
         "lossRate": 0.6639999999999999,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 53.45457732,
         "appliedHoffman": 53.45457732,
-        "amountFloorWon": 134361786
+        "amountFloorWon": 122147078
       },
       {
         "startMonth": 60,
         "endMonth": 360,
         "lossRate": 0.58,
         "dailyWageWon": 172068,
-        "monthlyWageWon": 3785496,
+        "monthlyWageWon": 3441360,
         "rawHoffman": 166.15549000000001,
         "appliedHoffman": 166.15549000000001,
-        "amountFloorWon": 364808946
+        "amountFloorWon": 331644497
       }
     ],
     "hoffman240CapAppliedHoffman": [53.45457732, 166.15549000000001],
@@ -89,7 +89,7 @@
   },
   "metadata": {
     "oracle": "manual-derivation",
-    "derivedAt": "2026-06-25",
-    "derivedBy": "COMP-2 기간식 재도출 — calc-correctness-fixes-2026-06-21.md B절 + compensation-other-damages-golden-derivation-2026-06-03.md"
+    "derivedAt": "2026-10-04",
+    "derivedBy": "r1-golden-rederivation-2026-10-04.md (C1·C2 재유도, 바뀌지 않은 중간값은 COMP-2 기간식 재도출: calc-correctness-fixes-2026-06-21.md B절 + compensation-other-damages-golden-derivation-2026-06-03.md)"
   }
 }

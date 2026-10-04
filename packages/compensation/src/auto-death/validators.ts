@@ -174,6 +174,9 @@ export function validateCompensationDeathInput(input: CompensationAutoDeathInput
   if (input.faultRatio !== undefined) {
     assertRatio("faultRatio", input.faultRatio);
   }
+  if (input.applyFaultToSolatium !== undefined && typeof input.applyFaultToSolatium !== "boolean") {
+    throw new RangeError(`${PREFIX}: applyFaultToSolatium 은 boolean 이어야 합니다.`);
+  }
   if (input.deductions !== undefined) {
     validateDeductions(input.deductions);
   }

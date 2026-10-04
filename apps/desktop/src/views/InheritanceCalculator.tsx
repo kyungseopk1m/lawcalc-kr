@@ -30,10 +30,12 @@ import {
   type HeirInput,
   type SpouseInput,
 } from "../components/inheritance-heirs";
+import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { useResultFingerprint } from "../hooks/use-result-fingerprint";
 import { useCaseSlot } from "../lib/case-file";
 import { ipc, type LcalcFile, type LcalcInheritancePayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
@@ -162,8 +164,6 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
   const [siblings, setSiblings] = useState<HeirInput[]>([]);
   const [collateralFourth, setCollateralFourth] = useState<HeirInput[]>([]);
   const [note, setNote] = useState("");
-  const [result, setResult] = useState<InheritanceResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const dirtySnapshot = useMemo(
@@ -181,6 +181,28 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
   );
   const markInheritanceClean = useLcalcDirtyTracker("inheritance", dirtySnapshot);
   const pristineSnapshotRef = useRef(dirtySnapshot);
+  const resultFingerprint = buildInheritanceDirtySnapshot({
+    decedent,
+    spouse,
+    linealDescendants,
+    linealAscendants,
+    siblings,
+    collateralFourth,
+    note: "",
+  });
+  const {
+    value: result,
+    setValue: setResult,
+    setLoaded: setLoadedResult,
+    stale: resultStale,
+    notice: resultNotice,
+  } = useResultFingerprint<InheritanceResult>(resultFingerprint);
+  const {
+    value: error,
+    setValue: setError,
+    stale: errorStale,
+  } = useResultFingerprint<string>(resultFingerprint);
+  const resultReady = result !== null && !resultStale;
 
   const buildInput = (): InheritanceInput =>
     buildInheritanceInput({
@@ -278,7 +300,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
   const handleExportPdf = () =>
     runAction("pdf", async () => {
-      if (!result) {
+      if (!result || resultStale) {
         throw new Error("계산 후 PDF를 저장해 주세요.");
       }
       const path = await ipc.exportInheritancePdf(result);
@@ -287,7 +309,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
-      if (!result) {
+      if (!result || resultStale) {
         throw new Error("계산 후 CSV를 저장해 주세요.");
       }
       const path = await ipc.exportInheritanceCsv(result);
@@ -296,7 +318,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
   const handleCopy = () =>
     runAction("copy", async () => {
-      if (!result) {
+      if (!result || resultStale) {
         throw new Error("계산 후 복사해 주세요.");
       }
       await ipc.copyToClipboard(formatInheritanceForClipboard(result));
@@ -305,7 +327,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
   const handleSaveLcalc = () =>
     runAction("save", async () => {
-      if (!result) {
+      if (!result || resultStale) {
         throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       }
       const path = await ipc.saveLcalc(buildLcalcFile(buildInput(), result));
@@ -331,10 +353,14 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     const loadedNote = loaded.note ?? "";
     applyInput(loaded.input);
     setNote(loadedNote);
-    const loadedResult = loaded.result ?? calculateInheritance(loaded.input);
-    setResult({ ...loadedResult, disclaimer: STANDARD_DISCLAIMER });
+    const differs = setLoadedResult(
+      loaded.result && { ...loaded.result, disclaimer: STANDARD_DISCLAIMER },
+      () => calculateInheritance(loaded.input),
+      (r) => r.shares.map((s) => `${s.name} ${s.numerator}/${s.denominator}`).join(", "),
+    );
     setError(null);
     markInheritanceClean(buildLoadedInheritanceDirtySnapshot(loaded.input, loadedNote));
+    return differs;
   };
 
   useCaseSlot("inheritance", {
@@ -490,12 +516,14 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
       </div>
 
       <div className="grid gap-4">
-        {error ? (
+        {error && !errorStale ? (
           <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
             <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
         ) : null}
+
+        <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
         {result ? (
           <>
@@ -575,7 +603,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 label="PDF"
                 loadingAction={loadingAction}
                 requiresResult={true}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportPdf}
               />
               <ActionButton
@@ -584,7 +612,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 label="CSV"
                 loadingAction={loadingAction}
                 requiresResult={true}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportCsv}
               />
               <ActionButton
@@ -593,7 +621,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 label="복사"
                 loadingAction={loadingAction}
                 requiresResult={true}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleCopy}
               />
               <ActionButton
@@ -602,7 +630,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 label=".lcalc 저장"
                 loadingAction={loadingAction}
                 requiresResult={true}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleSaveLcalc}
               />
               <ActionButton
@@ -611,7 +639,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 label=".lcalc 열기"
                 loadingAction={loadingAction}
                 requiresResult={false}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleLoadLcalc}
               />
             </div>

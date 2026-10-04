@@ -50,20 +50,24 @@ type ProvisionalApplicationKind =
 import { CaseValueEstimator } from "../components/form/CaseValueEstimator";
 import { ClaimAmendmentPanel } from "../components/form/ClaimAmendmentPanel";
 import { ProportionalPillInput } from "../components/form/ProportionalPillInput";
+import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
+import { useResultFingerprint } from "../hooks/use-result-fingerprint";
 import { useCaseSlot } from "../lib/case-file";
 import { formatWon, formatWonInput, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcFile, type LcalcLitigationCostPayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
+import { FieldError, parseNumberText, type ParsedNumber } from "../lib/parse-number";
 import {
   parseLoadedLitigationCostLcalcInput,
   validateLcalcEnvelope,
 } from "../lib/lcalc-validation";
+import { todayIso } from "../lib/today";
 
 const APP_VERSION = __APP_VERSION__;
 
@@ -75,10 +79,6 @@ interface ToastState {
   message: string;
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function formatComputedAt(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -88,21 +88,63 @@ function formatComputedAt(value: string): string {
   }).format(date);
 }
 
-function parsePositiveInteger(value: string, fallback: number): number {
-  const parsed = Number(value.replaceAll(",", ""));
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+/** 소가 칸. 읽지 못한 값이나 빈칸을 0원으로 바꾸면 인지대가 조용히 0원이 된다. */
+function caseValueParsed(text: string): ParsedNumber {
+  const parsed = parseNumberText(text, { integer: true, min: 0 });
+  return parsed.error === undefined && parsed.value === undefined
+    ? { error: "소가를 입력하세요." }
+    : parsed;
 }
 
-function parseNonNegativeInteger(value: string, fallback: number): number {
-  const parsed = Number(value.replaceAll(",", ""));
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+// 횟수·인원 칸. "10명" 처럼 라벨 단위를 붙여도 읽는다. 읽지 못한 값은 칸 옆 오류로 계산을
+// 막고(`numberFieldErrors`), 여기서는 화면이 그려지도록 fallback 만 돌려준다.
+const PARTY_COUNT_FORMAT = { unit: "명", integer: true, min: 1 } as const;
+const CREDITOR_COUNT_FORMAT = { unit: "명", integer: true, min: 0 } as const;
+const INSTITUTION_COUNT_FORMAT = { unit: "곳", integer: true, min: 0 } as const;
+const DELIVERY_COUNT_FORMAT = { unit: "회", integer: true, min: 1 } as const;
+
+function parsePositiveInteger(
+  value: string,
+  fallback: number,
+  format: Parameters<typeof parseNumberText>[1] = { integer: true, min: 1 },
+): number {
+  return parseNumberText(value, format).value ?? fallback;
+}
+
+function parseNonNegativeInteger(
+  value: string,
+  fallback: number,
+  format: Parameters<typeof parseNumberText>[1] = { integer: true, min: 0 },
+): number {
+  return parseNumberText(value, format).value ?? fallback;
 }
 
 const PROPORTIONAL_VALUE_TOKEN = /^\d{1,3}(?:,\d{3})+$|^\d+$/;
 
+const PROPORTIONAL_SEPARATOR = /(?:,\s+|\s+|\/)+/;
+
+/**
+ * 당사자별 소가 칸의 오류. `parseProportionalValues` 는 읽지 못한 토큰을 건너뛰므로, 계산
+ * 전에 여기서 걸러 조용히 빠지는 당사자가 없게 한다. 문제가 없으면 undefined.
+ */
+export function proportionalValuesError(value: string): string | undefined {
+  const tokens = value.split(PROPORTIONAL_SEPARATOR).filter((part) => part.length > 0);
+  const unreadable = tokens.filter(
+    (part) => !PROPORTIONAL_VALUE_TOKEN.test(part) || Number(part.replaceAll(",", "")) === 0,
+  );
+  if (unreadable.length > 0) return `읽지 못한 값이 있습니다: ${unreadable.join(", ")}`;
+  if (tokens.length === 0) return "당사자별 소가를 하나 이상 입력하세요.";
+  return undefined;
+}
+
+function proportionalParsed(value: string): ParsedNumber {
+  const error = proportionalValuesError(value);
+  return error === undefined ? {} : { error };
+}
+
 export function parseProportionalValues(value: string): number[] {
   return value
-    .split(/(?:,\s+|\s+|\/)+/)
+    .split(PROPORTIONAL_SEPARATOR)
     .filter((part) => PROPORTIONAL_VALUE_TOKEN.test(part))
     .map((part) => Number(part.replaceAll(",", "")))
     .filter((n) => Number.isInteger(n) && n > 0);
@@ -368,8 +410,6 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
   const [distributionMode, setDistributionMode] = useState<DistributionMode>("equal");
   const [proportionalValuesText, setProportionalValuesText] = useState("10000000, 20000000");
   const [note, setNote] = useState("");
-  const [result, setResult] = useState<LitigationCostResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
@@ -381,7 +421,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       caseValue: rawCaseValue,
       caseValueBasis,
     }).caseValue;
-    const partyCount = parsePositiveInteger(partyCountText, 1);
+    const partyCount = parsePositiveInteger(partyCountText, 1, PARTY_COUNT_FORMAT);
     const deliveryFormula = deliveryFormulaOf(caseType);
     const lawyerFeeAppliesNow = appliedDomains(caseType).includes("lawyerFee");
     // 지급명령(차)과 보전처분(카합/카단)은 심급 배수를 쓰지 않으므로 1심으로 고정한다.
@@ -420,11 +460,14 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       if (useCourtMultiplier) {
         discounts.push({
           kind: "courtDiscretion",
-          multiplier: Number(courtMultiplierText),
+          multiplier: parseNumberText(courtMultiplierText).value ?? Number.NaN,
         });
       }
       if (useCustomRate) {
-        discounts.push({ kind: "customPercent", rate: Number(customRateText) });
+        discounts.push({
+          kind: "customPercent",
+          rate: parseNumberText(customRateText).value ?? Number.NaN,
+        });
       }
     }
 
@@ -434,14 +477,26 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
         caseType,
         partyCount,
         ...(deliveryFormula.kind === "baseCountPlusCreditorMultiple"
-          ? { creditorCount: parseNonNegativeInteger(creditorCountText, 0) }
+          ? {
+              creditorCount: parseNonNegativeInteger(creditorCountText, 0, CREDITOR_COUNT_FORMAT),
+            }
           : {}),
         ...(deliveryFormula.kind === "perPartyPlusExtra"
-          ? { extraCount: parseNonNegativeInteger(inquiredInstitutionsText, 0) }
+          ? {
+              extraCount: parseNonNegativeInteger(
+                inquiredInstitutionsText,
+                0,
+                INSTITUTION_COUNT_FORMAT,
+              ),
+            }
           : {}),
         ...(deliveryFormula.kind === "range"
           ? {
-              customCount: parsePositiveInteger(deliveryCountText, deliveryFormula.countMin),
+              customCount: parsePositiveInteger(
+                deliveryCountText,
+                deliveryFormula.countMin,
+                DELIVERY_COUNT_FORMAT,
+              ),
             }
           : {}),
         ...(caseType === "provisionalMeasureCollegial" || caseType === "provisionalMeasureSingle"
@@ -598,7 +653,60 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     }
   };
 
+  // 화면에 보이는 숫자 칸 중 읽지 못한 것. 하나라도 있으면 계산하지 않는다.
+  const numberFields: (readonly [string, ParsedNumber])[] = [
+    ...(stampDutyApplies && caseValueBasis === "amount"
+      ? [["소가", caseValueParsed(caseValueText)] as const]
+      : []),
+    ...(distributionMode === "proportional"
+      ? [["당사자별 소가", proportionalParsed(proportionalValuesText)] as const]
+      : []),
+    ["당사자수", parseNumberText(partyCountText, PARTY_COUNT_FORMAT)],
+    ...(deliveryFormula.kind === "baseCountPlusCreditorMultiple"
+      ? [["채권자수", parseNumberText(creditorCountText, CREDITOR_COUNT_FORMAT)] as const]
+      : []),
+    ...(deliveryFormula.kind === "perPartyPlusExtra"
+      ? [
+          [
+            "우편 조회대상 기관수",
+            parseNumberText(inquiredInstitutionsText, INSTITUTION_COUNT_FORMAT),
+          ] as const,
+        ]
+      : []),
+    ...(deliveryFormula.kind === "range"
+      ? [["송달 횟수", parseNumberText(deliveryCountText, DELIVERY_COUNT_FORMAT)] as const]
+      : []),
+    ...(lawyerFeeApplies && useCourtMultiplier
+      ? [["재량 배율", parseNumberText(courtMultiplierText)] as const]
+      : []),
+    ...(lawyerFeeApplies && useCustomRate
+      ? [["직접 배율", parseNumberText(customRateText)] as const]
+      : []),
+  ];
+  const numberFieldError = numberFields
+    .flatMap(([label, parsed]) => (parsed.error === undefined ? [] : [`${label}: ${parsed.error}`]))
+    .join(" ");
+  const resultFingerprint = createLcalcDirtySnapshot({ input, numberFieldError });
+  const {
+    value: result,
+    setValue: setResult,
+    setLoaded: setLoadedResult,
+    stale: resultStale,
+    notice: resultNotice,
+  } = useResultFingerprint<LitigationCostResult>(resultFingerprint);
+  const {
+    value: error,
+    setValue: setError,
+    stale: errorStale,
+  } = useResultFingerprint<string>(resultFingerprint);
+  const resultReady = result !== null && !resultStale;
+
   const handleCalculate = () => {
+    if (numberFieldError) {
+      setResult(null);
+      setError(numberFieldError);
+      return;
+    }
     try {
       const calculated = computeLitigationCost(input);
       setResult(calculated);
@@ -606,7 +714,12 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       setToast(null);
     } catch (e) {
       setResult(null);
-      setError(e instanceof Error ? e.message : String(e));
+      // 범위 검사는 엔진 몫이라 엔진 필드명이 문구에 남는다. 화면 라벨로 바꿔 보인다.
+      setError(
+        (e instanceof Error ? e.message : String(e))
+          .replaceAll("courtDiscretion.multiplier", "재량 배율")
+          .replaceAll("customPercent.rate", "직접 배율"),
+      );
     }
   };
 
@@ -642,28 +755,28 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
 
   const handleExportPdf = () =>
     runAction("pdf", async () => {
-      if (!result) throw new Error("계산 후 PDF를 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 PDF를 저장해 주세요.");
       const path = await ipc.exportLitigationCostPdf(withLitigationCostExportWarnings(result));
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
     runAction("csv", async () => {
-      if (!result) throw new Error("계산 후 CSV를 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 CSV를 저장해 주세요.");
       const path = await ipc.exportLitigationCostCsv(withLitigationCostExportWarnings(result));
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleCopy = () =>
     runAction("copy", async () => {
-      if (!result) throw new Error("계산 후 복사해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 복사해 주세요.");
       await ipc.copyToClipboard(formatLitigationCostForClipboard(result));
       return "소송비용 계산 결과를 클립보드에 복사했습니다.";
     });
 
   const handleSaveLcalc = () =>
     runAction("save", async () => {
-      if (!result) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
+      if (!result || resultStale) throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       const path = await ipc.saveLcalc(buildLcalcFile(input, result, note));
       if (path) markLitigationCostClean();
       return path ? `.lcalc 파일을 저장했습니다: ${path}` : "저장을 취소했습니다.";
@@ -685,9 +798,14 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     const loadedNote = loaded.note ?? "";
     applyInput(loaded.input);
     setNote(loadedNote);
-    setResult(loaded.result ?? computeLitigationCost(loaded.input));
+    const differs = setLoadedResult(
+      loaded.result,
+      () => computeLitigationCost(loaded.input),
+      (r) => formatWon(r.totalAmount),
+    );
     setError(null);
     markLitigationCostClean(buildDirtySnapshot(loaded.input, loadedNote));
+    return differs;
   };
 
   useCaseSlot("litigation-cost", {
@@ -695,6 +813,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       if (dirtySnapshot === pristineSnapshotRef.current) {
         return { status: "pristine" };
       }
+      if (numberFieldError) return { status: "invalid" };
       try {
         return { status: "ok", file: buildLcalcFile(input, computeLitigationCost(input), note) };
       } catch {
@@ -787,6 +906,13 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   disabled={caseValueBasis !== "amount" || !stampDutyApplies}
                   onChange={(e) => setCaseValueText(parseWonText(e.target.value))}
                 />
+                <FieldError
+                  message={
+                    caseValueBasis === "amount" && stampDutyApplies
+                      ? caseValueParsed(caseValueText).error
+                      : undefined
+                  }
+                />
               </label>
               <label className="grid gap-2 text-sm font-medium">
                 당사자수
@@ -795,6 +921,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   inputMode="numeric"
                   onChange={(e) => setPartyCountText(e.target.value)}
                 />
+                <FieldError message={parseNumberText(partyCountText, PARTY_COUNT_FORMAT).error} />
               </label>
             </div>
             {deliveryFormula.kind === "baseCountPlusCreditorMultiple" ? (
@@ -804,6 +931,9 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   value={creditorCountText}
                   inputMode="numeric"
                   onChange={(e) => setCreditorCountText(e.target.value)}
+                />
+                <FieldError
+                  message={parseNumberText(creditorCountText, CREDITOR_COUNT_FORMAT).error}
                 />
                 <span className="text-xs font-normal text-muted-foreground">
                   송달 횟수 = 기본 {deliveryFormula.baseCount}회 + 채권자수 ×{" "}
@@ -819,6 +949,11 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   inputMode="numeric"
                   onChange={(e) => setInquiredInstitutionsText(e.target.value)}
                 />
+                <FieldError
+                  message={
+                    parseNumberText(inquiredInstitutionsText, INSTITUTION_COUNT_FORMAT).error
+                  }
+                />
                 <span className="text-xs font-normal text-muted-foreground">
                   우편에 의하여 재산조회를 실시하는 기관 수만큼 송달 횟수에 가산합니다. 해당 없으면
                   0.
@@ -833,6 +968,9 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   inputMode="numeric"
                   placeholder={`${deliveryFormula.countMin} ~ ${deliveryFormula.countMax}`}
                   onChange={(e) => setDeliveryCountText(e.target.value)}
+                />
+                <FieldError
+                  message={parseNumberText(deliveryCountText, DELIVERY_COUNT_FORMAT).error}
                 />
                 <span className="text-xs font-normal text-muted-foreground">
                   이 사건구분은 정본 기준이 {deliveryFormula.countMin}~{deliveryFormula.countMax}회
@@ -1080,6 +1218,11 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                     value={courtMultiplierText}
                     onChange={(e) => setCourtMultiplierText(e.target.value)}
                   />
+                  <FieldError
+                    message={
+                      useCourtMultiplier ? parseNumberText(courtMultiplierText).error : undefined
+                    }
+                  />
                 </label>
                 <label className="grid gap-2">
                   <span className="flex items-center gap-2">
@@ -1093,6 +1236,9 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   <Input
                     value={customRateText}
                     onChange={(e) => setCustomRateText(e.target.value)}
+                  />
+                  <FieldError
+                    message={useCustomRate ? parseNumberText(customRateText).error : undefined}
                   />
                 </label>
               </div>
@@ -1132,6 +1278,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   placeholder="예: 10,000,000"
                   ariaLabel="당사자별 소가"
                 />
+                <FieldError message={proportionalValuesError(proportionalValuesText)} />
               </label>
             ) : null}
             <label className="grid gap-2 text-sm font-medium">
@@ -1151,12 +1298,14 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       </div>
 
       <div className="grid gap-4">
-        {error ? (
+        {error && !errorStale ? (
           <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
             <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
         ) : null}
+
+        <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
         {result ? (
           <>
@@ -1248,7 +1397,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 label="PDF"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportPdf}
               />
               <ActionButton
@@ -1257,7 +1406,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 label="CSV"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleExportCsv}
               />
               <ActionButton
@@ -1266,7 +1415,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 label="복사"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleCopy}
               />
               <ActionButton
@@ -1275,7 +1424,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 label=".lcalc 저장"
                 loadingAction={loadingAction}
                 requiresResult
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleSaveLcalc}
               />
               <ActionButton
@@ -1284,7 +1433,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 label=".lcalc 열기"
                 loadingAction={loadingAction}
                 requiresResult={false}
-                resultReady={result !== null}
+                resultReady={resultReady}
                 onClick={handleLoadLcalc}
               />
             </div>

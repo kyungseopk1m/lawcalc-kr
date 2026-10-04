@@ -39,7 +39,8 @@ describe("소가 산정 기준 (인지규칙 제18조의2)", () => {
     fireEvent.change(basisSelect(), { target: { value: "unascertainable" } });
     expect(basisSelect().value).toBe("unascertainable");
 
-    // 초기화는 입력 필드 밖에서 Esc. 되돌리지 않으면 기본 화면에서 230,000원이 계산된다.
+    // 초기화는 입력 필드 밖에서 Esc 두 번. 되돌리지 않으면 기본 화면에서 230,000원이 계산된다.
+    fireEvent.keyDown(window, { key: "Escape" });
     fireEvent.keyDown(window, { key: "Escape" });
 
     expect(basisSelect().value).toBe("amount");
@@ -170,5 +171,39 @@ describe("소가 계산의 기준 가액 표시", () => {
     expect(screen.queryByLabelText(/^피담보채권액/)).toBeNull();
     fireEvent.change(kindSelect(), { target: { value: "securityRightConfirmation" } });
     expect(screen.getByLabelText(/^피담보채권액/)).toBeTruthy();
+  });
+});
+
+describe("숫자 칸 (공용 파서)", () => {
+  const partyCountInput = (): HTMLInputElement => screen.getByLabelText("당사자수");
+  const calculate = () => fireEvent.click(screen.getByRole("button", { name: "계산" }));
+
+  it('당사자수 "10명" 은 10명으로 계산한다 (1명으로 바꾸지 않는다)', () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(partyCountInput(), { target: { value: "10명" } });
+    calculate();
+
+    // 민사 1심 단독: 당사자수 × 15회 × 5,640원 (송달료 데이터셋). 1명으로 읽으면 84,600원.
+    expect(screen.getByText("846,000원")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("읽지 못한 당사자수는 칸 옆 오류를 내고 계산하지 않는다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(partyCountInput(), { target: { value: "열명" } });
+
+    expect(screen.getByText(/숫자로 입력하세요/)).toBeTruthy();
+    calculate();
+    expect(screen.getByText(/당사자수: 숫자로 입력하세요/)).toBeTruthy();
+    expect(screen.queryByText("계산 결과")).toBeNull();
+  });
+
+  it("소가를 비우면 0원으로 계산하지 않고 오류를 낸다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(caseValueInput(), { target: { value: "" } });
+    expect(screen.getByText("소가를 입력하세요.")).toBeTruthy();
+    calculate();
+    expect(screen.getByText(/소가: 소가를 입력하세요/)).toBeTruthy();
+    expect(screen.queryByText("계산 결과")).toBeNull();
   });
 });

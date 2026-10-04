@@ -152,6 +152,12 @@ function validateLossRate(lossRate: CompensationLossRateInput): void {
   if (lossRate.priorImpairmentRatio !== undefined) {
     assertRatio("lossRate.priorImpairmentRatio", lossRate.priorImpairmentRatio);
   }
+  if (
+    lossRate.hospitalizationFullLoss !== undefined &&
+    typeof lossRate.hospitalizationFullLoss !== "boolean"
+  ) {
+    throw new RangeError(`${PREFIX}: lossRate.hospitalizationFullLoss 는 boolean 이어야 합니다.`);
+  }
 }
 
 function validateLostIncome(lostIncome: CompensationLostIncomeInput): void {
@@ -234,6 +240,9 @@ export function validateCompensationInput(input: CompensationInput): void {
   }
   if (input.faultRatio !== undefined) {
     assertRatio("faultRatio", input.faultRatio);
+  }
+  if (input.applyFaultToSolatium !== undefined && typeof input.applyFaultToSolatium !== "boolean") {
+    throw new RangeError(`${PREFIX}: applyFaultToSolatium 은 boolean 이어야 합니다.`);
   }
   if (input.deductions !== undefined) {
     validateDeductions(input.deductions);

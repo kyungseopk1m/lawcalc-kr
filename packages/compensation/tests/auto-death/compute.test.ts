@@ -15,7 +15,8 @@ function baseInput(): CompensationAutoDeathInput {
       sex: "male",
       retirementAge: 65,
     },
-    lostIncome: { occupation: "보통인부", discountMethod: "hoffman" },
+    // 이 파일의 기대값은 월 가동일수 22일로 손계산했다. 기본값(20) 회귀는 별도 describe 에서 본다.
+    lostIncome: { occupation: "보통인부", discountMethod: "hoffman", workingDaysPerMonth: 22 },
     solatiumWon: 0,
     faultRatio: 0,
   };
@@ -71,7 +72,8 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
     input.solatiumWon = 80000000;
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.solatiumWon).toBe(80000000);
-    expect(result.pecuniaryDamagesSubtotalWon).toBe(605679360 + 80000000 + 5000000);
+    // 위자료는 과실상계 대상 소계에서 빠지고 최종액에 그대로 더해진다.
+    expect(result.pecuniaryDamagesSubtotalWon).toBe(605679360 + 5000000);
     expect(result.finalWon).toBe(Math.floor((605679360 + 80000000 + 5000000) / 100) * 100);
   });
 
@@ -111,7 +113,7 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
 
   it("directWageWon override (200,000원/일)", () => {
     const input = baseInput();
-    input.lostIncome = { directWageWon: 200000 };
+    input.lostIncome = { directWageWon: 200000, workingDaysPerMonth: 22 };
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
     expect(result.segments[0]!.dailyWageWon).toBe(200000);
     expect(result.finalWon).toBe(709000000);
@@ -182,12 +184,13 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
       ],
     };
     const result = computeCompensationDeath(input, { now: FIXED_NOW });
-    expect(result.finalWon).toBe(448025000);
+    // 위자료 8천만이 과실 20% 밖으로 나와 이전 448,025,000 보다 8천만 × 0.2 = 1,600만 많다.
+    expect(result.finalWon).toBe(464025000);
     const shares = result.inheritanceShares!;
-    // floor: 192010714 / 128007142 / 128007142, remainder 2 → 배우자·자녀1
-    expect(shares[0]!.amountWon).toBe(192010715);
-    expect(shares[1]!.amountWon).toBe(128007143);
-    expect(shares[2]!.amountWon).toBe(128007142);
+    // floor: 198867857 / 132578571 / 132578571, remainder 1 → 배우자
+    expect(shares[0]!.amountWon).toBe(198867858);
+    expect(shares[1]!.amountWon).toBe(132578571);
+    expect(shares[2]!.amountWon).toBe(132578571);
     expect(shares.reduce((a, s) => a + s.amountWon, 0)).toBe(result.finalWon);
   });
 
@@ -263,8 +266,8 @@ describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (
       deductedWon: 605_679_360,
       lostIncomeAfterWon: 0,
     });
-    // 위자료 10,000,000 + 장례비 5,000,000 보존 (과실 0).
-    expect(result.pecuniaryDamagesSubtotalWon).toBe(15_000_000);
+    // 위자료 10,000,000 + 장례비 5,000,000 보존 (과실 0). 과실상계 대상 소계는 장례비뿐.
+    expect(result.pecuniaryDamagesSubtotalWon).toBe(5_000_000);
     expect(result.finalWon).toBe(15_000_000);
   });
 
@@ -287,5 +290,36 @@ describe("computeCompensationDeath — 산재(산×사망) 유족급여 공제 (
     expect(result.industrialBenefit).toBeUndefined();
     expect(result.deductions.industrialBenefitWon).toBeUndefined();
     expect(result.finalWon).toBe(610679300);
+  });
+});
+
+describe("2026-10-04 정확성 정정 (C1 위자료, C2 가동일수)", () => {
+  it("C1 위자료는 과실상계 뒤에 더하고, 장례비는 과실상계 대상으로 남는다", () => {
+    // 22일 기준 일실수입 605,679,360 + 장례비 5,000,000 = 610,679,360
+    // floor(610,679,360 × 0.7) = 427,475,552, + 위자료 100,000,000 → 527,475,500
+    const input = baseInput();
+    input.solatiumWon = 100_000_000;
+    input.faultRatio = 0.3;
+    const result = computeCompensationDeath(input, { now: FIXED_NOW });
+    expect(result.pecuniaryDamagesSubtotalWon).toBe(610_679_360);
+    expect(result.faultOffset.afterWon).toBe(427_475_552);
+    expect(result.finalWon).toBe(527_475_500);
+  });
+
+  it("C1 보험약관 기준(applyFaultToSolatium)은 위자료에도 과실상계", () => {
+    // floor((610,679,360 + 100,000,000) × 0.7) = 497,475,551 → 497,475,500
+    const input = baseInput();
+    input.solatiumWon = 100_000_000;
+    input.faultRatio = 0.3;
+    input.applyFaultToSolatium = true;
+    const result = computeCompensationDeath(input, { now: FIXED_NOW });
+    expect(result.finalWon).toBe(497_475_500);
+  });
+
+  it("C2 월 가동일수 기본값은 20일", () => {
+    const input = baseInput();
+    delete input.lostIncome.workingDaysPerMonth;
+    const result = computeCompensationDeath(input, { now: FIXED_NOW });
+    expect(result.segments[0]!.monthlyWageWon).toBe(172068 * 20);
   });
 });
