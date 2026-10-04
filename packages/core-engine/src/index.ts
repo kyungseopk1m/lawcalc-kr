@@ -185,3 +185,46 @@ export {
   listCaseValueClaimKinds,
   loadCaseValueDataset,
 } from "./litigation-cost";
+
+export type { HolidayDataset, HolidayKind, HolidayRecord, RollResult } from "./holidays";
+export {
+  findHoliday,
+  holidaysVersionTag,
+  isBusinessDay,
+  isCovered,
+  isWeekend,
+  loadHolidays,
+  rollToNextBusinessDay,
+} from "./holidays";
+
+export type {
+  DateSpanInput,
+  DateSpanResult,
+  HolidayExtensionStatus,
+  PeriodArticleLabels,
+  PeriodDeps,
+  PeriodInput,
+  PeriodResult,
+  PeriodUnit,
+} from "./period";
+export { computeDateSpan, computePeriod, createHolidayDeps, validatePeriodInput } from "./period";
+
+export type {
+  DeadlineAlternate,
+  DeadlineDataset,
+  DeadlineHolidayRollover,
+  DeadlineImmutable,
+  DeadlineInput,
+  DeadlineItem,
+  DeadlinePeriodRules,
+  DeadlineResult,
+  DeadlineSourceLaw,
+} from "./deadline";
+export {
+  computeDeadline,
+  deadlinesVersionTag,
+  getDeadline,
+  listDeadlines,
+  loadDeadlines,
+  validateDeadlineInput,
+} from "./deadline";

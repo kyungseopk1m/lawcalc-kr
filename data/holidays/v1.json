@@ -1,0 +1,2186 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-08-30",
+  "source": "한국천문연구원 특일정보 (공공데이터포털 B090041/SpcdeInfoService/getRestDeInfo)",
+  "sourceUrl": "https://www.data.go.kr/data/15012690/openapi.do",
+  "license": "공공데이터포털 특일정보 서비스는 이용허락범위 제한 없음으로 공개되어 있습니다. 출처: 한국천문연구원 특일정보 (https://www.data.go.kr/data/15012690/openapi.do). 공휴일의 근거 법령인 「관공서의 공휴일에 관한 규정」(대통령령 제36290호) 원문은 국가법령정보센터 공개 자료입니다.",
+  "snapshotDate": "2026-08-30",
+  "snapshotMethod": "2004-01-01 ~ 2027-12-31 구간은 한국천문연구원 특일정보 API(getRestDeInfo)의 연도별 응답을 그대로 옮겼습니다. 2003년은 특일정보 API 커버리지(2004년 이후) 밖이라 한국천문연구원 2003년도 월력요항과 당시 시행 규정(대통령령 제15939호, 시행 1999-01-01) 제2조로 직접 구성했습니다. 월력요항이 밝힌 법정공휴일 16일 및 \"설날 연휴 마지막 날 2월 2일이 일요일과 겹쳐 실제 공휴일은 67일\" 이라는 기술과 본 데이터셋 2003년 16건이 일치합니다. 특일정보 응답에 없던 8건(2003년 별도, 2015-08-14 임시공휴일, 선거일 5건, 2027년 대체공휴일 2건)은 항목별 sourceRef 에 보충 근거를 적었습니다. 연도에 따라 달라지는 항목은 국가법령정보센터에서 시행일별 규정 원문을 받아 대조했습니다. 식목일(제5호, 2005-06-30 삭제) / 제헌절(2005-06-30 개정 부칙 제2항으로 2007-12-31까지 공휴일, 2026-04-30 개정으로 재지정) / 한글날(2012-12-28 개정으로 국경일 중 공휴일에 추가) / 선거일(2006-09-06 제10의2호 신설) / 노동절(2026-04-30 개정 제6호 신설, 2026-05-01 시행) 입니다.",
+  "coverage": {
+    "from": "2003-01-01",
+    "to": "2027-12-31"
+  },
+  "note": "「관공서의 공휴일에 관한 규정」 제2조의 공휴일과 제3조의 대체공휴일을 날짜로 펼친 스냅샷입니다. 민법 제161조가 말하는 공휴일 판정에 씁니다. 일요일은 규정 제2조 제1호의 공휴일이지만 본 목록에는 넣지 않습니다. 요일 판정은 달력으로 하는 것이 정확하고, 토요일은 제161조가 공휴일과 나란히 따로 적고 있어 어차피 요일 판정이 필요하기 때문입니다. 근로자의 날(노동절)은 2026-04-30 개정 규정 제2조 제6호로 2026-05-01부터 관공서의 공휴일이 되었습니다. 그 이전 연도에는 관공서의 공휴일이 아니어서 넣지 않습니다. 임기만료에 의한 선거의 선거일만 담습니다. 보궐선거일은 관공서의 공휴일이 아닙니다. 2025-06-03 제21대 대통령선거는 보궐 성격이라 법정공휴일이 아니고 임시공휴일로 지정되어 kind 가 temporary 입니다.",
+  "holidays": [
+    {
+      "date": "2003-01-01",
+      "nameKo": "신정",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-01-31",
+      "nameKo": "설날",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-02-01",
+      "nameKo": "설날",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-02-02",
+      "nameKo": "설날",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-04-05",
+      "nameKo": "식목일",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-05-08",
+      "nameKo": "석가탄신일",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-07-17",
+      "nameKo": "제헌절",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-09-10",
+      "nameKo": "추석",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-09-11",
+      "nameKo": "추석",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-09-12",
+      "nameKo": "추석",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2003-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory",
+      "sourceRef": "한국천문연구원 2003년도 월력요항 (설날 연휴 1월 31일~2월 2일, 추석 연휴 9월 10일~12일, 법정공휴일 16일). 「관공서의 공휴일에 관한 규정」(대통령령 제15939호, 시행 1999-01-01) 제2조 제2호~제10호 적용"
+    },
+    {
+      "date": "2004-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-01-21",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-01-22",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-01-23",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-04-05",
+      "nameKo": "식목일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-04-15",
+      "nameKo": "제17대 국회의원선거",
+      "kind": "temporary",
+      "sourceRef": "선거일 법정공휴일화(제2조 제10의2호, 2006-09-06 신설) 이전이라 임시공휴일로 지정된 선거일. KASI 특일정보 2004 응답에 누락되어 보충"
+    },
+    {
+      "date": "2004-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-05-26",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-07-17",
+      "nameKo": "제헌절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-09-27",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-09-28",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-09-29",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2004-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-02-08",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-02-09",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-02-10",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-04-05",
+      "nameKo": "식목일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-05-15",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-07-17",
+      "nameKo": "제헌절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-09-17",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-09-18",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-09-19",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2005-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-01-28",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-01-29",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-01-30",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-05-05",
+      "nameKo": "어린이날·석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-05-31",
+      "nameKo": "제4회 전국동시지방선거",
+      "kind": "temporary",
+      "sourceRef": "선거일 법정공휴일화(제2조 제10의2호, 2006-09-06 신설) 이전이라 임시공휴일로 지정된 선거일. KASI 특일정보 2006 응답에 누락되어 보충"
+    },
+    {
+      "date": "2006-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-07-17",
+      "nameKo": "제헌절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-10-05",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-10-06",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-10-07",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2006-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-02-17",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-02-18",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-02-19",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-05-24",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-07-17",
+      "nameKo": "제헌절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-09-24",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-09-25",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-09-26",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2007-12-19",
+      "nameKo": "제17대 대통령선거",
+      "kind": "election",
+      "sourceRef": "「관공서의 공휴일에 관한 규정」 제2조 제10의2호(임기만료에 의한 선거의 선거일). KASI 특일정보 2007 응답에 누락되어 보충"
+    },
+    {
+      "date": "2007-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-02-06",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-02-07",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-02-08",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-04-09",
+      "nameKo": "제18대 국회의원선거",
+      "kind": "election",
+      "sourceRef": "「관공서의 공휴일에 관한 규정」 제2조 제10의2호(임기만료에 의한 선거의 선거일). KASI 특일정보 2008 응답에 누락되어 보충"
+    },
+    {
+      "date": "2008-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-05-12",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-09-13",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-09-14",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-09-15",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2008-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-01-25",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-01-26",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-01-27",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-05-02",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-10-02",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-10-03",
+      "nameKo": "추석·개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-10-04",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2009-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-02-13",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-02-14",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-02-15",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-05-21",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-06-02",
+      "nameKo": "제5회 전국동시지방선거",
+      "kind": "election",
+      "sourceRef": "「관공서의 공휴일에 관한 규정」 제2조 제10의2호(임기만료에 의한 선거의 선거일). KASI 특일정보 2010 응답에 누락되어 보충"
+    },
+    {
+      "date": "2010-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-09-21",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-09-22",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-09-23",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2010-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-02-02",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-02-03",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-02-04",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-05-10",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-09-11",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-09-12",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-09-13",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2011-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-01-22",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-01-23",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-01-24",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-04-11",
+      "nameKo": "국회의원선거일",
+      "kind": "election"
+    },
+    {
+      "date": "2012-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-05-28",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-09-29",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-09-30",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-10-01",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2012-12-19",
+      "nameKo": "대통령선거일",
+      "kind": "election"
+    },
+    {
+      "date": "2012-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-02-09",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-02-10",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-02-11",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-05-17",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-09-18",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-09-19",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-09-20",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2013-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-01-30",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-01-31",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-02-01",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-05-06",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-06-04",
+      "nameKo": "동시지방선거일",
+      "kind": "election"
+    },
+    {
+      "date": "2014-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-09-07",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-09-08",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-09-09",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-09-10",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2014-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2014-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-02-18",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-02-19",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-02-20",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-05-25",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-08-14",
+      "nameKo": "임시공휴일",
+      "kind": "temporary",
+      "sourceRef": "광복 70주년 기념 임시공휴일. 「관공서의 공휴일에 관한 규정」 제2조 제11호에 따른 수시 지정. KASI 특일정보 2015 응답에 누락되어 보충"
+    },
+    {
+      "date": "2015-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-09-26",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-09-27",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-09-28",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-09-29",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2015-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2015-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-02-07",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-02-08",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-02-09",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-02-10",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2016-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-04-13",
+      "nameKo": "국회의원선거일",
+      "kind": "election"
+    },
+    {
+      "date": "2016-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-05-06",
+      "nameKo": "임시공휴일",
+      "kind": "temporary"
+    },
+    {
+      "date": "2016-05-14",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-09-14",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-09-15",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-09-16",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2016-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-01-27",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-01-28",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-01-29",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-01-30",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2017-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-05-03",
+      "nameKo": "석가탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-05-09",
+      "nameKo": "임시공휴일(제19대 대통령선거)",
+      "kind": "temporary",
+      "sourceRef": "대통령 궐위로 인한 선거라 「공직선거법」 제35조가 적용된다. 「관공서의 공휴일에 관한 규정」 제2조 제10의2호는 「공직선거법」 제34조의 임기만료에 의한 선거의 선거일만 공휴일로 정하므로, 이 날은 제2조 제11호에 따라 임시공휴일로 지정된 것이다. 2025-06-03 제21대 대통령선거와 같은 성격이다."
+    },
+    {
+      "date": "2017-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-10-02",
+      "nameKo": "임시공휴일",
+      "kind": "temporary"
+    },
+    {
+      "date": "2017-10-03",
+      "nameKo": "개천절·추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-10-04",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-10-05",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-10-06",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2017-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2017-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-02-15",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-02-16",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-02-17",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-05-07",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2018-05-22",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-06-13",
+      "nameKo": "전국동시지방선거",
+      "kind": "election"
+    },
+    {
+      "date": "2018-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-09-23",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-09-24",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-09-25",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-09-26",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2018-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2018-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-02-04",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-02-05",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-02-06",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-05-06",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2019-05-12",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-09-12",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-09-13",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-09-14",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2019-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-01-24",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-01-25",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-01-26",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-01-27",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2020-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-04-15",
+      "nameKo": "제21대 국회의원선거",
+      "kind": "election"
+    },
+    {
+      "date": "2020-04-30",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-08-17",
+      "nameKo": "임시공휴일",
+      "kind": "temporary"
+    },
+    {
+      "date": "2020-09-30",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-10-01",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-10-02",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2020-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-02-11",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-02-12",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-02-13",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-05-19",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-08-16",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2021-09-20",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-09-21",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-09-22",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-10-04",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2021-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2021-10-11",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2021-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-01-31",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-02-01",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-02-02",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-03-09",
+      "nameKo": "대통령선거일",
+      "kind": "election"
+    },
+    {
+      "date": "2022-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-05-08",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-06-01",
+      "nameKo": "전국동시지방선거",
+      "kind": "election"
+    },
+    {
+      "date": "2022-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-09-09",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-09-10",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-09-11",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-09-12",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2022-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2022-10-10",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2022-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-01-21",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-01-22",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-01-23",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-01-24",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2023-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-05-27",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-05-29",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2023-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-09-28",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-09-29",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-09-30",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-10-02",
+      "nameKo": "임시공휴일",
+      "kind": "temporary"
+    },
+    {
+      "date": "2023-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2023-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-02-09",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-02-10",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-02-11",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-02-12",
+      "nameKo": "대체공휴일(설날)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2024-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-04-10",
+      "nameKo": "국회의원선거",
+      "kind": "election"
+    },
+    {
+      "date": "2024-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-05-06",
+      "nameKo": "대체공휴일(어린이날)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2024-05-15",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-09-16",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-09-17",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-09-18",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-10-01",
+      "nameKo": "임시공휴일",
+      "kind": "temporary"
+    },
+    {
+      "date": "2024-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2024-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-01-27",
+      "nameKo": "임시공휴일",
+      "kind": "temporary"
+    },
+    {
+      "date": "2025-01-28",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-01-29",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-01-30",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-03-03",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2025-05-05",
+      "nameKo": "어린이날·부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-05-06",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2025-06-03",
+      "nameKo": "임시공휴일(제21대 대통령 선거)",
+      "kind": "temporary"
+    },
+    {
+      "date": "2025-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-10-05",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-10-06",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-10-07",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-10-08",
+      "nameKo": "대체공휴일",
+      "kind": "substitute"
+    },
+    {
+      "date": "2025-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2025-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-02-16",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-02-17",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-02-18",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-03-02",
+      "nameKo": "대체공휴일(삼일절)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2026-05-01",
+      "nameKo": "노동절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-05-24",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-05-25",
+      "nameKo": "대체공휴일(부처님오신날)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2026-06-03",
+      "nameKo": "전국동시지방선거",
+      "kind": "election"
+    },
+    {
+      "date": "2026-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-07-17",
+      "nameKo": "제헌절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-08-17",
+      "nameKo": "대체공휴일(광복절)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2026-09-24",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-09-25",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-09-26",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-10-05",
+      "nameKo": "대체공휴일(개천절)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2026-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2026-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-01-01",
+      "nameKo": "신정",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-02-06",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-02-07",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-02-08",
+      "nameKo": "설날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-02-09",
+      "nameKo": "대체공휴일(설날)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2027-03-01",
+      "nameKo": "삼일절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-05-01",
+      "nameKo": "노동절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-05-03",
+      "nameKo": "대체공휴일(노동절)",
+      "kind": "substitute",
+      "sourceRef": "2027-05-01 노동절이 토요일이라 「관공서의 공휴일에 관한 규정」(대통령령 제36290호) 제3조 제1항 제1호로 도출한 값. KASI 특일정보 2027 스냅샷에는 아직 반영되어 있지 않다"
+    },
+    {
+      "date": "2027-05-05",
+      "nameKo": "어린이날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-05-13",
+      "nameKo": "부처님오신날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-06-06",
+      "nameKo": "현충일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-07-17",
+      "nameKo": "제헌절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-07-19",
+      "nameKo": "대체공휴일(제헌절)",
+      "kind": "substitute",
+      "sourceRef": "2027-07-17 제헌절이 토요일이라 「관공서의 공휴일에 관한 규정」(대통령령 제36290호) 제3조 제1항 제1호로 도출한 값. KASI 특일정보 2027 스냅샷에는 아직 반영되어 있지 않다"
+    },
+    {
+      "date": "2027-08-15",
+      "nameKo": "광복절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-08-16",
+      "nameKo": "대체공휴일(광복절)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2027-09-14",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-09-15",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-09-16",
+      "nameKo": "추석",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-10-03",
+      "nameKo": "개천절",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-10-04",
+      "nameKo": "대체공휴일(개천절)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2027-10-09",
+      "nameKo": "한글날",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-10-11",
+      "nameKo": "대체공휴일(한글날)",
+      "kind": "substitute"
+    },
+    {
+      "date": "2027-12-25",
+      "nameKo": "기독탄신일",
+      "kind": "statutory"
+    },
+    {
+      "date": "2027-12-27",
+      "nameKo": "대체공휴일(기독탄신일)",
+      "kind": "substitute"
+    }
+  ]
+}
