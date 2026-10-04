@@ -117,6 +117,62 @@ describe("노임 시점 분할: 판결 별지·법원 프로그램 예시 재현
     expect(result.lostIncomeSubtotalWon).toBe(209460543);
   });
 
+  it("법원 프로그램 예시 BIN0094: 실제 장해율 + courtTruncation (데이터셋 원 표) 합계 209,460,543", () => {
+    // 예시 노동능력상실률 표: 영구 신장내과 58%(기왕증 50%) · 안과 13% · 치과 1.06%,
+    // 한시 정형외과 20%(기왕증 50%) 5년 · 비뇨기과 15% 2년. 항목별 기왕증은 비율에 미리 곱한다.
+    // 산식 53.2468% · 44.9963% · 38.8848% 가 53.24 · 44.99 · 38.88 로, 누적 호프만이 4자리로 잘린다.
+    // r2b-golden-derivation-2026-10-04.md 3절 (8자리 표면 +57원, 상실률 미절사면 +25,823원).
+    const input: CompensationInput = {
+      base: {
+        birthDate: "1987-08-11",
+        accidentDate: "2010-04-21",
+        treatmentEndDate: "2010-06-30",
+        sex: "male",
+        retirementAge: 60,
+        calculationDate: "2017-01-31",
+        laborRateEffectiveRule: "survey",
+        courtTruncation: true,
+      },
+      lossRate: {
+        permanent: [{ ratio: 0.29 }, { ratio: 0.13 }, { ratio: 0.0106 }],
+        temporary: [
+          { ratio: 0.1, years: 5 },
+          { ratio: 0.15, years: 2 },
+        ],
+      },
+      lostIncome: { occupation: "보통인부", workingDaysPerMonth: 22 },
+    };
+    const result = computeCompensation(input, { now: FIXED_NOW });
+    expect(result.segments.map((s) => s.lossRate)).toEqual([
+      1, 1, 0.5324, 0.5324, 0.5324, 0.5324, 0.4499, 0.4499, 0.4499, 0.4499, 0.4499, 0.4499, 0.4499,
+      0.3888, 0.3888, 0.3888, 0.3888, 0.3888,
+    ]);
+    expect(result.segments.map((s) => s.amountFloorWon)).toEqual([
+      0, 3082481, 1627736, 6553905, 3269897, 6527620, 0, 2878486, 5680149, 2865118, 5622393,
+      2835434, 5628051, 0, 2431332, 5022329, 2607905, 152827707,
+    ]);
+    expect(result.hoffman240Cap.appliedHoffman.at(-1)).toBeCloseTo(174.0954, 10);
+    expect(result.lostIncomeSubtotalWon).toBe(209460543);
+
+    // false 와 키 없음은 절사 없는 종전 결과로 같다.
+    const baseWithoutKey = { ...input.base };
+    delete baseWithoutKey.courtTruncation;
+    const plain = computeCompensation(
+      { ...input, base: { ...input.base, courtTruncation: false } },
+      { now: FIXED_NOW },
+    );
+    expect(plain).toEqual(
+      computeCompensation({ ...input, base: baseWithoutKey }, { now: FIXED_NOW }),
+    );
+    expect(plain.lostIncomeSubtotalWon).not.toBe(209460543);
+    expect(() =>
+      computeCompensation({
+        ...input,
+        base: { ...input.base, courtTruncation: "yes" },
+      } as unknown as CompensationInput),
+    ).toThrow(/courtTruncation/);
+  });
+
   it("법원 프로그램 예시 BIN0095 향후개호비 1~15행 (손계산, 예시 표시값과 행마다 0~20원 차이)", () => {
     const result = computeOtherDamages(
       {
@@ -149,6 +205,41 @@ describe("노임 시점 분할: 판결 별지·법원 프로그램 예시 재현
     );
     expect(result?.attendantCare?.futureWon).toBe(117353801 + 187744382);
     expect(result?.attendantCare?.hoffman240CappedAtIndex).toBeNull();
+  });
+
+  it("법원 프로그램 예시 BIN0095 향후개호비 16행: 연속 구간이라 누적 240, 적용계수 240 - H[240]", () => {
+    // 1~15행 계수 합 H[240] = 166.1055 에 이어 16행은 240 - 166.1055 = 73.8945 (8자리 표 73.89441625).
+    // 예시 16행 135.3402 (= H[604] - H[240]) 는 연속 구간에 240 을 합산하지 않은 값으로
+    // 대법원 85다카819 와 어긋나 따르지 않는다. 손계산 floor(1,560,801 × 73.8945 × 0.6384) = 73,629,614.
+    // r2b-golden-derivation-2026-10-04.md 2.1절.
+    const seg = (startDate: string, endDate: string, personCount: number) => ({
+      startDate,
+      endDate,
+      occupation: "보통인부",
+      personCount,
+      priorRatio: 0.3616,
+    });
+    const ctx = {
+      accidentDate: "2010-04-21",
+      calculationDate: "2017-01-31",
+      laborRateEffectiveRule: "survey" as const,
+      laborRates: loadLaborRatesTable(),
+      hoffman: HOFFMAN_4DP,
+    };
+    const result = computeOtherDamages(
+      {
+        attendantCare: {
+          future: [
+            seg("2010-04-21", "2017-05-01", 1),
+            seg("2017-05-01", "2030-04-22", 1),
+            seg("2030-04-22", "2060-09-19", 0.5),
+          ],
+        },
+      },
+      ctx,
+    );
+    expect(result?.attendantCare?.futureWon).toBe(117353801 + 187744382 + 73629614);
+    expect(result?.attendantCare?.hoffman240CappedAtIndex).toBe(2);
   });
 });
 
@@ -402,5 +493,66 @@ describe("노임 시점 분할: 하위 호환과 경계", () => {
         "warnings",
       );
     });
+  });
+});
+
+describe("courtTruncation 금액은 정수 연산 (만분율 상실률 × 만분율 계수)", () => {
+  const input = (wage: number, days: number, hosp: number, perm: number, age: number) =>
+    ({
+      base: {
+        birthDate: "1990-01-01",
+        accidentDate: "2020-01-01",
+        treatmentEndDate: `${2020 + Math.floor(hosp / 12)}-${String((hosp % 12) + 1).padStart(2, "0")}-01`,
+        sex: "male",
+        retirementAge: age,
+        courtTruncation: true,
+      },
+      lossRate: { permanent: [{ ratio: perm }] },
+      lostIncome: { directWageWon: wage, workingDaysPerMonth: days },
+    }) satisfies CompensationInput;
+
+  // 엔진을 쓰지 않는 기대값: 데이터셋 8자리 값을 정수로 바꿔 4자리 절사, 240 누적, BigInt 곱.
+  const H4 = [0n, ...HOFFMAN.values.map((v) => BigInt(Math.round(v * 1e8)) / 10000n)];
+  const expected = (wage: number, days: number, hosp: number, perm: number, age: number) => {
+    const total = (age - 30) * 12; // 1990-01-01생, 2020-01-01 사고
+    const permRate = BigInt(Math.round(perm * 100)) * 100n; // perm 은 0.01 단위라 절사 없음
+    const rows: [number, number, bigint][] = [];
+    if (hosp > 0) rows.push([0, Math.min(hosp, total), 10000n]);
+    if (hosp < total) rows.push([hosp, total, permRate]);
+    let cum = 0n;
+    return rows.map(([s, e, rate]) => {
+      const raw = H4[e]! - H4[s]!;
+      const applied = cum + raw > 2400000n ? 2400000n - cum : raw;
+      cum = cum + raw > 2400000n ? 2400000n : cum + raw;
+      return Number((BigInt(wage * days) * rate * applied) / 100000000n);
+    });
+  };
+
+  it("재현: 일당 150,000 × 22일, 입원 5개월, 영구 0.5 → 1행 3,300,000 × 4.9384 = 16,296,720", () => {
+    const result = computeCompensation(input(150000, 22, 5, 0.5, 60), { now: FIXED_NOW });
+    expect(result.segments[0]!.amountFloorWon).toBe(16296720);
+    expect(result.segments.map((s) => s.amountFloorWon)).toEqual(expected(150000, 22, 5, 0.5, 60));
+  });
+
+  it("만 원 단위 일당 3,000건 무작위가 독립 BigInt 기대값과 같다", () => {
+    let seed = 20261004;
+    const rand = (n: number) => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    for (let i = 0; i < 3000; i++) {
+      const args = [
+        (1 + rand(50)) * 10000,
+        20 + rand(6),
+        rand(25),
+        (1 + rand(99)) / 100,
+        60 + rand(6),
+      ] as const;
+      const result = computeCompensation(input(...args), { now: FIXED_NOW });
+      expect(
+        result.segments.map((s) => s.amountFloorWon),
+        JSON.stringify(args),
+      ).toEqual(expected(...args));
+    }
   });
 });

@@ -753,6 +753,9 @@ impl<'a> PageWriter<'a> {
     fn compensation_summary_lines(view: &CompensationResultView) -> Vec<(String, String)> {
         let mut lines: Vec<(String, String)> =
             Self::labor_rate_timing_line(&view.labor_rate_timing_text);
+        if !view.court_truncation_text.is_empty() {
+            lines.push(("절사".into(), view.court_truncation_text.clone()));
+        }
         lines.extend([
             (
                 "중복 노동능력상실률".into(),
@@ -1487,6 +1490,7 @@ mod tests {
             deduction_excess_label: String::new(),
             property_only_excess_won: 0.0,
             labor_rate_timing_text: String::new(),
+            court_truncation_text: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1707,6 +1711,9 @@ mod tests {
             "계산 기준일 2026-10-04 · 노임 적용일 규약 조사 시점 (5/1·9/1)".into();
         let lines = PageWriter::compensation_summary_lines(&view);
         assert_eq!(lines[0].0, "노임 기준");
+        assert_ne!(lines[1].0, "절사");
+        view.court_truncation_text = "법원 계산 프로그램 방식".into();
+        assert_eq!(PageWriter::compensation_summary_lines(&view)[1].0, "절사");
         let mut death = compensation_death_sample();
         death.labor_rate_timing_text = view.labor_rate_timing_text.clone();
         assert_eq!(

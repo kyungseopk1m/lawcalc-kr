@@ -151,6 +151,10 @@ pub struct CompensationResultView {
     /// 만들어 넘긴다. 비어 있으면 행을 내지 않는다.
     #[serde(default)]
     pub labor_rate_timing_text: String,
+    /// "절사" 행 값 (법원 계산 프로그램 방식 절사를 켠 자×부상). frontend
+    /// `COURT_TRUNCATION_TEXT` 를 넘긴다. 비어 있으면 행을 내지 않는다.
+    #[serde(default)]
+    pub court_truncation_text: String,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,

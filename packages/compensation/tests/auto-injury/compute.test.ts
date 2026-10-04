@@ -243,7 +243,7 @@ describe("computeCompensation — 10 단계 path", () => {
     const result = computeCompensation(baseInput(), { now: FIXED_NOW });
     expect(result.dataVersions.laborRates).toBe("labor-rates/v1.1.0");
     expect(result.dataVersions.lifeExpectancy).toBe("life-expectancy/v1.1.0");
-    expect(result.dataVersions.hoffman).toBe("hoffman/v1.0.0");
+    expect(result.dataVersions.hoffman).toBe("hoffman/v1.1.0");
     expect(result.dataVersions.leibniz).toBe("leibniz/v1.0.0");
   });
 

@@ -10,6 +10,7 @@ import type {
 
 import { formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
 import {
+  formatRatioText,
   parseNumberText,
   parseRatioText,
   readNumber,
@@ -284,7 +285,7 @@ function applyTreatmentFuture(items: TreatmentFutureInput[] | undefined): Treatm
     firstDate: item.firstDate,
     lastDate: item.lastDate,
     lifespanMonthsText: item.lifespanMonths === undefined ? "" : String(item.lifespanMonths),
-    priorRatioText: item.priorRatio === undefined ? "" : String(item.priorRatio),
+    priorRatioText: item.priorRatio === undefined ? "" : formatRatioText(item.priorRatio),
   }));
 }
 
@@ -301,7 +302,7 @@ export function applyOtherDamagesInput(
         item.directDailyWageWon === undefined ? "" : String(item.directDailyWageWon),
       totalDaysText: String(item.totalDays),
       actualSpentWonText: item.actualSpentWon === undefined ? "" : String(item.actualSpentWon),
-      priorRatioText: item.priorRatio === undefined ? "" : String(item.priorRatio),
+      priorRatioText: item.priorRatio === undefined ? "" : formatRatioText(item.priorRatio),
     })),
     attendantFuture: (input.attendantCare?.future ?? []).map((item) => ({
       uid: newUid(),
@@ -312,13 +313,13 @@ export function applyOtherDamagesInput(
       endDate: item.endDate,
       personCountText: String(item.personCount),
       daysPerMonthText: item.daysPerMonth === undefined ? "" : String(item.daysPerMonth),
-      priorRatioText: item.priorRatio === undefined ? "" : String(item.priorRatio),
+      priorRatioText: item.priorRatio === undefined ? "" : formatRatioText(item.priorRatio),
     })),
     treatmentPast: (input.treatment?.past ?? []).map((item) => ({
       uid: newUid(),
       label: item.label ?? "",
       costWonText: String(item.costWon),
-      priorRatioText: item.priorRatio === undefined ? "" : String(item.priorRatio),
+      priorRatioText: item.priorRatio === undefined ? "" : formatRatioText(item.priorRatio),
     })),
     treatmentFuture: applyTreatmentFuture(input.treatment?.future),
     appliance: applyTreatmentFuture(input.appliance),
@@ -434,6 +435,12 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
               추가
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            기왕개호비는 사고일 노임단가 × 총일수로 현가 할인 없이 계산합니다. 기간이 길어 노임
+            변동을 반영하려면 그 기간을 향후개호비 구간에 사고일부터 직종으로 입력하세요. 계산
+            기준일이 있으면 노임 변경일마다 나뉘어 그때 단가로 계산되며, 호프만 현가 할인과 240
+            한도도 함께 적용됩니다.
+          </p>
           {value.attendantPast.map((row) => (
             <div key={row.uid} className="grid gap-2 rounded-md border border-input p-3">
               <div className="grid gap-2 sm:grid-cols-2">

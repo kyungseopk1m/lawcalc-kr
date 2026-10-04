@@ -30,13 +30,21 @@ export interface WithExportWarnings {
   propertyOnlyExcessWon: number;
   /** "노임 기준" 행 값 (`laborRateTimingText`). 결과에는 입력이 없어 화면이 넘긴다. 없으면 "". */
   laborRateTimingText: string;
+  /** "절사" 행 값 (`COURT_TRUNCATION_TEXT`). 자×부상에서 법원 방식 절사를 켰을 때만, 아니면 "". */
+  courtTruncationText: string;
 }
 
 /** 결과를 낸 노임 시점 입력. 결과 객체에 없으므로 화면 입력에서 받는다. */
 export interface LaborRateTiming {
   calculationDate?: string;
   laborRateEffectiveRule?: LaborRateEffectiveRule;
+  /** 자×부상 `base.courtTruncation`. 결과에 없어 화면이 넘긴다. */
+  courtTruncation?: boolean;
 }
+
+/** "절사" 행 값. 화면·클립보드·PDF·CSV 공용. */
+export const COURT_TRUNCATION_TEXT =
+  "법원 계산 프로그램 방식 (노동능력상실률 % 소수 2자리, 누적 호프만 소수 4자리 버림)";
 
 /** "노임 기준" 행 값. 화면·클립보드·PDF·CSV 공용. */
 export function laborRateTimingText(timing: LaborRateTiming): string {
@@ -161,7 +169,8 @@ export function deductionExcessLabel(settlement: SolatiumSettlement): string {
  * 금액이 잘린 사실(상한 적용)을 먼저, 입력 방식에 대한 주의(분할 의심)를 뒤에 둔다.
  */
 export function buildCompensationExportWarnings(result: AnyCompensationResult): string[] {
-  // 엔진의 대체 처리 경고(직종 조사 중단 등). 문구는 엔진이 만든 한국어를 그대로 쓴다.
+  // 엔진의 대체 처리 경고(직종 조사 중단, 호프만표 범위 초과 `hoffmanCoverageClamped` 등).
+  // 문구는 엔진이 만든 한국어를 그대로 쓴다.
   const warnings: string[] = (result.warnings ?? []).map((warning) => warning.message);
 
   const cappedAt = result.hoffman240Cap.cappedAtIndex;
@@ -176,7 +185,7 @@ export function buildCompensationExportWarnings(result: AnyCompensationResult): 
     const attendantCappedAt = other.attendantCare?.hoffman240CappedAtIndex;
     if (attendantCappedAt !== null && attendantCappedAt !== undefined) {
       warnings.push(
-        `개호비에 호프만 240 한도가 적용됐습니다. ${attendantCappedAt + 1}번째 구간부터 제한돼 금액이 줄었습니다.`,
+        `개호비에 호프만 240 한도가 적용됐습니다. 향후개호 구간을 시작 시점 순으로 누적한 현가율이 ${attendantCappedAt + 1}번째 입력 구간에서 240에 닿아, 그 시점 이후 기간은 240 한도로 금액에 넣지 않았습니다.`,
       );
     }
     if (other.treatment?.valueSum20Capped === true) {
@@ -209,5 +218,6 @@ export function withCompensationExportWarnings<T extends AnyCompensationResult>(
     deductionExcessLabel: deductionExcessLabel(settlement),
     propertyOnlyExcessWon: propertyOnlyExcessWon(result),
     laborRateTimingText: timing ? laborRateTimingText(timing) : "",
+    courtTruncationText: timing?.courtTruncation ? COURT_TRUNCATION_TEXT : "",
   };
 }

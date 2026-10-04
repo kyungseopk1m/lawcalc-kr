@@ -127,6 +127,37 @@ describe("applyLoadedCompensationInput", () => {
   });
 });
 
+describe("법원 계산 프로그램 방식 절사 (자×부상)", () => {
+  it("기본 꺼짐은 키를 두지 않고, 켜면 base.courtTruncation: true 로 .lcalc 왕복된다", () => {
+    expect(buildCompensationInput(defaultCompensationFormState()).base).not.toHaveProperty(
+      "courtTruncation",
+    );
+    const input = buildCompensationInput(override({ courtTruncation: true }));
+    expect(input.base.courtTruncation).toBe(true);
+    const file = buildCompensationLcalcFile(input, computeCompensation(input), "");
+    const migrated = migrateLcalcFile(JSON.parse(JSON.stringify(file)));
+    validateLcalcEnvelope(migrated);
+    const loaded = parseLoadedCompensationLcalcInput(migrated).input;
+    if (loaded.mode === "death") throw new Error("expected injury");
+    expect(applyLoadedCompensationInput(loaded).courtTruncation).toBe(true);
+    const oldBase = { ...loaded.base };
+    delete oldBase.courtTruncation;
+    expect(applyLoadedCompensationInput({ ...loaded, base: oldBase }).courtTruncation).toBe(false);
+  });
+
+  it("켰을 때만 클립보드·내보내기에 절사 줄이 붙는다", () => {
+    const result = computeCompensation(buildCompensationInput(override({ courtTruncation: true })));
+    const timing = { calculationDate: "2026-01-01", laborRateEffectiveRule: "survey" as const };
+    expect(formatCompensationForClipboard(result, 0, timing)).not.toContain("절사:");
+    expect(withCompensationExportWarnings(result, timing).courtTruncationText).toBe("");
+    const on = { ...timing, courtTruncation: true };
+    expect(formatCompensationForClipboard(result, 0, on)).toContain(
+      "절사: 법원 계산 프로그램 방식 (노동능력상실률 % 소수 2자리, 누적 호프만 소수 4자리 버림)",
+    );
+    expect(withCompensationExportWarnings(result, on).courtTruncationText).toContain("법원 계산");
+  });
+});
+
 describe("computeCompensation integration via builder", () => {
   it("default state yields finalWon > 0 with STANDARD_DISCLAIMER and 4 dataVersions", () => {
     const input = buildCompensationInput(defaultCompensationFormState());
@@ -135,7 +166,7 @@ describe("computeCompensation integration via builder", () => {
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
     expect(result.dataVersions.laborRates).toBe("labor-rates/v1.1.0");
     expect(result.dataVersions.lifeExpectancy).toBe("life-expectancy/v1.1.0");
-    expect(result.dataVersions.hoffman).toBe("hoffman/v1.0.0");
+    expect(result.dataVersions.hoffman).toBe("hoffman/v1.1.0");
     expect(result.dataVersions.leibniz).toBe("leibniz/v1.0.0");
   });
 
@@ -160,7 +191,7 @@ describe("formatCompensationForClipboard + buildCompensationLcalcFile", () => {
     expect(text).toContain("LawCalc Korea 자동차 사고 부상 손해배상 계산 결과");
     expect(text).toContain("laborRates=labor-rates/v1.1.0");
     expect(text).toContain("lifeExpectancy=life-expectancy/v1.1.0");
-    expect(text).toContain("hoffman=hoffman/v1.0.0");
+    expect(text).toContain("hoffman=hoffman/v1.1.0");
     expect(text).toContain("leibniz=leibniz/v1.0.0");
     expect(text.trim().endsWith(STANDARD_DISCLAIMER)).toBe(true);
   });
@@ -234,7 +265,7 @@ describe("validator 거부 path (UI 측 오류 노출 사슬)", () => {
 });
 
 describe("buildCompensationDeathInput (자×사망)", () => {
-  it("default 상태는 mode:death + 장례비 500만 + 생계비 1/3 기본 입력을 만든다", () => {
+  it("default 상태는 mode:death + 장례비 500만 + 생계비 정확한 1/3 기본 입력을 만든다", () => {
     const input = buildCompensationDeathInput(defaultCompensationDeathFormState());
     expect(input.mode).toBe("death");
     expect(input.base.birthDate).toBe("1996-01-01");
@@ -242,8 +273,44 @@ describe("buildCompensationDeathInput (자×사망)", () => {
     expect(input.lostIncome.occupation).toBe("보통인부");
     expect(input.lostIncome.workingDaysPerMonth).toBe(20);
     expect(input.funeralExpenseWon).toBe(5_000_000);
-    expect(input.livingCostDeductionRatio).toBeCloseTo(0.3333, 4);
+    expect(input.livingCostDeductionRatio).toBe(1 / 3);
     expect(input.heirs).toBeUndefined();
+  });
+
+  it("생계비 1/3 과 0.3333 은 금액이 다르다 (손계산)", () => {
+    // 1961-04-01생, 사고 2026-01-01, 가동 65세 → 3개월. 일당 100,000 × 20일 = 월 2,000,000.
+    // 호프만 3개월 = 1/(1+0.05/12) + 1/(1+0.10/12) + 1/(1+0.15/12)
+    //             = 0.99585062 + 0.99173554 + 0.98765432 = 2.97524048
+    // 1/3:    floor(2,000,000 × 2.97524048 × 2/3)    = floor(3,966,987.31) = 3,966,987
+    // 0.3333: floor(2,000,000 × 2.97524048 × 0.6667) = floor(3,967,185.66) = 3,967,185
+    const subtotal = (text: string) =>
+      computeCompensationDeath(
+        buildCompensationDeathInput(
+          overrideDeath({
+            birthDate: "1961-04-01",
+            calculationDate: "2026-01-01",
+            occupation: "",
+            directWageWonText: "100000",
+            livingCostDeductionRatioText: text,
+          }),
+        ),
+      ).lostIncomeSubtotalWon;
+    expect(subtotal("1/3")).toBe(3_966_987);
+    expect(subtotal("0.3333")).toBe(3_967_185);
+  });
+
+  it('생계비 "1/3" 은 저장·재열기에도 "1/3" 이고, 키 없는 파일도 "1/3", 명시한 0.3333 은 그대로다', () => {
+    const saved = buildCompensationDeathInput(
+      overrideDeath({ livingCostDeductionRatioText: "1/3" }),
+    );
+    const roundTrip = JSON.parse(JSON.stringify(saved)) as typeof saved;
+    expect(applyLoadedCompensationDeathInput(roundTrip).livingCostDeductionRatioText).toBe("1/3");
+    delete roundTrip.livingCostDeductionRatio;
+    expect(applyLoadedCompensationDeathInput(roundTrip).livingCostDeductionRatioText).toBe("1/3");
+    const explicit = { ...saved, livingCostDeductionRatio: 0.3333 };
+    expect(applyLoadedCompensationDeathInput(explicit).livingCostDeductionRatioText).toBe("0.3333");
+    const result = computeCompensationDeath(saved);
+    expect(formatCompensationDeathForClipboard(result)).toContain("생계비 공제 비율: 33.33%");
   });
 
   it("상속인 체크 시 heirs 입력이 inheritance 컴포넌트 변환으로 만들어진다", () => {
@@ -1311,12 +1378,10 @@ describe("R2-a 사망 산재: 유족급여 수급권자별 공제 (2008다13104 
     expect(input.industrialInsurance).toEqual({
       recipients: [{ heirName: "배우자", survivorBenefitWon: 150_000_000 }],
     });
-    // 골든 022 는 생계비 공제 비율 기본값(1/3)이다. 화면 기본값은 "0.3333" 이라 그 키만 빼면
-    // 골든 입력과 같다.
-    const goldenInput = { ...input };
-    delete goldenInput.livingCostDeductionRatio;
+    // 골든 022 는 생계비 공제 비율 기본값(1/3)이다. 화면 기본값 "1/3" 도 같은 값이다.
+    expect(input.livingCostDeductionRatio).toBe(1 / 3);
     expect(
-      computeCompensationDeath(goldenInput).inheritanceShares?.map((share) => share.amountWon),
+      computeCompensationDeath(input).inheritanceShares?.map((share) => share.amountWon),
     ).toEqual([115_998_100, 147_332_000]);
     const result = computeCompensationDeath(input);
     expect(result.inheritanceShares?.map((share) => share.survivorBenefitDeductedWon)).toEqual([
@@ -1367,9 +1432,8 @@ describe("R2-a 사망 산재: 유족급여 수급권자별 공제 (2008다13104 
       paidTreatmentDeductions: [{ uid: "p", label: "", amountText: "60000000" }],
       survivorRecipients: [{ uid: "s1", heirName: "배우자", amountText: "900000000" }],
     };
-    // 손계산은 생계비 공제 비율 기본값(1/3)이다. 화면 기본값 "0.3333" 키만 뺀다.
+    // 손계산은 생계비 공제 비율 기본값(1/3)이다. 화면 기본값 "1/3" 과 같다.
     const input = buildCompensationDeathInput(form);
-    delete input.livingCostDeductionRatio;
     const result = computeCompensationDeath(input);
     expect(result.deductions.propertyOnlyAppliedWon).toBe(9_300_000);
     expect(result.deductions.propertyOnlyDiscardedWon).toBe(8_700_000);

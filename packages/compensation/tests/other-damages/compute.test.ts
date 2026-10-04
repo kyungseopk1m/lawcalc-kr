@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { loadHoffmanTable, loadLaborRatesTable } from "@lawcalc-kr/datasets-compensation";
 import { computeOtherDamages } from "../../src/other-damages/compute";
+import type { CompensationWarning } from "../../src/internal";
 import type { OtherDamagesContext } from "../../src/other-damages/internal";
 import type { OtherDamagesInput } from "../../src/other-damages/types";
 
@@ -101,6 +102,62 @@ describe("개호비 (attendant care)", () => {
     });
     // 누적 호프만 H[420]=242.466 > 240 → 두 번째 segment 에서 cap.
     expect(r.attendantCare?.hoffman240CappedAtIndex).toBe(1);
+  });
+
+  it("향후개호비 빈 기간은 빼고 누적: 480개월을 넘어도 합이 240 이하면 수치표 값 (94다31334)", () => {
+    // r2b-golden-derivation-2026-10-04.md 2.3절. 월 3,000,000.
+    const item = { directDailyWageWon: 100000, personCount: 1, daysPerMonth: 30 };
+    // [100, 600) 개월: H[600] - H[100] = 216.85956645 (480 clamp 였다면 539,661,607).
+    const late = run({
+      attendantCare: { future: [{ ...item, startDate: "2034-05-01", endDate: "2076-01-01" }] },
+    });
+    expect(late.attendantCare?.futureWon).toBe(650578699);
+    expect(late.attendantCare?.hoffman240CappedAtIndex).toBeNull();
+    // [0, 100) + [200, 600): 83.44672201 + 155.06072441 = 238.50744642 < 240.
+    const gap = run({
+      attendantCare: {
+        future: [
+          { ...item, startDate: "2026-01-01", endDate: "2034-05-01" },
+          { ...item, startDate: "2042-09-01", endDate: "2076-01-01" },
+        ],
+      },
+    });
+    expect(gap.attendantCare?.futureWon).toBe(715522339);
+    expect(gap.attendantCare?.hoffman240CappedAtIndex).toBeNull();
+  });
+
+  it("향후개호비 240 누적은 입력 순서가 아니라 시작 월수 순 (역순 입력)", () => {
+    // r2b-golden-derivation-2026-10-04.md 2.4절. 앞 [0,48) 월 3,000,000, 뒤 [48,420) 월 1,500,000.
+    // 시간 순: 43.67394639 + (240 - 43.67394639) = 131,021,839 + 294,489,080 = 425,510,919.
+    // 입력 순이었다면 뒤 구간 198.7923919 를 먼저 쌓아 421,811,411.
+    const item = { directDailyWageWon: 100000, daysPerMonth: 30 };
+    const r = run({
+      attendantCare: {
+        future: [
+          { ...item, startDate: "2030-01-01", endDate: "2061-01-01", personCount: 0.5 },
+          { ...item, startDate: "2026-01-01", endDate: "2030-01-01", personCount: 1 },
+        ],
+      },
+    });
+    expect(r.attendantCare?.futureWon).toBe(425510919);
+    // 잘린 조각은 시간상 뒤 구간 = 입력 인덱스 0.
+    expect(r.attendantCare?.hoffman240CappedAtIndex).toBe(0);
+  });
+
+  it("향후개호 끝이 호프만표 범위(1,440개월)를 넘고 240 한도 전이면 hoffmanCoverageClamped 경고", () => {
+    const item = { directDailyWageWon: 100000, personCount: 1, daysPerMonth: 30 };
+    const warningsOf = (startDate: string, endDate: string) => {
+      const warnings: CompensationWarning[] = [];
+      computeOtherDamages(
+        { attendantCare: { future: [{ ...item, startDate, endDate }] } },
+        { ...ctx, warnings },
+      );
+      return warnings.map((w) => w.code);
+    };
+    // [1368, 1488) 개월: 1,440 에서 clamp, 계수 합이 240 미만이라 금액이 줄어든다.
+    expect(warningsOf("2140-01-01", "2150-01-01")).toEqual(["hoffmanCoverageClamped"]);
+    // [0, 1488): 414개월에서 이미 240 한도라 clamp 가 금액을 바꾸지 않는다.
+    expect(warningsOf("2026-01-01", "2150-01-01")).toEqual([]);
   });
 
   it("항목 모두 비면 null 반환 (회귀 0)", () => {

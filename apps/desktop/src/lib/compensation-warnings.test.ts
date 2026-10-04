@@ -33,6 +33,28 @@ describe("buildCompensationExportWarnings", () => {
     expect(message).toContain("3번째 구간");
   });
 
+  // 엔진(`other-damages/attendant.ts`)이 만드는 문구 그대로.
+  const coverage = (i: number) =>
+    `개호비 향후[${i}] 기간이 호프만표 범위(사고일부터 1440개월)를 넘어 그 뒤는 현가율에 넣지 못했습니다. 금액이 실제보다 적습니다.`;
+
+  it("직종 없는 엔진 경고(hoffmanCoverageClamped)는 여러 개여도 문구 그대로 모두 낸다", () => {
+    const warnings = buildCompensationExportWarnings(
+      result({
+        warnings: [
+          {
+            code: "hoffmanCoverageClamped",
+            message: coverage(0),
+          },
+          {
+            code: "hoffmanCoverageClamped",
+            message: coverage(1),
+          },
+        ],
+      }),
+    );
+    expect(warnings).toEqual([coverage(0), coverage(1)]);
+  });
+
   it("개호비 240 · 치료비 20 · 보조구 20 · 분할 의심을 모두 낸다", () => {
     const warnings = buildCompensationExportWarnings(
       result({
@@ -44,7 +66,8 @@ describe("buildCompensationExportWarnings", () => {
       }),
     );
     expect(warnings).toHaveLength(4);
-    expect(warnings[0]).toContain("개호비");
+    expect(warnings[0]).toContain("시작 시점 순으로 누적");
+    expect(warnings[0]).toContain("1번째 입력 구간에서 240에 닿아");
     expect(warnings[1]).toContain("치료비");
     expect(warnings[2]).toContain("보조구");
     expect(warnings[3]).toContain("나눠 입력");

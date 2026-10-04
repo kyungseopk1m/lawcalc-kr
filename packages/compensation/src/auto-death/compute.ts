@@ -166,7 +166,7 @@ export function computeCompensationDeath(
   const boundaries = [...laborChanges, { month: totalMonths, date: retirementEndDate }];
 
   // 3. 호프만 + 240 cap
-  // coverage clamp — 만 25세 미만 사망 사건은 가동연한까지 480개월을 넘는다 (`../internal` 참조).
+  // 표 범위(1,440개월)를 넘는 월수는 clamp 한다. 240 한도가 414개월에서 걸려 금액 영향 없음 (`../internal` 참조).
   const rawHoffmanList: number[] = [];
   let cursorMonth = 0;
   for (const boundary of boundaries) {

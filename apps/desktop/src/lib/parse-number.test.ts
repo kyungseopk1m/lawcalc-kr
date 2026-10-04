@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseNumberText, parseRatioText, readNumber } from "./parse-number";
+import { formatRatioText, parseNumberText, parseRatioText, readNumber } from "./parse-number";
 
 describe("parseRatioText (0~1 비율 칸)", () => {
   it.each([
@@ -12,6 +12,9 @@ describe("parseRatioText (0~1 비율 칸)", () => {
     ["1", 1],
     ["100%", 1],
     ["33.33%", 0.3333],
+    ["1/3", 1 / 3],
+    ["2/3", 2 / 3],
+    ["1/1", 1],
   ])("%j → %j", (text, expected) => {
     const parsed = parseRatioText(text);
     expect(parsed.error).toBeUndefined();
@@ -19,7 +22,7 @@ describe("parseRatioText (0~1 비율 칸)", () => {
     else expect(parsed.value).toBeCloseTo(expected, 10);
   });
 
-  it.each(["30", "50", "120%", "-0.1", "삼십", "1/3", "0.3.1", "1e-1"])(
+  it.each(["30", "50", "120%", "-0.1", "삼십", "1/0", "4/3", "1/3%", "0.5/2", "0.3.1", "1e-1"])(
     "%j 는 기본값으로 바꾸지 않고 오류",
     (text) => {
       const parsed = parseRatioText(text);
@@ -27,6 +30,10 @@ describe("parseRatioText (0~1 비율 칸)", () => {
       expect(parsed.error).toBeTruthy();
     },
   );
+
+  it("분수는 나눗셈 그대로 정확한 값이다 (0.3333 으로 반올림하지 않는다)", () => {
+    expect(parseRatioText("1/3").value).toBe(1 / 3);
+  });
 
   it('% 없는 "30" 은 퍼센트 표기를 안내한다', () => {
     expect(parseRatioText("30").error).toContain("30%");
@@ -64,5 +71,14 @@ describe("parseNumberText (인원·일수 칸)", () => {
 describe("readNumber", () => {
   it("오류면 한국어 라벨을 붙여 던진다", () => {
     expect(() => readNumber("과실비율", parseRatioText("abc"))).toThrow(/^과실비율: /);
+  });
+});
+
+describe("formatRatioText (불러온 비율 표시)", () => {
+  it('1/3 은 "1/3" 로, 나머지는 그대로 다시 읽으면 같은 값이다', () => {
+    expect(formatRatioText(1 / 3)).toBe("1/3");
+    expect(formatRatioText(0.3333)).toBe("0.3333");
+    expect(formatRatioText(0.3)).toBe("0.3");
+    expect(parseRatioText(formatRatioText(1 / 3)).value).toBe(1 / 3);
   });
 });

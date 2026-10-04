@@ -10,17 +10,17 @@ import type { HoffmanDataset } from "../src/hoffman";
 const EPSILON = 1e-6;
 
 describe("hoffman dataset (loader + version tag)", () => {
-  it("loads the default dataset with version 1.0.0 and 480 months", () => {
+  it("loads the default dataset with version 1.1.0 and 1,440 months", () => {
     const ds = loadHoffmanTable();
-    expect(ds.version).toBe("1.0.0");
-    expect(ds.monthsCovered).toBe(480);
-    expect(ds.values).toHaveLength(480);
+    expect(ds.version).toBe("1.1.0");
+    expect(ds.monthsCovered).toBe(1440);
+    expect(ds.values).toHaveLength(1440);
     expect(ds.maxIndex).toBe(240);
     expect(ds.formula).toContain("0.05");
   });
 
-  it("emits hoffman/v1.0.0 version tag", () => {
-    expect(hoffmanDatasetVersionTag(loadHoffmanTable())).toBe("hoffman/v1.0.0");
+  it("emits hoffman/v1.1.0 version tag", () => {
+    expect(hoffmanDatasetVersionTag(loadHoffmanTable())).toBe("hoffman/v1.1.0");
   });
 
   it("matches the known formula at month boundaries", () => {
@@ -30,6 +30,18 @@ describe("hoffman dataset (loader + version tag)", () => {
     for (let k = 1; k <= 12; k++) expectedH12 += 1 / (1 + (0.05 * k) / 12);
     expect(getHoffmanAt(ds, 12)).toBeCloseTo(expectedH12, 6);
     expect(getHoffmanAt(ds, 480)).toBeGreaterThan(getHoffmanAt(ds, 240));
+  });
+
+  it("matches the formula (8 decimals) at every month up to 1,440", () => {
+    const ds = loadHoffmanTable();
+    let h = 0;
+    for (let k = 1; k <= ds.monthsCovered; k++) {
+      h += 1 / (1 + (0.05 * k) / 12);
+      expect(Math.abs((ds.values[k - 1] as number) - h)).toBeLessThan(6e-9);
+    }
+    // 향후개호비 예시의 480개월 초과 조회: H[604] - H[240] = 135.3402 (4자리 절사)
+    expect(getHoffmanAt(ds, 604)).toBe(301.44575634);
+    expect(getHoffmanAt(ds, 240)).toBe(166.10558375);
   });
 
   it("crosses the 240 cumulative threshold around month 414 (Compensation 제5조-마 정원)", () => {
@@ -52,7 +64,7 @@ describe("hoffman dataset (loader + version tag)", () => {
     expect(() => getHoffmanAt(ds, 1.5)).toThrow(RangeError);
     expect(() => getHoffmanAt(ds, Number.POSITIVE_INFINITY)).toThrow(RangeError);
     expect(() => getHoffmanAt(ds, Number.NaN)).toThrow(RangeError);
-    expect(() => getHoffmanAt(ds, 481)).toThrow(RangeError);
+    expect(() => getHoffmanAt(ds, 1441)).toThrow(RangeError);
   });
 
   it("rejects malformed overrides (length mismatch, non-monotonic)", () => {

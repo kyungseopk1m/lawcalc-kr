@@ -70,6 +70,7 @@ import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { useResultFingerprint } from "../hooks/use-result-fingerprint";
 import {
   buildCompensationExportWarnings,
+  COURT_TRUNCATION_TEXT,
   HEIR_EXCESS_DROPPED_LABEL,
   HEIR_ROUNDING_LABEL,
   PROPERTY_ONLY_EXCESS_LABEL,
@@ -86,7 +87,13 @@ import { type CaseSlot, useCaseSlot } from "../lib/case-file";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
-import { FieldError, parseNumberText, parseRatioText, readNumber } from "../lib/parse-number";
+import {
+  FieldError,
+  formatRatioText,
+  parseNumberText,
+  parseRatioText,
+  readNumber,
+} from "../lib/parse-number";
 import { todayIso } from "../lib/today";
 
 const APP_VERSION = __APP_VERSION__;
@@ -167,6 +174,8 @@ export interface CompensationFormState extends DeductionsFormState, LaborRateTim
   applyFaultToSolatium: boolean;
   /** 입원기간(사고일 ~ 입원치료 종료일) 노동능력상실률 100%. 기본 켜짐. */
   hospitalizationFullLoss: boolean;
+  /** 법원 계산 프로그램 방식 절사 (상실률 % 2자리, 호프만 4자리). 기본 꺼짐. */
+  courtTruncation: boolean;
   /** 산재(산×부상) 장해급여 (원). accidentType === "industrial" 일 때만 적용. */
   disabilityBenefitWonText: string;
   /** 기타손해 (개호비·치료비·보조구). 미입력 시 결과 회귀 0. */
@@ -392,10 +401,13 @@ function readAmountItems(
  * 결과를 낸 노임 시점 입력. 내보내기는 결과가 최신일 때(입력 지문 일치)만 되므로 지금
  * 화면 입력이 곧 결과의 입력이다.
  */
-function timingOf(state: LaborRateTimingFormState): LaborRateTiming {
+function timingOf(
+  state: LaborRateTimingFormState & { courtTruncation?: boolean },
+): LaborRateTiming {
   return {
     calculationDate: state.calculationDate,
     laborRateEffectiveRule: state.laborRateEffectiveRule,
+    ...(state.courtTruncation ? { courtTruncation: true } : {}),
   };
 }
 
@@ -442,7 +454,7 @@ function applyDeductionsInput(
     legacyRatioDeductions: (deductions?.legacyRatio ?? []).map((item) => ({
       uid: newUid(),
       label: item.label ?? "",
-      ratioText: String(item.ratio),
+      ratioText: formatRatioText(item.ratio),
     })),
   };
 }
@@ -479,6 +491,7 @@ export function defaultCompensationFormState(): CompensationFormState {
     faultRatioText: "",
     applyFaultToSolatium: false,
     hospitalizationFullLoss: true,
+    courtTruncation: false,
     ...defaultLaborRateTiming(),
     ...defaultDeductionsFormState(),
     disabilityBenefitWonText: "",
@@ -545,6 +558,8 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
     lossRate,
     lostIncome,
   };
+  // 끈 상태는 키를 두지 않는다. 키 없음 = 종전 계산이라 이 옵션이 없던 파일과 같다.
+  if (state.courtTruncation) input.base.courtTruncation = true;
 
   const solatium = parseWonAmount(state.solatiumWonText, 0);
   if (solatium > 0) input.solatiumWon = solatium;
@@ -575,28 +590,29 @@ export function applyLoadedCompensationInput(input: CompensationInput): Compensa
     permanent: (input.lossRate.permanent ?? []).map((item) => ({
       uid: newUid(),
       department: item.department ?? "",
-      ratioText: String(item.ratio),
+      ratioText: formatRatioText(item.ratio),
     })),
     temporary: (input.lossRate.temporary ?? []).map((item) => ({
       uid: newUid(),
       department: item.department ?? "",
-      ratioText: String(item.ratio),
+      ratioText: formatRatioText(item.ratio),
       yearsText: String(item.years),
     })),
     priorImpairmentRatioText:
       input.lossRate.priorImpairmentRatio === undefined
         ? ""
-        : String(input.lossRate.priorImpairmentRatio),
+        : formatRatioText(input.lossRate.priorImpairmentRatio),
     occupation: input.lostIncome.occupation ?? "",
     directWageWonText:
       input.lostIncome.directWageWon === undefined ? "" : String(input.lostIncome.directWageWon),
     workingDaysPerMonthText: String(input.lostIncome.workingDaysPerMonth ?? DEFAULT_WORKING_DAYS),
     solatiumWonText: input.solatiumWon === undefined ? "" : String(input.solatiumWon),
-    faultRatioText: input.faultRatio === undefined ? "" : String(input.faultRatio),
+    faultRatioText: input.faultRatio === undefined ? "" : formatRatioText(input.faultRatio),
     applyFaultToSolatium: input.applyFaultToSolatium === true,
     // 키가 없으면 이 토글이 없던 이전 버전 파일이다. 그때는 입원기간도 장해율로 계산했으므로
     // 끈 상태로 연다 (화면이 안내를 띄운다).
     hospitalizationFullLoss: input.lossRate.hospitalizationFullLoss === true,
+    courtTruncation: input.base.courtTruncation === true,
     ...applyLaborRateTiming(input.base),
     ...applyDeductionsInput(input.deductions),
     disabilityBenefitWonText:
@@ -740,6 +756,7 @@ function stateForDirtySnapshot(state: CompensationFormState) {
     })),
     priorImpairmentRatioText: state.priorImpairmentRatioText,
     hospitalizationFullLoss: state.hospitalizationFullLoss,
+    courtTruncation: state.courtTruncation,
     occupation: state.occupation,
     directWageWonText: state.directWageWonText,
     workingDaysPerMonthText: state.workingDaysPerMonthText,
@@ -800,6 +817,7 @@ export function formatCompensationForClipboard(
       ? "LawCalc Korea 산재 사고 부상 손해배상 계산 결과"
       : "LawCalc Korea 자동차 사고 부상 손해배상 계산 결과",
     ...(timing ? [`노임 기준: ${laborRateTimingText(timing)}`] : []),
+    ...(timing?.courtTruncation ? [`절사: ${COURT_TRUNCATION_TEXT}`] : []),
     `중복장해율: ${formatRatioPercent(result.combinedLossRate)}`,
     ...(hospitalMonths > 0 ? [hospitalizationLine(hospitalMonths)] : []),
     `일실수입 소계: ${formatWon(result.lostIncomeSubtotalWon)}`,
@@ -965,7 +983,8 @@ export interface CompensationDeathFormState extends DeductionsFormState, LaborRa
   collateralFourth: HeirInput[];
 }
 
-const DEFAULT_LIVING_COST_DEDUCTION_RATIO = "0.3333";
+// 엔진 기본(1/3)과 같은 값. 종전 "0.3333" 은 1/3 과 금액이 달랐다.
+const DEFAULT_LIVING_COST_DEDUCTION_RATIO = "1/3";
 
 export function defaultCompensationDeathFormState(): CompensationDeathFormState {
   return {
@@ -1112,10 +1131,10 @@ export function applyLoadedCompensationDeathInput(
     livingCostDeductionRatioText:
       input.livingCostDeductionRatio === undefined
         ? DEFAULT_LIVING_COST_DEDUCTION_RATIO
-        : String(input.livingCostDeductionRatio),
+        : formatRatioText(input.livingCostDeductionRatio),
     funeralExpenseWonText: String(input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE),
     solatiumWonText: input.solatiumWon === undefined ? "" : String(input.solatiumWon),
-    faultRatioText: input.faultRatio === undefined ? "" : String(input.faultRatio),
+    faultRatioText: input.faultRatio === undefined ? "" : formatRatioText(input.faultRatio),
     applyFaultToSolatium: input.applyFaultToSolatium === true,
     ...applyLaborRateTiming(input.base),
     ...applyDeductionsInput(input.deductions),
@@ -1412,6 +1431,8 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
   const [legacyHospitalNotice, setLegacyHospitalNotice] = useState(false);
   // 기준일 없는 파일·구 비율공제를 연 경우의 안내 (`legacyCompensationNotice`).
   const [legacyNotice, setLegacyNotice] = useState<string | null>(null);
+  // 결과를 낸 입력의 절사 여부. 결과에는 없고, 체크박스를 바꿔도 다시 계산 전까지 결과 카드는 그대로다.
+  const [resultCourtTruncation, setResultCourtTruncation] = useState(false);
   const [note, setNote] = useState("");
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -1447,6 +1468,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
       const input = buildCompensationInput(state);
       const calculated = computeCompensation(input);
       setResult(calculated);
+      setResultCourtTruncation(input.base.courtTruncation === true);
       setError(null);
       setToast(null);
     } catch (e) {
@@ -1533,6 +1555,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
     setLegacyNotice(legacyCompensationNotice(injuryInput));
     const loadedNote = loaded.note ?? "";
     setState(appliedState);
+    setResultCourtTruncation(appliedState.courtTruncation);
     setNote(loadedNote);
     const differs = setLoadedResult(
       loaded.result !== undefined && loaded.result.mode !== "death" ? loaded.result : undefined,
@@ -1820,6 +1843,19 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 입원치료 종료일까지 100%로 계산합니다.
               </p>
             ) : null}
+
+            <label className="flex items-center gap-2 border-t border-border pt-3 text-sm">
+              <input
+                type="checkbox"
+                checked={state.courtTruncation}
+                onChange={(e) => update({ courtTruncation: e.target.checked })}
+              />
+              법원 계산 프로그램 방식 절사 (상실률 % 2자리, 호프만 4자리)
+            </label>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              일실수입 구간마다 노동능력상실률을 % 소수 2자리에서, 누적 호프만 계수를 소수 4자리에서
+              버린 뒤 계산합니다. 끄면 절사하지 않습니다. 개호비 등 기타손해에는 적용하지 않습니다.
+            </p>
           </CardContent>
         </Card>
 
@@ -2013,7 +2049,11 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
         {result ? (
-          <ResultCards result={result} hospitalMonths={hospitalizationMonthsOf(result)} />
+          <ResultCards
+            result={result}
+            hospitalMonths={hospitalizationMonthsOf(result)}
+            courtTruncation={resultCourtTruncation}
+          />
         ) : null}
 
         <Card>
@@ -2413,7 +2453,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
                 생계비 공제 비율 (0~1)
                 <Input
                   inputMode="decimal"
-                  placeholder="예: 0.3333"
+                  placeholder="예: 1/3"
                   value={state.livingCostDeductionRatioText}
                   onChange={(e) => update({ livingCostDeductionRatioText: e.target.value })}
                 />
@@ -3443,8 +3483,9 @@ function EngineWarningRows({
     >
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <span className="grid flex-1 gap-1">
-        {result.warnings.map((warning) => (
-          <span key={`${warning.code}-${warning.occupation}`}>{warning.message}</span>
+        {result.warnings.map((warning, i) => (
+          // 직종이 없는 경고(`hoffmanCoverageClamped`)가 여럿이면 code 만으로는 겹친다.
+          <span key={`${warning.code}-${warning.occupation ?? ""}-${i}`}>{warning.message}</span>
         ))}
       </span>
     </span>
@@ -3495,9 +3536,11 @@ function SolatiumAddedRow({
 function ResultCards({
   result,
   hospitalMonths,
+  courtTruncation,
 }: {
   result: CompensationResult;
   hospitalMonths: number;
+  courtTruncation: boolean;
 }) {
   const hasDates = result.segments.some((segment) => segment.startDate !== undefined);
   return (
@@ -3516,6 +3559,14 @@ function ResultCards({
                 data-testid="compensation-hospitalization-months"
               >
                 {hospitalizationLine(hospitalMonths)}
+              </span>
+            ) : null}
+            {courtTruncation ? (
+              <span
+                className="col-span-2 text-xs text-muted-foreground"
+                data-testid="compensation-court-truncation"
+              >
+                절사: {COURT_TRUNCATION_TEXT}
               </span>
             ) : null}
             <span className="text-muted-foreground">일실수입 소계</span>

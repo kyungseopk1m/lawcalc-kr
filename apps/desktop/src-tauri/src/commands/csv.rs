@@ -441,6 +441,14 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
             view.labor_rate_timing_text.clone(),
         ),
         (
+            if view.court_truncation_text.is_empty() {
+                ""
+            } else {
+                "절사"
+            },
+            view.court_truncation_text.clone(),
+        ),
+        (
             "중복 노동능력상실률",
             format!("{:.2}%", view.combined_loss_rate * 100.0),
         ),
@@ -1013,6 +1021,7 @@ mod tests {
             deduction_excess_label: String::new(),
             property_only_excess_won: 0.0,
             labor_rate_timing_text: String::new(),
+            court_truncation_text: String::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1431,6 +1440,11 @@ mod tests {
             String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
         assert!(body
             .contains("노임 기준,계산 기준일 2026-10-04 · 노임 적용일 규약 조사 시점 (5/1·9/1)"));
+        assert!(!body.contains("절사,"));
+        view.court_truncation_text = "법원 계산 프로그램 방식".into();
+        let body =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(body.contains("절사,법원 계산 프로그램 방식"));
         let mut death = compensation_death_sample();
         death.labor_rate_timing_text =
             "계산 기준일 2026-10-04 · 노임 적용일 규약 조사 시점 (5/1·9/1)".into();

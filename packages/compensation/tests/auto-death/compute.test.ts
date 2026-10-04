@@ -206,7 +206,7 @@ describe("computeCompensationDeath — 자×사망 엔진", () => {
     expect(result.dataVersions).toEqual({
       laborRates: "labor-rates/v1.1.0",
       lifeExpectancy: "life-expectancy/v1.1.0",
-      hoffman: "hoffman/v1.0.0",
+      hoffman: "hoffman/v1.1.0",
       leibniz: "leibniz/v1.0.0",
     });
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);

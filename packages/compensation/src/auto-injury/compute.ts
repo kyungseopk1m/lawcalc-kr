@@ -36,6 +36,7 @@ const FINAL_FLOOR_UNIT = 100;
 import {
   applyDeductions,
   dropUnchangedLaborRates,
+  floorLossRatePercent2,
   floorTimesComplements,
   getCumulativeHoffmanClamped,
   resolveOccupationRate,
@@ -45,6 +46,7 @@ import {
   monthsBetween,
   shiftMonths,
   sumCourtDeductions,
+  truncateHoffman4,
 } from "../internal";
 
 /**
@@ -102,6 +104,8 @@ export function computeCompensation(
   // 미입력·0 이면 계수가 1 이라 기존 결과와 완전히 동일하다 (회귀 0).
   const priorImpairmentRatio = input.lossRate.priorImpairmentRatio ?? 0;
   const priorImpairmentFactor = 1 - priorImpairmentRatio;
+  // 법원 예시 절사 (상실률 % 2자리, 누적 호프만 4자리). 일실수입에만 적용한다.
+  const courtTruncation = input.base.courtTruncation === true;
 
   // 2. segment 분해 (Option B 기간식 — 한시장해는 실제 한시기간 [0, 종료월) 에만 적용)
   const retirementAge = input.base.retirementAge ?? DEFAULT_RETIREMENT_AGE;
@@ -185,7 +189,15 @@ export function computeCompensation(
     for (const t of temporaries) {
       if (t.endMonth > cursor.month) factor *= 1 - t.ratio;
     }
-    const disabilityRate = (1 - factor) * priorImpairmentFactor;
+    const disabilityRate = courtTruncation
+      ? floorLossRatePercent2(
+          [
+            ...permanentItems.map((item) => item.ratio),
+            ...temporaries.filter((t) => t.endMonth > cursor.month).map((t) => t.ratio),
+          ],
+          priorImpairmentRatio,
+        )
+      : (1 - factor) * priorImpairmentFactor;
     firstDisabilityRate ??= disabilityRate;
     segmentPlans.push({
       startMonth: cursor.month,
@@ -231,15 +243,17 @@ export function computeCompensation(
   const dailyWageWon = resolveDailyWage(accidentDate);
 
   // 4. segment 호프만 + 240 cap
-  // coverage clamp — 만 25세 미만이면 가동연한까지 480개월을 넘는다.
+  // 표 범위(1,440개월)를 넘는 월수는 clamp 한다.
   // 240 한도가 414개월에서 이미 걸리므로 clamp 는 금액에 영향이 없다 (`../internal` 주석 참조).
+  // 법원 예시 절사면 누적 계수를 4자리에서 버린 표를 쓴다 (일실수입만, 개호비는 원 표).
+  const lostIncomeHoffman = courtTruncation ? truncateHoffman4(hoffman) : hoffman;
   const rawHoffmanList: number[] = [];
   for (const plan of segmentPlans) {
     rawHoffmanList.push(
       Math.max(
         0,
-        getCumulativeHoffmanClamped(hoffman, plan.endMonth) -
-          getCumulativeHoffmanClamped(hoffman, plan.startMonth),
+        getCumulativeHoffmanClamped(lostIncomeHoffman, plan.endMonth) -
+          getCumulativeHoffmanClamped(lostIncomeHoffman, plan.startMonth),
       ),
     );
   }
@@ -255,7 +269,15 @@ export function computeCompensation(
         ? resolveDailyWage(laborRateDateAt(laborChanges, plan.startDate, accidentDate))
         : dailyWageWon;
     const monthlyWageWon = segmentDailyWageWon * workingDays;
-    const amountFloorWon = Math.floor(monthlyWageWon * plan.lossRate * appliedHoffman);
+    // 절사 경로의 상실률·계수는 만분율 정수라 BigInt 로 곱한다 (실수 곱은 정수가 되는 곱에서 1원 모자람).
+    const amountFloorWon = courtTruncation
+      ? Number(
+          (BigInt(monthlyWageWon) *
+            BigInt(Math.round(plan.lossRate * 1e4)) *
+            BigInt(Math.round(appliedHoffman * 1e4))) /
+            100000000n,
+        )
+      : Math.floor(monthlyWageWon * plan.lossRate * appliedHoffman);
     return {
       startMonth: plan.startMonth,
       endMonth: plan.endMonth,

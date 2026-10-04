@@ -38,15 +38,15 @@ export function monthsBetween(from: IsoDate, to: IsoDate): number {
 /**
  * 호프만표 coverage 범위로 월수를 clamp 한다.
  *
- * 사고 당시 만 25세 미만(가동연한 65세 기준 480개월 초과)이거나 가동연한을 65세보다
- * 높게 잡으면 조회 월수가 dataset 의 `monthsCovered` 를 넘어 `getHoffmanAt` 이
- * RangeError 를 던진다. 단리 중간이자 공제의 현가율은 414개월에서 이미 240 한도에
- * 걸리므로(대법원 1992. 7. 10. 선고 92다15871 — 240 을 넘으면 수치표상 값과 무관하게
- * 240 적용), coverage 를 넘는 구간의 기여분은 0 이고 clamp 해도 금액이 달라지지 않는다.
+ * 표는 1,440개월(120년)까지다. 그 너머 조회는 RangeError 대신 마지막 값으로 막는 안전장치다.
  *
- * 즉 clamp 는 근사가 아니라 판례가 정한 한도를 그대로 반영하는 것이며, 계산을 거부할
- * 이유가 없다. 표시용 `startMonth`/`endMonth` 는 clamp 하지 않아 실제 가동기간이
- * 결과에 그대로 남고, 한도 적용 사실은 `hoffman240Cap` 이 별도로 드러낸다.
+ * - 일실수입(사고일부터 이어지는 구간, 240 누적): 누적 현가율이 414개월에서 240 을 넘으므로
+ *   (대법원 1992. 7. 10. 선고 92다15871: 240 을 넘으면 240 적용) clamp 가 금액을 바꾸지 않는다.
+ * - 향후개호비(빈 기간을 뺀 조각 합에 240 누적): 개호가 사고 뒤 늦게 시작하면 `H[끝] - H[시작]` 합이
+ *   240 미만이어도 끝 월수가 480 을 넘을 수 있다. 끝 월수가 1,440 을 넘으면 그 조각 계수는 실제보다 작아진다.
+ *   사고일부터 120년을 넘는 개호기간은 현실에 없다고 보고 더 넓히지 않는다.
+ *
+ * 표시용 `startMonth`/`endMonth` 는 clamp 하지 않아 실제 기간이 결과에 그대로 남는다.
  */
 export function clampToHoffmanCoverage(dataset: HoffmanDataset, month: number): number {
   return Math.max(0, Math.min(month, dataset.monthsCovered));
@@ -105,9 +105,12 @@ export interface CompensationWarning {
   /**
    * - `laborRateCarriedForward`: 직종이 뒤 노임 조사에서 빠져 그 뒤 구간에 마지막 단가를 이어 썼다.
    * - `laborRateSurveyFallback`: 조사 시점 규약으로 사고일 단가를 찾지 못해 공표 적용일 단가를 썼다.
+   * - `hoffmanCoverageClamped`: 향후개호 기간 끝이 호프만표 범위를 넘어 clamp 됐고, 240 한도에
+   *   걸리지 않아 적용 계수가 실제보다 작다.
    */
-  code: "laborRateCarriedForward" | "laborRateSurveyFallback";
-  occupation: string;
+  code: "laborRateCarriedForward" | "laborRateSurveyFallback" | "hoffmanCoverageClamped";
+  /** 단가 경고의 직종. `hoffmanCoverageClamped` 에는 없다. */
+  occupation?: string;
   message: string;
 }
 
@@ -250,6 +253,34 @@ function decimalRatio(ratio: number): { num: bigint; den: bigint } {
   return exponent >= 0
     ? { num: digits * 10n ** BigInt(exponent), den: 1n }
     : { num: digits, den: 10n ** BigInt(-exponent) };
+}
+
+/**
+ * 법원 예시 절사 상실률: `1 - Π(1 - ratio_i)` 에 `(1 - priorRatio)` 를 곱한 값을 % 소수 2자리에서
+ * 버린다 (정수 연산). 실수로 곱하면 38.23% 가 0.38229999... 가 되어 38.22% 로 잘릴 수 있다.
+ */
+export function floorLossRatePercent2(ratios: readonly number[], priorRatio: number): number {
+  let keep = 1n;
+  let den = 1n;
+  for (const ratio of ratios) {
+    const r = decimalRatio(ratio);
+    keep *= r.den - r.num;
+    den *= r.den;
+  }
+  const prior = decimalRatio(priorRatio);
+  const loss = (den - keep) * (prior.den - prior.num);
+  return Number((loss * 10000n) / (den * prior.den)) / 10000;
+}
+
+/**
+ * 누적 호프만 계수를 소수 4자리에서 버린 표 (법원 예시). 데이터셋은 소수 8자리라 8자리 정수로
+ * 바꾼 뒤 버린다 (`Math.floor(v * 1e4)` 는 3.9588 이 39587.99... 가 될 수 있다).
+ */
+export function truncateHoffman4(dataset: HoffmanDataset): HoffmanDataset {
+  return {
+    ...dataset,
+    values: dataset.values.map((v) => Math.floor(Math.round(v * 1e8) / 1e4) / 1e4),
+  };
 }
 
 /** `floor(amount × Π(1 - ratio_i) / divisor)`. `divisor` 는 1e-4 단위 수치합계 등 정수 환산용. */

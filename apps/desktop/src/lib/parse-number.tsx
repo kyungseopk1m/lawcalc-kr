@@ -17,22 +17,30 @@ export interface ParsedNumber {
 }
 
 const PLAIN_NUMBER = /^(\d+\.?\d*|\.\d+)$/;
+const FRACTION = /^(\d+)\/(\d+)$/;
 
 function normalize(text: string): string {
   return text.replaceAll(",", "").replace(/\s+/g, "");
 }
 
 /**
- * 0~1 비율 칸. "0.3" 과 "30%" 를 0.3 으로 읽는다.
+ * 0~1 비율 칸. "0.3" 과 "30%" 를 0.3 으로, "1/3" 을 1 / 3 그대로 읽는다 (0.3333 으로 반올림하지 않는다).
  * % 없이 1 을 넘는 값("30")은 30% 인지 3000% 인지 단정할 수 없어 오류로 둔다.
  */
 export function parseRatioText(text: string): ParsedNumber {
   const s = normalize(text);
   if (s.length === 0) return {};
+  const fraction = FRACTION.exec(s);
+  if (fraction) {
+    const denominator = Number(fraction[2]);
+    if (denominator === 0) return { error: "분모는 0보다 커야 합니다." };
+    const value = Number(fraction[1]) / denominator;
+    return value > 1 ? { error: "분수는 1 이하여야 합니다 (예: 1/3)." } : { value };
+  }
   const percent = s.endsWith("%");
   const body = percent ? s.slice(0, -1) : s;
   if (!PLAIN_NUMBER.test(body)) {
-    return { error: "숫자로 입력하세요 (예: 0.3 또는 30%)." };
+    return { error: "숫자로 입력하세요 (예: 0.3, 30% 또는 1/3)." };
   }
   const value = percent ? Number(body) / 100 : Number(body);
   if (value > 1) {
@@ -43,6 +51,11 @@ export function parseRatioText(text: string): ParsedNumber {
     };
   }
   return { value };
+}
+
+/** 불러온 비율을 칸에 다시 쓸 문자열. 1/3 은 "0.3333333333333333" 대신 입력한 그대로 "1/3". */
+export function formatRatioText(value: number): string {
+  return value === 1 / 3 ? "1/3" : String(value);
 }
 
 export interface NumberTextOptions {
