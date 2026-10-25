@@ -39,19 +39,25 @@ const FINAL_FLOOR_UNIT = 100;
 
 import {
   applyDeductions,
+  decimalRatio,
   dropUnchangedLaborRates,
   floorEachStep,
+  floorLossRatePercent2,
   floorProduct,
   floorTimesComplements,
   getCumulativeHoffmanClamped,
+  hoffmanFraction,
   livingCostKeepFraction,
   resolveOccupationRate,
   type CompensationWarning,
   laborRateChanges,
   laborRateDateAt,
   monthsBetween,
+  shiftMonths,
   sumCourtDeductions,
   truncateHoffman4,
+  wageStepAt,
+  wageStepEvents,
 } from "../internal";
 
 /**
@@ -125,11 +131,8 @@ export function computeCompensationDeath(
     if (totalMonths === 0 && input.lostIncome.directWageWon === undefined) return 0;
     if (input.lostIncome.directWageWon !== undefined) return input.lostIncome.directWageWon;
     const occupation = input.lostIncome.occupation;
-    if (occupation === undefined) {
-      throw new RangeError(
-        "사망 손해배상 계산 실패: lostIncome.occupation 또는 lostIncome.directWageWon 중 하나는 필요합니다.",
-      );
-    }
+    // 월소득 입력(호봉승급·직접 편집)이 사고일부터 덮는 경우만 validator 가 단가 없이 통과시킨다.
+    if (occupation === undefined || occupation.length === 0) return 0;
     const rate = resolveOccupationRate(
       laborRates,
       occupation,
@@ -147,6 +150,18 @@ export function computeCompensationDeath(
   };
   const dailyWageWon = resolveDailyWage(accidentDate);
 
+  // 2.4. 호봉승급 일정 (직접 편집 행이 있으면 쓰지 않는다). 첫 승급 이후 노임 변경일은 경계로 쓰지 않는다.
+  const manualRows = input.lostIncome.manualRows;
+  const incomeSteps = manualRows === undefined ? (input.lostIncome.incomeSteps ?? []) : [];
+  // 경계를 합치지 않는 사망 표라 0개월째 승급은 기준일이 있고 사고일보다 늦을 때만 따로 둔다.
+  const stepEvents = wageStepEvents(incomeSteps, accidentDate, totalMonths).filter(
+    (e) => e.month > 0 || (calculationDate !== undefined && e.date > accidentDate),
+  );
+  const firstStepMonth =
+    incomeSteps.length > 0
+      ? monthsBetween(accidentDate, (incomeSteps[0] as { fromDate: IsoDate }).fromDate)
+      : Infinity;
+
   // 2.5. 노임단가 변경 경계. 계산 기준일이 있고 직종 단가일 때만 나눈다.
   // 직종 단가가 직전과 같은 변경일은 뺀다 (직종이 뒤 조사에서 빠져 마지막 단가를 이어 쓸 때).
   const laborOccupation = input.lostIncome.occupation;
@@ -156,7 +171,7 @@ export function computeCompensationDeath(
     laborOccupation !== undefined
       ? dropUnchangedLaborRates(
           laborRateChanges(laborRates, accidentDate, calculationDate, rateRule).filter(
-            (c) => c.month < totalMonths,
+            (c) => c.month < totalMonths && c.month < firstStepMonth,
           ),
           (date) =>
             resolveOccupationRate(
@@ -171,7 +186,34 @@ export function computeCompensationDeath(
         )
       : [];
   // 경계 = 노임 변경일(0개월째 변경도 따로 두어 금액 0 인 행이 생긴다, 법원 계산표와 같음) + 가동종료.
-  const boundaries = [...laborChanges, { month: totalMonths, date: retirementEndDate }];
+  // 직접 편집 행이 있으면 그 행들이 경계다 (행 사이 빈 기간은 계수 차이로 건너뛴다).
+  // 같은 월수의 승급 두 건은 부상과 같이 기준일이 있고 날짜가 늦을 때만 따로 둔다 (길이 0 행 방지).
+  const autoBoundaries: { month: number; date: IsoDate }[] = [];
+  let lastBoundary = { month: 0, date: accidentDate };
+  for (const event of stepEvents.length > 0
+    ? [...laborChanges, ...stepEvents].sort(
+        (a, b) => a.month - b.month || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0),
+      )
+    : laborChanges) {
+    const isStep = stepEvents.includes(event);
+    if (
+      isStep &&
+      event.month === lastBoundary.month &&
+      (calculationDate === undefined || event.date <= lastBoundary.date)
+    ) {
+      continue;
+    }
+    autoBoundaries.push(event);
+    lastBoundary = event;
+  }
+  const boundaries: { month: number; date: IsoDate; startMonth?: number }[] =
+    manualRows === undefined
+      ? [...autoBoundaries, { month: totalMonths, date: retirementEndDate }]
+      : manualRows.map((row) => ({
+          month: row.endMonth,
+          date: shiftMonths(accidentDate, row.endMonth),
+          startMonth: row.startMonth,
+        }));
 
   // 3. 호프만 + 240 cap
   // 표 범위(1,440개월)를 넘는 월수는 clamp 한다. 240 한도가 414개월에서 걸려 금액 영향 없음 (`../internal` 참조).
@@ -182,6 +224,7 @@ export function computeCompensationDeath(
   const rawHoffmanList: number[] = [];
   let cursorMonth = 0;
   for (const boundary of boundaries) {
+    cursorMonth = boundary.startMonth ?? cursorMonth;
     rawHoffmanList.push(
       getCumulativeHoffmanClamped(lostIncomeHoffman, boundary.month) -
         getCumulativeHoffmanClamped(lostIncomeHoffman, cursorMonth),
@@ -195,15 +238,35 @@ export function computeCompensationDeath(
   const keep = livingCostKeepFraction(livingCostDeductionRatio);
   let cursor = { month: 0, date: accidentDate };
   const segments: CompensationSegment[] = boundaries.map((boundary, i) => {
-    const start = cursor;
+    const row = manualRows?.[i];
+    const start =
+      row !== undefined
+        ? { month: row.startMonth, date: shiftMonths(accidentDate, row.startMonth) }
+        : cursor;
     cursor = boundary;
     const rawHoffman = rawHoffmanList[i] as number;
     const appliedHoffman = capResult.appliedHoffman[i] as number;
+    // 월소득 직접 지정 (직접 편집 행 > 호봉승급 일정). 없으면 일당 × 가동일수.
+    const stepWon = wageStepAt(incomeSteps, accidentDate, start.month);
+    const fixedMonthlyWon = row?.monthlyWageWon ?? stepWon;
+    const wageBasis = row !== undefined ? "manual" : stepWon !== undefined ? "step" : undefined;
     const segmentDailyWageWon =
-      laborChanges.length > 0
-        ? resolveDailyWage(laborRateDateAt(laborChanges, start.date, accidentDate))
-        : dailyWageWon;
-    const monthlyWageWon = segmentDailyWageWon * workingDays;
+      fixedMonthlyWon !== undefined
+        ? 0
+        : laborChanges.length > 0
+          ? resolveDailyWage(laborRateDateAt(laborChanges, start.date, accidentDate))
+          : dailyWageWon;
+    const monthlyWageWon = fixedMonthlyWon ?? segmentDailyWageWon * workingDays;
+    // 직접 편집 행만 상실률·생계비 공제 여부를 행마다 쓴다 (자동 구간은 상실률 1, 늘 공제).
+    const rowKeep = row === undefined || row.livingCostDeducted ? keep : { num: 1n, den: 1n };
+    // 법원식 절사면 행 상실률을 자동 구간(부상)과 같이 % 2자리에서 버린다.
+    const rowLossRate =
+      row !== undefined && courtTruncation
+        ? floorLossRatePercent2([row.lossRate], 0)
+        : row?.lossRate;
+    const lossFactors = rowLossRate !== undefined ? [decimalRatio(rowLossRate)] : [];
+    const courtLoss = rowLossRate !== undefined ? BigInt(Math.round(rowLossRate * 1e4)) : 1n;
+    const courtLossDen = row !== undefined ? 10000n : 1n;
     return {
       startMonth: start.month,
       endMonth: boundary.month,
@@ -211,20 +274,31 @@ export function computeCompensationDeath(
       ...(calculationDate !== undefined
         ? { startDate: start.date, endDate: addDays(boundary.date, -1) }
         : {}),
-      lossRate: 1,
+      lossRate: rowLossRate ?? 1,
       dailyWageWon: segmentDailyWageWon,
       monthlyWageWon,
       rawHoffman,
       appliedHoffman,
       // 단계마다 절사면 월급여 × (1 - 생계비) 를 먼저 버린 뒤 호프만을 곱한다.
       amountFloorWon: truncateEachStep
-        ? floorEachStep(monthlyWageWon, [keep, appliedHoffman])
+        ? floorEachStep(monthlyWageWon, [...lossFactors, rowKeep, hoffmanFraction(appliedHoffman)])
         : courtTruncation
           ? Number(
-              (BigInt(monthlyWageWon) * BigInt(Math.round(appliedHoffman * 1e4)) * keep.num) /
-                (10000n * keep.den),
+              (BigInt(monthlyWageWon) *
+                courtLoss *
+                BigInt(Math.round(appliedHoffman * 1e4)) *
+                rowKeep.num) /
+                (courtLossDen * 10000n * rowKeep.den),
             )
-          : floorProduct(monthlyWageWon, [appliedHoffman, keep]),
+          : floorProduct(monthlyWageWon, [
+              ...lossFactors,
+              hoffmanFraction(appliedHoffman),
+              rowKeep,
+            ]),
+      // 직접 편집 행에서 생계비 공제를 끈 행만 false 로 싣는다 (사망 자동 구간은 키 없음 = 공제).
+      ...(row !== undefined && !row.livingCostDeducted ? { livingCostDeducted: false } : {}),
+      // 월소득 직접 지정 행에만 키를 싣는다 → 기존 골든/.lcalc byte-identical (회귀 0).
+      ...(wageBasis !== undefined ? { wageBasis } : {}),
     };
   });
   const lostIncomeSubtotalWon = segments.reduce((acc, segment) => acc + segment.amountFloorWon, 0);

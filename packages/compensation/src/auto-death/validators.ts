@@ -12,6 +12,7 @@ import type {
 import { validateOtherDamagesInput } from "../other-damages/validators";
 import { validateLifeExpectancyInput } from "../life-expectancy/validators";
 import { validateLostRetirementInput } from "../lost-retirement/validators";
+import { validateWageSchedule } from "../auto-injury/validators";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DEDUCTION_ITEMS = 50;
@@ -98,14 +99,15 @@ function validateBase(base: CompensationDeathBaseInput): void {
   }
 }
 
-function validateLostIncome(lostIncome: CompensationLostIncomeInput): void {
+function validateLostIncome(lostIncome: CompensationLostIncomeInput, accidentDate: string): void {
   if (lostIncome === null || typeof lostIncome !== "object") {
     throw new RangeError(`${PREFIX}: lostIncome 객체가 필요합니다.`);
   }
+  const coversStart = validateWageSchedule(lostIncome, accidentDate, PREFIX);
   const hasOccupation =
     typeof lostIncome.occupation === "string" && lostIncome.occupation.length > 0;
   const hasDirectWage = lostIncome.directWageWon !== undefined;
-  if (!hasOccupation && !hasDirectWage) {
+  if (!hasOccupation && !hasDirectWage && !coversStart) {
     throw new RangeError(
       `${PREFIX}: lostIncome.occupation 또는 lostIncome.directWageWon 중 하나는 필요합니다.`,
     );
@@ -285,7 +287,7 @@ export function validateCompensationDeathInput(input: CompensationAutoDeathInput
     throw new RangeError(`${PREFIX}: accidentType 는 "auto" 또는 "industrial" 여야 합니다.`);
   }
   validateBase(input.base);
-  validateLostIncome(input.lostIncome);
+  validateLostIncome(input.lostIncome, input.base.accidentDate);
   if (input.livingCostDeductionRatio !== undefined) {
     assertRatio("livingCostDeductionRatio", input.livingCostDeductionRatio);
     // 법원 예시 절사는 생계비 비율을 정확한 분수로 쓴다: 1/3 이거나 소수 6자리까지.

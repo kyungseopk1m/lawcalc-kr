@@ -14,6 +14,7 @@ import {
   dropUnchangedLaborRates,
   floorProduct,
   floorTimesComplements,
+  hoffmanFraction,
   laborRateChanges,
   laborRateDateAt,
 } from "../internal";
@@ -173,7 +174,7 @@ export function computeAttendantCare(
     // 인원은 0.5 같은 소수일 수 있어 정수 곱하지 않고 계수로 넣는다.
     futureWon += floorProduct(monthlyPerPerson, [
       seg.personCount,
-      appliedHoffman,
+      hoffmanFraction(appliedHoffman),
       { num: prior.den - prior.num, den: prior.den },
     ]);
   }

@@ -333,6 +333,16 @@ export function truncateHoffman4(dataset: HoffmanDataset): HoffmanDataset {
 }
 
 /**
+ * 구간 호프만 계수(`H[끝] - H[시작]`, 240 한도 잔여 `240 - 누적`)의 정확한 분수.
+ * 데이터셋 값은 소수 8자리라 그 차이·잔여도 소수 8자리다. 실수 뺄셈 오차(`H[60] - H[59]` =
+ * 0.7999999999999972)는 1e-12 수준이라 1e-8 단위로 반올림하면 정확한 값이 되살아난다.
+ * `decimalRatio` 는 유효 15자리 정규화라 0.799999999999997 로 남아 나누어떨어지는 곱이 1원 모자란다.
+ */
+export function hoffmanFraction(coefficient: number): { num: bigint; den: bigint } {
+  return { num: BigInt(Math.round(coefficient * 1e8)), den: 100000000n };
+}
+
+/**
  * 생계비 공제 후 남는 비율 `1 - ratio` 의 정확한 분수. 화면은 1/3 을 실수 `1/3` 로 저장하므로
  * 1/3 과 1e-12 안이면 정확히 2/3 으로 본다. 그 밖의 값은 십진 유리수(소수 6자리까지 검증)로 바꾼다.
  */
@@ -426,4 +436,31 @@ export function sumCourtDeductions(
     const kept = (BigInt(item.amount) * remain + scale - 1n) / scale;
     return acc + item.amount - Number(kept);
   }, 0);
+}
+
+/**
+ * 호봉승급 일정의 구간 경계 `{ month, date }` (월수 = `monthsBetween(사고일, fromDate)`).
+ * 가동종료 월수 이상은 뺀다. 0개월째 승급은 노임 변경일처럼 경계로 두어 기준일이 있으면 금액 0 인 행이 생긴다.
+ */
+export function wageStepEvents(
+  steps: readonly { fromDate: IsoDate }[],
+  accidentDate: IsoDate,
+  totalMonths: number,
+): { month: number; date: IsoDate }[] {
+  return steps
+    .map((step) => ({ month: monthsBetween(accidentDate, step.fromDate), date: step.fromDate }))
+    .filter((event) => event.month < totalMonths);
+}
+
+/** 시작 월수 `month` 에 적용되는 승급 월소득 (월수가 `month` 이하인 마지막 항목). 없으면 undefined. */
+export function wageStepAt(
+  steps: readonly { fromDate: IsoDate; monthlyWageWon: number }[],
+  accidentDate: IsoDate,
+  month: number,
+): number | undefined {
+  let won: number | undefined;
+  for (const step of steps) {
+    if (monthsBetween(accidentDate, step.fromDate) <= month) won = step.monthlyWageWon;
+  }
+  return won;
 }

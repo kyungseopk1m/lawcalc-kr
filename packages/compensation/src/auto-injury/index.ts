@@ -14,6 +14,8 @@ export type {
   CompensationInput,
   CompensationLossRateInput,
   CompensationLostIncomeInput,
+  CompensationIncomeStep,
+  CompensationManualRow,
   CompensationRatioDeduction,
   CompensationLegacyRatioDeduction,
   CompensationResult,

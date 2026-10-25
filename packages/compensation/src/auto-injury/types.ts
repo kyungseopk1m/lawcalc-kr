@@ -125,6 +125,45 @@ export interface CompensationLostIncomeInput {
    * 도시 일용근로자의 월 가동일수를 20일을 초과하여 인정하기 어렵다).
    */
   workingDaysPerMonth?: number;
+  /**
+   * 호봉승급 등 월소득 변경 일정 (선택). 각 항목의 `fromDate` 부터 월소득이 `monthlyWageWon` 이 되고,
+   * 그 날을 일실수입 구간 경계로 더한다 (월수 = `monthsBetween(사고일, fromDate)`, 노임 변경일과 같은 규칙).
+   * 첫 항목 이전은 직종 단가·일당 직접 입력으로 계산한다. 첫 항목이 사고일과 같은 월수(0개월째)면
+   * `occupation`·`directWageWon` 없이도 된다. 첫 항목 이후의 노임 변경일은 경계로 쓰지 않는다.
+   * 장차 증가될 임금수익을 상당한 정도로 확실하게 예측할 수 있는 객관적 자료가 있을 때만 반영한다
+   * (대법원 1989. 12. 26. 선고 88다카6761 전원합의체). `fromDate` 는 사고일 이상, 오름차순.
+   */
+  incomeSteps?: CompensationIncomeStep[];
+  /**
+   * 일실수입 표 행 단위 편집 (선택). 지정하면 자동 구간(입원·한시장해·노임 변경·기대여명·호봉승급) 대신
+   * 이 행들로 일실수입을 계산한다. 행 계수 = `H[endMonth] - H[startMonth]`, 240 한도는 행 순서대로 누적,
+   * 절사 옵션(`courtTruncation`·`truncateEachStep`)은 자동 구간과 같다. 있으면 `incomeSteps` 는 쓰지 않는다.
+   */
+  manualRows?: CompensationManualRow[];
+}
+
+/** 월소득 변경 1건 (호봉승급). */
+export interface CompensationIncomeStep {
+  /** 이 날부터 월소득이 바뀐다 (승급일). */
+  fromDate: IsoDate;
+  /** 월소득 (원, 0 이상 정수). */
+  monthlyWageWon: number;
+}
+
+/** 직접 편집한 일실수입 행 1건. */
+export interface CompensationManualRow {
+  /** 시작 월수 (사고일 기준, 0 이상 정수). 앞 행의 `endMonth` 이상. */
+  startMonth: number;
+  /** 끝 월수 (> startMonth, 1,440 이하). */
+  endMonth: number;
+  /** 월소득 (원, 0 이상 정수). */
+  monthlyWageWon: number;
+  /** 노동능력상실률 (0~1). 사망은 보통 1. */
+  lossRate: number;
+  /**
+   * 생계비 공제 여부. 부상은 1/3 (기대여명 이후 구간), 사망은 `livingCostDeductionRatio`.
+   */
+  livingCostDeducted: boolean;
 }
 
 /**
@@ -282,9 +321,15 @@ export interface CompensationSegment {
   amountFloorWon: number;
   /**
    * 기대여명 이후 구간이라 생계비 1/3 을 공제했다 (금액 = floor(월급여 × 상실률 × 계수 × 2/3)).
-   * 부상 `lifeExpectancy` 입력으로 공제된 구간에만 `true` 로 실린다.
+   * 부상 `lifeExpectancy` 입력으로 공제된 구간에만 `true` 로 실린다. 사망 직접 편집 행에서 생계비 공제를
+   * 끈 행은 `false` 다 (사망 자동 구간은 키 없음 = 공제).
    */
   livingCostDeducted?: boolean;
+  /**
+   * 월소득을 직접 정한 행. `"step"` = 호봉승급 일정, `"manual"` = 표 직접 편집. 이 행의 `dailyWageWon` 은 0 이고
+   * `monthlyWageWon` 이 입력값이다. 자동 단가 행에는 키가 없다.
+   */
+  wageBasis?: "step" | "manual";
 }
 
 export interface CompensationFaultOffset {

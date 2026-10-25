@@ -10,11 +10,14 @@ import type {
 import { validateOtherDamagesInput } from "../other-damages/validators";
 import { validateLifeExpectancyInput } from "../life-expectancy/validators";
 import { validateLostRetirementInput } from "../lost-retirement/validators";
+import { monthsBetween } from "../internal";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DEDUCTION_ITEMS = 50;
 const MAX_DISABILITY_ITEMS = 20;
 const MAX_FAMILY_CLAIMANTS = 20;
+const MAX_WAGE_SCHEDULE_ROWS = 600;
+const MAX_MANUAL_ROW_MONTH = 1440;
 const PREFIX = "손해배상 입력 검증 실패";
 
 function assertIsoDate(label: string, value: unknown): void {
@@ -186,14 +189,100 @@ function validateLossRate(lossRate: CompensationLossRateInput): void {
   }
 }
 
-function validateLostIncome(lostIncome: CompensationLostIncomeInput): void {
+/**
+ * 호봉승급 일정(`incomeSteps`)·직접 편집 행(`manualRows`) 검증. 부상·사망 공용 (`prefix` 로 메시지 구분).
+ * 반환값: 월소득 입력이 사고일부터 덮어 직종·일당 입력이 없어도 되는지.
+ */
+export function validateWageSchedule(
+  lostIncome: CompensationLostIncomeInput,
+  accidentDate: string,
+  prefix: string,
+): boolean {
+  const won = (label: string, value: unknown) => {
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+      throw new RangeError(`${prefix}: ${label} 는 0 이상 정수여야 합니다.`);
+    }
+  };
+  const list = (label: string, value: unknown): unknown[] => {
+    if (!Array.isArray(value) || value.length === 0 || value.length > MAX_WAGE_SCHEDULE_ROWS) {
+      throw new RangeError(
+        `${prefix}: ${label} 는 1~${MAX_WAGE_SCHEDULE_ROWS}건 배열이어야 합니다.`,
+      );
+    }
+    return value;
+  };
+  if (lostIncome.manualRows !== undefined) {
+    let prevEnd = 0;
+    list("lostIncome.manualRows", lostIncome.manualRows).forEach((raw, i) => {
+      const label = `lostIncome.manualRows[${i}]`;
+      const row = raw as Record<string, unknown>;
+      if (row === null || typeof row !== "object") {
+        throw new RangeError(`${prefix}: ${label} 객체가 필요합니다.`);
+      }
+      const { startMonth, endMonth } = row;
+      if (
+        !Number.isInteger(startMonth) ||
+        !Number.isInteger(endMonth) ||
+        (startMonth as number) < prevEnd ||
+        (endMonth as number) <= (startMonth as number) ||
+        (endMonth as number) > MAX_MANUAL_ROW_MONTH
+      ) {
+        throw new RangeError(
+          `${prefix}: ${label} 의 월수는 앞 행 끝 이상에서 시작해 시작보다 큰 ${MAX_MANUAL_ROW_MONTH} 이하 정수로 끝나야 합니다.`,
+        );
+      }
+      prevEnd = endMonth as number;
+      won(`${label}.monthlyWageWon`, row.monthlyWageWon);
+      const { lossRate } = row;
+      if (
+        typeof lossRate !== "number" ||
+        !Number.isFinite(lossRate) ||
+        lossRate < 0 ||
+        lossRate > 1
+      ) {
+        throw new RangeError(`${prefix}: ${label}.lossRate 는 0 이상 1 이하 실수여야 합니다.`);
+      }
+      if (typeof row.livingCostDeducted !== "boolean") {
+        throw new RangeError(`${prefix}: ${label}.livingCostDeducted 는 boolean 이어야 합니다.`);
+      }
+    });
+  }
+  if (lostIncome.incomeSteps === undefined) return lostIncome.manualRows !== undefined;
+  let prevDate = accidentDate;
+  list("lostIncome.incomeSteps", lostIncome.incomeSteps).forEach((raw, i) => {
+    const label = `lostIncome.incomeSteps[${i}]`;
+    const step = raw as Record<string, unknown>;
+    if (step === null || typeof step !== "object") {
+      throw new RangeError(`${prefix}: ${label} 객체가 필요합니다.`);
+    }
+    const { fromDate } = step;
+    if (
+      typeof fromDate !== "string" ||
+      !ISO_DATE_PATTERN.test(fromDate) ||
+      new Date(Date.parse(`${fromDate}T00:00:00Z`) || 0).toISOString().slice(0, 10) !== fromDate ||
+      fromDate < prevDate ||
+      (i > 0 && fromDate === prevDate)
+    ) {
+      throw new RangeError(
+        `${prefix}: ${label}.fromDate 는 사고일 이상, 앞 항목보다 늦은 YYYY-MM-DD 날짜여야 합니다.`,
+      );
+    }
+    prevDate = fromDate;
+    won(`${label}.monthlyWageWon`, step.monthlyWageWon);
+  });
+  const first = lostIncome.incomeSteps[0] as { fromDate: string };
+  return lostIncome.manualRows !== undefined || monthsBetween(accidentDate, first.fromDate) === 0;
+}
+
+function validateLostIncome(lostIncome: CompensationLostIncomeInput, accidentDate: string): void {
   if (lostIncome === null || typeof lostIncome !== "object") {
     throw new RangeError(`${PREFIX}: lostIncome 객체가 필요합니다.`);
   }
+  const coversStart = validateWageSchedule(lostIncome, accidentDate, PREFIX);
   const hasOccupation =
     typeof lostIncome.occupation === "string" && lostIncome.occupation.length > 0;
   const hasDirectWage = lostIncome.directWageWon !== undefined;
-  if (!hasOccupation && !hasDirectWage) {
+  if (!hasOccupation && !hasDirectWage && !coversStart) {
     throw new RangeError(
       `${PREFIX}: lostIncome.occupation 또는 lostIncome.directWageWon 중 하나는 필요합니다.`,
     );
@@ -274,7 +363,7 @@ export function validateCompensationInput(input: CompensationInput): void {
   }
   validateBase(input.base);
   validateLossRate(input.lossRate);
-  validateLostIncome(input.lostIncome);
+  validateLostIncome(input.lostIncome, input.base.accidentDate);
   if (input.solatiumWon !== undefined) {
     assertNonNegativeInteger("solatiumWon", input.solatiumWon);
   }

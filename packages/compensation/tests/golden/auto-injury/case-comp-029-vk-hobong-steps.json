@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-029-vk-hobong-steps",
+  "title": "VK 대조 호봉승급 5-4: 영구 30%, 2단계 승급, 법원식 절사",
+  "source": "manual-derivation",
+  "notes": "VK 실측(2026-10-22, session-subscreens.md 5-4): 24·24·312개월, 월소득 2,320,000/2,436,000/2,552,000, 호프만 22.8290/20.8449/175.9361, 일실소득 15,888,984/15,233,452/134,696,678, 합계 165,819,114. 손계산: H4[24]=22.8290, H4[48]=43.6739, H4[360]=219.6100 (Fraction 합 1/(1+0.05k/12) 후 4자리 절사). 월소득 × 0.3 × 구간 계수 floor. 과실 0, 최종 100원 미만 절사 165,819,100.",
+  "input": {
+    "mode": "injury",
+    "accidentType": "auto",
+    "base": {
+      "birthDate": "1980-01-01",
+      "accidentDate": "2010-01-01",
+      "sex": "male",
+      "courtTruncation": true,
+      "treatmentEndDate": "2010-01-01",
+      "retirementAge": 60,
+      "laborRateEffectiveRule": "published"
+    },
+    "lossRate": {
+      "hospitalizationFullLoss": false,
+      "permanent": [
+        {
+          "ratio": 0.3
+        }
+      ],
+      "temporary": []
+    },
+    "lostIncome": {
+      "workingDaysPerMonth": 22,
+      "discountMethod": "hoffman",
+      "incomeSteps": [
+        {
+          "fromDate": "2010-01-01",
+          "monthlyWageWon": 2320000
+        },
+        {
+          "fromDate": "2012-01-01",
+          "monthlyWageWon": 2436000
+        },
+        {
+          "fromDate": "2014-01-01",
+          "monthlyWageWon": 2552000
+        }
+      ]
+    },
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    }
+  },
+  "expected": {
+    "lostIncomeSubtotalWon": 165819114,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 165819114,
+    "faultOffset": {
+      "ratio": 0,
+      "beforeWon": 165819114,
+      "afterWon": 165819114
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 165819114
+    },
+    "finalWon": 165819100,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.1.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 24,
+        "lossRate": 0.3,
+        "dailyWageWon": 0,
+        "monthlyWageWon": 2320000,
+        "rawHoffman": 22.829,
+        "appliedHoffman": 22.829,
+        "amountFloorWon": 15888984,
+        "wageBasis": "step"
+      },
+      {
+        "startMonth": 24,
+        "endMonth": 48,
+        "lossRate": 0.3,
+        "dailyWageWon": 0,
+        "monthlyWageWon": 2436000,
+        "rawHoffman": 20.844900000000003,
+        "appliedHoffman": 20.844900000000003,
+        "amountFloorWon": 15233452,
+        "wageBasis": "step"
+      },
+      {
+        "startMonth": 48,
+        "endMonth": 360,
+        "lossRate": 0.3,
+        "dailyWageWon": 0,
+        "monthlyWageWon": 2552000,
+        "rawHoffman": 175.9361,
+        "appliedHoffman": 175.9361,
+        "amountFloorWon": 134696678,
+        "wageBasis": "step"
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [22.829, 20.844900000000003, 175.9361],
+    "combinedLossRate": 0.3
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-25",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 5부"
+  }
+}

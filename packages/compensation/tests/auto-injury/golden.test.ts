@@ -137,6 +137,7 @@ const COVERAGE: GoldenCoverage = {
     "segments[].rawHoffman",
     "segments[].appliedHoffman",
     "segments[].amountFloorWon",
+    "segments[].wageBasis",
     "hoffman240Cap.appliedHoffman[]",
     "hoffman240Cap.cappedAtIndex",
     "faultOffset.ratio",
@@ -176,8 +177,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴얼 derivation)", () => {
-  it("loads exactly 17 cases", () => {
-    expect(cases).toHaveLength(17);
+  it("loads exactly 18 cases", () => {
+    expect(cases).toHaveLength(18);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {

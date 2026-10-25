@@ -38,12 +38,14 @@ const FINAL_FLOOR_UNIT = 100;
 import {
   applyDeductions,
   dropUnchangedLaborRates,
+  decimalRatio,
   floorEachStep,
   floorLossRatePercent2,
   floorProduct,
   lossRateFraction,
   floorTimesComplements,
   getCumulativeHoffmanClamped,
+  hoffmanFraction,
   resolveOccupationRate,
   type CompensationWarning,
   laborRateChanges,
@@ -52,6 +54,8 @@ import {
   shiftMonths,
   sumCourtDeductions,
   truncateHoffman4,
+  wageStepEvents,
+  wageStepAt,
 } from "../internal";
 
 /**
@@ -158,6 +162,8 @@ export function computeCompensation(
     /** `lossRate` 의 정확한 분수 (절사 없는 경로의 금액 계산용). */
     lossFraction: { num: bigint; den: bigint };
     livingCostDeducted: boolean;
+    /** 직접 편집 행의 월소득. */
+    monthlyWageWon?: number;
   }
   // 입원기간은 상실률 100% (외부 reference 매뉴얼 본문과 계산표 예시 1·2행).
   // 기왕증 기여도를 입원기간에도 곱할지는 원문으로 확인하지 못해 곱하지 않는다.
@@ -175,6 +181,14 @@ export function computeCompensation(
   const calculationDate = input.base.calculationDate;
   const rateRule = input.base.laborRateEffectiveRule ?? "published";
   const warnings: CompensationWarning[] = [];
+  // 호봉승급 일정 (직접 편집 행이 있으면 쓰지 않는다). 첫 승급 이후 노임 변경일은 경계로 쓰지 않는다.
+  const manualRows = input.lostIncome.manualRows;
+  const incomeSteps = manualRows === undefined ? (input.lostIncome.incomeSteps ?? []) : [];
+  const stepEvents = wageStepEvents(incomeSteps, accidentDate, totalMonths);
+  const firstStepMonth =
+    incomeSteps.length > 0
+      ? monthsBetween(accidentDate, (incomeSteps[0] as { fromDate: IsoDate }).fromDate)
+      : Infinity;
   // 직종 단가가 직전과 같은 변경일은 뺀다 (직종이 뒤 조사에서 빠져 마지막 단가를 이어 쓸 때).
   const laborOccupation = input.lostIncome.occupation;
   const laborChanges =
@@ -183,7 +197,7 @@ export function computeCompensation(
     laborOccupation !== undefined
       ? dropUnchangedLaborRates(
           laborRateChanges(laborRates, accidentDate, calculationDate, rateRule).filter(
-            (c) => c.month < totalMonths,
+            (c) => c.month < totalMonths && c.month < firstStepMonth,
           ),
           (date) =>
             resolveOccupationRate(
@@ -206,8 +220,13 @@ export function computeCompensation(
     ...temporaries.map((t) => ({ month: t.endMonth, date: shiftMonths(accidentDate, t.endMonth) })),
     ...laborChanges,
     ...(lifeEvent !== undefined ? [lifeEvent] : []),
+    ...stepEvents,
   ]
-    .filter((e) => (e.month > 0 || laborChanges.includes(e)) && e.month < totalMonths)
+    .filter(
+      (e) =>
+        (e.month > 0 || laborChanges.includes(e) || stepEvents.includes(e)) &&
+        e.month < totalMonths,
+    )
     .sort((a, b) => a.month - b.month || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   if (totalMonths > 0) events.push({ month: totalMonths, date: retirementEndDate });
   const segmentPlans: SegmentPlan[] = [];
@@ -255,6 +274,26 @@ export function computeCompensation(
   // 가동연한 경과로 segment 가 없으면 영구장해 병합률을 그대로 표시한다 (일실수입은 0 이지만
   // 상실률 자체는 위자료 산정 참고치로 의미가 있다).
   const combinedLossRate = firstDisabilityRate ?? (1 - permFactor) * priorImpairmentFactor;
+  // 직접 편집 행이 있으면 자동 구간 대신 쓴다 (상실률 표시값 combinedLossRate 는 자동 구간 그대로).
+  const plans: SegmentPlan[] =
+    manualRows === undefined
+      ? segmentPlans
+      : manualRows.map((row) => {
+          // 법원식 절사면 자동 구간과 같이 % 2자리에서 버린다 (반올림·미절사 아님).
+          const lossRate = courtTruncation
+            ? floorLossRatePercent2([row.lossRate], 0)
+            : row.lossRate;
+          return {
+            startMonth: row.startMonth,
+            endMonth: row.endMonth,
+            startDate: shiftMonths(accidentDate, row.startMonth),
+            nextDate: shiftMonths(accidentDate, row.endMonth),
+            lossRate,
+            lossFraction: decimalRatio(lossRate),
+            livingCostDeducted: row.livingCostDeducted,
+            monthlyWageWon: row.monthlyWageWon,
+          };
+        });
 
   // 3. segment 단가
   // 일실수입 기간이 없으면 단가는 결과에 쓰이지 않는다. 위자료만 청구하는 고령 사건에서
@@ -263,11 +302,8 @@ export function computeCompensation(
     if (retirementAgeReached && input.lostIncome.directWageWon === undefined) return 0;
     if (input.lostIncome.directWageWon !== undefined) return input.lostIncome.directWageWon;
     const occupation = input.lostIncome.occupation;
-    if (occupation === undefined) {
-      throw new RangeError(
-        "손해배상 계산 실패: lostIncome.occupation 또는 lostIncome.directWageWon 중 하나는 필요합니다.",
-      );
-    }
+    // 월소득 입력(호봉승급·직접 편집)이 사고일부터 덮는 경우만 validator 가 단가 없이 통과시킨다.
+    if (occupation === undefined || occupation.length === 0) return 0;
     const rate = resolveOccupationRate(
       laborRates,
       occupation,
@@ -291,7 +327,7 @@ export function computeCompensation(
   // 법원 예시 절사면 누적 계수를 4자리에서 버린 표를 쓴다 (일실수입만, 개호비는 원 표).
   const lostIncomeHoffman = courtTruncation ? truncateHoffman4(hoffman) : hoffman;
   const rawHoffmanList: number[] = [];
-  for (const plan of segmentPlans) {
+  for (const plan of plans) {
     rawHoffmanList.push(
       Math.max(
         0,
@@ -303,15 +339,22 @@ export function computeCompensation(
   const capResult = applyHoffman240Cap(rawHoffmanList);
 
   // 5. segment 합산 + 6. floor
-  const segments: CompensationSegment[] = segmentPlans.map((plan, i) => {
+  const segments: CompensationSegment[] = plans.map((plan, i) => {
     const rawHoffman = rawHoffmanList[i] as number;
     const appliedHoffman = capResult.appliedHoffman[i] as number;
+    // 월소득 직접 지정 (직접 편집 행 > 호봉승급 일정). 없으면 일당 × 가동일수.
+    const stepWon = wageStepAt(incomeSteps, accidentDate, plan.startMonth);
+    const fixedMonthlyWon = plan.monthlyWageWon ?? stepWon;
+    const wageBasis =
+      plan.monthlyWageWon !== undefined ? "manual" : stepWon !== undefined ? "step" : undefined;
     // 구간 단가 = 구간 초일 이전 마지막 노임 변경일의 단가, 없으면 사고일 단가.
     const segmentDailyWageWon =
-      laborChanges.length > 0
-        ? resolveDailyWage(laborRateDateAt(laborChanges, plan.startDate, accidentDate))
-        : dailyWageWon;
-    const monthlyWageWon = segmentDailyWageWon * workingDays;
+      fixedMonthlyWon !== undefined
+        ? 0
+        : laborChanges.length > 0
+          ? resolveDailyWage(laborRateDateAt(laborChanges, plan.startDate, accidentDate))
+          : dailyWageWon;
+    const monthlyWageWon = fixedMonthlyWon ?? segmentDailyWageWon * workingDays;
     // 절사 경로의 상실률·계수는 만분율 정수라 BigInt 로 곱한다 (실수 곱은 정수가 되는 곱에서 1원 모자람).
     // 기대여명 이후 구간은 × 2/3 을 같은 정수 연산 안에서 한다 (선절사 없음).
     const keepNum = plan.livingCostDeducted ? 2n : 1n;
@@ -320,7 +363,7 @@ export function computeCompensation(
       ? floorEachStep(monthlyWageWon, [
           plan.lossRate,
           ...(plan.livingCostDeducted ? [{ num: 2n, den: 3n }] : []),
-          appliedHoffman,
+          hoffmanFraction(appliedHoffman),
         ])
       : courtTruncation
         ? Number(
@@ -334,7 +377,7 @@ export function computeCompensation(
           floorProduct(monthlyWageWon, [
             plan.lossFraction,
             ...(plan.livingCostDeducted ? [{ num: 2n, den: 3n }] : []),
-            appliedHoffman,
+            hoffmanFraction(appliedHoffman),
           ]);
     return {
       startMonth: plan.startMonth,
@@ -354,6 +397,8 @@ export function computeCompensation(
       amountFloorWon,
       // 기대여명 공제 구간에만 키를 싣는다 → 기존 골든/.lcalc byte-identical (회귀 0).
       ...(plan.livingCostDeducted ? { livingCostDeducted: true } : {}),
+      // 월소득 직접 지정 행에만 키를 싣는다 → 기존 골든/.lcalc byte-identical (회귀 0).
+      ...(wageBasis !== undefined ? { wageBasis } : {}),
     };
   });
   const lostIncomeSubtotalWon = segments.reduce((acc, segment) => acc + segment.amountFloorWon, 0);
