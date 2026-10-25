@@ -1,0 +1,3319 @@
+{
+  "version": "1.0.1",
+  "updatedAt": "2026-10-25",
+  "source": "「민사접수서류에 붙일 인지액 및 그 편철방법 등에 관한 예규(재민 91-1)」 별표 (재판예규 제1916호, 2025-07-12 시행)",
+  "sourceUrl": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=admrul&type=XML&ID=2200000107657",
+  "license": "법령·대법원규칙·재판예규 본문과 별표는 저작권법 제7조 제1호·제2호의 보호받지 못하는 저작물로 보고 옮겼습니다 (재판예규를 제2호의 훈령 그 밖에 이와 유사한 것으로 보는 것은 해석이며 판례로 확인하지 않았습니다). 출처: 법제처 국가법령정보센터 (https://www.law.go.kr). 본 데이터셋은 원문 표의 칸을 그대로 옮기고 아래 snapshotMethod 에 적은 정리만 했습니다.",
+  "snapshotDate": "2026-10-25",
+  "snapshotMethod": "법제처 Open API(target=admrul) 응답의 별표 HWP(flSeq 154518185, sha256 824aecf8a42fb3a74f3dcd088c0fff307a258e1a766d0a00702838b4bba6a3bf)에서 표 칸을 그대로 뽑았습니다. 병합 칸은 아래·오른쪽 칸에 같은 값을 펼쳤습니다. 칸 안 줄바꿈·연속 공백만 공백 하나로 줄였고, 편철방법의 \"가  철\" 처럼 글자 사이 공백은 지웠습니다. 인지액 칸은 원문(text)을 그대로 두고 종류(kind)만 붙였습니다: \"－\" 은 none, \"N원\" 한 가지 금액만 적힌 칸은 fixed, 민사소송 등 인지법·민사조정규칙 조문 번호와 \"소정액\" 만 적힌 칸은 statute(조문 번호를 refs 로 뽑음), 나머지(본안 인지액의 2분의 1, 신청서 인지액의 2배, 조건·선택·단서·차감이 붙은 금액 등)는 other 입니다. 변환 스크립트: packages/core-engine/scripts/convert-court-guides.mjs.",
+  "regulation": {
+    "name": "민사접수서류에 붙일 인지액 및 그 편철방법 등에 관한 예규(재민 91-1)",
+    "number": "재판예규 제1916호",
+    "issuedOn": "2025-07-09",
+    "effectiveFrom": "2025-07-12",
+    "serial": "2200000107657"
+  },
+  "electronicFiling": {
+    "text": "「민사소송 등에서의 전자문서 이용 등에 관한 법률」 제8조에 따라 등록사용자가 전자소송에 동의하고 전자문서로 제출하는 경우에는 「민사소송 등 인지법」 제16조에 따라 별표 인지액의 10분의 9에 해당하는 인지를 붙입니다.",
+    "sourceArticle": "재민 91-1 제3조 제2항, 민사소송 등 인지법 제16조"
+  },
+  "documents": [
+    {
+      "id": "c001",
+      "name": "관할법원지정신청서",
+      "article": "민소 28",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c002",
+      "name": "관할합의서",
+      "article": "민소 29",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c003",
+      "name": "소송이송신청서",
+      "article": "민소 34 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c004",
+      "name": "소송이송신청서",
+      "article": "민소 34②, 35, 36",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c005",
+      "name": "합의부재판신청서",
+      "article": "민소 34 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c006",
+      "name": "법원직원의 제척 또는 기피신청서",
+      "article": "민소 42, 43, 50",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c007",
+      "name": "당사자선정서, 변경서, 취소서",
+      "article": "민소 53",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c008",
+      "name": "법정대리권 등의 증명서(호적 또는 등기부 등․초본)",
+      "article": "민소 58",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c009",
+      "name": "소송능력보정서",
+      "article": "민소 59, 61",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c010",
+      "name": "소송행위추인서",
+      "article": "민소 60",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c011",
+      "name": "특별대리인선임신청서",
+      "article": "민소 62, 62의2, 64",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c012",
+      "name": "대리권의 소멸 또는 변경통지송달신청서",
+      "article": "민소 63",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c013",
+      "name": "필수적 공동소송인 추가신청서",
+      "article": "민소 68",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c014",
+      "name": "예비적․선택적 공동소송인 추가신청서",
+      "article": "민소 70, 68",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c015",
+      "name": "보조참가신청서",
+      "article": "민소 71",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c016",
+      "name": "보조참가에 대한 이의신청서",
+      "article": "민소 73",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c017",
+      "name": "공동소송적 보조참가신청서",
+      "article": "민소 78",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c018",
+      "name": "독립당사자 참가신청서",
+      "article": "민소 79",
+      "stamp": {
+        "kind": "statute",
+        "refs": ["제2조", "제6조"],
+        "text": "민사소송등인지법(이하 민소인지법이라 한다) 제2조, 제6조 소정액"
+      },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c019",
+      "name": "소송탈퇴서, 동의서",
+      "article": "민소 80",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c020",
+      "name": "권리승계인의 소송참가신청서",
+      "article": "민소 81",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c021",
+      "name": "권리승계인의 소송참가신청서",
+      "article": "민소 81",
+      "stamp": {
+        "kind": "other",
+        "text": "피신청인이 신청인의 승계주장 사실을 다투는 경우에는 민소인지법 제2조, 제6조 소정액"
+      },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c022",
+      "name": "의무승계인의 소송참가신청서",
+      "article": "민소 81",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c023",
+      "name": "승계인의 소송인수신청서",
+      "article": "민소 82",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c024",
+      "name": "원고측 공동소송참가신청서",
+      "article": "민소 83",
+      "stamp": {
+        "kind": "statute",
+        "refs": ["제2조", "제6조"],
+        "text": "민소인지법 제2조, 제6조 소정액"
+      },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c025",
+      "name": "피고측 공동소송참가신청서",
+      "article": "민소 83",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c026",
+      "name": "소송고지신청서",
+      "article": "민소 85",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c027",
+      "name": "소송대리인 허가신청서",
+      "article": "민소 88",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c028",
+      "name": "소송대리권의 증명서(위임장, 지정서)",
+      "article": "민소 89",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c029",
+      "name": "소송대리인 해임(사임)신고서",
+      "article": "민소 89",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c030",
+      "name": "제3자에 대한 소송비용액 상환신청서",
+      "article": "민소 107",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c031",
+      "name": "소송비용액 확정신청서",
+      "article": "민소 110,113, 114",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c032",
+      "name": "소송비용담보제공신청서",
+      "article": "민소 117 ①, 민소규 22",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c033",
+      "name": "지급보증위탁계약체결문서의 제출에 의한 담보제공허가신청서",
+      "article": "민소 122, 민소규 22",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c034",
+      "name": "담보취소신청서",
+      "article": "민소 125, 127",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c035",
+      "name": "담보권리자동의서",
+      "article": "민소 125 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c036",
+      "name": "담보권리행사최고신청서",
+      "article": "민소 125 ③",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c037",
+      "name": "담보취소결정확정증명원",
+      "article": "민소 162",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(제증명발급신청서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c038",
+      "name": "담보물변경신청서",
+      "article": "민소 126",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c039",
+      "name": "소송구조신청서",
+      "article": "민소 128",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철(항고,재항고 심리기간에는 별도기록)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c040",
+      "name": "소송구조취소신청서",
+      "article": "민소 131",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c041",
+      "name": "변호사(또는 집행관)의 보수 지급신청서",
+      "article": "민소규 26 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c042",
+      "name": "변호사(또는 집행관)의 보수와 체당금의 비용액확정신청서",
+      "article": "민소 132 ②, ③",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c043",
+      "name": "구석명신청서",
+      "article": "민소 136",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c044",
+      "name": "재판장(또는 합의부원)의 처치에 대한 이의",
+      "article": "민소 138",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c045",
+      "name": "법원의 석명처분(당사자본인 또는 법정대리인출석명령, 당사자가 소지하는 문서 또는 물건제출명령)신청서",
+      "article": "민소 140 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c046",
+      "name": "변론의 제한, 분리, 병합 또는 재개를 구하는 신청서",
+      "article": "민소 141, 142",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c047",
+      "name": "진술보조허가신청서",
+      "article": "민소143의2 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c048",
+      "name": "실기한 공격방어방법의 각하신청서",
+      "article": "민소 149",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c049",
+      "name": "소송절차에 관한 이의권에 기한 이의",
+      "article": "민소 151",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c050",
+      "name": "조서기재 생략에 대한 이의",
+      "article": "민소 155",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c051",
+      "name": "변론의 속기(또는 녹음)신청서",
+      "article": "민소 159 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c052",
+      "name": "녹음테이프(또는 속기록) 요지의 조서기재 신청서",
+      "article": "민소 159 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c053",
+      "name": "녹음테이프(또는 속기록) 폐 기에 대한 이의",
+      "article": "민소 159 ④",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c054",
+      "name": "소송기록의 열람․복사신청서",
+      "article": "민소 162 ①",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(열람 및 복사청구서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c055",
+      "name": "재판서, 조서의 정본․등본․초본 교부 신청서",
+      "article": "민소 162 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(제증명발급신청서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c056",
+      "name": "확정된 소송기록에 대한 열람신청서",
+      "article": "민소 162 ②",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c057",
+      "name": "재판기록 열람 등 제한신청서(비밀 기재부분, 개인정보 기재부분)",
+      "article": "민소 163 ①, ②",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c058",
+      "name": "재판기록 열람 등 제한결정 취소신청서(비밀 기재부분, 개인정보 기재부분)",
+      "article": "민소 163 ④",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철(제한신청사건에)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c059",
+      "name": "판결서 열람 등의 제한 신청서(비밀보호)",
+      "article": "민소 163조의2",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c060",
+      "name": "판결서 열람 등 제한 결정 취소신청서(비밀보호)",
+      "article": "민소 163조의2 ④, 163 ③, 민사판결서 열람 및 복사에 관한 규칙 6 ③",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철(제한신청사건에)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c061",
+      "name": "판결서 열람 등 제한 결정 취소신청서(변론공개금지사건)",
+      "article": "민소 163조의2 ① 단서, 민사판결서 열람 및 복사에 관한 규칙 5 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c062",
+      "name": "기일지정(또는 연기, 속행, 변경)신청서",
+      "article": "민소 165 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c063",
+      "name": "기간 신장 또는 단축신청, 부가기간의 신청서",
+      "article": "민소 172",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c064",
+      "name": "재송달신청서",
+      "article": "민소 174",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c065",
+      "name": "집행관송달신청서(특별송달신청)",
+      "article": "민소 176 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c066",
+      "name": "송달영수인신고서",
+      "article": "민소 184",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c067",
+      "name": "송달장소변경신고서",
+      "article": "민소 185",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c068",
+      "name": "휴일(또는 야간) 송달신청서",
+      "article": "민소 190",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c069",
+      "name": "공시송달신청서",
+      "article": "민소 194",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c070",
+      "name": "판결(또는 화해, 인낙, 포기 등의 조서, 지급명령 기타 결정명령) 경정신청서",
+      "article": "민소 211",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c071",
+      "name": "추가재판신청서",
+      "article": "민소 212",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c072",
+      "name": "가집행선고신청서",
+      "article": "민소 213 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c073",
+      "name": "가집행선고신청서",
+      "article": "민소 406, 435",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c074",
+      "name": "가집행선고면제신청서",
+      "article": "민소 213 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c075",
+      "name": "가집행선고 실효로 인한 원상회복(또는 손해배상) 신청서",
+      "article": "민소 215 ②, ③",
+      "stamp": { "kind": "statute", "refs": ["제4조②"], "text": "민소인지법 제4조 ② 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c076",
+      "name": "법원사무관 등의 처분에 대한 이의신청서",
+      "article": "민소 223",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c077",
+      "name": "화해권고결정에 대한 이의신 청서",
+      "article": "민소 226",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c078",
+      "name": "화해권고결정에 대한 이의신 청의 취하서",
+      "article": "민소 228",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c079",
+      "name": "화해권고결정에 대한 이의신청의 취하에 대한 부동의서",
+      "article": "민소 228",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c080",
+      "name": "화해권고결정 취소 신청서",
+      "article": "민소규 59 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c081",
+      "name": "소송절차수계신청서",
+      "article": "민소 233부터 241(238제외)",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c082",
+      "name": "당사자의 장애로 인한 중지신청 및 그 취소신청서",
+      "article": "민소 246",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c083",
+      "name": "소장",
+      "article": "민소 248",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c084",
+      "name": "정기금판결에 대한 변경의 소장",
+      "article": "민소 252",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c085",
+      "name": "인지․주소보정서",
+      "article": "민소 254 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c086",
+      "name": "피고경정신청서",
+      "article": "민소 260",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c087",
+      "name": "청구취지(또는 청구원인) 변경신청서",
+      "article": "민소 262",
+      "stamp": { "kind": "statute", "refs": ["제5조"], "text": "민소인지법 제5조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c088",
+      "name": "청구취지(또는 청구원인)변경불허신청서",
+      "article": "민소 263",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c089",
+      "name": "중간확인의 소",
+      "article": "민소264",
+      "stamp": {
+        "kind": "other",
+        "text": "민소인지법 제5조(원고가 제기한 경우) 또는 제4조②(피고가) 소정액"
+      },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c090",
+      "name": "소(상소)취하서",
+      "article": "민소 266 ①, 393①, 425",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c091",
+      "name": "소 취하에 대한 이의(또는 부동의서)",
+      "article": "민소 266 ⑥",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c092",
+      "name": "기일지정신청서",
+      "article": "민소 268 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c093",
+      "name": "소취하 효력을 다투는 기일지정 신청서",
+      "article": "민소규 67",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c094",
+      "name": "반소장",
+      "article": "민소269",
+      "stamp": { "kind": "statute", "refs": ["제4조"], "text": "민소인지법 제4조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c095",
+      "name": "준비서면, 답변서",
+      "article": "민소 272, 256",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c096",
+      "name": "사실조사촉탁신청서",
+      "article": "민소 294",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c097",
+      "name": "개인정보정정신청서",
+      "article": "민소규 76조의2",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c098",
+      "name": "증인신문신청서",
+      "article": "민소 308",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c099",
+      "name": "촉탁신문신청서",
+      "article": "민소 313",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c100",
+      "name": "증인불출석신청서",
+      "article": "민소규 83",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c101",
+      "name": "증인구인신청서",
+      "article": "민소 312",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c102",
+      "name": "증언거부신청서",
+      "article": "민소 314, 315",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c103",
+      "name": "증인대질신청서",
+      "article": "민소 329",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c104",
+      "name": "감정신청서",
+      "article": "민소 333",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c105",
+      "name": "감정인기피신청서",
+      "article": "민소336",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c106",
+      "name": "감정증인신문신청서",
+      "article": "민소 340",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c107",
+      "name": "문서제출명령신청서",
+      "article": "민소 343",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c108",
+      "name": "서증의 신청서",
+      "article": "민소0",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c109",
+      "name": "문서송부촉탁신청서",
+      "article": "민소 352",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c110",
+      "name": "법원외서증조사신청서",
+      "article": "민소규 112",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c111",
+      "name": "검증신청서",
+      "article": "민소 364",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c112",
+      "name": "당사자본인(또는 법정대리인) 신문신청서",
+      "article": "민소2",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c113",
+      "name": "증거보전신청서",
+      "article": "민소 375",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "소제기 전 별도기록",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c114",
+      "name": "증거보전신청서",
+      "article": "민소 375",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "소제기 후 첨철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c115",
+      "name": "제소전화해신청서",
+      "article": "민소 385",
+      "stamp": { "kind": "statute", "refs": ["제7조①④"], "text": "민소인지법 제7조①④ 소정액" },
+      "entryMethod": "화해사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c116",
+      "name": "화해불성립으로 인한 소제기신청서",
+      "article": "민소 388",
+      "stamp": {
+        "kind": "other",
+        "text": "민소인지법 제7조③ 소정액 (피신청인이 소제기신청을 하는 경우에는 첩부하지 않음)"
+      },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c117",
+      "name": "항소장",
+      "article": "민소 397",
+      "stamp": { "kind": "statute", "refs": ["제3조"], "text": "민소인지법 제3조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c118",
+      "name": "항소취지확장신청서",
+      "article": "민소7, 408",
+      "stamp": {
+        "kind": "statute",
+        "refs": ["제2조", "제3조"],
+        "text": "민소인지법 제2조,제3조 소정액"
+      },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c119",
+      "name": "불항소합의서",
+      "article": "민소 390 단서",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c120",
+      "name": "상소취하서",
+      "article": "민소 393 ① 425, 443",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c121",
+      "name": "상소권포기서",
+      "article": "민소 394, 425, 443",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c122",
+      "name": "부대상소장",
+      "article": "민소5, 443",
+      "stamp": { "kind": "statute", "refs": ["제3조"], "text": "민소인지법 제3조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c123",
+      "name": "항소(항고)이유서",
+      "article": "민소 402의2 ① (443 ①)",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c124",
+      "name": "항소(항고)이유서 제출기간 연장신청서",
+      "article": "민소 402의2 ② (443 ①)",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c125",
+      "name": "항소이유에 대한 답변서",
+      "article": "민소규 126의3",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c126",
+      "name": "상고장(비약상고장 포함)",
+      "article": "민소 422",
+      "stamp": { "kind": "statute", "refs": ["제3조"], "text": "민소인지법 제3조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c127",
+      "name": "상고이유서",
+      "article": "민소 427",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c128",
+      "name": "상고이유에 대한 답변서",
+      "article": "민소 428 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c129",
+      "name": "추완항소(상고)장",
+      "article": "민소173, 397, 422",
+      "stamp": { "kind": "statute", "refs": ["제3조"], "text": "민소인지법 제3조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c130",
+      "name": "항고장(보통항고장, 즉시항고장, 재항고장, 준항고장), 추완항고장",
+      "article": "민소 439, 441 ②, 442, 443, 444",
+      "stamp": { "kind": "statute", "refs": ["제11조"], "text": "민소인지법 제11조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c131",
+      "name": "수명법관이나 수탁판사의 재판에 대한 이의신청",
+      "article": "민소 441 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c132",
+      "name": "특별항고장",
+      "article": "민소 449",
+      "stamp": { "kind": "statute", "refs": ["제11조"], "text": "민소인지법 제11조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c133",
+      "name": "재심소장(준재심소장)",
+      "article": "민소 451",
+      "stamp": { "kind": "statute", "refs": ["제8조"], "text": "민소인지법 제8조 소정액" },
+      "entryMethod": "재심사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c134",
+      "name": "지급명령신청서",
+      "article": "민소 462",
+      "stamp": { "kind": "statute", "refs": ["제7조②④"], "text": "민소인지법 제7조②④소정액" },
+      "entryMethod": "독촉사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c135",
+      "name": "소제기신청서",
+      "article": "민소 466 ①",
+      "stamp": {
+        "kind": "other",
+        "text": "민소인지법 제2조 소정액에서 지급명령신청서에 붙힌 인지액을 뺀 금액"
+      },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c136",
+      "name": "지급명령에 대한 이의신청서",
+      "article": "민소 469 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c137",
+      "name": "공시최고신청서",
+      "article": "민소 477",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "공시최고사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c138",
+      "name": "관리 또는 청구의 신고서",
+      "article": "민소5",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c139",
+      "name": "재권판결에 대한 불복의 소장",
+      "article": "민소 490 ②",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c140",
+      "name": "판결확정증명신청서",
+      "article": "민소 499",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(제증명발급신청서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c141",
+      "name": "강제집행정지 등의 신청서",
+      "article": "민소1",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c142",
+      "name": "야간(휴일)집행허가신청서",
+      "article": "민집 8",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c143",
+      "name": "즉시항고장",
+      "article": "민집 15",
+      "stamp": { "kind": "statute", "refs": ["제11조"], "text": "민소인지법 제11조 소정액" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철 (항고사건의 기록만을 보내거나 민사집행사건의 기록 일부의 등본을 항고사건의 기록에 붙여 보낼 때는 별도기록)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c144",
+      "name": "집행에 관한 이의신청서",
+      "article": "민집 16 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c145",
+      "name": "집행에 관한 이의신청에 기한 잠정처분 신청서",
+      "article": "민집 16 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c146",
+      "name": "집행관의 집행위임거부 등에 대한 이의신청서",
+      "article": "민집 16 ③",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c147",
+      "name": "집행판결을 구하는 소장",
+      "article": "민집 26",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c148",
+      "name": "집행(승계집행)문 부여신청",
+      "article": "민집 28, 31, 58, 292",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(제증명발급신청서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c149",
+      "name": "집행문부여의 소장",
+      "article": "민집 33, 59 ④",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c150",
+      "name": "집행문부여에 대한 이의신청서",
+      "article": "민집 34",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c151",
+      "name": "집행문부여에 대한 이의신청에 기한 잠정처분신청서",
+      "article": "민집 34 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c152",
+      "name": "집행문 수통(또는 재도)부여신청서",
+      "article": "민집 35",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(제증명발급신청서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c153",
+      "name": "판결등 집행권원 정본의 송달증명원",
+      "article": "민집 39",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(제증명발급신청서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c154",
+      "name": "경정결정 정본의 송달증명원",
+      "article": "민집 39",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(제증명발급신청서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c155",
+      "name": "청구에 관한 이의의 소장",
+      "article": "민집 44",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c156",
+      "name": "집행문부여에 대한 이의의 소장",
+      "article": "민집 45",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c157",
+      "name": "잠정처분신청서",
+      "article": "민집 46 ②, 48 ③",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c158",
+      "name": "제3자이의 소장",
+      "article": "민집 48",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c159",
+      "name": "경매절차정지신청서",
+      "article": "민집 49",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c160",
+      "name": "채무자 유산의 강제집행을 위한 특별대리인선임신청서",
+      "article": "민집 52",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c161",
+      "name": "집행비용액확정결정신청서",
+      "article": "민집 53, 민집규 24 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c162",
+      "name": "군인, 군무원에 대한 집행의 촉탁신청서",
+      "article": "민집 54",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c163",
+      "name": "외국에서 할 강제집행에 대한 촉탁신청서",
+      "article": "민집 55",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c164",
+      "name": "공증인의 집행문부여에 대한 이의신청서",
+      "article": "민집 59 ②",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c165",
+      "name": "재산명시신청서",
+      "article": "민집 61",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c166",
+      "name": "명시명령에 대한 이의신청서",
+      "article": "민집 63",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c167",
+      "name": "재산목록 정정허가 신청서",
+      "article": "민집 66",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c168",
+      "name": "재산목록의 열람․복사신청서",
+      "article": "민집 67",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(열람 및 복사청구서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c169",
+      "name": "감치재판개시결정",
+      "article": "민집 68 민집규 30②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c170",
+      "name": "명시명령 이행 신청서",
+      "article": "민집 68 ⑤",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c171",
+      "name": "채무불이행자명부등재신청서",
+      "article": "민집 70",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c172",
+      "name": "채무불이행자명부 열람․복사신청서",
+      "article": "민집 72 ④",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(열람 및 복사청구서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c173",
+      "name": "명부등재말소신청서",
+      "article": "민집 73",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c174",
+      "name": "재산조회신청서",
+      "article": "민집 74",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c175",
+      "name": "재산조회결과의 열람․복 사․출력신청서",
+      "article": "민집 75",
+      "stamp": { "kind": "fixed", "won": 500, "text": "500원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "(재산조회결과 열람․복사․출력청구서철에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c176",
+      "name": "부동산경매신청서",
+      "article": "민집 80, 264",
+      "stamp": { "kind": "fixed", "won": 5000, "text": "5,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c177",
+      "name": "매각기일연기(변경)신청서",
+      "article": "",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c178",
+      "name": "미등기 부동산에 대한 집행 관조사신청서",
+      "article": "민집 81③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c179",
+      "name": "부동산에 대한 침해행위방지조치신청서",
+      "article": "민집 83 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c180",
+      "name": "채권계산서",
+      "article": "민집 253, 84",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c181",
+      "name": "경매개시결정에 대한 이의신청서",
+      "article": "민집 86, 265",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c182",
+      "name": "경매개시결정에 대한 이의신청에 기한 잠정처분신청서",
+      "article": "민집 86 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c183",
+      "name": "후행 경매개시결정에 의한 절차속행신청서",
+      "article": "민집 87 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c184",
+      "name": "채권자의 배당요구신청서",
+      "article": "민집 247, 88",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c185",
+      "name": "경매신청취하서",
+      "article": "민집 93",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c186",
+      "name": "부동산의 멸실 등에 의한 경매취소신청서",
+      "article": "민집 96",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c187",
+      "name": "부동산재평가신청서",
+      "article": "민집 97",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c188",
+      "name": "부동산일괄매각신청서",
+      "article": "민집 98",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c189",
+      "name": "채권자의 매수신청서",
+      "article": "민집 102 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c190",
+      "name": "합의에 의한 매각조건변경신청서",
+      "article": "민집 110",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c191",
+      "name": "최고가(차순위)매수신고인의 송달영수인 신고서",
+      "article": "민집 118",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c192",
+      "name": "매각허가결정에 관한 이의신청서",
+      "article": "민집 120",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c193",
+      "name": "매각부동산지정서",
+      "article": "민집 124 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c194",
+      "name": "부동산훼손등에 의한 매각불허가신청서",
+      "article": "민집 127 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c195",
+      "name": "부동산훼손등에 의한 매각허가결정의 취소신청서",
+      "article": "민집 127 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c196",
+      "name": "매각허가여부에 대한 항고장, 재항고장",
+      "article": "민집 129",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철 (항고사건의 기록만을 보내거나 민사집행사건의 기록 일부의 등본을 항고사건의 기록에 붙여 보낼 때는 별도기록)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c197",
+      "name": "매각부동산인도명령신청서",
+      "article": "민집 136 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c198",
+      "name": "매각부동산관리명령신청서",
+      "article": "민집 136 ②",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c199",
+      "name": "공유자의 우선매수신고서",
+      "article": "민집 140",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c200",
+      "name": "매수대금과 배당액의 상계신청서",
+      "article": "민집 143 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c201",
+      "name": "매수인의 채무인수신청서",
+      "article": "민집 143 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c202",
+      "name": "매수인의 채무인수 또는 차액지급신고에 대한 이의신청서",
+      "article": "민집 143 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c203",
+      "name": "배당표에 대한 이의신청서",
+      "article": "민집 151 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c204",
+      "name": "배당이의의 소장",
+      "article": "민집 154",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c205",
+      "name": "집행력있는 정본의 환부신청서",
+      "article": "민집 159 ③, 172",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c206",
+      "name": "배당액계좌입금신청서",
+      "article": "민집 160 ② 민집규 82 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c207",
+      "name": "부동산강제관리신청서",
+      "article": "민집 163",
+      "stamp": { "kind": "fixed", "won": 5000, "text": "5,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c208",
+      "name": "관리인해임신청서",
+      "article": "민집 167 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c209",
+      "name": "강제관리에 대한 제3자 이의의 소장",
+      "article": "민집 168",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c210",
+      "name": "배당협의불성립사유신고서",
+      "article": "민집 169 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c211",
+      "name": "수익처리신고서",
+      "article": "민집규 91 ⑥",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c212",
+      "name": "관리인의 계산에 대한 이의신청서",
+      "article": "민집 170 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c213",
+      "name": "선박에 대한 강제집행신청서",
+      "article": "민집 172",
+      "stamp": { "kind": "fixed", "won": 5000, "text": "5,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c214",
+      "name": "선박국적증서인도명령신청서",
+      "article": "민집 175",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c215",
+      "name": "선박국적증서등 수취불능신고서",
+      "article": "민집규 97",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c216",
+      "name": "선박국적증서등의 재수취명령신청서",
+      "article": "민집규 101",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c217",
+      "name": "압류선박의 항행허가신청서",
+      "article": "민집 176 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c218",
+      "name": "선박등기부초본 또는 등본의 송부청구신청서",
+      "article": "민집 177 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c219",
+      "name": "선박 감수ㆍ보존처분",
+      "article": "민집 178",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c220",
+      "name": "보증의 제공에 의한 선박강제경매절차의 취소신청서",
+      "article": "민집 181",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c221",
+      "name": "자동차인도명령신청서",
+      "article": "민집규 113 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c222",
+      "name": "자동차운행허가신청서",
+      "article": "민집규 117, 210 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c223",
+      "name": "선박지분에 대한 강제집행신청서",
+      "article": "민집 185",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c224",
+      "name": "제3자 점유물인도명령신청서",
+      "article": "민집 193 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c225",
+      "name": "압류금지물의 범위변경신청서",
+      "article": "민집 196",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c226",
+      "name": "압류금지물의 범위변경신청서",
+      "article": "민집 196",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "보전처분에서는신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c227",
+      "name": "유체동산 특별현금화명령신청서",
+      "article": "민집 214",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c228",
+      "name": "집행관에 대한 매각실시명령신청서",
+      "article": "민집 216",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c229",
+      "name": "공유부인의 소장",
+      "article": "민집 221 ③",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c230",
+      "name": "매각대금의 공탁사유신고서",
+      "article": "민집 222 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c231",
+      "name": "가압류를 본압류로 전이하는 신청서",
+      "article": "민집 225",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c232",
+      "name": "채권압류명령신청서",
+      "article": "민집 225",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c233",
+      "name": "저당권있는 채권압류명령의 등기부기입신청서",
+      "article": "민집 228 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c234",
+      "name": "전부명령신청서",
+      "article": "민집 229",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c235",
+      "name": "채권압류 및 전부(추심)명령신청서",
+      "article": "민집 229",
+      "stamp": { "kind": "fixed", "won": 4000, "text": "4,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c236",
+      "name": "추심명령신청서",
+      "article": "민집 229",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c237",
+      "name": "저당권있는 채권전부명령의 등기부기입신청서",
+      "article": "민집 230",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c238",
+      "name": "압류액의 제한(또는 초과액처분) 허가신청서",
+      "article": "민집 232",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c239",
+      "name": "압류채권자의 추심신고서",
+      "article": "민집 236 ①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c240",
+      "name": "추심금액공탁사유신고서",
+      "article": "민집 236 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c241",
+      "name": "제3채무자에 대한 진술최고신청서",
+      "article": "민집 237",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c242",
+      "name": "제3채무자 진술서",
+      "article": "민집 237",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c243",
+      "name": "추심권포기신고서",
+      "article": "민집 240",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c244",
+      "name": "채권 기타 재산권 특별현금화명령 신청서",
+      "article": "민집 241",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c245",
+      "name": "유체동산 인도나 권리이전청구권에 대한 압류명령신청서",
+      "article": "민집 242, 243",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c246",
+      "name": "유체물인도청구권에 대한 추심명령신청서",
+      "article": "민집 243 ②",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c247",
+      "name": "부동산 인도나 권리이전청구권에 대한 압류명령신청서",
+      "article": "민집 244 ①, ②",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c248",
+      "name": "부동산청구권에 대한 추심명령 신청서",
+      "article": "민집 244 ④",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c249",
+      "name": "압류금지채권의 범위변경신청서",
+      "article": "민집246②, ③, 291",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c250",
+      "name": "압류금지채권의 범위변경신청서",
+      "article": "민집246②, ③, 291",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "보전처분에서는 신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c251",
+      "name": "제3채무자의 채무액공탁사유신고서",
+      "article": "민집 248 ④",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c252",
+      "name": "채권가압류를 원인으로 한 제3채무자의 권리공탁신고서",
+      "article": "민집규 172조①, ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c253",
+      "name": "추심의 소장",
+      "article": "민집 249 ①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c254",
+      "name": "제3채무자의 배당요구채권자 참가명령신청서",
+      "article": "민집 249 ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c255",
+      "name": "배당요구채권자의 압류채권추심허가신청서",
+      "article": "민집 250",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c256",
+      "name": "그 밖의 재산권의 압류명령신청서",
+      "article": "민집 251",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c257",
+      "name": "제3자가 점유하는 물건에 대한 인도청구권의 이부명령신청서",
+      "article": "민집 259",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c258",
+      "name": "대체집행신청서",
+      "article": "민집 260 ①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c259",
+      "name": "대체집행비용선지급결정신청서",
+      "article": "민집 260 ②",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c260",
+      "name": "간접강제신청서",
+      "article": "민집 261",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "집행사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c261",
+      "name": "가압류신청서",
+      "article": "민집 276",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c262",
+      "name": "가압류결정에 대한 이의신청서",
+      "article": "민집 283",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c263",
+      "name": "가압류이의신청사건의 이송 신청서",
+      "article": "민집 284",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c264",
+      "name": "가압류신청취하서",
+      "article": "민집 285",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c265",
+      "name": "가압류이의․취소에 관한 결정에 대한 항고장, 재항고장",
+      "article": "민집 286 ⑦",
+      "stamp": { "kind": "other", "text": "신청서에 붙인 인지액의 2배" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c266",
+      "name": "제소명령신청서",
+      "article": "민집 287 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c267",
+      "name": "제소기간도과에 의한 가압류취소신청서",
+      "article": "민집 287 ③",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c268",
+      "name": "사정변경등에 의한 가압류취소 신청서",
+      "article": "민집 288 ①",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c269",
+      "name": "가압류취소재판의 효력정지 신청서",
+      "article": "민집 289",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c270",
+      "name": "강제관리의 방법에 의한 가압류 집행신청서",
+      "article": "민집 294",
+      "stamp": { "kind": "fixed", "won": 5000, "text": "5,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c271",
+      "name": "채권자의 가압류(가처분) 집행취소(해제) 신청서",
+      "article": "",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c272",
+      "name": "채권자의 가압류(가처분)신청취하를 이유로 하는 채무자의 집행취소신청서",
+      "article": "",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c273",
+      "name": "가압류취소재판의 취소재판에 의한 가압류집행신청서",
+      "article": "민집 298 ②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c274",
+      "name": "해방공탁에 의한 가압류집행의 취소신청서",
+      "article": "민집 299",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c275",
+      "name": "가처분신청서",
+      "article": "민집 300",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c276",
+      "name": "임시의 지위를 정하기 위한 가처분신청서",
+      "article": "민집 300",
+      "stamp": {
+        "kind": "other",
+        "text": "본안의 소에 따른 인지액의 2분의 1(인지액의 상한액은 50만원)"
+      },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c277",
+      "name": "가처분신청취하서",
+      "article": "",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c278",
+      "name": "가처분결정에 대한 이의신청서",
+      "article": "민집",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c279",
+      "name": "임시의 지위를 정하기 위한 가처분결정에 대한 이의신청서",
+      "article": "민집3",
+      "stamp": {
+        "kind": "other",
+        "text": "본안의 소에 따른 인지액의 2분의 1(인지액의 상한액은 50만원)"
+      },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c280",
+      "name": "가처분이의․취소에 관한 결정에 대한 항고장, 재항고장",
+      "article": "민집 286 ⑦ 민집 307 ②",
+      "stamp": { "kind": "other", "text": "신청서에 붙인 인지액의 2배" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c281",
+      "name": "사정변경등에 의한 가처분취소 신청서",
+      "article": "민집8",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c282",
+      "name": "사정변경등에 의한 임시의 지위를 정하기 위한 가처분취소신청서",
+      "article": "민집8",
+      "stamp": {
+        "kind": "other",
+        "text": "본안의 소에 따른 인지액의 2분의 1(인지액의 상한액은 50만원)"
+      },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c283",
+      "name": "특별사정에 의한 가처분취소신청서",
+      "article": "민집 307",
+      "stamp": { "kind": "fixed", "won": 10000, "text": "10,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c284",
+      "name": "특별사정에 의한 임시의 지위를 정하기 위한 가처분취소신청서",
+      "article": "민집 307",
+      "stamp": {
+        "kind": "other",
+        "text": "본안의 소에 따른 인지액의 2분의 1(인지액의 상한액은 50만원)"
+      },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "c285",
+      "name": "가처분원상회복 신청서",
+      "article": "민집 308",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c286",
+      "name": "가처분집행정지 신청서",
+      "article": "민집 309",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c287",
+      "name": "변론기일지정신청서",
+      "article": "소액사건심판규칙 3조의3",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c288",
+      "name": "이행권고결정에 대한 이의신 청서",
+      "article": "소액사건심판법 5조의4",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c289",
+      "name": "민사조정신청서",
+      "article": "민사조정법 2",
+      "stamp": { "kind": "statute", "refs": ["제3조①"], "text": "민사조정규칙 제3조① 소정액" },
+      "entryMethod": "민사조정사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c290",
+      "name": "조정사건이송신청서",
+      "article": "민사조정법 4①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c291",
+      "name": "조정사건이송신청서",
+      "article": "민사조정법 4②",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c292",
+      "name": "조정회부신청서",
+      "article": "민사조정법 7②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c293",
+      "name": "조정위원선정합의서",
+      "article": "민사조정법 10조의2",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c294",
+      "name": "피신청인경정신청서",
+      "article": "민사조정법 17①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c295",
+      "name": "대표당사자선정신고서",
+      "article": "민사조정법 18①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c296",
+      "name": "조정에 갈음하는 결정에 대한 이의신청서",
+      "article": "민사조정법 34①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c297",
+      "name": "과태료결정에 대한 이의신청서",
+      "article": "비송사건절차법 250②, 질서위반행위규제법 45①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c298",
+      "name": "재산조회",
+      "article": "채무자 회생 및 파산에 관한 법률(이하,채무자 회생)29①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c299",
+      "name": "회생절차개시의 신청서",
+      "article": "채무자 회생34①",
+      "stamp": { "kind": "fixed", "won": 30000, "text": "30,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c300",
+      "name": "보전처분(회생절차)",
+      "article": "채무자 회생43①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c301",
+      "name": "중지 또는 금지명령신청서(회생절차)",
+      "article": "채무자 회생44①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c302",
+      "name": "포괄적 금지명령신청서(회생절차)",
+      "article": "채무자 회생45①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c303",
+      "name": "포괄적 금지명령의 적용 배제신청서(회생절차)",
+      "article": "채무자 회생47①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c304",
+      "name": "중지된 절차 또는 처분의 속행 또는 취소신청서(회생절차)",
+      "article": "채무자 회생44④, 45⑤, 58⑤",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c305",
+      "name": "부인의 청구서(회생절차)",
+      "article": "채무자 회생105①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c306",
+      "name": "부인의 청구인용결정에 대한 이의의 소(회생절차)",
+      "article": "채무자 회생107①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c307",
+      "name": "이사등의 재산에 대한 보전처분신청서(회생절차)",
+      "article": "채무자 회생114①, ③",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c308",
+      "name": "손해배상청구권등의 조사확정재판신청서(회생절차)",
+      "article": "채무자 회생115①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c309",
+      "name": "손해배상청구권 등의 조사확정재판에 대한 이의의 소(회생절차)",
+      "article": "채무자 회생116①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c310",
+      "name": "회생채권, 회생담보권 조사확정재판 신청서",
+      "article": "채무자 회생170①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c311",
+      "name": "회생채권, 회생담보권 조사확정재판에 대한 이의의 소",
+      "article": "채무자 회생171①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c312",
+      "name": "파산신청서",
+      "article": "채무자 회생294①",
+      "stamp": {
+        "kind": "other",
+        "text": "30,000원[단, 채무자(법인 포함)가 신청하는 경우에는 1,000원]"
+      },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c313",
+      "name": "보전처분 신청서(파산절차)",
+      "article": "채무자 회생323①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c314",
+      "name": "이사등의 재산에 대한 보전처분신청서(파산절차)",
+      "article": "채무자 회생351①, ③",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c315",
+      "name": "손해배상청구권등의 조사확정재판신청서(파산절차)",
+      "article": "채무자 회생352①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c316",
+      "name": "손해배상청구권 등의 조사확정재판에 대한 이의의 소(파산절차)",
+      "article": "채무자 회생353①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c317",
+      "name": "면제재산 결정 신청서(파산절차)",
+      "article": "채무자 회생383②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c318",
+      "name": "부인의 청구서",
+      "article": "채무자 회생396①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c319",
+      "name": "부인의 청구인용결정에 대한 이의의 소(파산절차)",
+      "article": "채무자 회생396④, 107①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c320",
+      "name": "파산채권 조사확정재판 신청서",
+      "article": "채무자 회생462①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c321",
+      "name": "파산채권 조사확정재판에 대한 이의의 소",
+      "article": "채무자 회생463①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c322",
+      "name": "배당표에 대한 이의신청서",
+      "article": "채무자 회생514①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c323",
+      "name": "면책신청서(파산절차)",
+      "article": "채무자 회생556",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c324",
+      "name": "면책의 취소신청서",
+      "article": "채무자 회생569①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c325",
+      "name": "복권신청서",
+      "article": "채무자 회생575①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c326",
+      "name": "면제재산 결정 신청서(개인회생절차)",
+      "article": "채무자 회생580③, 383②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c327",
+      "name": "부인의 청구서(개인회생절차)",
+      "article": "채무자 회생584①, 396①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c328",
+      "name": "부인의 청구인용결정에 대한 이의의 소(개인회생절차)",
+      "article": "채무자 회생584①, 396④, 107①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c329",
+      "name": "개인회생절차 개시신청서",
+      "article": "채무자 회생588",
+      "stamp": { "kind": "fixed", "won": 30000, "text": "30,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c330",
+      "name": "보전처분신청서(개인회생절차)",
+      "article": "채무자 회생592①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c331",
+      "name": "중지 또는 금지명령신청서(개인회생절차)",
+      "article": "채무자 회생593①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c332",
+      "name": "중지 또는 금지명령의 취소 또는 변경신청서(개인회생절차)",
+      "article": "채무자 회생593④",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c333",
+      "name": "포괄적 금지명령신청서(개인회생절차)",
+      "article": "채무자 회생 593⑤, 45①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c334",
+      "name": "포괄적 금지명령의 적용 배제신청서(개인회생절차)",
+      "article": "채무자 회생593⑤, 47①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c335",
+      "name": "중지된 절차 또는 처분의 속행 또는 취소신청서(개인회생절차)",
+      "article": "채무자 회생 593⑤, 45⑤, 600③",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c336",
+      "name": "개인회생채권 조사확정재판 신청서",
+      "article": "채무자 회생 604①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c337",
+      "name": "개인회생채권 조사확정재판에 대한 이의의 소",
+      "article": "채무자 회생 605①",
+      "stamp": { "kind": "statute", "refs": ["제2조"], "text": "민소인지법 제2조 소정액" },
+      "entryMethod": "민사사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c338",
+      "name": "면책신청서(개인회생절차)",
+      "article": "채무자 회생 624①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c339",
+      "name": "면책 취소 신청서(개인회생절차)",
+      "article": "채무자 회생 626①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c340",
+      "name": "사건 이송 신청서(국제도산)",
+      "article": "채무자 회생 630",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c341",
+      "name": "외국도산절차의 승인신청서",
+      "article": "채무자 회생 631①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c342",
+      "name": "승인전 명령신청서",
+      "article": "채무자 회생 635①, 636①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c343",
+      "name": "외국도산절차에 대한 지원신청서",
+      "article": "채무자 회생 636①",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "도산사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c344",
+      "name": "외국도산절차의 지원 결정의 변경 또는 취소신청서",
+      "article": "채무자 회생 636⑥",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c345",
+      "name": "중지된 절차의 취소신청서(국제도산)",
+      "article": "채무자 회생 636⑦",
+      "stamp": { "kind": "fixed", "won": 2000, "text": "2,000원" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c346",
+      "name": "소송허가신청서",
+      "article": "증권관련집단소송법 7①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c347",
+      "name": "대표당사자 선임신청서",
+      "article": "증권관련집단소송법 10③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c348",
+      "name": "심리할 법원지정신청서",
+      "article": "증권관련집단소송법 14②, 동규칙 9①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별도기록",
+      "filingKind": "별도기록"
+    },
+    {
+      "id": "c349",
+      "name": "제외신고서",
+      "article": "증권관련집단소송법 18①, 27③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "제외신고서철에 가철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "c350",
+      "name": "대표당사자 허가신청서",
+      "article": "증권관련집단소송법 21①, 동규칙 16",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c351",
+      "name": "대표당사자 소송수행금지신청서",
+      "article": "증권관련집단소송법 22①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c352",
+      "name": "소송대리인 선임허가신청서",
+      "article": "증권관련집단소송법 26②, 동규칙 18",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c353",
+      "name": "총원범위 변경신청서",
+      "article": "증권관련집단소송법 27①, 동규칙 19",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c354",
+      "name": "소취하․청구포기․ 화해 허가신청서",
+      "article": "증권관련집단소송법 35①, 동규칙 22①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c355",
+      "name": "상소취하․상소권포기 허가신청서",
+      "article": "증권관련집단소송법 38①, 35①",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c356",
+      "name": "분배관리인 선임․변경신청서",
+      "article": "증권관련집단소송법 41①, ③",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c357",
+      "name": "분배계획안 인가전 비용지급허가신청서",
+      "article": "증권관련집단소송법 44②, 동규칙 35②",
+      "stamp": { "kind": "none", "text": "－" },
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "c358",
+      "name": "변호사보수 감액신청서",
+      "article": "증권관련집단소송법 44③",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c359",
+      "name": "분배계획 변경신청서",
+      "article": "증권관련집단소송법 48①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c360",
+      "name": "권리확인신청서",
+      "article": "증권관련집단소송법 50①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c361",
+      "name": "소송허가신청서",
+      "article": "소비자기본법 73조①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "c362",
+      "name": "공동소송참가허가신청서",
+      "article": "소비자단체소송규칙 13조 ①",
+      "stamp": { "kind": "fixed", "won": 1000, "text": "1,000원" },
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    }
+  ]
+}

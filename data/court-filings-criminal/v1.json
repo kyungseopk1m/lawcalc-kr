@@ -1,0 +1,1419 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-10-25",
+  "source": "「형사소송서류의 전산입력 및 편철방법에 대한 예규(재형 2003-11)」 별표 1~7 (재판예규 제1968-17호, 2026-10-02 시행)",
+  "sourceUrl": "https://www.law.go.kr/DRF/lawService.do?OC=test&target=admrul&type=XML&ID=2200000109007",
+  "license": "법령·대법원규칙·재판예규 본문과 별표는 저작권법 제7조 제1호·제2호의 보호받지 못하는 저작물로 보고 옮겼습니다 (재판예규를 제2호의 훈령 그 밖에 이와 유사한 것으로 보는 것은 해석이며 판례로 확인하지 않았습니다). 출처: 법제처 국가법령정보센터 (https://www.law.go.kr). 본 데이터셋은 원문 표의 칸을 그대로 옮기고 아래 snapshotMethod 에 적은 정리만 했습니다.",
+  "snapshotDate": "2026-10-25",
+  "snapshotMethod": "법제처 Open API(target=admrul) 응답의 별표 HWP 10개 중 내용이 같은 3쌍을 뺀 7개(flSeq 170046441 sha256 9238513d307bc9c5, flSeq 170046443 sha256 6d2ce145925d6788, flSeq 170046445 sha256 0d9c2168cc0137f9, flSeq 170046451 sha256 54dcbdd44d34a6ff, flSeq 170046453 sha256 732fab93d8350a24, flSeq 170046455 sha256 f495550da4ec7a14, flSeq 170046457 sha256 561e03881d745696)에서 표 칸을 뽑았습니다. 원문의 \"″\"·\"“\" (윗칸과 같음 표시)는 바로 윗행 값으로 채웠고 채운 칸 이름을 copiedFromAbove 에 남겼습니다. 칸 안 줄바꿈·연속 공백은 공백 하나로 줄였고, 입력방법의 글자 사이 공백과 \"별 책\" 같은 두 글자 편철방법의 공백은 지웠습니다. 변환 스크립트: packages/core-engine/scripts/convert-court-guides.mjs.",
+  "regulation": {
+    "name": "형사소송서류의 전산입력 및 편철방법에 대한 예규(재형 2003-11)",
+    "number": "재판예규 제1968-17호",
+    "issuedOn": "2026-09-28",
+    "effectiveFrom": "2026-10-02",
+    "serial": "2200000109007"
+  },
+  "tables": [
+    { "no": 1, "title": "형사접수서류의 전산입력 및 편철 방법 일람표1" },
+    { "no": 2, "title": "형사접수서류의 전산입력 및 편철 방법 일람표2" },
+    { "no": 3, "title": "형사접수서류의 전산입력 및 편철 방법 일람표 3" },
+    { "no": 4, "title": "형사접수서류의 전산입력 및 편철 방법 일람표4" },
+    { "no": 5, "title": "형사접수서류의 전산입력 및 편철 방법 일람표5" },
+    { "no": 6, "title": "형사접수서류의 전산입력 및 편철 방법 일람표6" },
+    { "no": 7, "title": "형사접수서류의 전산입력 및 편철 방법 일람표7" }
+  ],
+  "documents": [
+    {
+      "id": "k001",
+      "table": 1,
+      "name": "토지관할의 병합심리신청서",
+      "article": "형소법 6",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k002",
+      "table": 1,
+      "name": "뒤에 공소를 받은 법원의 심판신청서",
+      "article": "형소법 13 단서",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k003",
+      "table": 1,
+      "name": "관할지정신청서",
+      "article": "형소법 14",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k004",
+      "table": 1,
+      "name": "관할이전신청서",
+      "article": "형소법 15",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k005",
+      "table": 1,
+      "name": "기피신청서",
+      "article": "형소법 18 ① 형소법 25 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k006",
+      "table": 1,
+      "name": "회피신청서",
+      "article": "형소법 24 ② 형소법 25 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k007",
+      "table": 1,
+      "name": "소송행위의 특별대리인 선임청구서",
+      "article": "형소법 28 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k008",
+      "table": 1,
+      "name": "보조인신고서",
+      "article": "형소법 29 ②",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k009",
+      "table": 1,
+      "name": "변호인선임서",
+      "article": "형소법 32 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k010",
+      "table": 1,
+      "name": "대표변호인의 지정철회, 변경신청서",
+      "article": "형소법 32의2 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k011",
+      "table": 1,
+      "name": "국선변호인 선정청구서",
+      "article": "형소법 33 ② 형소법 214의2 ⑩",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k012",
+      "table": 1,
+      "name": "변호인의 서류, 증거물 열람․등사청구서",
+      "article": "형소법 35",
+      "entryMethod": "문건입력",
+      "filingMethod": "열람 및 등사청구서철에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k013",
+      "table": 1,
+      "name": "재판서등 등․초본교부청구서",
+      "article": "형소법 45",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k014",
+      "table": 1,
+      "name": "소송에 관한 사항의 증명서 교부청구서",
+      "article": "형소규 27",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k015",
+      "table": 1,
+      "name": "소송관계서류 등의 열람․등사청구서",
+      "article": "형소법 55 ① 형소법 35",
+      "entryMethod": "문건입력",
+      "filingMethod": "열람 및 등사청구서철에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k016",
+      "table": 1,
+      "name": "증인의 증인신문조서 열람․등사청구서",
+      "article": "형소규 84의2",
+      "entryMethod": "문건입력",
+      "filingMethod": "열람 및 등사청구서철에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k017",
+      "table": 1,
+      "name": "형사 판결서 등 열람․복사 신청서",
+      "article": "형소법 59의3 ①, ④",
+      "entryMethod": "문건입력",
+      "filingMethod": "형사 판결서 등 열람․복사 신청서에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k018",
+      "table": 1,
+      "name": "형사 판결서 등 열람․복사 제한신청서",
+      "article": "형소법 59의3 ① 5호 단서",
+      "entryMethod": "문건입력",
+      "filingMethod": "형사 판결서 등 열람․복사 제한신청서철에 편쳘",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k019",
+      "table": 2,
+      "name": "속기록등 사본신청서",
+      "article": "형소법 56의2 ③",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k020",
+      "table": 2,
+      "name": "속기(녹음) 신청서",
+      "article": "형소법 56의2 ① 형소법 30의2 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k021",
+      "table": 2,
+      "name": "송달영수인 선임신고서",
+      "article": "형소법 60 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k022",
+      "table": 2,
+      "name": "구속촉탁서",
+      "article": "형소법 77 ①",
+      "entryMethod": "사건입력",
+      "filingMethod": "별 책 (단, 공조사건기록을 송부받은 촉탁법원은 구속영장을 분리하여 주기록에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k023",
+      "table": 2,
+      "name": "변호인 선임의뢰서",
+      "article": "형소법 90 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k024",
+      "table": 2,
+      "name": "비변호인과의 접견, 교통금지 청구서",
+      "article": "형소법 91",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k025",
+      "table": 2,
+      "name": "구속취소청구서",
+      "article": "형소법 93",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k026",
+      "table": 2,
+      "name": "보석청구서",
+      "article": "형소법 94",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k027",
+      "table": 2,
+      "name": "구속집행정지신청서",
+      "article": "형소법 101",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k028",
+      "table": 2,
+      "name": "구속집행정지취소청구서",
+      "article": "형소법 102 ②",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "k029",
+      "table": 2,
+      "name": "보석취소, 보증금몰수청구서",
+      "article": "형소법 102 ② 형소법 103 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k030",
+      "table": 2,
+      "name": "압수물환부신청서",
+      "article": "형소법 133 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k031",
+      "table": 2,
+      "name": "압수장물환부신청서",
+      "article": "형소법 134",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k032",
+      "table": 2,
+      "name": "압수물가환부청구서",
+      "article": "형소법 133 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k033",
+      "table": 2,
+      "name": "압수․수색촉탁서",
+      "article": "형소법 136 ①, ②",
+      "entryMethod": "사건입력",
+      "filingMethod": "별 책 (단, 공조사건기록을 송부받은 촉탁법원은 압수․수색영장을 분리하여 주기록에 편철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k034",
+      "table": 2,
+      "name": "검증촉탁서",
+      "article": "형소법 145",
+      "entryMethod": "사건입력",
+      "filingMethod": "별 책 (단, 공조사건기록을 송부받은 촉탁법원은 이를 주기록에 첨철)",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k035",
+      "table": 3,
+      "name": "증인신문청구서",
+      "article": "형소법 164",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k036",
+      "table": 3,
+      "name": "증인신문촉탁서",
+      "article": "형소법 167 ①, ②",
+      "entryMethod": "사건입력",
+      "filingMethod": "별 책 (단, 공조사건기록을 송부받은 촉탁법원은 이를 주기록에 첨철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k037",
+      "table": 3,
+      "name": "감정보고서",
+      "article": "형소법 171 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k038",
+      "table": 3,
+      "name": "피고인의 간수명령신청서",
+      "article": "형소법 172 ⑤",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k039",
+      "table": 3,
+      "name": "수용비용지급청구서",
+      "article": "형소규 87",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k040",
+      "table": 3,
+      "name": "증거보전청구서",
+      "article": "형소법 184 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k041",
+      "table": 3,
+      "name": "증거보전서류 등의 열람․등사 허가청구서",
+      "article": "형소법 185",
+      "entryMethod": "문건입력",
+      "filingMethod": "열람 및 등사청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k042",
+      "table": 3,
+      "name": "체포영장청구서",
+      "article": "형소법 200의 2",
+      "entryMethod": "영장입력",
+      "filingMethod": "체포영장 청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k043",
+      "table": 3,
+      "name": "구속영장청구서",
+      "article": "형소법 200의2 ⑤ 200의4 ① 201 ① 213의2",
+      "entryMethod": "영장입력",
+      "filingMethod": "구속영장 청구서철에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k044",
+      "table": 3,
+      "name": "체포, 구속영장등본교부청구서",
+      "article": "형소규 50 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k045",
+      "table": 3,
+      "name": "구속기간연장신청서",
+      "article": "형소법 205 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "구속기간연장신청서철에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k046",
+      "table": 3,
+      "name": "체포, 구속적부심사청구서",
+      "article": "형소법 214의2 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k047",
+      "table": 3,
+      "name": "압수․수색․검증 영장청구서",
+      "article": "형소법 215 ①",
+      "entryMethod": "영장입력",
+      "filingMethod": "압수영장등청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k048",
+      "table": 3,
+      "name": "통신제한조치허가청구서(범죄수사)",
+      "article": "통신비밀보호법 6 ①, ②",
+      "entryMethod": "영장입력",
+      "filingMethod": "통신제한조치허가청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k049",
+      "table": 3,
+      "name": "통신제한조치기간 연장청구서(범죄수사)",
+      "article": "통신비밀보호법 6 ⑦",
+      "entryMethod": "문건입력",
+      "filingMethod": "통신제한조치허가청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k050",
+      "table": 3,
+      "name": "통신사실 확인자료제공요청 허가청구서(범죄수사)",
+      "article": "통신비밀보호법 13 ③",
+      "entryMethod": "영장입력",
+      "filingMethod": "통신사실 확인자료제공요청 허가청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k051",
+      "table": 3,
+      "name": "전기통신보관등승인청구서",
+      "article": "통신비밀보호법 12의2 ①",
+      "entryMethod": "영장입력",
+      "filingMethod": "전기통신보관등승인청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k052",
+      "table": 3,
+      "name": "전기통신폐기결과보고서",
+      "article": "통신비밀보호법 12의2 ⑥",
+      "entryMethod": "문건입력",
+      "filingMethod": "전기통신폐기결과보고서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k053",
+      "table": 3,
+      "name": "디엔에이감식시료채취영장청구서",
+      "article": "디엔에이신원확인정보의 이용 및 보호에 관한 법률 8",
+      "entryMethod": "영장입력",
+      "filingMethod": "디엔에이감식시료채취영장청구서 철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k054",
+      "table": 3,
+      "name": "압수물 환부, 가환부 청구서",
+      "article": "형소법 218조의2 ②",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k055",
+      "table": 3,
+      "name": "제1회 공판기일전의 증인신문청구서",
+      "article": "형소법 221의2 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k056",
+      "table": 3,
+      "name": "감정유치장 청구서",
+      "article": "형소법 221의3 ①",
+      "entryMethod": "영장입력",
+      "filingMethod": "구속영장 청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k057",
+      "table": 4,
+      "name": "감정처분허가장 청구서",
+      "article": "형소법 221의4 ②",
+      "entryMethod": "영장입력",
+      "filingMethod": "압수영장등청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k058",
+      "table": 4,
+      "name": "고소취소서",
+      "article": "형소법 232 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k059",
+      "table": 4,
+      "name": "공소장",
+      "article": "형소법 254 ①",
+      "entryMethod": "사건입력",
+      "filingMethod": "별 책 (제5조 참조)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k060",
+      "table": 4,
+      "name": "공소취소서",
+      "article": "형소법 255 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k061",
+      "table": 4,
+      "name": "재정신청서",
+      "article": "형소법 260 ①, 고위공직자범죄수사처 설치 및 운영에 관한 법률 29 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k062",
+      "table": 4,
+      "name": "재정신청비용지급신청서",
+      "article": "형소법 262의3 ①, 고위공직자범죄수사처 설치 및 운영에 관한 법률 29 ⑤",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k063",
+      "table": 4,
+      "name": "재정신청취소서",
+      "article": "형소법 264 ②",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k064",
+      "table": 4,
+      "name": "열람·등사허용신청서",
+      "article": "형소법 266의4 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k065",
+      "table": 4,
+      "name": "공판기일의 변경신청서",
+      "article": "형소법 270 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k066",
+      "table": 4,
+      "name": "공무소등에 대한 조회신청서",
+      "article": "형소법 272 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k067",
+      "table": 4,
+      "name": "공판기일전의 증거조사 신청서",
+      "article": "형소법 273 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k068",
+      "table": 4,
+      "name": "전문심리위원 참여신청서",
+      "article": "형소법 279의2 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k069",
+      "table": 4,
+      "name": "전문심리위원 참여결정 취소신청서",
+      "article": "형소법 279의3 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k070",
+      "table": 4,
+      "name": "비공개 증인신문 신청서",
+      "article": "형소법 294의3 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k071",
+      "table": 4,
+      "name": "피해자 재판기록 열람복사 신청서",
+      "article": "형소법 294의4 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "열람 및 복사신청서철에 편철(사본은 가철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k072",
+      "table": 4,
+      "name": "피해자 속기록 등 열람·복사 신청서",
+      "article": "형소법 294의4 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "열람 및 복사신청서철에 편철(사본은 가철)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k073",
+      "table": 4,
+      "name": "증거조사에 대한 이의신청서",
+      "article": "형소법 296 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k074",
+      "table": 4,
+      "name": "공소장 변경허가신청서",
+      "article": "형소법 298 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k075",
+      "table": 4,
+      "name": "변론분리 또는 병합신청서",
+      "article": "형소법 300",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k076",
+      "table": 4,
+      "name": "재판장의 처분에 대한 이의신청서",
+      "article": "형소법 304 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k077",
+      "table": 4,
+      "name": "석명을 위한 발문신청서",
+      "article": "형소규 141 ③",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k078",
+      "table": 4,
+      "name": "변론재개신청서",
+      "article": "형소법 305",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k079",
+      "table": 4,
+      "name": "집행유예 취소청구서",
+      "article": "형소법 335 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k080",
+      "table": 4,
+      "name": "누범발각에 의한 형의 결정청구서",
+      "article": "형소법 336 ① (형법 36)",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k081",
+      "table": 4,
+      "name": "경합범에 관한 형의 분리청구서",
+      "article": "형소법 336 ① (형법 39③)",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k082",
+      "table": 4,
+      "name": "선고유예실효청구서",
+      "article": "형소법 336 ① (형법 61)",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k083",
+      "table": 5,
+      "name": "형의 소멸재판신청서",
+      "article": "형소법 337 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k084",
+      "table": 5,
+      "name": "상소권 회복청구서",
+      "article": "형소법 345",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k085",
+      "table": 5,
+      "name": "상소의 포기, 취하서",
+      "article": "형소법 349",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k086",
+      "table": 5,
+      "name": "절차속행신청서",
+      "article": "형소규 154 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "k087",
+      "table": 5,
+      "name": "항소장",
+      "article": "형소법 359",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k088",
+      "table": 5,
+      "name": "상소이유서와 답변서",
+      "article": "형소법361의3 ①, ③ 형소법379 ①, ④",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k089",
+      "table": 5,
+      "name": "상고장",
+      "article": "형소법 371",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k090",
+      "table": 5,
+      "name": "비약적 상고장",
+      "article": "형소법 372",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k091",
+      "table": 5,
+      "name": "판결정정신청서",
+      "article": "형소법 400 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "k092",
+      "table": 5,
+      "name": "재판서경정신청서",
+      "article": "형소규 25 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k093",
+      "table": 5,
+      "name": "항고장(즉시항고 포함)",
+      "article": "형소법 402 형소법 405",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k094",
+      "table": 5,
+      "name": "재항고장",
+      "article": "형소법 415",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k095",
+      "table": 5,
+      "name": "준항고장",
+      "article": "형소법 59의2 ⑥ 형소법 59의3 ④ 형소법 416 ① 형소법 417 디엔에이신원확인정보의 이용 및 보호에 관한 법률 8의2 ① 형사 판결서등 열람복사 규칙 6 ④",
+      "entryMethod": "사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k096",
+      "table": 5,
+      "name": "재심청구서",
+      "article": "형소법 420",
+      "entryMethod": "사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["filingMethod"]
+    },
+    {
+      "id": "k097",
+      "table": 5,
+      "name": "재심청구의 취하서",
+      "article": "형소법 429 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k098",
+      "table": 5,
+      "name": "비상상고장",
+      "article": "형소규 441",
+      "entryMethod": "사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k099",
+      "table": 5,
+      "name": "약식명령청구서",
+      "article": "형소법 449",
+      "entryMethod": "사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["filingMethod"]
+    },
+    {
+      "id": "k100",
+      "table": 5,
+      "name": "약식명령에 대한 정식재판청구서",
+      "article": "형소법 453 ①",
+      "entryMethod": "사건입력",
+      "filingMethod": "가 철 (재형2003-1 참조)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k101",
+      "table": 5,
+      "name": "정식재판청구 취하서",
+      "article": "형소법 454",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k102",
+      "table": 5,
+      "name": "소송비용집행면제신청서",
+      "article": "형소법 487",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k103",
+      "table": 5,
+      "name": "재판의 해석에 관한 의의신청서",
+      "article": "형소법 488",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k104",
+      "table": 5,
+      "name": "재판의 집행에 관한 이의신청서",
+      "article": "형소법 489",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k105",
+      "table": 6,
+      "name": "소송비용집행면제신청, 재판의 해석에 관한 의의신청, 재판의 집행에 관한 이의신청의 취하서",
+      "article": "형소법 490 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k106",
+      "table": 6,
+      "name": "즉결심판청구서",
+      "article": "즉결심판에 관한 절차법 3 ①",
+      "entryMethod": "사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k107",
+      "table": 6,
+      "name": "즉결심판에 대한 정식재판청구의 포기, 취하서",
+      "article": "형소규 14 ④",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k108",
+      "table": 6,
+      "name": "배상신청서",
+      "article": "소송촉진등에관한특례법 26 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "k109",
+      "table": 6,
+      "name": "배상신청 취하서",
+      "article": "소송촉진등에관한특례법 26 ⑥",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k110",
+      "table": 6,
+      "name": "배상신청에 관한 소송행위대리허가신청서",
+      "article": "소송촉진등에관한특례법 27 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k111",
+      "table": 6,
+      "name": "배상신청인의 소송기록 열람청구서",
+      "article": "소송촉진등에관한특례법 30 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "열람 및 등사청구서철에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k112",
+      "table": 6,
+      "name": "배상신청인의 피고인 또는 증인신문신청 및 증거신청서",
+      "article": "소송촉진등에관한특례법 30 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k113",
+      "table": 6,
+      "name": "확정된 배상명령이 기재된 유죄판결서정본교부신청서",
+      "article": "소송촉진등에관한특례규칙 27",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k114",
+      "table": 6,
+      "name": "배상명령에 대한 집행정지신청서",
+      "article": "소송촉진등에관한특례법 31 ④, 민소법 473, 474",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k115",
+      "table": 6,
+      "name": "형사보상청구서",
+      "article": "형사보상법 1 ①",
+      "entryMethod": "사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k116",
+      "table": 6,
+      "name": "형사보상청구의 취소서",
+      "article": "형사보상법 12 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k117",
+      "table": 6,
+      "name": "감호영장청구서",
+      "article": "치료감호법 6 ①",
+      "entryMethod": "영장입력",
+      "filingMethod": "감호영장 청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k118",
+      "table": 6,
+      "name": "보호구속기간연장신청서",
+      "article": "치료감호법 6 ③",
+      "entryMethod": "문건입력",
+      "filingMethod": "보호구속기간연장신청서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k119",
+      "table": 6,
+      "name": "감호청구서",
+      "article": "치료감호법 6 ①, 7",
+      "entryMethod": "사건입력",
+      "filingMethod": "합철(독립청구시에는 별책)",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k120",
+      "table": 6,
+      "name": "공판절차로의 이행청구서",
+      "article": "치료감호법 10 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철",
+      "filingKind": "가철"
+    },
+    {
+      "id": "k121",
+      "table": 6,
+      "name": "구인장청구서",
+      "article": "보호관찰등에관한법률 39 ①, 64 ②",
+      "entryMethod": "영장입력",
+      "filingMethod": "구속영장 청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k122",
+      "table": 7,
+      "name": "유치허가장청구서",
+      "article": "보호관찰등에관한법률 42 ②, 64 ②",
+      "entryMethod": "영장입력",
+      "filingMethod": "구속영장청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k123",
+      "table": 7,
+      "name": "국회의원체포동의서",
+      "article": "헌법 44 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "체포영장청구서철에 편철",
+      "filingKind": "기타"
+    },
+    {
+      "id": "k124",
+      "table": 7,
+      "name": "국회의원체포(구속)동의서",
+      "article": "헌법 44 ①",
+      "entryMethod": "문건입력",
+      "filingMethod": "구속영장청구서철에 편철",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k125",
+      "table": 7,
+      "name": "국회의원석방통지서",
+      "article": "형소법 101 ⑤",
+      "entryMethod": "문건입력",
+      "filingMethod": "가철 (구속관계서류에 연속하여 편철)",
+      "filingKind": "기타",
+      "copiedFromAbove": ["entryMethod"]
+    },
+    {
+      "id": "k126",
+      "table": 7,
+      "name": "부착명령청구서",
+      "article": "특정 성폭력범죄자에 대한 위치추적 전자장치 부착에 관한 법률 5 ①",
+      "entryMethod": "사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "k127",
+      "table": 7,
+      "name": "사회봉사허가청구서, 사회봉사허가취소청구서",
+      "article": "벌금 미납자의 사회봉사집행에 관한 특례법 5 ①, 14 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k128",
+      "table": 7,
+      "name": "사회봉사신청 기각에 대한 이의신청서",
+      "article": "벌금 미납자의 사회봉사집행에 관한 특례법 5 ⑥",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k129",
+      "table": 7,
+      "name": "준수사항변경등 신청서(청구서)",
+      "article": "보호관찰 등에 관한 법률 32 ④",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k130",
+      "table": 7,
+      "name": "부착기간연장청구서",
+      "article": "특정 범죄자에 대한 위치추적 전자장치 부착 등에 관한 법률 14조의2 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "k131",
+      "table": 7,
+      "name": "준수사항추가청구서",
+      "article": "특정 범죄자에 대한 위치추적 전자장치 부착 등에 관한 법률 14조의2 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["article", "entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k132",
+      "table": 7,
+      "name": "준수사항변경청구서",
+      "article": "특정 범죄자에 대한 위치추적 전자장치 부착 등에 관한 법률 14조의2 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["article", "entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k133",
+      "table": 7,
+      "name": "제1심판결 후의 부착명령청구서",
+      "article": "특정 범죄자에 대한 위치추적 전자장치 부착 등에 관한 법률 제9112호 부칙 2",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["entryMethod", "filingMethod"]
+    },
+    {
+      "id": "k134",
+      "table": 7,
+      "name": "보호처분청구서",
+      "article": "아동·청소년의 성보호에 관한 법률 28조의2",
+      "entryMethod": "사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "k135",
+      "table": 7,
+      "name": "보호처분기간연장청구서",
+      "article": "아동·청소년의 성보호에 관한 법률 28조의3 ③",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "k136",
+      "table": 7,
+      "name": "열람ㆍ복사 담당 법원공무원의 처분에 대한 이의신청서",
+      "article": "재판기록 열람ㆍ복사 규칙 7 ⑤",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k137",
+      "table": 7,
+      "name": "보호처분변경청구서",
+      "article": "아동·청소년의 성보호에 관한 법률 28조의4 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "k138",
+      "table": 7,
+      "name": "보호처분종결청구서",
+      "article": "아동·청소년의 성보호에 관한 법률 28조의4 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철",
+      "copiedFromAbove": ["article"]
+    },
+    {
+      "id": "k139",
+      "table": 7,
+      "name": "보호처분결정 변경신청",
+      "article": "아동·청소년의 성보호에 관한 법률 28조의3 ⑤",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "k140",
+      "table": 7,
+      "name": "공개명령청구서",
+      "article": "아동·청소년의 성보호에 관한 법률 제9765호 부칙 3 ②",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "첨철",
+      "filingKind": "첨철"
+    },
+    {
+      "id": "k141",
+      "table": 7,
+      "name": "치료명령청구서",
+      "article": "성폭력범죄자의 성충동 약물치료에 관한 법률 4 ①",
+      "entryMethod": "사건입력",
+      "filingMethod": "합철",
+      "filingKind": "합철"
+    },
+    {
+      "id": "k142",
+      "table": 7,
+      "name": "치료기간연장청구서",
+      "article": "성폭력범죄자의 성충동 약물치료에 관한 법률 16 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k143",
+      "table": 7,
+      "name": "준수사항추가청구서",
+      "article": "성폭력범죄자의 성충동 약물치료에 관한 법률 16 ②, ③",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k144",
+      "table": 7,
+      "name": "준수사항변경청구서",
+      "article": "성폭력범죄자의 성충동 약물치료에 관한 법률 16 ②, ③",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k145",
+      "table": 7,
+      "name": "준수사항삭제청구서",
+      "article": "성폭력범죄자의 성충동 약물치료에 관한 법률 16 ③",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k146",
+      "table": 7,
+      "name": "치료명령집행면제신청서",
+      "article": "성폭력범죄자의 성충동 약물치료에 관한 법률 8조의2 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k147",
+      "table": 7,
+      "name": "성폭력수형자치료명령청구서",
+      "article": "성폭력범죄자의 성충동 약물치료에 관한 법률 22 ①",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    },
+    {
+      "id": "k148",
+      "table": 7,
+      "name": "취업제한변경신청(기간변경,면제)서",
+      "article": "아동·청소년의 성보호에 관한 법률 제15352호 부칙 4 ② 아동복지법 제15889호 부칙 3 ② 장애인복지법 제15904호 부칙 3 ②",
+      "entryMethod": "신청사건입력",
+      "filingMethod": "별책",
+      "filingKind": "별책"
+    }
+  ]
+}

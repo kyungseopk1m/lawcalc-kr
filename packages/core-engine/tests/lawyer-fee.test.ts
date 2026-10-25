@@ -24,7 +24,7 @@ function input(overrides: Partial<LawyerFeeInput> = {}): LawyerFeeInput {
 describe("loadLawyerFeeDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadLawyerFeeDataset();
-    expect(ds.version).toBe("1.2.0");
+    expect(ds.version).toBe("1.3.0");
     expect(ds.brackets).toHaveLength(8);
     expect(ds.brackets.map((b) => b.baseAmount)).toEqual([
       300_000, 300_000, 2_000_000, 4_400_000, 7_400_000, 9_400_000, 10_400_000, 13_400_000,
@@ -33,8 +33,8 @@ describe("loadLawyerFeeDataset / 기본 dataset", () => {
     expect(ds.appealsRule.policy).toBe("perInstanceIndependent");
   });
 
-  it("lawyerFeeDatasetVersionTag 는 lawyer-fee/v1.2.0", () => {
-    expect(lawyerFeeDatasetVersionTag(loadLawyerFeeDataset())).toBe("lawyer-fee/v1.2.0");
+  it("lawyerFeeDatasetVersionTag 는 lawyer-fee/v1.3.0", () => {
+    expect(lawyerFeeDatasetVersionTag(loadLawyerFeeDataset())).toBe("lawyer-fee/v1.3.0");
   });
 
   it("override 도 동일하게 검증한다", () => {
@@ -174,7 +174,7 @@ describe("computeLawyerFee / bracket 산식", () => {
     expect(r.baseAmount).toBe(300_000);
     expect(r.amount).toBe(300_000);
     expect(r.multiplier).toBe(1.0);
-    expect(r.dataVersion).toBe("lawyer-fee/v1.2.0");
+    expect(r.dataVersion).toBe("lawyer-fee/v1.3.0");
     expect(r.computedAt).toBe(FROZEN_AT);
   });
 
@@ -610,9 +610,9 @@ describe("computeLawyerFee / validator integration", () => {
 });
 
 describe("computeLawyerFee / dataset injection 결정성", () => {
-  it("default 호출 → bundled dataset 사용 (lawyer-fee/v1.2.0)", () => {
+  it("default 호출 → bundled dataset 사용 (lawyer-fee/v1.3.0)", () => {
     const r = computeLawyerFee(input(), { computedAt: FROZEN_AT });
-    expect(r.dataVersion).toBe("lawyer-fee/v1.2.0");
+    expect(r.dataVersion).toBe("lawyer-fee/v1.3.0");
   });
 
   it("custom dataset 주입 → dataVersion 변경", () => {

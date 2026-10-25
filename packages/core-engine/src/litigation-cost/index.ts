@@ -173,3 +173,31 @@ export type {
   RealEstateCaseValueResult,
 } from "./compute-case-value";
 export { computeRealEstateCaseValue } from "./compute-case-value";
+
+export type {
+  LawyerFeeArticle5Reason,
+  LawyerFeeRuleVersion,
+  LawyerFeeRuleVersionKey,
+  LawyerFeeTableKey,
+} from "./lawyer-fee-dataset";
+
+export type {
+  ComputeCostAssessmentDeps,
+  CostAssessmentAmountSource,
+  CostAssessmentClaim,
+  CostAssessmentHalfReason,
+  CostAssessmentInput,
+  CostAssessmentInstanceInput,
+  CostAssessmentInstanceResult,
+  CostAssessmentLawyerFee,
+  CostAssessmentParty,
+  CostAssessmentPartyCosts,
+  CostAssessmentPartyCostsInput,
+  CostAssessmentResult,
+} from "./compute-cost-assessment";
+
+export {
+  COST_ASSESSMENT_PARTY_LABEL,
+  computeCostAssessment,
+  selectLawyerFeeRuleVersion,
+} from "./compute-cost-assessment";

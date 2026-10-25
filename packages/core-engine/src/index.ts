@@ -266,3 +266,63 @@ export type {
   CalculatorRounding,
 } from "./calculator";
 export { evaluateExpression } from "./calculator";
+
+export type {
+  CivilFilingDataset,
+  CivilFilingDocument,
+  CivilStamp,
+  CivilStampKind,
+  CriminalFilingDataset,
+  CriminalFilingDocument,
+  FilingKind,
+  FilingRegulation,
+} from "./filings";
+export {
+  civilFilingsVersionTag,
+  criminalFilingsVersionTag,
+  loadCivilFilings,
+  loadCriminalFilings,
+  searchFilings,
+} from "./filings";
+
+export type {
+  CourtJurisdictionDataset,
+  CourtJurisdictionInput,
+  CourtJurisdictionResult,
+  CourtJurisdictionRow,
+  CourtJurisdictionSnapshot,
+  CourtJurisdictionUnit,
+  CourtSet,
+} from "./jurisdiction";
+export {
+  courtJurisdictionVersionTag,
+  findCourtJurisdiction,
+  listJurisdictionProvinces,
+  listJurisdictionUnits,
+  loadCourtJurisdiction,
+  snapshotAt,
+} from "./jurisdiction";
+
+export type {
+  ComputeCostAssessmentDeps,
+  CostAssessmentAmountSource,
+  CostAssessmentClaim,
+  CostAssessmentHalfReason,
+  CostAssessmentInput,
+  CostAssessmentInstanceInput,
+  CostAssessmentInstanceResult,
+  CostAssessmentLawyerFee,
+  CostAssessmentParty,
+  CostAssessmentPartyCosts,
+  CostAssessmentPartyCostsInput,
+  CostAssessmentResult,
+  LawyerFeeArticle5Reason,
+  LawyerFeeRuleVersion,
+  LawyerFeeRuleVersionKey,
+  LawyerFeeTableKey,
+} from "./litigation-cost";
+export {
+  COST_ASSESSMENT_PARTY_LABEL,
+  computeCostAssessment,
+  selectLawyerFeeRuleVersion,
+} from "./litigation-cost";

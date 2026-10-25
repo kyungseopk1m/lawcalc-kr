@@ -1,13 +1,18 @@
 {
-  "version": "1.2.0",
-  "updatedAt": "2026-08-03",
+  "version": "1.3.0",
+  "updatedAt": "2026-10-25",
+  "source": "「변호사보수의 소송비용 산입에 관한 규칙」 (법령ID 005866) 연혁 7개 판(대법원규칙 제758호·제1123호·제1829호·제2116호·제2496호·제2779호·제2936호)의 본문·별표·부칙",
+  "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=225413",
+  "license": "법령·대법원규칙 본문과 별표는 저작권법 제7조 제1호의 보호받지 못하는 저작물로 보고 옮겼습니다. 출처: 법제처 국가법령정보센터 (https://www.law.go.kr). 대한법률구조공단·판례 인용은 출처 URL 만 남겼습니다.",
+  "snapshotDate": "2026-10-25",
+  "snapshotMethod": "법제처 Open API(DRF) target=lsHistory 로 연혁 목록을 받고, 각 판을 target=law&MST=<ruleVersions[].mst>&type=XML 로 받아 별표 표를 행으로 옮겼습니다. 각 구간의 base 가 앞 구간 base + 요율 x 구간폭과 같은지 스크립트로 확인했고, 2018판 표(C)에 최저 30만원을 씌운 값과 2020판 표(D, brackets)가 표본 소가 13개에서 같음을 확인했습니다. brackets 는 현행 2020판 표(D)이고, historicalTables 는 표 A(1981·1990·2003판), B(2008·2013판), C(2018판)입니다. 2020-12-28 이후 개정은 2026-10-25 조회 기준 없습니다.",
   "sourceLaw": {
     "name": "변호사보수의 소송비용 산입에 관한 규칙",
     "lsId": "005866",
     "currentEffectiveFrom": "2020-12-28",
     "currentRuleNumber": "대법원규칙 제2936호",
-    "bracketTableEffectiveFrom": "2018-04-01",
-    "bracketTableRuleNumber": "대법원규칙 제2779호",
+    "bracketTableEffectiveFrom": "2020-12-28",
+    "bracketTableRuleNumber": "대법원규칙 제2936호",
     "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=225413"
   },
   "brackets": [
@@ -88,8 +93,8 @@
   ],
   "appealsRule": {
     "policy": "perInstanceIndependent",
-    "note": "각 심급마다 별표 그대로 적용. 항소심·상고심의 소가는 상소로써 불복하는 범위 (제3조 제3항).",
-    "sourceArticle": "제3조 제1항·제3항"
+    "note": "각 심급단위로 별표를 그대로 적용한다 (제3조 제1항). 소송목적의 값은 민사소송 등 인지법 제2조에 따르고 (제4조 제1항), 항소·상고심은 상소로써 불복하는 범위의 소가다 (민사소송 등 인지규칙 제25조).",
+    "sourceArticle": "제3조 제1항·제4조 제1항, 민사소송 등 인지규칙 제25조"
   },
   "modifiers": {
     "provisionalSeizureOrInjunction": {
@@ -172,24 +177,39 @@
   "historyNote": {
     "bracketTableChanges": [
       {
+        "effectiveFrom": "2020-12-28",
+        "ruleNumber": "대법원규칙 제2936호",
+        "summary": "제3조 제1항 단서(최저 30만원) 삭제, 300만원까지 30만원 정액을 별표에 편입해 8구간(표 D). 산입액은 2018판과 같음"
+      },
+      {
         "effectiveFrom": "2018-04-01",
         "ruleNumber": "대법원규칙 제2779호",
-        "summary": "9구간 → 8구간 재편 + 최저기준액 30만원 정액 도입 (본 슬라이스 기준)"
+        "summary": "별표 9구간 → 7구간 재편(표 C, 2,000만원까지 10%), 최저 30만원은 제3조 제1항 단서 유지"
       },
       {
         "effectiveFrom": "2013-12-01",
         "ruleNumber": "대법원규칙 제2496호",
-        "summary": "최저기준액 10만 → 30만 상향 (별표 본체는 9구간 유지)"
+        "summary": "제3조 제1항 단서 최저액 10만원 → 30만원 (별표 9구간 표 B 유지)"
       },
       {
         "effectiveFrom": "2008-01-01",
         "ruleNumber": "대법원규칙 제2116호",
-        "summary": "별표 9구간 (1,000만 이하 8% 시작)"
+        "summary": "별표 9구간 표 B (1,000만원까지 8%) + 제3조 제1항 단서 최저 10만원 신설 + 제6조 제2항 증액 신설"
+      },
+      {
+        "effectiveFrom": "2003-07-01",
+        "ruleNumber": "대법원규칙 제1829호",
+        "summary": "별표 요율 그대로(표 A). 제5조 감액 사유를 자백간주·무변론 판결로 바꾸고 화해 등 재판 외 완결 삭제, 제3조 제2항에 심문 추가"
       },
       {
         "effectiveFrom": "1990-09-01",
         "ruleNumber": "대법원규칙 제1123호",
-        "summary": "가압류·가처분 1/2 적용 신설 (제3조 제2항)"
+        "summary": "가압류·가처분 1/2 신설 (제3조 제2항, 변론을 거친 경우에 한함). 별표 표 A 유지"
+      },
+      {
+        "effectiveFrom": "1981-03-01",
+        "ruleNumber": "대법원규칙 제758호",
+        "summary": "제정. 별표 10구간 표 A (100만원까지 10%)"
       }
     ],
     "modifierChanges": [
@@ -199,5 +219,354 @@
         "summary": "제5조에 이행권고결정 사유 추가. 별표 본체 무변경."
       }
     ]
-  }
+  },
+  "historicalTables": {
+    "A": [
+      {
+        "name": "1구간 (100만원까지)",
+        "sortOrder": 1,
+        "scopeStart": 0,
+        "scopeEnd": 1000000,
+        "baseAmount": 0,
+        "rate": 0.1,
+        "rateText": "100분의 10"
+      },
+      {
+        "name": "2구간 (100만원~200만원)",
+        "sortOrder": 2,
+        "scopeStart": 1000000,
+        "scopeEnd": 2000000,
+        "baseAmount": 100000,
+        "rate": 0.09,
+        "rateText": "100분의 9"
+      },
+      {
+        "name": "3구간 (200만원~300만원)",
+        "sortOrder": 3,
+        "scopeStart": 2000000,
+        "scopeEnd": 3000000,
+        "baseAmount": 190000,
+        "rate": 0.08,
+        "rateText": "100분의 8"
+      },
+      {
+        "name": "4구간 (300만원~400만원)",
+        "sortOrder": 4,
+        "scopeStart": 3000000,
+        "scopeEnd": 4000000,
+        "baseAmount": 270000,
+        "rate": 0.07,
+        "rateText": "100분의 7"
+      },
+      {
+        "name": "5구간 (400만원~500만원)",
+        "sortOrder": 5,
+        "scopeStart": 4000000,
+        "scopeEnd": 5000000,
+        "baseAmount": 340000,
+        "rate": 0.06,
+        "rateText": "100분의 6"
+      },
+      {
+        "name": "6구간 (500만원~1,000만원)",
+        "sortOrder": 6,
+        "scopeStart": 5000000,
+        "scopeEnd": 10000000,
+        "baseAmount": 400000,
+        "rate": 0.05,
+        "rateText": "100분의 5"
+      },
+      {
+        "name": "7구간 (1,000만원~3,000만원)",
+        "sortOrder": 7,
+        "scopeStart": 10000000,
+        "scopeEnd": 30000000,
+        "baseAmount": 650000,
+        "rate": 0.04,
+        "rateText": "100분의 4"
+      },
+      {
+        "name": "8구간 (3,000만원~5,000만원)",
+        "sortOrder": 8,
+        "scopeStart": 30000000,
+        "scopeEnd": 50000000,
+        "baseAmount": 1450000,
+        "rate": 0.03,
+        "rateText": "100분의 3"
+      },
+      {
+        "name": "9구간 (5,000만원~1억원)",
+        "sortOrder": 9,
+        "scopeStart": 50000000,
+        "scopeEnd": 100000000,
+        "baseAmount": 2050000,
+        "rate": 0.01,
+        "rateText": "100분의 1"
+      },
+      {
+        "name": "10구간 (1억원 초과)",
+        "sortOrder": 10,
+        "scopeStart": 100000000,
+        "scopeEnd": null,
+        "baseAmount": 2550000,
+        "rate": 0.005,
+        "rateText": "1000분의 5"
+      }
+    ],
+    "B": [
+      {
+        "name": "1구간 (1,000만원까지)",
+        "sortOrder": 1,
+        "scopeStart": 0,
+        "scopeEnd": 10000000,
+        "baseAmount": 0,
+        "rate": 0.08,
+        "rateText": "100분의 8"
+      },
+      {
+        "name": "2구간 (1,000만원~2,000만원)",
+        "sortOrder": 2,
+        "scopeStart": 10000000,
+        "scopeEnd": 20000000,
+        "baseAmount": 800000,
+        "rate": 0.07,
+        "rateText": "100분의 7"
+      },
+      {
+        "name": "3구간 (2,000만원~3,000만원)",
+        "sortOrder": 3,
+        "scopeStart": 20000000,
+        "scopeEnd": 30000000,
+        "baseAmount": 1500000,
+        "rate": 0.06,
+        "rateText": "100분의 6"
+      },
+      {
+        "name": "4구간 (3,000만원~5,000만원)",
+        "sortOrder": 4,
+        "scopeStart": 30000000,
+        "scopeEnd": 50000000,
+        "baseAmount": 2100000,
+        "rate": 0.05,
+        "rateText": "100분의 5"
+      },
+      {
+        "name": "5구간 (5,000만원~7,000만원)",
+        "sortOrder": 5,
+        "scopeStart": 50000000,
+        "scopeEnd": 70000000,
+        "baseAmount": 3100000,
+        "rate": 0.04,
+        "rateText": "100분의 4"
+      },
+      {
+        "name": "6구간 (7,000만원~1억원)",
+        "sortOrder": 6,
+        "scopeStart": 70000000,
+        "scopeEnd": 100000000,
+        "baseAmount": 3900000,
+        "rate": 0.03,
+        "rateText": "100분의 3"
+      },
+      {
+        "name": "7구간 (1억원~2억원)",
+        "sortOrder": 7,
+        "scopeStart": 100000000,
+        "scopeEnd": 200000000,
+        "baseAmount": 4800000,
+        "rate": 0.02,
+        "rateText": "100분의 2"
+      },
+      {
+        "name": "8구간 (2억원~5억원)",
+        "sortOrder": 8,
+        "scopeStart": 200000000,
+        "scopeEnd": 500000000,
+        "baseAmount": 6800000,
+        "rate": 0.01,
+        "rateText": "100분의 1"
+      },
+      {
+        "name": "9구간 (5억원 초과)",
+        "sortOrder": 9,
+        "scopeStart": 500000000,
+        "scopeEnd": null,
+        "baseAmount": 9800000,
+        "rate": 0.005,
+        "rateText": "1000분의 5"
+      }
+    ],
+    "C": [
+      {
+        "name": "1구간 (2,000만원까지)",
+        "sortOrder": 1,
+        "scopeStart": 0,
+        "scopeEnd": 20000000,
+        "baseAmount": 0,
+        "rate": 0.1,
+        "rateText": "100분의 10"
+      },
+      {
+        "name": "2구간 (2,000만원~5,000만원)",
+        "sortOrder": 2,
+        "scopeStart": 20000000,
+        "scopeEnd": 50000000,
+        "baseAmount": 2000000,
+        "rate": 0.08,
+        "rateText": "100분의 8"
+      },
+      {
+        "name": "3구간 (5,000만원~1억원)",
+        "sortOrder": 3,
+        "scopeStart": 50000000,
+        "scopeEnd": 100000000,
+        "baseAmount": 4400000,
+        "rate": 0.06,
+        "rateText": "100분의 6"
+      },
+      {
+        "name": "4구간 (1억원~1억5,000만원)",
+        "sortOrder": 4,
+        "scopeStart": 100000000,
+        "scopeEnd": 150000000,
+        "baseAmount": 7400000,
+        "rate": 0.04,
+        "rateText": "100분의 4"
+      },
+      {
+        "name": "5구간 (1억5,000만원~2억원)",
+        "sortOrder": 5,
+        "scopeStart": 150000000,
+        "scopeEnd": 200000000,
+        "baseAmount": 9400000,
+        "rate": 0.02,
+        "rateText": "100분의 2"
+      },
+      {
+        "name": "6구간 (2억원~5억원)",
+        "sortOrder": 6,
+        "scopeStart": 200000000,
+        "scopeEnd": 500000000,
+        "baseAmount": 10400000,
+        "rate": 0.01,
+        "rateText": "100분의 1"
+      },
+      {
+        "name": "7구간 (5억원 초과)",
+        "sortOrder": 7,
+        "scopeStart": 500000000,
+        "scopeEnd": null,
+        "baseAmount": 13400000,
+        "rate": 0.005,
+        "rateText": "1000분의 5"
+      }
+    ]
+  },
+  "ruleVersions": [
+    {
+      "key": "v1981",
+      "ruleNumber": "대법원규칙 제758호",
+      "promulgatedOn": "1981-02-28",
+      "effectiveFrom": "1981-03-01",
+      "mst": 35468,
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=35468",
+      "table": "A",
+      "minimumWon": null,
+      "minimumArticle": null,
+      "article5Reasons": ["admissionJudgment", "nonJudgmentEnding"],
+      "provisionalHalf": false,
+      "courtIncreaseAllowed": false,
+      "transitionalProvision": null
+    },
+    {
+      "key": "v1990",
+      "ruleNumber": "대법원규칙 제1123호",
+      "promulgatedOn": "1990-08-21",
+      "effectiveFrom": "1990-09-01",
+      "mst": 35469,
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=35469",
+      "table": "A",
+      "minimumWon": null,
+      "minimumArticle": null,
+      "article5Reasons": ["admissionJudgment", "nonJudgmentEnding"],
+      "provisionalHalf": true,
+      "courtIncreaseAllowed": false,
+      "transitionalProvision": null
+    },
+    {
+      "key": "v2003",
+      "ruleNumber": "대법원규칙 제1829호",
+      "promulgatedOn": "2003-06-09",
+      "effectiveFrom": "2003-07-01",
+      "mst": 57565,
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=57565",
+      "table": "A",
+      "minimumWon": null,
+      "minimumArticle": null,
+      "article5Reasons": ["admissionJudgment", "noOralHearingJudgment"],
+      "provisionalHalf": true,
+      "courtIncreaseAllowed": false,
+      "transitionalProvision": null
+    },
+    {
+      "key": "v2008",
+      "ruleNumber": "대법원규칙 제2116호",
+      "promulgatedOn": "2007-11-28",
+      "effectiveFrom": "2008-01-01",
+      "mst": 81434,
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=81434",
+      "table": "B",
+      "minimumWon": 100000,
+      "minimumArticle": "제3조 제1항 단서",
+      "article5Reasons": ["admissionJudgment", "noOralHearingJudgment"],
+      "provisionalHalf": true,
+      "courtIncreaseAllowed": true,
+      "transitionalProvision": "부칙 제2조: 이 규칙은 이 규칙 시행 전에 법원에 접수된 사건에 대하여는 적용하지 아니한다. 다만, 이 규칙 시행 이후 상소되는 사건에 대하여 상소심에서의 소송비용에 산입할 변호사보수의 금액을 정할 때는 이 규칙을 적용한다."
+    },
+    {
+      "key": "v2013",
+      "ruleNumber": "대법원규칙 제2496호",
+      "promulgatedOn": "2013-11-27",
+      "effectiveFrom": "2013-12-01",
+      "mst": 146984,
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=146984",
+      "table": "B",
+      "minimumWon": 300000,
+      "minimumArticle": "제3조 제1항 단서",
+      "article5Reasons": ["admissionJudgment", "noOralHearingJudgment"],
+      "provisionalHalf": true,
+      "courtIncreaseAllowed": true,
+      "transitionalProvision": "부칙 제2조: 이 규칙은 이 규칙 시행 전에 법원에 접수된 사건에 대하여는 적용하지 아니한다. 다만, 이 규칙 시행 이후 상소되는 사건에 대하여 상소심에서의 소송비용에 산입할 변호사보수의 금액을 정할 때는 이 규칙을 적용한다."
+    },
+    {
+      "key": "v2018",
+      "ruleNumber": "대법원규칙 제2779호",
+      "promulgatedOn": "2018-03-07",
+      "effectiveFrom": "2018-04-01",
+      "mst": 202615,
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=202615",
+      "table": "C",
+      "minimumWon": 300000,
+      "minimumArticle": "제3조 제1항 단서",
+      "article5Reasons": ["admissionJudgment", "noOralHearingJudgment"],
+      "provisionalHalf": true,
+      "courtIncreaseAllowed": true,
+      "transitionalProvision": "부칙 제2조: 이 규칙은 이 규칙 시행 전에 법원에 접수된 사건에 대하여는 적용하지 아니한다. 다만, 이 규칙 시행 이후 상소되는 사건에 대하여 상소심에서의 소송비용에 산입할 변호사보수의 금액을 정할 때는 이 규칙을 적용한다."
+    },
+    {
+      "key": "v2020",
+      "ruleNumber": "대법원규칙 제2936호",
+      "promulgatedOn": "2020-12-28",
+      "effectiveFrom": "2020-12-28",
+      "mst": 225413,
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsiSeq=225413",
+      "table": "D",
+      "minimumWon": null,
+      "minimumArticle": null,
+      "article5Reasons": ["admissionJudgment", "noOralHearingJudgment", "orderForPerformance"],
+      "provisionalHalf": true,
+      "courtIncreaseAllowed": true,
+      "transitionalProvision": null
+    }
+  ]
 }
