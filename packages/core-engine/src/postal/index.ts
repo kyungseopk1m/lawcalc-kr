@@ -33,6 +33,7 @@ function codeMatches(entry: string, code: string): boolean {
  * 지역 이름이나 우편번호로 찾는다.
  * - 숫자만 2~5자리: 그 번호(앞자리)가 나오는 읍·면·동 (역조회).
  * - 그 밖: 공백으로 나눈 낱말이 모두 "시·도 시·군·구 읍·면·동(행정동 포함)" 안에 들어 있는 칸.
+ *   칸 자체는 안 맞고 "… 읍·면 리" 로 맞는 리가 있으면 그 리마다 `ri` 와 리 번호를 단 칸을 낸다.
  *   가운뎃점은 공백처럼 낱말을 가른다.
  */
 export function searchPostalCodes(
@@ -60,10 +61,28 @@ export function searchPostalCodes(
       .map(fold)
       .filter(Boolean);
     if (words.length === 0) return { hits: [], total: 0, mode: null };
-    all = ds.regions.filter((r) => {
+    all = [];
+    for (const r of ds.regions) {
       const hay = fold([r.sido, r.sigungu, r.emd, ...(r.adminDongs ?? [])].join(""));
-      return words.every((w) => hay.includes(w));
-    });
+      if (words.every((w) => hay.includes(w))) {
+        all.push(r);
+        continue;
+      }
+      for (const ri of r.ris ?? []) {
+        const riHay = hay + fold(ri.name);
+        if (words.every((w) => riHay.includes(w))) {
+          const { sido, sigungu, emd, adminDongs } = r;
+          all.push({
+            sido,
+            sigungu,
+            emd,
+            ...(adminDongs && { adminDongs }),
+            ri: ri.name,
+            codes: ri.codes,
+          });
+        }
+      }
+    }
   }
   return { hits: all.slice(0, limit), total: all.length, mode };
 }

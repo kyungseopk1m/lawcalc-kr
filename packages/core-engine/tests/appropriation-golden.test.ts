@@ -141,6 +141,8 @@ const COVERAGE: GoldenCoverage = {
   ],
   unpinned: {
     computedAt: "실행 시각이라 비결정이다.",
+    "interpretationNotices[]":
+      "해석 안내 문구이고 금액에 영향이 없다. 발생 조건과 문구는 tests/appropriation/notices.test.ts 가 검증한다.",
   },
 };
 

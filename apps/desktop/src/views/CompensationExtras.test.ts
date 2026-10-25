@@ -535,6 +535,33 @@ describe("P4-4·P4-7 조정안·판결 이유 형식 문단과 단계마다 절�
     expect(table!.lines.at(-1)).toBe("합계\t\t\t\t\t\t99,959,664원");
   });
 
+  it("소장 송달일을 넣으면 다음 날부터 특례법 이율, 문단 머리도 그에 맞춘다", () => {
+    const result = computeCompensation(b3);
+    const doc = computeDocumentExport(
+      { ...mediation, serviceDate: "2015-06-30" },
+      b3,
+      result,
+      (faultRatio) => computeCompensation({ ...b3, faultRatio }),
+    );
+    expect(doc.error).toBeUndefined();
+    for (const r of doc.value!.scenarios) {
+      expect(r.totalWon).toBe(
+        computeMediationInterest(r.finalWon, "2010-01-01", "2026-10-22", undefined, "2015-06-30")
+          .totalWon,
+      );
+      expect(r.totalWon).toBeGreaterThan(
+        computeMediationInterest(r.finalWon, "2010-01-01", "2026-10-22").totalWon,
+      );
+    }
+    expect(doc.value!.blocks[0]!.lines.join("\n")).toContain(
+      "소장 송달일 2015. 6. 30.까지 민법이 정한 연 5%, 그 다음 날부터 조정일 2026. 10. 22.까지 소송촉진 등에 관한 특례법이 정한 이율",
+    );
+    const run = (serviceDate: string) =>
+      computeDocumentExport({ ...mediation, serviceDate }, b3, result, () => result).error;
+    expect(run("2009-12-31")).toBe("소장 송달일은 사고일 이후여야 합니다.");
+    expect(run("2015-6-30")).toBe("소장 송달일 형식이 올바르지 않습니다.");
+  });
+
   it("조정일 누락·사고일 전·가감 폭 오류는 문단 없이 오류만", () => {
     const result = computeCompensation(b3);
     const run = (patch: object) =>

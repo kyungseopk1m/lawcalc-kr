@@ -59,6 +59,13 @@ describe("우편번호 찾기", () => {
     expect(screen.getByTestId("postal-court").textContent).toContain("서울중앙지방법원");
   });
 
+  it("리 이름으로 찾으면 리까지 적고 그 리 번호를 보인다", () => {
+    search("강동면 모전리");
+    expect(screen.getByTestId("postal-count").textContent).toBe("1곳");
+    fireEvent.click(screen.getByRole("button", { name: /강원특별자치도 강릉시 강동면 모전리/ }));
+    expect(screen.getByTestId("postal-codes").textContent).toBe("25627");
+  });
+
   it("없는 지역", () => {
     search("없는동네이름");
     expect(screen.getByTestId("postal-count").textContent).toBe("찾은 지역이 없습니다");

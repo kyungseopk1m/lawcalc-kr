@@ -861,7 +861,7 @@ export function DelayDamagesCard({
   return (
     <SectionCard
       title="지연손해금 (선택)"
-      hint="계산 결과 최종액에 대한 판결 주문형 지연손해금입니다. 판결 선고일까지 민법 연 5%, 다음 날부터 소송촉진 등에 관한 특례법 이율을 적용합니다. 피고가 이행의무의 존부나 범위를 다투는 것이 타당한 범위를 선고일까지로 본 문구이므로(같은 법 제3조 제2항), 사건에서 그 범위가 다르면 기산일·선고일 칸을 그에 맞게 바꾸세요. 손해배상액에는 들어가지 않고 파일에 저장하지 않습니다."
+      hint="계산 결과 최종액에 대한 판결 주문형 지연손해금입니다. 판결 선고일까지 민법 연 5%, 다음 날부터 소송촉진 등에 관한 특례법 이율을 적용합니다. 피고가 이행의무의 존부나 범위를 다투는 것이 타당한 범위를 선고일까지로 본 문구이므로(같은 법 제3조 제2항), 사건에서 그 범위가 다르면 기산일·선고일 칸을 그에 맞게 바꾸세요. 기산일은 위자료·장례비를 포함한 최종액 전부에 사고일을 씁니다. 불법행위로 인한 손해배상채무는 불법행위일부터 지체책임이 생긴다는 판례 입장에 따른 것이므로, 기산일이 다른 항목은 기산일 칸을 바꿔 따로 계산하세요. 손해배상액에는 들어가지 않고 파일에 저장하지 않습니다."
       enabled={value.enabled}
       toggleLabel="지연손해금 계산"
       onToggle={(enabled) => patch({ enabled })}
@@ -963,7 +963,7 @@ export function DocumentTextCard({
   return (
     <SectionCard
       title="조정안·판결 이유 형식 문단 (선택)"
-      hint="계산 결과를 조정안 또는 판결 이유 형식의 문단과 별지 일실수입 계산표로 정리합니다. 조정안은 피고 책임비율을 가감 폭만큼 올리고 내린 금액과, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적습니다. 조정일은 이자 끝날로만 쓰고 일실수입 현가는 사고일 기준 그대로입니다. 복사·PDF·CSV에 함께 실리며 파일에 저장하지 않습니다."
+      hint="계산 결과를 조정안 또는 판결 이유 형식의 문단과 별지 일실수입 계산표로 정리합니다. 조정안은 피고 책임비율을 가감 폭만큼 올리고 내린 금액과, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적습니다. 소장 송달일을 넣으면 그 다음 날부터 조정일까지는 소송촉진 등에 관한 특례법 이율(개정 연혁대로)을 적용합니다. 이자는 위자료·장례비를 포함한 최종액 전부에 사고일부터 붙입니다. 불법행위로 인한 손해배상채무는 불법행위일부터 지체책임이 생긴다는 판례 입장에 따른 것이므로, 기산일이 다른 항목은 지연손해금 카드의 기산일 칸을 바꿔 따로 계산하세요. 조정일은 이자 끝날로만 쓰고 일실수입 현가는 사고일 기준 그대로입니다. 복사·PDF·CSV에 함께 실리며 파일에 저장하지 않습니다."
       enabled={value.enabled}
       toggleLabel="문단 만들기"
       onToggle={(enabled) => patch({ enabled })}
@@ -991,6 +991,18 @@ export function DocumentTextCard({
               value={value.mediationDate}
               onChange={(e) => patch({ mediationDate: e.target.value })}
             />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            소장 송달일 (선택)
+            <Input
+              type="date"
+              value={value.serviceDate}
+              onChange={(e) => patch({ serviceDate: e.target.value })}
+            />
+            <span className="text-xs font-normal text-muted-foreground">
+              비우면 조정일까지 연 5%만 적용합니다. 피고가 이행의무의 존부나 범위를 다투는 것이
+              타당한 범위가 있으면(같은 법 제3조 제2항) 송달일 대신 그 범위가 끝나는 날을 넣으세요.
+            </span>
           </label>
           <label className="grid gap-2 text-sm font-medium">
             책임비율 가감 폭 (%p)

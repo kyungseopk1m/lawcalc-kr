@@ -81,19 +81,22 @@ export function computeAppropriation(input: AppropriationInput): AppropriationRe
   }
 
   const totals = buildTotals(works);
-  return {
-    claims: works.map(toClaimResult),
-    payment: {
-      amount: input.payment.amount,
-      allocationType: input.payment.allocation.type,
-      appliedAmount: input.payment.amount - remaining,
-      unappliedAmount: remaining,
+  return withInterpretationNotices(
+    {
+      claims: works.map(toClaimResult),
+      payment: {
+        amount: input.payment.amount,
+        allocationType: input.payment.allocation.type,
+        appliedAmount: input.payment.amount - remaining,
+        unappliedAmount: remaining,
+      },
+      totals,
+      dataVersion: APPROPRIATION_DATA_VERSION,
+      disclaimer: STANDARD_DISCLAIMER,
+      computedAt,
     },
-    totals,
-    dataVersion: APPROPRIATION_DATA_VERSION,
-    disclaimer: STANDARD_DISCLAIMER,
-    computedAt,
-  };
+    input,
+  );
 }
 
 function applyExplicitDirective(
@@ -379,6 +382,12 @@ function reviewInterestLimit(
   }
   base.capRate = cap;
   const notes: string[] = [];
+  // 해석 안내: 2014 개정령 부칙은 "시행 후" 로 적혀 있으나 시행일 당일 약정도 새 최고이자율로 본다.
+  if (dataset.slices.some((s) => s.law === "interestLimitAct" && s.from === limit.agreedAt)) {
+    notes.push(
+      `약정일 ${limit.agreedAt} 은 최고이자율 변경 시행일입니다. 시행일 당일 약정은 새 최고이자율을 적용한 것으로 보았습니다 (해석, 2014 개정령 부칙은 "시행 후" 로 적혀 있어 당일을 종전 이율로 읽는 견해도 있습니다).`,
+    );
+  }
   // 제2조 제3항: 최고이자율을 초과하는 부분은 무효.
   if (agreedRate !== undefined && agreedRate > cap) {
     base.appliedRate = cap;
@@ -560,6 +569,30 @@ function computeAppropriationSchedule(input: AppropriationInput): AppropriationR
     result.interestLimits = interestLimits;
     result.interestLimitsDataVersion = interestLimitsVersionTag(dataset);
   }
+  return withInterpretationNotices(result, input);
+}
+
+const ORDER_479_NOTICE =
+  "민법 제479조는 비용 · 이자 · 원본 순서를 정하지만 채무가 여러 개일 때 그 순서를 채무별로 돌릴지 " +
+  "모든 채무의 비용, 모든 채무의 이자, 원본 순으로 돌릴지 정한 판례를 찾지 못했습니다. " +
+  "이 계산은 제477조로 채무를 먼저 고른 뒤 그 채무 안에서 비용, 이자, 원본 순으로 충당했고, " +
+  "후자로 읽으면 금액이 달라질 수 있습니다 (해석).";
+
+/** 제479조 다수 채무 해석 안내: 비용·이자가 있는 채무가 둘 이상이고 법정충당이 쓰일 때만 필드를 붙인다. */
+function withInterpretationNotices(
+  result: AppropriationResult,
+  input: AppropriationInput,
+): AppropriationResult {
+  const withCostOrInterest = input.claims.filter(
+    (c) => (c.costBalance ?? 0) > 0 || (c.interestBalance ?? 0) > 0 || c.interestRate !== undefined,
+  );
+  if (withCostOrInterest.length < 2) return result;
+  const usesLegal = [input.payment, ...(input.additionalPayments ?? [])].some(
+    (p) =>
+      p.allocation.type === "legal" ||
+      p.amount > p.allocation.targets.reduce((sum, t) => sum + t.amount, 0),
+  );
+  if (usesLegal) result.interpretationNotices = [ORDER_479_NOTICE];
   return result;
 }
 

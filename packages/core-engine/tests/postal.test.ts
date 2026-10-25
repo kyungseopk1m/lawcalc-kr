@@ -57,6 +57,24 @@ describe("우편번호 찾기", () => {
     expect(searchPostalCodes("99999").total).toBe(0);
   });
 
+  it("리 이름으로 찾으면 그 리의 번호만 낸다", () => {
+    const riNames = (q: string) =>
+      searchPostalCodes(q).hits.map((r) =>
+        [r.sido, r.sigungu, r.emd, r.ri].filter(Boolean).join(" "),
+      );
+    expect(riNames("모전리")).toContain("강원특별자치도 강릉시 강동면 모전리");
+    expect(riNames("모전리").length).toBeGreaterThan(1);
+    expect(riNames("강동면 모전리")).toEqual(["강원특별자치도 강릉시 강동면 모전리"]);
+    const hit = searchPostalCodes("이천시 백사면 모전리").hits;
+    expect(hit).toHaveLength(1);
+    expect(hit[0]!.ri).toBe("모전리");
+    expect(hit[0]!.codes).toEqual(["17311", "17316"]);
+    expect(hit[0]!.ris).toBeUndefined();
+    // 읍·면 자체가 맞으면 리마다 펼치지 않는다.
+    expect(riNames("이천시 백사면")).toEqual(["경기도 이천시 백사면"]);
+    expect(loadPostalCodes().counts.ri).toBeGreaterThan(10000);
+  });
+
   it("세종은 시·군·구 없이 읍·면·동만", () => {
     const r = searchPostalCodes("세종 조치원읍").hits;
     expect(r).toHaveLength(1);

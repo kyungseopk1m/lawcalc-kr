@@ -35,7 +35,7 @@ export const DELAY_DAMAGES_DEFAULT_OPTIONS: CalcOptions = {
   rounding: "floor",
 };
 
-function lawSegments(
+export function lawSegments(
   principal: number,
   code: LegalRateCode,
   startDate: IsoDate,

@@ -194,6 +194,8 @@ export interface AppropriationResult {
   events?: AppropriationEventResult[];
   /** 이자제한법 검토. 채권에 `interestLimitAct` 를 넣었을 때만 있다. */
   interestLimits?: AppropriationInterestLimitResult[];
+  /** 해석이 갈리는 지점 안내 (민법 제479조 다수 채무 순서). 해당할 때만 있다. */
+  interpretationNotices?: string[];
   /** 이자제한법 최고이자율 데이터셋 식별자. `interestLimits` 와 함께 있다. */
   interestLimitsDataVersion?: string;
 }

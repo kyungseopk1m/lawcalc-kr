@@ -8,9 +8,13 @@
  * 사고일~조정일 구간에서 중간이자 공제와 지연이자가 함께 빠지거나 겹친다.
  */
 
-import type { IsoDate } from "@lawcalc-kr/core-engine";
+import { addDays, calculateInterest, type IsoDate } from "@lawcalc-kr/core-engine";
 
-import { computeDelayDamages } from "../delay-damages/compute";
+import {
+  computeDelayDamages,
+  DELAY_DAMAGES_DEFAULT_OPTIONS,
+  lawSegments,
+} from "../delay-damages/compute";
 import type { DelayDamagesDeps } from "../delay-damages/types";
 
 /** 기본 가감 폭 (책임비율 %p). */
@@ -49,16 +53,45 @@ export interface MediationInterestResult {
 }
 
 /**
- * 사고일부터 조정일까지 민법 연 5% 이자. 지연손해금 계산과 같은 방식(기간식, 초일 산입, 원 미만 절사,
- * `DELAY_DAMAGES_DEFAULT_OPTIONS`)이고 소송촉진 등에 관한 특례법 구간은 없다.
+ * 사고일부터 조정일까지 이자. 지연손해금 계산과 같은 방식(기간식, 초일 산입, 원 미만 절사,
+ * `DELAY_DAMAGES_DEFAULT_OPTIONS`)이다.
+ *
+ * - `serviceDate`(소장 송달일) 없음: 전 기간 민법 연 5%.
+ * - 있음: 사고일부터 송달일까지 민법 연 5%, 다음 날부터 조정일까지 소송촉진 등에 관한 특례법 이율.
+ *   선고가 없어 변론종결일 시점 이율 하나로 고정할 근거가 없으므로 지연손해금 엔진과 같은 이율표를
+ *   연혁대로 나눠 쓴다 (2015. 10. 1., 2019. 6. 1. 개정 경계에서 구간 분할). 송달일이 조정일 이후면
+ *   특례법 구간이 없다.
  */
 export function computeMediationInterest(
   principalWon: number,
   accidentDate: IsoDate,
   mediationDate: IsoDate,
   deps?: DelayDamagesDeps,
+  serviceDate?: IsoDate,
 ): MediationInterestResult {
   if (principalWon <= 0) return { interestWon: 0, totalWon: principalWon };
+  if (serviceDate !== undefined) {
+    if (serviceDate < accidentDate) {
+      throw new RangeError("조정 이자 계산 실패: 소장 송달일은 사고일 이후여야 합니다.");
+    }
+    if (serviceDate < mediationDate) {
+      const segments = [
+        ...lawSegments(principalWon, "civil", accidentDate, serviceDate, deps),
+        ...lawSegments(principalWon, "promotion", addDays(serviceDate, 1), mediationDate, deps),
+      ];
+      const r = calculateInterest(
+        {
+          principal: principalWon,
+          startDate: accidentDate,
+          endDate: mediationDate,
+          segments,
+          options: DELAY_DAMAGES_DEFAULT_OPTIONS,
+        },
+        deps,
+      );
+      return { interestWon: r.totalInterest, totalWon: r.grandTotal };
+    }
+  }
   const r = computeDelayDamages(
     {
       principalWon,

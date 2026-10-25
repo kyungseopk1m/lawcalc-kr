@@ -9,6 +9,10 @@ export interface PostalRegion {
   codes: string[];
   /** 같은 법정동 안의 행정동명 (검색용). */
   adminDongs?: string[];
+  /** 읍·면 안의 리(里)와 원본에서 그 리 건물 행에 나오는 번호. 이름순. */
+  ris?: { name: string; codes: string[] }[];
+  /** 검색 결과가 리 하나로 좁혀졌을 때 그 리 이름. 이때 `codes` 는 그 리의 번호다. */
+  ri?: string;
 }
 
 export interface PostalCodeDataset {
@@ -23,7 +27,7 @@ export interface PostalCodeDataset {
   baseDate: string;
   /** 원본 고시일. */
   noticeDate: string;
-  counts: { sido: number; sigungu: number; emd: number; codes: number };
+  counts: { sido: number; sigungu: number; emd: number; codes: number; ri: number };
   regions: PostalRegion[];
 }
 

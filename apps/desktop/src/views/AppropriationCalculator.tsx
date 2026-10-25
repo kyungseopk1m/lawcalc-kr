@@ -271,7 +271,10 @@ export function appropriationSummaryRows(result: AppropriationResult): [string, 
 
 /** 이자제한법 검토 문구 (화면·클립보드·PDF·CSV 공통). */
 export function appropriationNotices(result: AppropriationResult): string[] {
-  return (result.interestLimits ?? []).map((limit) => `${limit.claimId}: ${limit.notice}`);
+  return [
+    ...(result.interestLimits ?? []).map((limit) => `${limit.claimId}: ${limit.notice}`),
+    ...(result.interpretationNotices ?? []),
+  ];
 }
 
 /** 변제별 충당 표 (화면·클립보드·PDF·CSV 공통). 여러 번 변제 결과에만 있다. */
@@ -373,7 +376,7 @@ export function formatAppropriationForClipboard(result: AppropriationResult): st
           ...appropriationEventRows(result).map((row) => row.join("\t")),
         ]
       : []),
-    ...(result.interestLimits ? ["", ...appropriationNotices(result)] : []),
+    ...(appropriationNotices(result).length > 0 ? ["", ...appropriationNotices(result)] : []),
     "",
     STANDARD_DISCLAIMER,
   ].join("\n");

@@ -580,6 +580,10 @@ export interface DocumentFormState {
   format: DocumentFormat;
   /** 조정일. 사고일부터 이 날까지 연 5% 이자를 더한 금액을 함께 적는다. */
   mediationDate: string;
+  /**
+   * 소장 송달일 (선택). "" 이면 조정일까지 연 5% 만. 넣으면 다음 날부터 소송촉진 등에 관한 특례법 이율.
+   */
+  serviceDate: string;
   /** 책임비율 가감 폭 (%p). */
   spreadPercentText: string;
 }
@@ -589,6 +593,7 @@ export function defaultDocumentFormState(today: string): DocumentFormState {
     enabled: false,
     format: "mediation",
     mediationDate: today,
+    serviceDate: "",
     spreadPercentText: String(MEDIATION_DEFAULT_SPREAD_PERCENT),
   };
 }
@@ -761,6 +766,7 @@ function buildMediationBlock(
   result: AnyResult,
   mediationDate: string,
   scenarios: MediationScenarioRow[],
+  serviceDate = "",
 ): DocumentTextBlock {
   const lines: string[] = ["1. 기초 사항", `  ${basicFactLine(input, result)}`];
   if (result.lifeExpectancy !== undefined) {
@@ -782,7 +788,10 @@ function buildMediationBlock(
   if (deduction !== undefined) lines.push(`${n++}. 공제`, `  ${deduction}`);
   lines.push(`${n++}. 위자료 ${formatWon(result.solatiumWon)}`);
   lines.push(
-    `${n}. 조정 금액 (괄호 안은 ${formatCourtDate(input.base.accidentDate)}부터 조정일 ${formatCourtDate(mediationDate)}까지 연 5% 이자를 더한 금액)`,
+    serviceDate !== "" && serviceDate < mediationDate
+      ? `${n}. 조정 금액 (괄호 안은 ${formatCourtDate(input.base.accidentDate)}부터 소장 송달일 ${formatCourtDate(serviceDate)}까지 민법이 정한 연 5%, ` +
+          `그 다음 날부터 조정일 ${formatCourtDate(mediationDate)}까지 소송촉진 등에 관한 특례법이 정한 이율(개정 연혁대로)의 이자를 더한 금액)`
+      : `${n}. 조정 금액 (괄호 안은 ${formatCourtDate(input.base.accidentDate)}부터 조정일 ${formatCourtDate(mediationDate)}까지 연 5% 이자를 더한 금액)`,
     ...scenarios.map(
       (s, i) =>
         `  책임 ${s.responsibilityPercent}%${i === 0 ? " (입력 기준)" : ""}: ${formatWon(s.finalWon)} (${formatWon(s.totalWon)})`,
@@ -862,7 +871,8 @@ function buildJudgmentBlocks(
 
 /**
  * 조정안·판결 이유 형식 문단. 조정안은 과실비율만 바꿔 `recompute` 로 엔진을 다시 돌려 시나리오 금액을
- * 내고, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적는다.
+ * 내고, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식, 소장 송달일을 넣으면 그 다음 날부터
+ * 소송촉진 등에 관한 특례법 이율)를 더한 금액을 함께 적는다.
  * 입력이 모자라면 `error` 만 돌려준다.
  */
 export function computeDocumentExport(
@@ -880,6 +890,13 @@ export function computeDocumentExport(
   if (state.mediationDate < input.base.accidentDate) {
     return { error: "조정일은 사고일 이후여야 합니다." };
   }
+  if (state.serviceDate !== "") {
+    if (!ISO_DATE.test(state.serviceDate))
+      return { error: "소장 송달일 형식이 올바르지 않습니다." };
+    if (state.serviceDate < input.base.accidentDate) {
+      return { error: "소장 송달일은 사고일 이후여야 합니다." };
+    }
+  }
   const spread = parseNumberText(state.spreadPercentText, { unit: "%", min: 0, max: 100 });
   if (spread.error !== undefined) return { error: `가감 폭: ${spread.error}` };
   try {
@@ -893,6 +910,8 @@ export function computeDocumentExport(
         finalWon,
         input.base.accidentDate,
         state.mediationDate,
+        undefined,
+        state.serviceDate || undefined,
       );
       return { responsibilityPercent: pct, finalWon, ...interest };
     });
@@ -900,7 +919,7 @@ export function computeDocumentExport(
       value: {
         scenarios,
         blocks: [
-          buildMediationBlock(input, result, state.mediationDate, scenarios),
+          buildMediationBlock(input, result, state.mediationDate, scenarios, state.serviceDate),
           { title: "별지 일실수입 계산표", lines: lostIncomeTableLines(result) },
         ],
       },
