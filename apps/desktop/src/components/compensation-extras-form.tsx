@@ -251,7 +251,7 @@ export function LifeExpectancyResultRows({ result }: { result: LifeExpectancyRes
 
 /* -------------------------------------------------------------- 일실퇴직금 */
 
-export function previewLostRetirement(
+function previewLostRetirement(
   value: LostRetirementFormState,
   mode: "injury" | "death",
   accidentDate: string,

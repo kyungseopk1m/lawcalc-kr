@@ -1,5 +1,7 @@
 import {
   computeCostAssessment,
+  COST_ASSESSMENT_LEVEL_LABEL,
+  COST_ASSESSMENT_PARTY_LABEL,
   loadLawyerFeeDataset,
   STANDARD_DISCLAIMER,
   type AppealsLevel,
@@ -54,17 +56,11 @@ interface InstanceDraft {
   defendant: PartyDraft;
 }
 
-const LEVEL_LABEL: Record<AppealsLevel, string> = {
-  firstInstance: "1심",
-  appeal: "항소심",
-  supreme: "상고심",
-};
 const LEVEL_CASE_TYPE: Record<AppealsLevel, CaseType> = {
   firstInstance: "civilFirstInstanceSingle",
   appeal: "civilAppeal",
   supreme: "civilSupremeAppeal",
 };
-const PARTY_LABEL: Record<CostAssessmentParty, string> = { plaintiff: "원고", defendant: "피고" };
 const HALF_OPTIONS: Array<[CostAssessmentHalfReason, string]> = [
   ["none", "없음"],
   ["admissionJudgment", "전부자백·자백간주 판결 (제5조)"],
@@ -161,7 +157,7 @@ export function formatCostAssessmentForClipboard(result: CostAssessmentResult): 
   const lines = ["[소송비용확정]"];
   result.instances.forEach((r, i) => {
     lines.push(
-      `${i + 1}. ${LEVEL_LABEL[r.level]} (접수 ${r.filingDate}, 소가 ${formatWon(r.caseValue)})`,
+      `${i + 1}. ${COST_ASSESSMENT_LEVEL_LABEL[r.level]} (접수 ${r.filingDate}, 소가 ${formatWon(r.caseValue)})`,
       `  변호사보수 산정: ${r.lawyerFee.formulaText}`,
       partyLine("원고", r.plaintiff),
       partyLine("피고", r.defendant),
@@ -436,8 +432,8 @@ export function CostAssessmentPanel() {
                 {(["plaintiff", "defendant"] as const).map((p) => (
                   <PartyFields
                     key={p}
-                    title={PARTY_LABEL[p]}
-                    prefix={`${n} ${PARTY_LABEL[p]}`}
+                    title={COST_ASSESSMENT_PARTY_LABEL[p]}
+                    prefix={`${n} ${COST_ASSESSMENT_PARTY_LABEL[p]}`}
                     draft={d[p]}
                     onChange={(next) => update(d.id, { [p]: next })}
                   />
@@ -459,7 +455,7 @@ export function CostAssessmentPanel() {
               }}
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              {LEVEL_LABEL[level]} 추가
+              {COST_ASSESSMENT_LEVEL_LABEL[level]} 추가
             </Button>
           ))}
         </div>
@@ -551,7 +547,7 @@ function CostAssessmentResultView({
         <tbody>
           {result.instances.map((r, i) => (
             <tr key={i} className="border-b border-border last:border-b-0">
-              <td className="py-1">{LEVEL_LABEL[r.level]}</td>
+              <td className="py-1">{COST_ASSESSMENT_LEVEL_LABEL[r.level]}</td>
               <td className="py-1">{r.lawyerFee.ruleNumber}</td>
               <td className="py-1 text-right">{formatWon(r.lawyerFee.assessedWon)}</td>
               <td className="py-1 text-right">{formatWon(r.plaintiff.subtotalWon)}</td>
@@ -566,13 +562,13 @@ function CostAssessmentResultView({
           {result.instances.map((r, i) => (
             <div key={i} className="grid gap-1">
               <strong>
-                {i + 1}. {LEVEL_LABEL[r.level]}
+                {i + 1}. {COST_ASSESSMENT_LEVEL_LABEL[r.level]}
               </strong>
               <span>{r.lawyerFee.formulaText}</span>
               {(["plaintiff", "defendant"] as const).map((p) => (
                 <span key={p}>
-                  {PARTY_LABEL[p]}: 인지 {r[p].stampDutyFormula} / 송달료 {r[p].deliveryFeeFormula}{" "}
-                  / 변호사보수 {r[p].lawyerFeeFormula}
+                  {COST_ASSESSMENT_PARTY_LABEL[p]}: 인지 {r[p].stampDutyFormula} / 송달료{" "}
+                  {r[p].deliveryFeeFormula} / 변호사보수 {r[p].lawyerFeeFormula}
                 </span>
               ))}
             </div>
@@ -593,8 +589,8 @@ function CostAssessmentResultView({
           </p>
         ) : null}
         <p className="font-semibold" data-testid="cost-assessment-net">
-          {PARTY_LABEL[result.net.payer]}가 {PARTY_LABEL[result.net.payee]}에게{" "}
-          {formatWon(result.net.amountWon)}
+          {COST_ASSESSMENT_PARTY_LABEL[result.net.payer]}가{" "}
+          {COST_ASSESSMENT_PARTY_LABEL[result.net.payee]}에게 {formatWon(result.net.amountWon)}
         </p>
         <p className="text-xs text-muted-foreground">{result.net.formulaText}</p>
       </div>

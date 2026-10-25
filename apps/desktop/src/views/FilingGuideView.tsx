@@ -1,4 +1,4 @@
-import { CheckCircle2, Clipboard, Info } from "lucide-react";
+import { CheckCircle2, Info } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -13,12 +13,11 @@ import {
   type CriminalFilingDocument,
 } from "@lawcalc-kr/core-engine";
 
-import { Button } from "../components/ui/button";
+import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { formatWon } from "../lib/format-won";
-import { ipc } from "../lib/ipc";
 
 const CIVIL = loadCivilFilings();
 const CRIMINAL = loadCriminalFilings();
@@ -29,7 +28,7 @@ type Doc = CivilFilingDocument | CriminalFilingDocument;
 const TH = "px-3 py-2 text-left font-medium text-muted-foreground";
 const TD = "px-3 py-1.5 align-top";
 
-export function stampLabel(stamp: CivilStamp): string {
+function stampLabel(stamp: CivilStamp): string {
   switch (stamp.kind) {
     case "none":
       return "붙일 인지 없음";
@@ -74,7 +73,6 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
   const documents: readonly Doc[] = ds.documents;
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [copyStatus, setCopyStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const rows = useMemo(() => searchFilings(documents, query), [documents, query]);
   const selected = documents.find((d) => d.id === selectedId) ?? null;
   const title = kind === "civil" ? "민사서류 안내" : "형사서류 안내";
@@ -84,19 +82,8 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
   const handleReset = () => {
     setQuery("");
     setSelectedId(null);
-    setCopyStatus(null);
   };
   useFormShortcuts({ onReset: handleReset, enabled: active });
-
-  const handleCopy = async () => {
-    if (!selected) return;
-    try {
-      await ipc.copyToClipboard(formatFilingForClipboard(kind, selected));
-      setCopyStatus({ ok: true, message: "안내를 클립보드에 복사했습니다." });
-    } catch (e) {
-      setCopyStatus({ ok: false, message: e instanceof Error ? e.message : String(e) });
-    }
-  };
 
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px]">
@@ -116,7 +103,6 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setCopyStatus(null);
               }}
             />
           </label>
@@ -151,7 +137,6 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
                         aria-pressed={d.id === selectedId}
                         onClick={() => {
                           setSelectedId(d.id);
-                          setCopyStatus(null);
                         }}
                       >
                         {d.name}
@@ -219,24 +204,11 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
                 </div>
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    void handleCopy();
-                  }}
-                >
-                  <Clipboard className="h-4 w-4" aria-hidden="true" />
-                  복사
-                </Button>
-                {copyStatus ? (
-                  <span
-                    role="status"
-                    className={`text-xs ${copyStatus.ok ? "text-muted-foreground" : "text-red-700 dark:text-red-200"}`}
-                  >
-                    {copyStatus.message}
-                  </span>
-                ) : null}
+                <CopyButton
+                  key={`${query}|${selected.id}`}
+                  getText={() => formatFilingForClipboard(kind, selected)}
+                  okMessage="안내를 클립보드에 복사했습니다."
+                />
               </div>
               <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

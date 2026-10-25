@@ -8,13 +8,10 @@
  * 사고일~조정일 구간에서 중간이자 공제와 지연이자가 함께 빠지거나 겹친다.
  */
 
-import { addDays, calculateInterest, type IsoDate } from "@lawcalc-kr/core-engine";
+import { calculateInterest, serviceSwitchSegments, type IsoDate } from "@lawcalc-kr/core-engine";
 
-import {
-  computeDelayDamages,
-  DELAY_DAMAGES_DEFAULT_OPTIONS,
-  lawSegments,
-} from "../delay-damages/compute";
+import { DELAY_DAMAGES_DEFAULT_OPTIONS } from "../delay-damages/compute";
+import { validateDelayDamagesInput } from "../delay-damages/validators";
 import type { DelayDamagesDeps } from "../delay-damages/types";
 
 /** 기본 가감 폭 (책임비율 %p). */
@@ -70,34 +67,30 @@ export function computeMediationInterest(
   serviceDate?: IsoDate,
 ): MediationInterestResult {
   if (principalWon <= 0) return { interestWon: 0, totalWon: principalWon };
-  if (serviceDate !== undefined) {
-    if (serviceDate < accidentDate) {
-      throw new RangeError("조정 이자 계산 실패: 소장 송달일은 사고일 이후여야 합니다.");
-    }
-    if (serviceDate < mediationDate) {
-      const segments = [
-        ...lawSegments(principalWon, "civil", accidentDate, serviceDate, deps),
-        ...lawSegments(principalWon, "promotion", addDays(serviceDate, 1), mediationDate, deps),
-      ];
-      const r = calculateInterest(
+  if (serviceDate !== undefined && serviceDate < accidentDate) {
+    throw new RangeError("조정 이자 계산 실패: 소장 송달일은 사고일 이후여야 합니다.");
+  }
+  validateDelayDamagesInput({
+    principalWon,
+    startDate: accidentDate,
+    judgmentDate: mediationDate,
+    endDate: mediationDate,
+  });
+  const r = calculateInterest(
+    {
+      principal: principalWon,
+      startDate: accidentDate,
+      endDate: mediationDate,
+      segments: serviceSwitchSegments(
         {
-          principal: principalWon,
           startDate: accidentDate,
           endDate: mediationDate,
-          segments,
-          options: DELAY_DAMAGES_DEFAULT_OPTIONS,
+          serviceDate: serviceDate ?? mediationDate,
+          basePreset: "civil",
         },
         deps,
-      );
-      return { interestWon: r.totalInterest, totalWon: r.grandTotal };
-    }
-  }
-  const r = computeDelayDamages(
-    {
-      principalWon,
-      startDate: accidentDate,
-      judgmentDate: mediationDate,
-      endDate: mediationDate,
+      ),
+      options: DELAY_DAMAGES_DEFAULT_OPTIONS,
     },
     deps,
   );

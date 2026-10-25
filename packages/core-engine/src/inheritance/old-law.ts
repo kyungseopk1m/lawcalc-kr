@@ -16,10 +16,11 @@
  */
 
 import type { BigFraction } from "./fraction";
+import { closestByDegree, livingReps, slotted } from "./heirs";
 import type { HeirNode, InheritanceInput } from "./types";
 
 export const OLD_LAW_FROM = "1960-01-01";
-export const OLD_LAW_1977_AMENDMENT_FROM = "1979-01-01";
+const OLD_LAW_1977_AMENDMENT_FROM = "1979-01-01";
 export const OLD_LAW_DATA_VERSION = "inheritance-pre1991/v1.0.0";
 
 const MALE = 8n;
@@ -75,20 +76,6 @@ function wifeWeight(period: Period, withDescendants: boolean): bigint {
 
 function nameOf(h: HeirNode, fallback: string): string {
   return h.name ?? fallback;
-}
-
-function livingReps(h: HeirNode): HeirNode[] {
-  return (h.representatives ?? []).filter((r) => !r.deceasedBeforeOpening);
-}
-
-function slotted(heirs: HeirNode[]): HeirNode[] {
-  return heirs.filter((h) => !h.deceasedBeforeOpening || livingReps(h).length > 0);
-}
-
-function closestByDegree(heirs: HeirNode[]): HeirNode[] {
-  if (heirs.length === 0 || heirs.some((h) => h.degree === undefined)) return heirs;
-  const min = Math.min(...heirs.map((h) => h.degree as number));
-  return heirs.filter((h) => h.degree === min);
 }
 
 function validate(input: InheritanceInput): void {

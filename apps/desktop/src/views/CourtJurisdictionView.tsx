@@ -1,4 +1,4 @@
-import { CheckCircle2, Clipboard, Info, XCircle } from "lucide-react";
+import { CheckCircle2, Info, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -12,11 +12,11 @@ import {
 } from "@lawcalc-kr/core-engine";
 
 import { Button } from "../components/ui/button";
+import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
-import { ipc } from "../lib/ipc";
 import { todayIso } from "../lib/today";
 
 const DATASET = loadCourtJurisdiction();
@@ -59,7 +59,6 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
   const [date, setDate] = useState(todayIso);
   const [province, setProvince] = useState("");
   const [unit, setUnit] = useState("");
-  const [copyStatus, setCopyStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   const { provinces, units, error } = useMemo((): {
     provinces: string[];
@@ -90,19 +89,8 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
     setDate(todayIso());
     setProvince("");
     setUnit("");
-    setCopyStatus(null);
   };
   useFormShortcuts({ onReset: handleReset, enabled: active });
-
-  const handleCopy = async () => {
-    if (!result) return;
-    try {
-      await ipc.copyToClipboard(formatJurisdictionForClipboard(result, date));
-      setCopyStatus({ ok: true, message: "결과를 클립보드에 복사했습니다." });
-    } catch (e) {
-      setCopyStatus({ ok: false, message: e instanceof Error ? e.message : String(e) });
-    }
-  };
 
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[420px_minmax(0,1fr)]">
@@ -122,7 +110,6 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
               value={date}
               onChange={(e) => {
                 setDate(e.target.value);
-                setCopyStatus(null);
               }}
             />
           </label>
@@ -133,7 +120,6 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
               onChange={(e) => {
                 setProvince(e.target.value);
                 setUnit("");
-                setCopyStatus(null);
               }}
             >
               <option value="">선택</option>
@@ -151,7 +137,6 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
               disabled={units.length === 0}
               onChange={(e) => {
                 setUnit(e.target.value);
-                setCopyStatus(null);
               }}
             >
               <option value="">선택</option>
@@ -249,24 +234,10 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
                 </div>
               ))}
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    void handleCopy();
-                  }}
-                >
-                  <Clipboard className="h-4 w-4" aria-hidden="true" />
-                  복사
-                </Button>
-                {copyStatus ? (
-                  <span
-                    role="status"
-                    className={`text-xs ${copyStatus.ok ? "text-muted-foreground" : "text-red-700 dark:text-red-200"}`}
-                  >
-                    {copyStatus.message}
-                  </span>
-                ) : null}
+                <CopyButton
+                  key={`${date}|${province}|${unit}`}
+                  getText={() => formatJurisdictionForClipboard(result, date)}
+                />
               </div>
               <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { CheckCircle2, Clipboard, Info, Scale } from "lucide-react";
+import { CheckCircle2, Info, Scale } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -8,6 +8,7 @@ import {
   listJurisdictionUnits,
   loadCourtJurisdiction,
   loadPostalCodes,
+  postalCodesVersionTag,
   postalRegionToJurisdiction,
   searchPostalCodes,
   type CourtJurisdictionResult,
@@ -15,10 +16,10 @@ import {
 } from "@lawcalc-kr/core-engine";
 
 import { Button } from "../components/ui/button";
+import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
-import { ipc } from "../lib/ipc";
 import { todayIso } from "../lib/today";
 
 const DATASET = loadPostalCodes();
@@ -63,7 +64,6 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [showCourt, setShowCourt] = useState(false);
-  const [copyStatus, setCopyStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   const result = useMemo(() => searchPostalCodes(query), [query]);
   const picked = result.hits.find((r) => regionKey(r) === selected) ?? null;
@@ -77,19 +77,8 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
     setQuery("");
     setSelected(null);
     setShowCourt(false);
-    setCopyStatus(null);
   };
   useFormShortcuts({ onReset: handleReset, enabled: active });
-
-  const handleCopy = async () => {
-    if (!picked) return;
-    try {
-      await ipc.copyToClipboard(formatPostalForClipboard(picked));
-      setCopyStatus({ ok: true, message: "결과를 클립보드에 복사했습니다." });
-    } catch (e) {
-      setCopyStatus({ ok: false, message: e instanceof Error ? e.message : String(e) });
-    }
-  };
 
   return (
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[420px_minmax(0,1fr)]">
@@ -112,7 +101,6 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
                 setQuery(e.target.value);
                 setSelected(null);
                 setShowCourt(false);
-                setCopyStatus(null);
               }}
             />
           </label>
@@ -126,7 +114,7 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
             <span>{CAVEAT}</span>
           </div>
           <p className="text-xs text-muted-foreground" data-testid="postal-snapshot">
-            데이터 postal-codes/v{DATASET.version} · 우정사업본부 우편번호 DB {DATASET.baseDate}{" "}
+            데이터 {postalCodesVersionTag(DATASET)} · 우정사업본부 우편번호 DB {DATASET.baseDate}{" "}
             기준({DATASET.noticeDate} 고시) · 스냅샷 {DATASET.snapshotDate} · 읍·면·동{" "}
             {DATASET.counts.emd.toLocaleString("ko-KR")}곳, 리{" "}
             {DATASET.counts.ri.toLocaleString("ko-KR")}곳, 우편번호{" "}
@@ -166,7 +154,6 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
                           onClick={() => {
                             setSelected(key);
                             setShowCourt(false);
-                            setCopyStatus(null);
                           }}
                         >
                           <span>{regionName(r)}</span>
@@ -196,16 +183,10 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
             <CardContent className="grid gap-3 p-4 pt-0 text-sm">
               <p data-testid="postal-codes">{formatPostalCodes(picked.codes)}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    void handleCopy();
-                  }}
-                >
-                  <Clipboard className="h-4 w-4" aria-hidden="true" />
-                  복사
-                </Button>
+                <CopyButton
+                  key={regionKey(picked)}
+                  getText={() => formatPostalForClipboard(picked)}
+                />
                 <Button
                   type="button"
                   variant="outline"
@@ -215,14 +196,6 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
                   <Scale className="h-4 w-4" aria-hidden="true" />
                   관할법원 보기
                 </Button>
-                {copyStatus ? (
-                  <span
-                    role="status"
-                    className={`text-xs ${copyStatus.ok ? "text-muted-foreground" : "text-red-700 dark:text-red-200"}`}
-                  >
-                    {copyStatus.message}
-                  </span>
-                ) : null}
               </div>
               {showCourt ? (
                 <div

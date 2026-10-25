@@ -147,7 +147,7 @@ export interface ComputeCostAssessmentDeps {
   computedAt?: string;
 }
 
-const LEVEL_LABEL: Record<AppealsLevel, string> = {
+export const COST_ASSESSMENT_LEVEL_LABEL: Record<AppealsLevel, string> = {
   firstInstance: "1심",
   appeal: "항소심",
   supreme: "상고심",
@@ -432,7 +432,7 @@ export function computeCostAssessment(
 
   const warnings: string[] = [];
   const instances = input.instances.map((instance, i): CostAssessmentInstanceResult => {
-    const label = `${i + 1}번째 심급(${LEVEL_LABEL[instance.level] ?? String(instance.level)})`;
+    const label = `${i + 1}번째 심급(${COST_ASSESSMENT_LEVEL_LABEL[instance.level] ?? String(instance.level)})`;
     if (!isValidIsoDate(instance.filingDate)) {
       fail(
         `${label} 접수일이 실제 달력의 YYYY-MM-DD 날짜가 아닙니다 (입력: ${String(instance.filingDate)})`,

@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Clipboard, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import {
@@ -14,12 +14,12 @@ import {
 } from "@lawcalc-kr/core-engine";
 
 import { Button } from "../components/ui/button";
+import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { FormulaCell } from "../components/result/FormulaCell";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
-import { ipc } from "../lib/ipc";
 import { todayIso } from "../lib/today";
 
 const HOLIDAY_DATASET = loadHolidays();
@@ -218,29 +218,16 @@ export function MonthGrid({
 
 export function ServiceEffectCalculator({ active = true }: { active?: boolean }) {
   const [form, setForm] = useState<ServiceEffectFormState>(emptyServiceEffectForm);
-  const [copyStatus, setCopyStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   const input = useMemo(() => buildServiceEffectInput(form), [form]);
   const { result, calendar, error } = useMemo(() => compute(input), [input]);
 
   const update = (patch: Partial<ServiceEffectFormState>) => {
     setForm((prev) => ({ ...prev, ...patch }));
-    setCopyStatus(null);
   };
 
   const handleReset = () => {
     setForm(emptyServiceEffectForm());
-    setCopyStatus(null);
-  };
-
-  const handleCopy = async () => {
-    if (!result) return;
-    try {
-      await ipc.copyToClipboard(formatServiceEffectForClipboard(input, result));
-      setCopyStatus({ ok: true, message: "결과를 클립보드에 복사했습니다." });
-    } catch (e) {
-      setCopyStatus({ ok: false, message: e instanceof Error ? e.message : String(e) });
-    }
   };
 
   useFormShortcuts({ onReset: handleReset, enabled: active });
@@ -357,24 +344,10 @@ export function ServiceEffectCalculator({ active = true }: { active?: boolean })
                   적용 조문: {result.articles.join(", ")}
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      void handleCopy();
-                    }}
-                  >
-                    <Clipboard className="h-4 w-4" aria-hidden="true" />
-                    복사
-                  </Button>
-                  {copyStatus ? (
-                    <span
-                      role="status"
-                      className={`text-xs ${copyStatus.ok ? "text-muted-foreground" : "text-red-700 dark:text-red-200"}`}
-                    >
-                      {copyStatus.message}
-                    </span>
-                  ) : null}
+                  <CopyButton
+                    key={JSON.stringify(form)}
+                    getText={() => formatServiceEffectForClipboard(input, result)}
+                  />
                 </div>
               </CardContent>
             </Card>

@@ -85,7 +85,7 @@ export function cleanExtraHolidays(rows: readonly ExtraHolidayInput[]): ExtraHol
  * 최종 만료일 전날까지 지나가므로 그 구간에 든 지정일이 적용된 날이다. 번들 데이터에 이미
  * 있는 날은 지정하지 않아도 같은 결과라 뺀다.
  */
-export function appliedExtraHolidays(
+function appliedExtraHolidays(
   extraHolidays: readonly ExtraHolidayInput[] | undefined,
   period: Pick<PeriodResult, "holidayExtension" | "rawExpiry" | "expiryDate">,
 ): ExtraHolidayInput[] {
@@ -776,7 +776,7 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
  * 불변기한 탭도 같은 컴포넌트를 쓴다.
  */
 /** `.lcalc` 파서(lcalc-validation.ts)가 받는 사용자 지정 공휴일 상한과 같아야 한다. */
-export const MAX_EXTRA_HOLIDAYS = 100;
+const MAX_EXTRA_HOLIDAYS = 100;
 
 export function ExtraHolidaysEditor({
   rows,

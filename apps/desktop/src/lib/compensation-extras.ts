@@ -12,6 +12,7 @@ import {
   computeDelayDamages,
   computeMediationInterest,
   faultRatioOfResponsibilityPercent,
+  fullAge,
   MEDIATION_DEFAULT_SPREAD_PERCENT,
   mediationResponsibilityPercents,
   type CompensationSegment,
@@ -33,10 +34,6 @@ import {
 
 import { formatWon, parseWonAmount } from "./format-won";
 import { parseNumberText, readNumber } from "./parse-number";
-
-function newUid(): string {
-  return crypto.randomUUID();
-}
 
 /* ------------------------------------------------------------------ 기대여명 */
 
@@ -288,7 +285,7 @@ export interface InjuryClaimantsFormState {
 }
 
 export function emptyFamilyClaimant(): FamilyClaimantRow {
-  return { uid: newUid(), name: "", solatiumText: "" };
+  return { uid: crypto.randomUUID(), name: "", solatiumText: "" };
 }
 
 export function defaultInjuryClaimantsFormState(): InjuryClaimantsFormState {
@@ -319,7 +316,7 @@ export function applyInjuryClaimantsInput(
   return {
     enabled: true,
     family: (input.family ?? []).map((row) => ({
-      uid: newUid(),
+      uid: crypto.randomUUID(),
       name: row.name,
       solatiumText: String(row.solatiumWon),
     })),
@@ -402,7 +399,7 @@ export function applyDeathClaimantsInput(
     funeralPayer: input.funeralPayer ?? "",
     funeralBenefitText: funeralBenefitWon === undefined ? "" : String(funeralBenefitWon),
     others: (input.otherClaimants ?? []).map((row) => ({
-      uid: newUid(),
+      uid: crypto.randomUUID(),
       name: row.name,
       solatiumText: String(row.solatiumWon),
     })),
@@ -629,12 +626,6 @@ function hoffmanText(value: number): string {
   return value.toLocaleString("ko-KR", { minimumFractionDigits: 4, maximumFractionDigits: 8 });
 }
 
-function ageAt(birthDate: string, date: string): number {
-  let age = Number(date.slice(0, 4)) - Number(birthDate.slice(0, 4));
-  if (date.slice(5) < birthDate.slice(5)) age -= 1;
-  return age;
-}
-
 function keepText(livingCostRatio: number): string {
   return Math.abs(livingCostRatio - 1 / 3) < 1e-12 ? "2/3" : percentText(1 - livingCostRatio);
 }
@@ -669,7 +660,7 @@ function segmentFormulaLines(result: AnyResult): string[] {
 }
 
 /** 별지형 일실수입 계산표 (탭으로 칸을 나눈 행). 클립보드·PDF·CSV 공용. */
-export function lostIncomeTableLines(result: AnyResult): string[] {
+function lostIncomeTableLines(result: AnyResult): string[] {
   const keepColumn = result.segments.some((s) => segmentKeep(result, s) !== undefined);
   const head = ["순번", "기간", "개월", "월 소득", "상실률", "호프만", "금액"];
   if (keepColumn) head.splice(5, 0, "생계비 공제 후");
@@ -716,7 +707,7 @@ function basicFactLine(input: DocumentInput, result: AnyResult): string {
   return (
     `피해자는 ${formatCourtDate(birthDate)}생 ${sex === "male" ? "남자" : "여자"}이고, ` +
     `${formatCourtDate(accidentDate)} 사고${death ? "로 사망하였다" : "를 당하였다"}. ` +
-    `사고 당시 만 ${ageAt(birthDate, accidentDate)}세이며, 가동연한은 만 ${retirementAge}세가 되기 전날인 ` +
+    `사고 당시 만 ${fullAge(birthDate, accidentDate)}세이며, 가동연한은 만 ${retirementAge}세가 되기 전날인 ` +
     `${formatCourtDate(retirementEnd)}까지로 보았다.`
   );
 }
@@ -971,7 +962,7 @@ export function defaultWageScheduleFormState(): WageScheduleFormState {
 }
 
 export function emptyIncomeStep(fromDate = "", monthlyText = ""): IncomeStepRow {
-  return { uid: newUid(), fromDate, monthlyText };
+  return { uid: crypto.randomUUID(), fromDate, monthlyText };
 }
 
 export function emptyManualIncomeRow(
@@ -980,23 +971,13 @@ export function emptyManualIncomeRow(
   livingCost = false,
 ): ManualIncomeRow {
   return {
-    uid: newUid(),
+    uid: crypto.randomUUID(),
     startMonthText: String(startMonth),
     endMonthText: "",
     monthlyText: "",
     lossPercentText,
     livingCost,
   };
-}
-
-/** `date` 에서 `months` 개월 뒤 같은 날 (없는 날은 그 달 말일). 승급 간격 채우기용. */
-export function shiftIsoMonths(date: string, months: number): string {
-  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
-  const index = y * 12 + (m - 1) + months;
-  const ty = Math.floor(index / 12);
-  const tm = (index % 12) + 1;
-  const last = new Date(Date.UTC(ty, tm, 0)).getUTCDate();
-  return `${String(ty).padStart(4, "0")}-${String(tm).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
 }
 
 const MONTH_FORMAT = { integer: true, min: 0, max: 1440 } as const;
@@ -1057,7 +1038,7 @@ export function applyWageScheduleInput(
       mode: "manual",
       steps: [],
       rows: input.manualRows.map((row) => ({
-        uid: newUid(),
+        uid: crypto.randomUUID(),
         startMonthText: String(row.startMonth),
         endMonthText: String(row.endMonth),
         monthlyText: String(row.monthlyWageWon),
@@ -1088,7 +1069,7 @@ export function manualRowsFromSegments(
   return segments
     .filter((s) => s.endMonth > s.startMonth)
     .map((s) => ({
-      uid: newUid(),
+      uid: crypto.randomUUID(),
       startMonthText: String(s.startMonth),
       endMonthText: String(s.endMonth),
       monthlyText: String(s.monthlyWageWon),

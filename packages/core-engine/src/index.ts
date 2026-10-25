@@ -20,7 +20,7 @@ export type { ResolveSegmentsDeps } from "./segments";
 export type { InterestLimitDataset, InterestLimitLaw, InterestLimitSlice } from "./interest-limits";
 
 export { calculateInterest } from "./interest";
-export { buildInterestClaimText, formatCourtDate } from "./interest-claim-text";
+export { buildInterestClaimText, formatCourtDate, formatPercent } from "./interest-claim-text";
 export {
   addDays,
   addYears,
@@ -308,7 +308,6 @@ export type {
   CourtSet,
 } from "./jurisdiction";
 export {
-  courtJurisdictionVersionTag,
   findCourtJurisdiction,
   listJurisdictionProvinces,
   listJurisdictionUnits,
@@ -335,6 +334,7 @@ export type {
   LawyerFeeTableKey,
 } from "./litigation-cost";
 export {
+  COST_ASSESSMENT_LEVEL_LABEL,
   COST_ASSESSMENT_PARTY_LABEL,
   computeCostAssessment,
   selectLawyerFeeRuleVersion,

@@ -29,7 +29,7 @@ export function formatCourtDate(iso: IsoDate): string {
   return `${Number(year)}. ${Number(month)}. ${Number(day)}.`;
 }
 
-function formatPercent(rate: number): string {
+export function formatPercent(rate: number): string {
   // 청구취지 표시이율 정책: 백분율 기준 소수점 **최대 10자리**.
   // - 법정이율(5/6/12/15/20%)·실무 약정이율(소수 몇 자리)은 손실 없이 정확히 표기된다.
   // - 계산은 항상 입력 raw rate 를 그대로 쓴다. 백분율 10자리(= rate 소수 12자리)를 넘는

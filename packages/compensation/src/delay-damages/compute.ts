@@ -17,6 +17,7 @@ import {
   addDays,
   calculateInterest,
   formatCourtDate,
+  formatPercent,
   resolveSegments,
   type CalcOptions,
   type IsoDate,
@@ -88,11 +89,6 @@ export function computeDelayDamages(
     },
     deps,
   );
-}
-
-function formatPercent(rate: number): string {
-  // core-engine 청구취지 표기와 같은 규칙 (소수 최대 10자리, IEEE754 잡음 차단).
-  return `${(rate * 100).toLocaleString("ko-KR", { maximumFractionDigits: 10 })}%`;
 }
 
 /**

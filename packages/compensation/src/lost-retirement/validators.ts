@@ -1,21 +1,11 @@
-import type { IsoDate } from "@lawcalc-kr/core-engine";
+import { isValidIsoDate, type IsoDate } from "@lawcalc-kr/core-engine";
 import type { LostRetirementInput } from "./types";
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const PREFIX = "일실퇴직금 입력 검증 실패";
 
 function assertIsoDate(label: string, value: unknown): void {
-  if (typeof value !== "string" || !ISO_DATE_PATTERN.test(value)) {
-    throw new RangeError(`${PREFIX}: ${label} 는 YYYY-MM-DD 형식이어야 합니다.`);
-  }
-  const [y, m, d] = value.split("-").map(Number) as [number, number, number];
-  const reconstructed = new Date(Date.UTC(y, m - 1, d));
-  if (
-    reconstructed.getUTCFullYear() !== y ||
-    reconstructed.getUTCMonth() !== m - 1 ||
-    reconstructed.getUTCDate() !== d
-  ) {
-    throw new RangeError(`${PREFIX}: ${label} 는 유효한 날짜여야 합니다.`);
+  if (!isValidIsoDate(value)) {
+    throw new RangeError(`${PREFIX}: ${label} 는 YYYY-MM-DD 형식의 유효한 날짜여야 합니다.`);
   }
 }
 

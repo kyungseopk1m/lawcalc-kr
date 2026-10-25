@@ -19,6 +19,8 @@
  *     남으면 `moreDigits: true` 로 알린다. `rounding` 은 쓰지 않는다.
  */
 
+import { type BigFraction, simplify } from "./inheritance/fraction";
+
 export type CalculatorDigits = 0 | 1 | 2 | 3 | 4 | 5 | "full";
 export type CalculatorRounding = "floor" | "round" | "ceil";
 
@@ -42,10 +44,7 @@ const PREFIX = "계산식 오류";
 const MAX_LENGTH = 2000;
 const FULL_DIGITS = 10;
 
-interface Rational {
-  n: bigint;
-  d: bigint;
-}
+type Rational = BigFraction;
 
 type Token =
   | { kind: "num"; value: Rational; text: string }
@@ -55,17 +54,8 @@ type Token =
 
 const OPEN: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
 
-function gcd(a: bigint, b: bigint): bigint {
-  let x = a < 0n ? -a : a;
-  let y = b < 0n ? -b : b;
-  while (y !== 0n) [x, y] = [y, x % y];
-  return x;
-}
-
-function make(n: bigint, d: bigint): Rational {
-  if (d < 0n) [n, d] = [-n, -d];
-  const g = gcd(n, d);
-  return g > 1n ? { n: n / g, d: d / g } : { n, d };
+function make(num: bigint, den: bigint): Rational {
+  return den < 0n ? simplify({ num: -num, den: -den }) : simplify({ num, den });
 }
 
 /** 전각 문자(！~～)를 반각으로, 그 밖의 기호 표기를 ASCII 로 바꾼다. */
@@ -147,8 +137,8 @@ class Parser {
       const right = this.term(depth);
       left =
         t.op === "+"
-          ? make(left.n * right.d + right.n * left.d, left.d * right.d)
-          : make(left.n * right.d - right.n * left.d, left.d * right.d);
+          ? make(left.num * right.den + right.num * left.den, left.den * right.den)
+          : make(left.num * right.den - right.num * left.den, left.den * right.den);
       t = this.tokens[this.pos];
     }
     return left;
@@ -161,10 +151,10 @@ class Parser {
       this.parts.push(t.op === "*" ? "×" : "÷");
       const right = this.factor(depth);
       if (t.op === "*") {
-        left = make(left.n * right.n, left.d * right.d);
+        left = make(left.num * right.num, left.den * right.den);
       } else {
-        if (right.n === 0n) throw new RangeError(`${PREFIX}: 0으로 나눌 수 없습니다.`);
-        left = make(left.n * right.d, left.d * right.n);
+        if (right.num === 0n) throw new RangeError(`${PREFIX}: 0으로 나눌 수 없습니다.`);
+        left = make(left.num * right.den, left.den * right.num);
       }
       t = this.tokens[this.pos];
     }
@@ -183,7 +173,7 @@ class Parser {
     if (t.kind === "op" && (t.op === "+" || t.op === "-")) {
       this.parts.push(t.op);
       const v = this.factor(depth + 1);
-      return t.op === "-" ? { n: -v.n, d: v.d } : v;
+      return t.op === "-" ? { num: -v.num, den: v.den } : v;
     }
     if (t.kind === "open") {
       this.parts.push("(");
@@ -216,11 +206,11 @@ function floorDiv(n: bigint, d: bigint): bigint {
 }
 
 function roundScaled(x: Rational, scale: bigint, rounding: CalculatorRounding): bigint {
-  const n = x.n * scale;
-  if (rounding === "floor") return floorDiv(n, x.d);
-  if (rounding === "ceil") return -floorDiv(-n, x.d);
+  const n = x.num * scale;
+  if (rounding === "floor") return floorDiv(n, x.den);
+  if (rounding === "ceil") return -floorDiv(-n, x.den);
   const abs = n < 0n ? -n : n;
-  const q = (abs * 2n + x.d) / (2n * x.d);
+  const q = (abs * 2n + x.den) / (2n * x.den);
   return n < 0n ? -q : q;
 }
 
@@ -268,8 +258,8 @@ export function evaluateExpression(text: string, options: CalculatorOptions): Ca
   if (digits === "full") {
     const scale = 10n ** BigInt(FULL_DIGITS);
     // 0 쪽으로 자른다.
-    const q = (x.n * scale) / x.d;
-    moreDigits = (x.n * scale) % x.d !== 0n;
+    const q = (x.num * scale) / x.den;
+    moreDigits = (x.num * scale) % x.den !== 0n;
     value = formatScaled(q, FULL_DIGITS).replace(/\.?0+$/, "");
     if (value === "-0") value = "0";
   } else {

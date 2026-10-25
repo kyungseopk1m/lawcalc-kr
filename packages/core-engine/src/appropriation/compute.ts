@@ -1,6 +1,7 @@
 import { addDays } from "../days";
 import { STANDARD_DISCLAIMER } from "../disclaimers";
 import { calculateInterest } from "../interest";
+import { formatPercent } from "../interest-claim-text";
 import { getCapAt, interestLimitsVersionTag, loadInterestLimits } from "../interest-limits";
 // 원 단위 잔여 배분 규칙(최대잉여법)의 단일 출처. 도메인 지식이 없는 순수 산술
 // 헬퍼라 소송비용 쪽 구현을 그대로 쓴다 — 복제하면 한쪽만 고쳐지는 결함이 생긴다.
@@ -310,10 +311,6 @@ function simpleInterest(principal: number, rate: number, from: IsoDate, to: IsoD
     legalRatePreset: { customRate: rate },
     options: ACCRUAL_OPTIONS,
   }).totalInterest;
-}
-
-function formatPercent(rate: number): string {
-  return `${(rate * 100).toLocaleString("ko-KR", { maximumFractionDigits: 10 })}%`;
 }
 
 interface ScheduleClaim {

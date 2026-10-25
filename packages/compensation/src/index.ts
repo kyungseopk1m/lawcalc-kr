@@ -80,7 +80,7 @@ export type {
   LifeExpectancyWarning,
   LifeShortening,
 } from "./life-expectancy";
-export { computeLifeExpectancy, validateLifeExpectancyInput } from "./life-expectancy";
+export { computeLifeExpectancy, fullAge, validateLifeExpectancyInput } from "./life-expectancy";
 
 export type {
   LostRetirementInput,
@@ -90,7 +90,7 @@ export type {
 } from "./lost-retirement";
 export { computeLostRetirement, validateLostRetirementInput } from "./lost-retirement";
 
-export { combineDisabilityRatesPercent } from "./internal";
+export { combineDisabilityRatesPercent, shiftMonths } from "./internal";
 
 export type { MediationInterestResult } from "./mediation";
 export {

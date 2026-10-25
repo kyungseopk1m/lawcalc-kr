@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { computeCompensation, computeCompensationDeath } from "@lawcalc-kr/compensation";
+import {
+  computeCompensation,
+  computeCompensationDeath,
+  shiftMonths,
+} from "@lawcalc-kr/compensation";
 
 import {
   applyWageScheduleInput,
@@ -8,7 +12,6 @@ import {
   emptyIncomeStep,
   manualRowsFromSegments,
   segmentWageText,
-  shiftIsoMonths,
 } from "../lib/compensation-extras";
 import { migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedCompensationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
@@ -132,6 +135,6 @@ describe("호봉승급 · 일실수입 표 직접 편집 (화면 상태)", () =>
     expect(() =>
       buildWageScheduleInput({ mode: "steps", steps: [emptyIncomeStep("", "1")], rows: [] }),
     ).toThrow("호봉승급 1번째");
-    expect(shiftIsoMonths("2010-01-31", 1)).toBe("2010-02-28");
+    expect(shiftMonths("2010-01-31", 1)).toBe("2010-02-28");
   });
 });

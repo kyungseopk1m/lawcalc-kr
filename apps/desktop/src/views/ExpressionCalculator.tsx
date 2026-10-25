@@ -1,4 +1,4 @@
-import { CheckCircle2, Clipboard, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -11,11 +11,11 @@ import {
 } from "@lawcalc-kr/core-engine";
 
 import { Button } from "../components/ui/button";
+import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
-import { ipc } from "../lib/ipc";
 
 const DIGIT_OPTIONS: ReadonlyArray<CalculatorDigits> = [0, 1, 2, 3, 4, 5, "full"];
 
@@ -64,28 +64,15 @@ function compute(form: ExpressionFormState) {
 
 export function ExpressionCalculator({ active = true }: { active?: boolean }) {
   const [form, setForm] = useState<ExpressionFormState>(emptyExpressionForm);
-  const [copyStatus, setCopyStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   const { result, error } = useMemo(() => compute(form), [form]);
 
   const update = (patch: Partial<ExpressionFormState>) => {
     setForm((prev) => ({ ...prev, ...patch }));
-    setCopyStatus(null);
   };
 
   const handleReset = () => {
     setForm(emptyExpressionForm());
-    setCopyStatus(null);
-  };
-
-  const handleCopy = async () => {
-    if (!result) return;
-    try {
-      await ipc.copyToClipboard(formatExpressionForClipboard(form, result));
-      setCopyStatus({ ok: true, message: "결과를 클립보드에 복사했습니다." });
-    } catch (e) {
-      setCopyStatus({ ok: false, message: e instanceof Error ? e.message : String(e) });
-    }
   };
 
   useFormShortcuts({ onReset: handleReset, enabled: active });
@@ -197,24 +184,10 @@ export function ExpressionCalculator({ active = true }: { active?: boolean }) {
                   </span>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      void handleCopy();
-                    }}
-                  >
-                    <Clipboard className="h-4 w-4" aria-hidden="true" />
-                    복사
-                  </Button>
-                  {copyStatus ? (
-                    <span
-                      role="status"
-                      className={`text-xs ${copyStatus.ok ? "text-muted-foreground" : "text-red-700 dark:text-red-200"}`}
-                    >
-                      {copyStatus.message}
-                    </span>
-                  ) : null}
+                  <CopyButton
+                    key={JSON.stringify(form)}
+                    getText={() => formatExpressionForClipboard(form, result)}
+                  />
                 </div>
               </CardContent>
             </Card>

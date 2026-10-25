@@ -6,7 +6,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import type { CompensationSegment } from "@lawcalc-kr/compensation";
+import { shiftMonths, type CompensationSegment } from "@lawcalc-kr/compensation";
 import { isValidIsoDate } from "@lawcalc-kr/core-engine";
 
 import {
@@ -14,7 +14,6 @@ import {
   emptyManualIncomeRow,
   LOSS_RATE_PERCENT_FORMAT,
   manualRowsFromSegments,
-  shiftIsoMonths,
   WAGE_SCHEDULE_MODE_LABELS,
   type IncomeStepRow,
   type ManualIncomeRow,
@@ -56,7 +55,7 @@ export function WageScheduleCard({
       last === undefined
         ? accidentDate
         : isValidIsoDate(last.fromDate) && interval !== undefined
-          ? shiftIsoMonths(last.fromDate, interval)
+          ? shiftMonths(last.fromDate, interval)
           : "";
     patch({ steps: [...value.steps, emptyIncomeStep(fromDate, last?.monthlyText ?? "")] });
   };

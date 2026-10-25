@@ -1,4 +1,4 @@
-import { CheckCircle2, Clipboard, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -11,12 +11,12 @@ import {
 } from "@lawcalc-kr/core-engine";
 
 import { Button } from "../components/ui/button";
+import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { FormulaCell } from "../components/result/FormulaCell";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
-import { ipc } from "../lib/ipc";
 import { todayIso } from "../lib/today";
 import { MonthGrid } from "./ServiceEffectCalculator";
 
@@ -25,15 +25,12 @@ const BASIS_LABEL: Record<DetentionBasis, string> = {
   release: "석방일 기준 (구금 시작일과 석방일 모두 산입)",
 };
 
-export function emptyDetentionForm(): DetentionInput {
+function emptyDetentionForm(): DetentionInput {
   const today = todayIso();
   return { startDate: today, baseDate: today, basis: "sentencing" };
 }
 
-export function formatDetentionForClipboard(
-  input: DetentionInput,
-  result: DetentionResult,
-): string {
+function formatDetentionForClipboard(input: DetentionInput, result: DetentionResult): string {
   return [
     "LawCalc Korea 미결구금일수 계산 결과",
     `구금 시작일: ${input.startDate}`,
@@ -65,7 +62,6 @@ function table(baseDate: string, basis: DetentionBasis) {
 
 export function DetentionCalculator({ active = true }: { active?: boolean }) {
   const [form, setForm] = useState<DetentionInput>(emptyDetentionForm);
-  const [copyStatus, setCopyStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   const { result, error } = useMemo(() => compute(form), [form]);
   const rows = useMemo(() => table(form.baseDate, form.basis), [form.baseDate, form.basis]);
@@ -73,22 +69,10 @@ export function DetentionCalculator({ active = true }: { active?: boolean }) {
 
   const update = (patch: Partial<DetentionInput>) => {
     setForm((prev) => ({ ...prev, ...patch }));
-    setCopyStatus(null);
   };
 
   const handleReset = () => {
     setForm(emptyDetentionForm());
-    setCopyStatus(null);
-  };
-
-  const handleCopy = async () => {
-    if (!result) return;
-    try {
-      await ipc.copyToClipboard(formatDetentionForClipboard(form, result));
-      setCopyStatus({ ok: true, message: "결과를 클립보드에 복사했습니다." });
-    } catch (e) {
-      setCopyStatus({ ok: false, message: e instanceof Error ? e.message : String(e) });
-    }
   };
 
   useFormShortcuts({ onReset: handleReset, enabled: active });
@@ -172,24 +156,10 @@ export function DetentionCalculator({ active = true }: { active?: boolean }) {
                   적용 조문: {result.articles.join(", ")}
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      void handleCopy();
-                    }}
-                  >
-                    <Clipboard className="h-4 w-4" aria-hidden="true" />
-                    복사
-                  </Button>
-                  {copyStatus ? (
-                    <span
-                      role="status"
-                      className={`text-xs ${copyStatus.ok ? "text-muted-foreground" : "text-red-700 dark:text-red-200"}`}
-                    >
-                      {copyStatus.message}
-                    </span>
-                  ) : null}
+                  <CopyButton
+                    key={JSON.stringify(form)}
+                    getText={() => formatDetentionForClipboard(form, result)}
+                  />
                 </div>
               </CardContent>
             </Card>

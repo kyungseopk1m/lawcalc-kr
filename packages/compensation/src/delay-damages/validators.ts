@@ -2,23 +2,14 @@
  * 지연손해금 입력 검증. 실패 시 RangeError (한국어 메시지).
  */
 
+import { isValidIsoDate } from "@lawcalc-kr/core-engine";
 import type { DelayDamagesInput } from "./types";
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const PREFIX = "지연손해금 입력 검증 실패";
 
 function assertIsoDate(label: string, value: unknown): void {
-  if (typeof value !== "string" || !ISO_DATE_PATTERN.test(value)) {
-    throw new RangeError(`${PREFIX}: ${label} 는 YYYY-MM-DD 형식이어야 합니다.`);
-  }
-  const [y, m, d] = value.split("-").map(Number) as [number, number, number];
-  const reconstructed = new Date(Date.UTC(y, m - 1, d));
-  if (
-    reconstructed.getUTCFullYear() !== y ||
-    reconstructed.getUTCMonth() !== m - 1 ||
-    reconstructed.getUTCDate() !== d
-  ) {
-    throw new RangeError(`${PREFIX}: ${label} 는 유효한 날짜여야 합니다.`);
+  if (!isValidIsoDate(value)) {
+    throw new RangeError(`${PREFIX}: ${label} 는 YYYY-MM-DD 형식의 유효한 날짜여야 합니다.`);
   }
 }
 

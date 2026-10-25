@@ -197,6 +197,7 @@ export type {
 } from "./compute-cost-assessment";
 
 export {
+  COST_ASSESSMENT_LEVEL_LABEL,
   COST_ASSESSMENT_PARTY_LABEL,
   computeCostAssessment,
   selectLawyerFeeRuleVersion,

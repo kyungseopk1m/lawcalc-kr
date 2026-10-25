@@ -270,7 +270,7 @@ export function appropriationSummaryRows(result: AppropriationResult): [string, 
 }
 
 /** 이자제한법 검토 문구 (화면·클립보드·PDF·CSV 공통). */
-export function appropriationNotices(result: AppropriationResult): string[] {
+function appropriationNotices(result: AppropriationResult): string[] {
   return [
     ...(result.interestLimits ?? []).map((limit) => `${limit.claimId}: ${limit.notice}`),
     ...(result.interpretationNotices ?? []),
@@ -278,7 +278,7 @@ export function appropriationNotices(result: AppropriationResult): string[] {
 }
 
 /** 변제별 충당 표 (화면·클립보드·PDF·CSV 공통). 여러 번 변제 결과에만 있다. */
-export function appropriationEventRows(result: AppropriationResult): string[][] {
+function appropriationEventRows(result: AppropriationResult): string[][] {
   return (result.events ?? []).flatMap((event) =>
     event.claims.map((claim) => [
       event.paidAt,
@@ -294,7 +294,7 @@ export function appropriationEventRows(result: AppropriationResult): string[][] 
   );
 }
 
-export const EVENT_HEADERS = [
+const EVENT_HEADERS = [
   "변제일",
   "구분",
   "채권",

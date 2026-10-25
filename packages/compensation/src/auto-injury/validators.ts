@@ -11,6 +11,7 @@ import { validateOtherDamagesInput } from "../other-damages/validators";
 import { validateLifeExpectancyInput } from "../life-expectancy/validators";
 import { validateLostRetirementInput } from "../lost-retirement/validators";
 import { monthsBetween } from "../internal";
+import { isValidIsoDate } from "@lawcalc-kr/core-engine";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DEDUCTION_ITEMS = 50;
@@ -256,13 +257,7 @@ export function validateWageSchedule(
       throw new RangeError(`${prefix}: ${label} 객체가 필요합니다.`);
     }
     const { fromDate } = step;
-    if (
-      typeof fromDate !== "string" ||
-      !ISO_DATE_PATTERN.test(fromDate) ||
-      new Date(Date.parse(`${fromDate}T00:00:00Z`) || 0).toISOString().slice(0, 10) !== fromDate ||
-      fromDate < prevDate ||
-      (i > 0 && fromDate === prevDate)
-    ) {
+    if (!isValidIsoDate(fromDate) || fromDate < prevDate || (i > 0 && fromDate === prevDate)) {
       throw new RangeError(
         `${prefix}: ${label}.fromDate 는 사고일 이상, 앞 항목보다 늦은 YYYY-MM-DD 날짜여야 합니다.`,
       );

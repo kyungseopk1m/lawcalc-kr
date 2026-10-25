@@ -44,7 +44,7 @@ export function loadCourtJurisdiction(
   return ds;
 }
 
-export const courtJurisdictionVersionTag = (ds: CourtJurisdictionDataset): string =>
+const courtJurisdictionVersionTag = (ds: CourtJurisdictionDataset): string =>
   `court-jurisdiction/v${ds.version}`;
 
 /** 기준일에 시행 중인 판. 날짜가 비었거나 형식이 틀리거나 첫 판보다 이르면 한국어 RangeError. */

@@ -58,7 +58,7 @@ export interface LaborRateTiming {
 }
 
 /** 단계마다 원 미만 절사 문구. */
-export const TRUNCATE_EACH_STEP_TEXT = "일실수입 구간 금액은 계수를 곱할 때마다 원 미만 버림";
+const TRUNCATE_EACH_STEP_TEXT = "일실수입 구간 금액은 계수를 곱할 때마다 원 미만 버림";
 
 /** "절사" 행 값 (법원 방식 절사·단계마다 절사). 둘 다 꺼져 있으면 "". 화면·클립보드·PDF·CSV 공용. */
 export function truncationTextOf(
