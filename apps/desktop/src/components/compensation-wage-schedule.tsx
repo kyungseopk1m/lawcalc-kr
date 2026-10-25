@@ -7,6 +7,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import type { CompensationSegment } from "@lawcalc-kr/compensation";
+import { isValidIsoDate } from "@lawcalc-kr/core-engine";
 
 import {
   emptyIncomeStep,
@@ -54,7 +55,7 @@ export function WageScheduleCard({
     const fromDate =
       last === undefined
         ? accidentDate
-        : /^\d{4}-\d{2}-\d{2}$/.test(last.fromDate) && interval !== undefined
+        : isValidIsoDate(last.fromDate) && interval !== undefined
           ? shiftIsoMonths(last.fromDate, interval)
           : "";
     patch({ steps: [...value.steps, emptyIncomeStep(fromDate, last?.monthlyText ?? "")] });

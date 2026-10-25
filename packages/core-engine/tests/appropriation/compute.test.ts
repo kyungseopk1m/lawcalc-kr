@@ -584,4 +584,14 @@ describe("computeAppropriation — 변제일 (payment.paidAt) [APP-3]", () => {
       }),
     ).toThrow(/paidAt 은 YYYY-MM-DD 형식이어야 합니다/);
   });
+
+  it("존재하지 않는 달력 날짜(2026-02-30)는 거부하고 윤일(2024-02-29)은 받는다", () => {
+    const run = (paidAt: string) =>
+      computeAppropriation({
+        claims: [{ id: "c1", principalBalance: 100_000, dueAt: "2024-01-01" }],
+        payment: { amount: 1_000, allocation: { type: "legal" }, paidAt },
+      });
+    expect(() => run("2026-02-30")).toThrow(/paidAt 은 YYYY-MM-DD 형식이어야 합니다/);
+    expect(() => run("2024-02-29")).not.toThrow();
+  });
 });

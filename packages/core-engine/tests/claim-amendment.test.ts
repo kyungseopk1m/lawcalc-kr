@@ -43,6 +43,16 @@ describe("computeClaimAmendmentStampDuty / 인지법 제5조", () => {
     expect(r.beforeAmount).toBe(paper(10_000_000));
   });
 
+  it("제2심 배수는 제2조 제2항 절사를 마친 금액에 곱하고 다시 끊지 않는다 (제3조와 같은 원칙)", () => {
+    // 변경 후 3,350,000: 16,750 → 16,700 (제2조 제2항) × 1.5 = 25,050. 변경 전 1,000,000: 5,000.
+    const r = computeClaimAmendmentStampDuty(
+      input({ appealsLevel: "appeal", beforeCaseValue: 1_000_000, afterCaseValue: 3_350_000 }),
+      { computedAt },
+    );
+    expect(r.afterAmount).toBe(25_050);
+    expect(r.amount).toBe(20_050);
+  });
+
   it("전자소송 감액은 차액에 한 번만 건다 (항마다 곱하지 않는다)", () => {
     const r = computeClaimAmendmentStampDuty(input({ isElectronicFiling: true }), { computedAt });
     const difference = paper(30_000_000) - paper(10_000_000);

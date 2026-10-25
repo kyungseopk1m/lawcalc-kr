@@ -116,66 +116,56 @@ function applyExplicitDirective(
   return pool;
 }
 
+/**
+ * 법정충당 (민법 제477조·제479조, 상계는 제499조 준용).
+ *
+ * 변제가 모든 채무를 소멸시키지 못하면 합의가 없는 한 모든 채무의 비용, 모든 채무의 이자·지연손해금,
+ * 원본 순으로 충당한다 (제479조, 대법원 2022. 8. 31. 선고 2022다239896 판결). 각 단계 안에서 채무 사이
+ * 순서는 제477조 (도래 → 변제이익 → 이행기, 모두 같으면 그 단계 잔액에 비례 안분) 를 따른다.
+ */
 function applyLegalAllocation(
   works: ClaimWork[],
   paymentAmount: number,
   asOf: IsoDate,
   labelPrefix = "",
 ): number {
+  const open = works.filter((w) => totalRemaining(w) > 0);
+  const ranked = [
+    ...rankLegal(open.filter((w) => w.input.dueAt <= asOf)).map((g) => ({ g, dueReached: true })),
+    ...rankLegal(open.filter((w) => w.input.dueAt > asOf)).map((g) => ({ g, dueReached: false })),
+  ];
   let pool = paymentAmount;
-  let priorityIndex = 0;
 
-  while (pool > 0) {
-    const open = works.filter((w) => totalRemaining(w) > 0 && w.statutoryRank === undefined);
-    if (open.length === 0) break;
-
-    const due = open.filter((w) => w.input.dueAt <= asOf);
-    const notDue = open.filter((w) => w.input.dueAt > asOf);
-    const tier = due.length > 0 ? due : notDue;
-    const dueReached = due.length > 0;
-
-    const groups = rankLegal(tier);
-    const topGroup = groups[0]!;
-    const priorityLabel = labelPrefix + formatPriorityLabel(priorityIndex, dueReached, topGroup);
-    priorityIndex += 1;
-
-    if (topGroup.length === 1) {
-      const w = topGroup[0]!;
-      w.statutoryRank = {
-        dueReached,
-        debtorBenefitRank: w.input.debtorBenefitRank ?? 0,
-        dueAt: w.input.dueAt,
-        priorityLabel,
-      };
-      const used = absorbIntoClaim(w, pool);
-      pool -= used;
-    } else {
+  for (const part of ["cost", "interest", "principal"] as const) {
+    for (const [index, { g, dueReached }] of ranked.entries()) {
+      if (pool <= 0) return pool;
+      const members = g.filter((w) => w.balance[part] > 0);
+      if (members.length === 0) continue;
+      const balances = members.map((w) => w.balance[part]);
+      const denominator = balances.reduce((sum, value) => sum + value, 0);
       // 민법 제477조 제4호 비례 안분. 소송비용 분배와 같은 최대잉여법을 쓴다
-      // (`divideProportionally` = BigInt 정확 나머지 + 결정적 tie-break).
-      // 직접 floor + 마지막 채권에 잔여 몰아주기를 하면 (a) 그 채권이 자기 잔액에
-      // 걸릴 때 차액이 어느 채권에도 충당되지 않고 사라지고 (b) 채권 입력 순서에
-      // 따라 결과가 달라진다.
-      const claimTotals = topGroup.map((w) => totalRemaining(w));
-      const denominator = claimTotals.reduce((sum, value) => sum + value, 0);
-      // 안분 대상 총액은 잔액 합을 넘지 않는다. 각 배분액이 해당 채권 잔액을
-      // 초과하지 않음이 보장되므로 (배분액 ≤ ceil(pool × 잔액 / 합) ≤ 잔액),
-      // 전액이 그대로 흡수되고 재분배 루프가 필요 없다.
-      const groupPool = Math.min(pool, denominator);
-      const { perParty } = divideProportionally(groupPool, claimTotals);
-
-      let allocatedSum = 0;
-      for (const [i, w] of topGroup.entries()) {
-        allocatedSum += absorbIntoClaim(w, perParty[i]!);
+      // (`divideProportionally` = BigInt 정확 나머지 + 결정적 tie-break). 안분 총액이 잔액 합을
+      // 넘지 않으므로 각 배분액은 그 채무 잔액 이하이고 전액 흡수된다.
+      const amounts =
+        members.length === 1
+          ? [Math.min(pool, denominator)]
+          : divideProportionally(Math.min(pool, denominator), balances).perParty;
+      const priorityLabel = labelPrefix + formatPriorityLabel(index, dueReached, members);
+      for (const [i, w] of members.entries()) {
+        const used = amounts[i]!;
+        w.balance[part] -= used;
+        w.balance[`${part}Applied`] += used;
+        pool -= used;
         w.statutoryRank = {
           dueReached,
           debtorBenefitRank: w.input.debtorBenefitRank ?? 0,
           dueAt: w.input.dueAt,
-          proportionalShare: { numerator: claimTotals[i]!, denominator },
+          ...(members.length > 1
+            ? { proportionalShare: { numerator: balances[i]!, denominator } }
+            : {}),
           priorityLabel,
         };
       }
-      pool -= allocatedSum;
-      if (allocatedSum === 0) break;
     }
   }
   return pool;
@@ -303,6 +293,14 @@ const ACCRUAL_OPTIONS = {
 /** 이자제한법 제2조 제5항: 대차원금 10만원 미만은 제1항(최고이자율)을 적용하지 않는다. */
 const INTEREST_LIMIT_MIN_PRINCIPAL = 100_000;
 
+/**
+ * 이자제한법(법률 제8322호) 시행일. 부칙 제2항 "이 법 시행 전에 성립한 대차관계에 관한 계약상의
+ * 이자율에 관하여도 이 법 시행일 이후부터는 이 법에 따라 이자율을 계산한다." (법률 제10925호 부칙
+ * 제2항도 같은 취지). 그 전날까지의 이자는 제한하지 않는다 (구 이자제한법은 1998-01-13 폐지).
+ */
+const INTEREST_LIMIT_ACT_EFFECTIVE = "2007-06-30";
+const INTEREST_LIMIT_ACT_PRE_LAST_DAY = "2007-06-29";
+
 function simpleInterest(principal: number, rate: number, from: IsoDate, to: IsoDate): number {
   if (principal <= 0 || rate <= 0 || to < from) return 0;
   return calculateInterest({
@@ -323,6 +321,8 @@ interface ScheduleClaim {
   /** 다음 이자 기산일. 이자를 붙이지 않는 채권은 null. */
   accrualFrom: IsoDate | null;
   rate: number;
+  /** 시행 전 약정이 제한된 경우 2007-06-29 까지 쓰는 약정이율. 그 밖에는 없다. */
+  preActRate?: number;
   costApplied: number;
   interestApplied: number;
   principalApplied: number;
@@ -365,23 +365,32 @@ function reviewInterestLimit(
       prepaidOnlyNote;
     return base;
   }
-  // 제2조 제2항: 최고이자율은 약정한 때의 이자율. 시행령 부칙도 "시행 이후 계약을 체결하거나 갱신하는 분부터".
-  const cap = getCapAt(dataset, "interestLimitAct", limit.agreedAt);
+  // 제2조 제2항: 최고이자율은 약정한 때의 이자율. 시행령 개정 부칙(제25376호·제28413호·제31593호 각
+  // 제2조)은 "시행 후(이후) 계약을 체결하거나 갱신하는 분부터" 적용하므로, 시행 전 약정에는 2007-06-30
+  // 시행 최고이자율(대통령령 제20118호, 부칙은 시행일만 정함)이 그대로 미친다 (법률 제8322호 부칙 제2항).
+  const preAct = limit.agreedAt < INTEREST_LIMIT_ACT_EFFECTIVE;
+  const cap = getCapAt(
+    dataset,
+    "interestLimitAct",
+    preAct ? INTEREST_LIMIT_ACT_EFFECTIVE : limit.agreedAt,
+  );
   if (cap === undefined) {
     base.notice =
-      `약정일 ${limit.agreedAt} 에 적용할 최고이자율 데이터가 없어 제한하지 않았습니다 ` +
-      "(데이터는 2007-06-30 이후 약정만 담고 있습니다)." +
-      // 현행 이자제한법(법률 제8322호)은 2007-06-30 시행이고, 구 이자제한법은 1998-01-13 폐지(법률 제5507호).
-      (prepaid > 0 && limit.agreedAt < "2007-06-30"
-        ? " 현행 이자제한법(법률 제8322호)은 2007-06-30 시행이라 그 전 약정에는 적용되지 않아 선이자 사전공제(제3조) 검토도 하지 않았습니다."
-        : prepaid > 0
-          ? " 선이자 사전공제(제3조) 검토도 하지 않았습니다."
-          : "") +
+      `약정일 ${limit.agreedAt} 에 적용할 최고이자율 데이터가 없어 제한하지 않았습니다.` +
+      (prepaid > 0 ? " 선이자 사전공제(제3조) 검토도 하지 않았습니다." : "") +
       prepaidOnlyNote;
     return base;
   }
   base.capRate = cap;
   const notes: string[] = [];
+  if (preAct) {
+    notes.push(
+      `약정일 ${limit.agreedAt} 이 이자제한법(법률 제8322호) 시행일 2007-06-30 전이라 2007-06-29 까지 이자는 ` +
+        "약정이율로, 2007-06-30 부터 이자는 그날 시행한 최고이자율로 계산했습니다 (법률 제8322호 부칙 제2항). " +
+        "이후 최고이자율 개정령은 그 시행 후 체결·갱신한 계약부터 적용합니다 (각 개정령 부칙 제2조).",
+    );
+  }
+  const capLabel = preAct ? "2007-06-30 시행" : "약정일";
   // 해석 안내: 2014 개정령 부칙은 "시행 후" 로 적혀 있으나 시행일 당일 약정도 새 최고이자율로 본다.
   if (dataset.slices.some((s) => s.law === "interestLimitAct" && s.from === limit.agreedAt)) {
     notes.push(
@@ -393,13 +402,22 @@ function reviewInterestLimit(
     base.appliedRate = cap;
     base.capped = true;
     notes.push(
-      `약정이율 연 ${formatPercent(agreedRate)} 가 약정일 최고이자율 연 ${formatPercent(cap)} 를 넘어 ` +
+      `약정이율 연 ${formatPercent(agreedRate)} 가 ${capLabel} 최고이자율 연 ${formatPercent(cap)} 를 넘어 ` +
         `연 ${formatPercent(cap)} 로 계산했습니다 (이자제한법 제2조 제3항).`,
     );
   } else {
-    notes.push(`약정일 최고이자율은 연 ${formatPercent(cap)} 입니다.`);
+    notes.push(`${capLabel} 최고이자율은 연 ${formatPercent(cap)} 입니다.`);
   }
-  if (prepaid > 0) {
+  if (prepaid > 0 && claim.interestFrom! < INTEREST_LIMIT_ACT_EFFECTIVE) {
+    // 선이자는 이자 기산일(대여일)에 공제한 것으로 본다. 공제가 시행 전이면 제3조를 적용하지 않는다.
+    notes.push(
+      `이자 기산일 ${claim.interestFrom} 이 이자제한법 시행일 2007-06-30 전이라 선이자 사전공제(제3조) 검토는 하지 않았습니다.` +
+        (claim.dueAt >= INTEREST_LIMIT_ACT_EFFECTIVE
+          ? " 선이자 기간 중 시행일 이후 부분이 최고이자율을 넘는지는 검토하지 않았습니다 (미검토)."
+          : "") +
+        prepaidOnlyNote,
+    );
+  } else if (prepaid > 0) {
     // 제3조: 실제 받은 금액을 원본으로 최고이자율에 따라 계산한 금액을 넘는 선이자는 원본에 충당한 것으로 본다.
     const receivedAmount = claim.principalBalance - prepaid;
     const allowedInterest = simpleInterest(receivedAmount, cap, claim.interestFrom!, claim.dueAt);
@@ -425,7 +443,7 @@ function reviewInterestLimit(
  * 여러 번 변제·이자 발생·상계·이자제한법을 반영한 충당 (민법 제476조~제479조, 제499조 준용).
  *
  * 변제를 날짜 순으로 하나씩 처리한다. 각 변제 직전에 그 변제일까지의 이자를 붙이고, 그 변제는
- * 종전 단일 변제와 같은 규칙(지정 → 잉여는 제477조 법정충당, 채권 안에서는 제479조 비용·이자·원본 순)
+ * 종전 단일 변제와 같은 규칙(지정 → 잉여는 법정충당: 모든 채무의 비용·이자 먼저, 원본은 제477조 순)
  * 으로 충당한다. 이자는 원본에만 붙고 이자에 이자를 붙이지 않는다.
  */
 function computeAppropriationSchedule(input: AppropriationInput): AppropriationResult {
@@ -438,14 +456,18 @@ function computeAppropriationSchedule(input: AppropriationInput): AppropriationR
     let principal = claim.principalBalance;
     let rate = claim.interestRate ?? 0;
     let accrualFrom: IsoDate | null = claim.interestRate === undefined ? null : claim.interestFrom!;
+    let preActRate: number | undefined;
     if (claim.interestLimitAct && dataset) {
       const review = reviewInterestLimit(claim, dataset);
       interestLimits.push(review);
       if (review.appliedRate !== undefined) rate = review.appliedRate;
+      if (review.capped && claim.interestLimitAct.agreedAt < INTEREST_LIMIT_ACT_EFFECTIVE) {
+        preActRate = claim.interestRate;
+      }
       if (review.prepaid) principal = review.prepaid.principalAfter;
     }
     // 선이자는 이자 기산일~변제기 이자를 미리 받은 것이므로 그 다음 날부터 이자를 붙인다.
-    // 이자제한법 제3조 검토 여부(10만원 미만, 2007-06-30 전 약정)와 상관없이 이중으로 붙이지 않는다.
+    // 이자제한법 제3조 검토 여부(10만원 미만, 2007-06-30 전 공제)와 상관없이 이중으로 붙이지 않는다.
     if ((claim.interestLimitAct?.prepaidInterest ?? 0) > 0 && accrualFrom !== null) {
       accrualFrom = addDays(claim.dueAt, 1);
     }
@@ -463,6 +485,7 @@ function computeAppropriationSchedule(input: AppropriationInput): AppropriationR
       },
       accrualFrom,
       rate,
+      ...(preActRate === undefined ? {} : { preActRate }),
       costApplied: 0,
       interestApplied: 0,
       principalApplied: 0,
@@ -483,7 +506,17 @@ function computeAppropriationSchedule(input: AppropriationInput): AppropriationR
     const accrued = states.map((s) => {
       if (s.accrualFrom === null || s.accrualFrom > paidAt) return null;
       const from = s.accrualFrom;
-      const amount = simpleInterest(s.work.balance.principal, s.rate, from, paidAt);
+      const principal = s.work.balance.principal;
+      // 시행 전 약정은 2007-06-29 까지 약정이율, 시행일부터 최고이자율 (법률 제8322호 부칙 제2항).
+      const amount =
+        s.preActRate !== undefined && from < INTEREST_LIMIT_ACT_EFFECTIVE
+          ? simpleInterest(
+              principal,
+              s.preActRate,
+              from,
+              paidAt < INTEREST_LIMIT_ACT_EFFECTIVE ? paidAt : INTEREST_LIMIT_ACT_PRE_LAST_DAY,
+            ) + simpleInterest(principal, s.rate, INTEREST_LIMIT_ACT_EFFECTIVE, paidAt)
+          : simpleInterest(principal, s.rate, from, paidAt);
       s.work.balance.interest += amount;
       s.accrualFrom = addDays(paidAt, 1);
       return { from, to: paidAt, amount };
@@ -573,12 +606,11 @@ function computeAppropriationSchedule(input: AppropriationInput): AppropriationR
 }
 
 const ORDER_479_NOTICE =
-  "민법 제479조는 비용 · 이자 · 원본 순서를 정하지만 채무가 여러 개일 때 그 순서를 채무별로 돌릴지 " +
-  "모든 채무의 비용, 모든 채무의 이자, 원본 순으로 돌릴지 정한 판례를 찾지 못했습니다. " +
-  "이 계산은 제477조로 채무를 먼저 고른 뒤 그 채무 안에서 비용, 이자, 원본 순으로 충당했고, " +
-  "후자로 읽으면 금액이 달라질 수 있습니다 (해석).";
+  "채무가 여러 개이고 변제가 전부를 소멸시키지 못하면 모든 채무의 비용, 모든 채무의 이자·지연손해금을 " +
+  "먼저 충당하고 원본은 민법 제477조 순서로 충당했습니다 (민법 제479조, 대법원 2022. 8. 31. 선고 " +
+  "2022다239896 판결).";
 
-/** 제479조 다수 채무 해석 안내: 비용·이자가 있는 채무가 둘 이상이고 법정충당이 쓰일 때만 필드를 붙인다. */
+/** 제479조 다수 채무 충당 순서 안내: 비용·이자가 있는 채무가 둘 이상이고 법정충당이 쓰일 때만 필드를 붙인다. */
 function withInterpretationNotices(
   result: AppropriationResult,
   input: AppropriationInput,

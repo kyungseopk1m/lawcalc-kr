@@ -21,7 +21,15 @@ export type { InterestLimitDataset, InterestLimitLaw, InterestLimitSlice } from 
 
 export { calculateInterest } from "./interest";
 export { buildInterestClaimText, formatCourtDate } from "./interest-claim-text";
-export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "./days";
+export {
+  addDays,
+  addYears,
+  containsLeapDay,
+  countDays,
+  daysInYear,
+  isLeapYear,
+  isValidIsoDate,
+} from "./days";
 export { resolveSegments, serviceSwitchSegments } from "./segments";
 export { datasetVersionTag, loadLegalRates, rateHistoryFor } from "./legal-rates";
 export {

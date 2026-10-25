@@ -69,10 +69,9 @@ export function computeClaimAmendmentStampDuty(
       : rule.afterMultipliers.firstInstance;
 
   const afterBase = paperStampDuty(dataset, input, input.afterCaseValue, computedAt);
-  const afterAmount = applyStampDutyRounding(afterBase * afterMultiplier, {
-    ...dataset.roundingPolicy,
-    floorMinimumWon: 0,
-  });
+  // 제5조 제2호 항소심 배수는 제2조 제2항 절사를 마친 금액에 곱하고 다시 끊지 않는다
+  // (항소장 제3조와 같은 원칙, 2026-10-25 결정). 절사 금액은 100원 단위라 ×1.5 는 50원 단위 정수다.
+  const afterAmount = Math.round(afterBase * afterMultiplier);
   const beforeAmount =
     input.beforeStampDutyWon ??
     applyStampDutyRounding(
@@ -87,11 +86,13 @@ export function computeClaimAmendmentStampDuty(
   const electronicApplies =
     input.isElectronicFiling === true &&
     (input.filingDate === undefined || input.filingDate >= discount.effectiveFrom);
-  const preRounding = electronicApplies ? difference * discount.multiplier : difference;
-  const amount = applyStampDutyRounding(preRounding, {
-    ...dataset.roundingPolicy,
-    floorMinimumWon: 0,
-  });
+  // 종이소송은 차액 그대로(각 항이 이미 절사를 마쳤다). 전자 10분의 9 는 감액 뒤 100원 절사(현행 유지).
+  const amount = electronicApplies
+    ? applyStampDutyRounding(difference * discount.multiplier, {
+        ...dataset.roundingPolicy,
+        floorMinimumWon: 0,
+      })
+    : difference;
 
   const segments = [
     `${rule.sourceArticle} 청구취지 확장`,

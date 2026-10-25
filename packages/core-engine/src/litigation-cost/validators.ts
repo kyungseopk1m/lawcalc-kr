@@ -9,6 +9,7 @@
  * 대한법률구조공단 적용 사건 범위 검증은 RangeError 비차단 — `KoreaLegalAidScopeWarning[]` 반환 (G5 제3조.3).
  */
 
+import { isValidIsoDate } from "../days";
 import {
   appliedDomains,
   caseNameKo,
@@ -29,8 +30,6 @@ import type {
 } from "./types";
 
 const APPEALS_LEVELS: readonly AppealsLevel[] = ["firstInstance", "appeal", "supreme"];
-
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function isFiniteNonNegative(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n) && n >= 0;
@@ -161,7 +160,7 @@ export function validateStampDutyInput(input: StampDutyInput): void {
       `원신청서 인지액이 유효하지 않습니다 (입력: ${String(input.underlyingApplicationStampDutyWon)})`,
     );
   }
-  if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
+  if (input.filingDate !== undefined && !isValidIsoDate(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
   }
 }
@@ -192,7 +191,7 @@ export function validateClaimAmendmentInput(input: ClaimAmendmentInput): void {
       `변경 전 납부 인지액이 유효하지 않습니다 (입력: ${String(input.beforeStampDutyWon)})`,
     );
   }
-  if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
+  if (input.filingDate !== undefined && !isValidIsoDate(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
   }
 }
@@ -235,7 +234,7 @@ export function validateDeliveryFeeInput(input: DeliveryFeeInput): void {
   ) {
     fail(prefix, `회당 단가가 유효하지 않습니다 (입력: ${String(input.perDeliveryUnitPriceWon)})`);
   }
-  if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
+  if (input.filingDate !== undefined && !isValidIsoDate(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
   }
 }
@@ -343,7 +342,7 @@ export function validateLawyerFeeInput(input: LawyerFeeInput): void {
   if (input.agreedFeeWon !== undefined && !isFiniteNonNegative(input.agreedFeeWon)) {
     fail(prefix, `지급보수액이 유효하지 않습니다 (입력: ${String(input.agreedFeeWon)})`);
   }
-  if (input.filingDate !== undefined && !ISO_DATE_PATTERN.test(input.filingDate)) {
+  if (input.filingDate !== undefined && !isValidIsoDate(input.filingDate)) {
     fail(prefix, `접수일이 ISO 형식이 아닙니다 (입력: ${String(input.filingDate)})`);
   }
 }

@@ -6,6 +6,7 @@ import {
   applyInheritanceInput,
   buildInheritanceInput,
   emptyHeir,
+  isOldLawDate,
   fromHeirNode,
   hasInheritanceV2Fields,
   toHeirNode,
@@ -315,5 +316,12 @@ describe("inheritance-heirs / 구법 필드", () => {
     ]);
     // 불러오기 → 다시 만들기 왕복
     expect(buildInheritanceInput(applyInheritanceInput(input))).toEqual(input);
+  });
+});
+
+describe("isOldLawDate", () => {
+  it("존재하지 않는 달력 날짜는 구법 대상으로 보지 않는다", () => {
+    expect(isOldLawDate("1990-02-28")).toBe(true);
+    expect(isOldLawDate("1990-02-30")).toBe(false);
   });
 });

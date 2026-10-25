@@ -1,7 +1,7 @@
 {
   "schemaVersion": "2",
   "id": "case-comp-025-vk-b3-claimants-won",
-  "title": "VK 대조 B-3 — B-1 + 위자료 500만 + 전액공제 300만, 원고별 원 단위",
+  "title": "VK 대조 B-3: B-1 + 위자료 500만 + 전액공제 300만, 원고별 원 단위",
   "source": "manual-derivation",
   "notes": "VK 실측: 81,967,731 (전액공제는 과실상계 뒤 재산상 손해에서, 위자료는 과실상계 없이 가산). 손계산: 79,967,731 − 3,000,000 + 5,000,000 = 81,967,731. claimants finalRounding won 이라 원 단위.",
   "input": {

@@ -1,3 +1,4 @@
+import { isValidIsoDate } from "./days";
 import { DEFAULT_LEGAL_RATES_DATASET } from "./legal-rates.dataset.generated";
 import type { IsoDate, LegalRateCode } from "./types";
 
@@ -40,11 +41,9 @@ export interface LegalRateDataset {
  */
 const DEFAULT_DATASET: LegalRateDataset = DEFAULT_LEGAL_RATES_DATASET;
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function assertIsoDate(value: string, context: string): void {
-  if (!ISO_DATE_PATTERN.test(value)) {
-    throw new RangeError(`${context}: invalid ISO date "${value}"`);
+  if (!isValidIsoDate(value)) {
+    throw new RangeError(`${context}: invalid ISO date "${String(value)}"`);
   }
 }
 

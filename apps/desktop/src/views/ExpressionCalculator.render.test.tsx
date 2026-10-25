@@ -6,7 +6,7 @@ import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 
 import type * as IpcModule from "../lib/ipc";
 
-/** 대조값은 for-claude `personal/lawcalc-kr/docs/data/vk-run-2026-10-20/session-dates.md` 5절 실측. */
+/** 대조값은 외부 계산기 실측. */
 const { copied } = vi.hoisted(() => ({ copied: [] as string[] }));
 
 vi.mock("../lib/ipc", async (importOriginal) => {

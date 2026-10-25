@@ -629,6 +629,11 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
       loaded.result,
       () => computeAppropriation(loaded.input),
       (r) => formatWon(r.totals.remainingGrandTotal),
+      // 총 잔액이 같아도 채무별 충당이 달라지면 이후 이자 기초가 달라지므로 함께 비교한다.
+      (r) =>
+        r.claims
+          .map((c) => `${c.costBalanceAfter}/${c.interestBalanceAfter}/${c.principalBalanceAfter}`)
+          .join("|"),
     );
     setError(null);
     markAppropriationClean(buildAppropriationDirtySnapshot({ ...applied, note: loadedNote }));
@@ -856,7 +861,8 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
             <span className="text-xs text-muted-foreground">
               변제를 여러 번 넣거나 이율·상계·이자제한법을 쓰면 모든 변제에 변제일이 필요합니다.
               날짜 순서로 충당하고, 각 변제일까지 이자를 붙인 뒤 비용, 이자, 원본 순으로
-              충당합니다(민법 제479조).
+              충당합니다(민법 제479조). 법정충당은 모든 채무의 비용과 이자를 먼저 충당합니다(대법원
+              2022다239896).
             </span>
             <label className="grid gap-2 text-sm font-medium">
               비고

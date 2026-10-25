@@ -465,9 +465,16 @@ export function computeCompensationDeath(
     const solatiumReducedWon = Math.min(solatiumAddWon, overWon);
     const estate = Math.max(0, afterDeductionWon + solatiumAddWon);
     const estateSolatiumWon = Math.min(solatiumAddWon, estate);
-    const funeralClaimWon = floorTimesComplements(funeralExpenseWon, [faultRatio]);
     const funeralBenefitWon =
       accidentType === "industrial" ? input.industrialInsurance?.funeralBenefitWon : undefined;
+    // 장의비는 같은 성질의 손해인 장례비 손해에서만 그 금액 한도로 먼저 빼고 과실상계한다
+    // (대법원 2022. 4. 14. 선고 2021다252472 이유 3.가, 2021다241618 전원합의체 인용). 넘는 부분은
+    // 다른 손해에서 빼지 않는다. 장의비는 장례비 지출 상속인이 있어야 입력할 수 있어(validators)
+    // 상속분대로 나누는 장례비에는 공제가 없다.
+    const funeralBenefitDeductedWon = Math.min(funeralBenefitWon ?? 0, funeralExpenseWon);
+    const funeralClaimWon = floorTimesComplements(funeralExpenseWon - funeralBenefitDeductedWon, [
+      faultRatio,
+    ]);
     const unit = claimants.finalRounding === "hundred" ? FINAL_FLOOR_UNIT : 1;
     if (recipients !== undefined) {
       benefitWon = recipients.reduce((acc, r) => acc + r.survivorBenefitWon, 0);
@@ -528,20 +535,12 @@ export function computeCompensationDeath(
           : isPayer
             ? funeralClaimWon
             : 0;
-      // 장의비는 장례비 손해에서만, 그 금액 한도로 (2021다241618).
-      const funeralBenefitDeductedWon =
-        isPayer && funeralBenefitWon !== undefined ? Math.min(funeralBenefitWon, funeralWon) : 0;
       const ownSolatiumWon = ownSolatiumOf(
         (claimants.ownSolatium ?? [])
           .filter((o) => o.heirName === share.name)
           .reduce((acc, o) => acc + o.solatiumWon, 0),
       );
-      const rawWon =
-        inheritedPecuniaryWon +
-        inheritedSolatiumWon +
-        ownSolatiumWon +
-        funeralWon -
-        funeralBenefitDeductedWon;
+      const rawWon = inheritedPecuniaryWon + inheritedSolatiumWon + ownSolatiumWon + funeralWon;
       return {
         name: share.name,
         numerator: share.numerator,
@@ -567,7 +566,8 @@ export function computeCompensationDeath(
     if (recipientTotals !== undefined) {
       estateWon = recipientTotals.estateWon;
       totals = {
-        pecuniaryWon: lostIncomeSubtotalWon - deductedWon + otherPecuniaryWon,
+        pecuniaryWon:
+          lostIncomeSubtotalWon - deductedWon + otherPecuniaryWon - funeralBenefitDeductedWon,
         afterFaultWon: recipientTotals.afterFaultWon + funeralClaimWon,
         legacyRatioWon: recipientTotals.legacyRatioWon,
         propertyOnlyAppliedWon: recipientTotals.propertyOnlyAppliedWon,
@@ -579,7 +579,7 @@ export function computeCompensationDeath(
       };
     } else {
       totals = {
-        pecuniaryWon: estatePecuniaryWon + funeralExpenseWon,
+        pecuniaryWon: estatePecuniaryWon + funeralExpenseWon - funeralBenefitDeductedWon,
         afterFaultWon: afterFaultWon + funeralClaimWon,
         legacyRatioWon,
         propertyOnlyAppliedWon,

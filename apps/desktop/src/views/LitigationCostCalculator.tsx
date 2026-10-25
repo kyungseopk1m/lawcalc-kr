@@ -274,7 +274,12 @@ function distributionLabel(mode: DistributionMode) {
  * 손해배상 export 와 같은 정책으로, 문구를 여기서 한 번 만들어 세 경로가 함께 쓴다.
  */
 export function buildLitigationCostExportWarnings(result: LitigationCostResult): string[] {
-  return result.lawyerFee.koreaLegalAidWarnings.map((w) => w.messageKo);
+  return [
+    ...(result.stampDuty.roundingOrderNotice !== undefined
+      ? [`인지대: ${result.stampDuty.roundingOrderNotice}`]
+      : []),
+    ...result.lawyerFee.koreaLegalAidWarnings.map((w) => w.messageKo),
+  ];
 }
 
 /** export payload — 결과 원본에 경고 목록만 덧붙인다. `.lcalc` 에는 저장하지 않는다. */
@@ -1365,12 +1370,10 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               </CardContent>
             </Card>
 
-            {result.lawyerFee.koreaLegalAidWarnings.length > 0 ? (
+            {buildLitigationCostExportWarnings(result).length > 0 ? (
               <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>
-                  {result.lawyerFee.koreaLegalAidWarnings.map((w) => w.messageKo).join(" / ")}
-                </span>
+                <span>{buildLitigationCostExportWarnings(result).join(" / ")}</span>
               </div>
             ) : null}
 

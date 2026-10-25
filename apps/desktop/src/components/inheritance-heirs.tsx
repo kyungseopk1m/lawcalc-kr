@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 
+import { isValidIsoDate } from "@lawcalc-kr/core-engine";
 import type { HeirNode, InheritanceInput } from "@lawcalc-kr/core-engine";
 
 import { Button } from "./ui/button";
@@ -29,7 +30,7 @@ export type Sex = "male" | "female";
 
 /** 구법 입력을 받는 사망일 (1991-01-01 전). 1960 전은 엔진이 관습법 안내로 거부한다. */
 export function isOldLawDate(deceasedAt: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(deceasedAt) && deceasedAt < "1991-01-01";
+  return isValidIsoDate(deceasedAt) && deceasedAt < "1991-01-01";
 }
 
 export type RepresentationCause = "death" | "disqualified" | "forfeited";

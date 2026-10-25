@@ -184,6 +184,11 @@ export interface StampDutyResult {
   refund?: StampDutyRefund;
   /** `input.includeLawsuitTopUp` 일 때만. */
   lawsuitTopUp?: StampDutyLawsuitTopUp;
+  /**
+   * 항소·상고에서 절사 순서 해석(제2조 제2항 절사 후 제3조 배수 / 배수 후 절사)에 따라 금액이
+   * 갈릴 때만. 다른 해석의 금액을 알린다.
+   */
+  roundingOrderNotice?: string;
 }
 
 // ===== Delivery Fee (제2조) =====

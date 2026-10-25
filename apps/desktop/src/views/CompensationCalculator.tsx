@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { STANDARD_DISCLAIMER, calculateInheritance } from "@lawcalc-kr/core-engine";
+import { STANDARD_DISCLAIMER, calculateInheritance, isValidIsoDate } from "@lawcalc-kr/core-engine";
 import {
   computeCompensation,
   computeCompensationDeath,
@@ -319,7 +319,7 @@ function josa(word: string, kind: "은는" | "으로"): string {
  * 통합으로 사라진 직종이면 어디로 흡수됐는지 알려 준다. 단가를 대신 계산해 주지는 않는다.
  */
 export function occupationHintAt(occupation: string, accidentDate: string): string | null {
-  if (!occupation || !ISO_DATE.test(accidentDate)) {
+  if (!occupation || !isValidIsoDate(accidentDate)) {
     return null;
   }
   if (getLaborRateAt(LABOR_RATES_DATASET, occupation, accidentDate) !== undefined) {
@@ -337,8 +337,6 @@ export function occupationHintAt(occupation: string, accidentDate: string): stri
   }
   return `"${occupation}"${josa(occupation, "은는")} 이 사고일 기준 노임단가에 없습니다. 일당을 직접 입력하세요.`;
 }
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function newUid(): string {
   return crypto.randomUUID();
@@ -392,8 +390,8 @@ function defaultLaborRateTiming(): LaborRateTimingFormState {
 }
 
 function readLaborRateTiming(state: LaborRateTimingFormState & { accidentDate: string }) {
-  if (!ISO_DATE.test(state.calculationDate)) throw new Error("계산 기준일을 입력하세요.");
-  if (ISO_DATE.test(state.accidentDate) && state.calculationDate < state.accidentDate) {
+  if (!isValidIsoDate(state.calculationDate)) throw new Error("계산 기준일을 입력하세요.");
+  if (isValidIsoDate(state.accidentDate) && state.calculationDate < state.accidentDate) {
     throw new Error("계산 기준일은 사고일과 같거나 그 뒤여야 합니다.");
   }
   return {
@@ -1425,7 +1423,7 @@ export function formatCompensationDeathForClipboard(
       `원고\t지분(약분)${survivor ? "\t유족급여 공제" : ""}\t상속 재산상 손해\t상속 위자료\t고유 위자료\t장례비${benefit ? "\t장의비 공제" : ""}\t최종액`,
       ...shares.map(
         (s) =>
-          `${s.name}\t${s.numerator}/${s.denominator}${survivor ? `\t${formatWon(s.survivorBenefitDeductedWon ?? 0)}` : ""}\t${formatWon(s.inheritedPecuniaryWon ?? 0)}\t${formatWon(s.inheritedSolatiumWon ?? 0)}\t${formatWon(s.ownSolatiumWon ?? 0)}\t${formatWon(s.funeralWon ?? 0)}${benefit ? `\t${formatWon(-(s.funeralBenefitDeductedWon ?? 0))}` : ""}\t${formatWon(s.amountWon)}`,
+          `${s.name}\t${s.numerator}/${s.denominator}${survivor ? `\t${formatWon(s.survivorBenefitDeductedWon ?? 0)}` : ""}\t${formatWon(s.inheritedPecuniaryWon ?? 0)}\t${formatWon(s.inheritedSolatiumWon ?? 0)}\t${formatWon(s.ownSolatiumWon ?? 0)}\t${formatWon(s.funeralWon ?? 0)}${benefit ? `\t${formatWon(s.funeralBenefitDeductedWon ?? 0)}` : ""}\t${formatWon(s.amountWon)}`,
       ),
       // 상속인 아닌 유족: 고유 위자료만 있다 (화면 표와 같은 "-" 칸).
       ...(result.otherClaimants ?? []).map(

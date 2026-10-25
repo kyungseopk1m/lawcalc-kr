@@ -46,8 +46,13 @@ import { validateStampDutyInput } from "./validators";
  *      민사조정규칙 제3조 제2항도 같은 구조다 — "제1항 본문에 따른 수수료가 1천원 미만이면
  *      1천원으로 하고, 제1항 본문 또는 단서에 따른 수수료 중 100원 미만은 계산하지
  *      아니한다" (하한은 감액 전 본문에만, 절사는 감액 전후 양쪽에).
- *   9. 100원 절사는 모든 배수·감액이 끝난 뒤 마지막 한 번만. 절사를 배수 앞으로 옮기는 것은
- *      별개 쟁점이라 손대지 않았다 (소가 3,350,000 항소가 25,100 과 25,050 으로 갈린다).
+ *   9. 항소·상고는 제2조 제2항(하한 + 100원 절사)을 마친 금액에 제3조 배수를 곱한다. 제3조가
+ *      곱하는 대상이 "제2조에 따른 금액" 이고 법원 소장 작성안내도 절사 뒤 배수 순서로 적는다
+ *      (2026-10-25 결정). 소가 3,350,000 항소 = floor100(16,750) × 1.5 = 25,050. 배수 뒤에 한 번
+ *      절사하는 다른 해석(25,100)과 갈리면 `roundingOrderNotice` 로 알린다.
+ *  10. 종이 항소·상고는 배수 뒤에 다시 절사하지 않는다 (25,050 그대로). 그 밖에는 100원 절사를
+ *      모든 배수·감액이 끝난 뒤 마지막에 건다. 제16조(전자 10분의 9)에는 절사 준용 문언이 없지만
+ *      현행 동작을 유지한다 (항소 전자 25,050 × 0.9 = 22,545 → 22,500).
  *
  * 누적 multiplier 가 [0, 1.5] 범위 외인 변호사보수와 달리 인지법의 multiplier 는 본 규칙상
  * 각각 명시적이므로 clamp 미적용 (특별절차 0.1 < 항소 1.5 < 상고 + 1심외 X 조합 차단은 validator 에서).
@@ -109,14 +114,18 @@ function buildFormulaText(args: {
   specialLabel: string | null;
   electronicMultiplier: number | null;
   electronicSkippedNote: string | null;
-  /** 제2조 제2항 1,000원 하한이 제2조 제1항 금액에 실제로 걸렸을 때 그 금액. 안 걸렸으면 null. */
+  /** 제2조 제2항(하한, 항소·상고는 100원 절사 포함)이 제2조 제1항 금액을 실제로 바꿨을 때 그 금액. */
   article2FloorWon: number | null;
+  /** article2FloorWon 옆에 붙는 근거 표기. */
+  article2Note: string;
   /** 제7조 제4항 준용 하한이 화해·지급명령 금액에 실제로 걸렸을 때 그 금액. 안 걸렸으면 null. */
   specialFloorWon: number | null;
   /** 2013-11-01 전 조정신청일 때 인지법 제2조(같은 조 제2항 포함)로 산출한 기준 금액. 아니면 null. */
   preAmendmentMediationBaseWon: number | null;
   preRounding: number;
   finalAmount: number;
+  /** 종이 항소·상고: 제3조 배수 뒤 절사하지 않음. */
+  noFinalTruncation: boolean;
   deemedNote?: string | null;
 }): string {
   const segments: string[] = [];
@@ -143,7 +152,7 @@ function buildFormulaText(args: {
       `= ${args.preAmendmentMediationBaseWon.toLocaleString("en-US")}원 (제2조 제2항 하한·100원 절사)`,
     );
   } else if (args.article2FloorWon !== null) {
-    arithmetic.push(`= ${args.article2FloorWon.toLocaleString("en-US")}원 (제2조 제2항 하한)`);
+    arithmetic.push(`= ${args.article2FloorWon.toLocaleString("en-US")}원 (${args.article2Note})`);
   }
   arithmetic.push(`× ${args.appealsMultiplier}`);
   if (args.specialMultiplier !== null) {
@@ -162,7 +171,9 @@ function buildFormulaText(args: {
   const arithmeticText =
     args.preAmendmentMediationBaseWon !== null
       ? `${arithmetic.join(" ")} = ${args.finalAmount.toLocaleString("en-US")}원 (구 민사조정규칙에는 제3조 제2항 하한·절사가 없음)`
-      : `${arithmetic.join(" ")} = ${preRoundingDisplay}원 → ${args.finalAmount.toLocaleString("en-US")}원 (제2조 제2항 100원 절사)`;
+      : args.noFinalTruncation && args.finalAmount % 100 !== 0
+        ? `${arithmetic.join(" ")} = ${args.finalAmount.toLocaleString("en-US")}원 (제3조 배수 뒤에는 절사하지 않음)`
+        : `${arithmetic.join(" ")} = ${preRoundingDisplay}원 → ${args.finalAmount.toLocaleString("en-US")}원 (제2조 제2항 100원 절사)`;
   return `${segments.join(" + ")}: ${arithmeticText}`;
 }
 
@@ -505,7 +516,15 @@ function computeStampDutyBase(input: StampDutyInput, deps?: ComputeStampDutyDeps
   // 전자소송 감액도 같은 이유로 사라진다 (소가 10,000 전자 = 1,000원 ← 정답 900원).
   // 소가 약 222,222원 이하(= 제2조 제1항 금액이 1,000원 미만인 구간) 전체가 영향권이다.
   const article2Floor = Math.max(baseLine, dataset.roundingPolicy.floorMinimumWon);
-  const article2FloorWon = article2Floor > baseLine ? article2Floor : null;
+  // 항소·상고는 제3조 "제2조에 따른 금액" 이 제2조 제2항의 100원 절사까지 마친 금액이라 보고
+  // 배수 앞에서 절사한다. 1심(화해·지급명령·조정 포함)은 배수가 1 이라 기존 순서를 그대로 둔다.
+  const isAppeal = appealsMultiplier !== 1;
+  const article2Base = isAppeal
+    ? applyStampDutyRounding(baseLine, dataset.roundingPolicy)
+    : article2Floor;
+  const article2FloorWon = article2Base !== baseLine ? article2Base : null;
+  const article2Note =
+    article2Base === article2Floor ? "제2조 제2항 하한" : "제2조 제2항 100원 절사";
 
   // 2013-11-01 전 조정신청은 "인지법 제2조에 따라 산출한 금액" (같은 조 제2항의 하한·절사까지
   // 마친 금액) 의 5분의 1 이다. 규칙 자체의 하한·절사가 없던 시기라 뒤에서 다시 끊지 않는다.
@@ -513,7 +532,7 @@ function computeStampDutyBase(input: StampDutyInput, deps?: ComputeStampDutyDeps
     ? applyStampDutyRounding(baseLine, dataset.roundingPolicy)
     : null;
 
-  let preRounding = (preAmendmentMediationBaseWon ?? article2Floor) * appealsMultiplier;
+  let preRounding = (preAmendmentMediationBaseWon ?? article2Base) * appealsMultiplier;
 
   // 제7조 제4항은 "제1항과 제2항에 따른 인지액에 관하여는 제2조제2항을 준용한다" 로, 화해·
   // 지급명령 배수를 곱한 **뒤**의 금액에 하한을 다시 건다고 명문화했다. 제3조에는 그런
@@ -531,16 +550,40 @@ function computeStampDutyBase(input: StampDutyInput, deps?: ComputeStampDutyDeps
     preRounding *= electronicMultiplier;
   }
 
-  // 100원 절사는 마지막 한 번만. 절사를 배수·감액 앞으로 옮기는 것은 별개 쟁점이다
-  // (소가 3,350,000 항소에서 25,100 과 25,050 으로 갈리며, 근거가 확정되지 않았다).
+  // 종이 항소·상고는 이미 절사한 금액의 1.5배·2배라 다시 끊지 않는다. 그 밖에는 배수·감액이
+  // 끝난 뒤 100원 절사 (제16조 10분의 9 뒤 절사는 준용 문언이 없지만 현행 동작 유지).
+  const noFinalTruncation = isAppeal && electronicMultiplier === null;
   // 구 조정 슬라이스는 100원 단위 기준 금액 × 5분의 1 (× 10분의 9) 이라 참값이 정수다.
   // float 오차(예: 455,000 × 0.2)만 걷어낸다.
-  const finalAmount = preAmendmentMediation
-    ? Math.round(preRounding)
-    : applyStampDutyRounding(preRounding, {
+  const finalAmount =
+    preAmendmentMediation || noFinalTruncation
+      ? Math.round(preRounding)
+      : applyStampDutyRounding(preRounding, {
+          ...dataset.roundingPolicy,
+          floorMinimumWon: 0,
+        });
+
+  // 다른 해석: 절사 없이 배수·감액을 곱한 뒤 한 번만 절사 (2026-10-25 이전 동작).
+  // 항소·상고에는 특별절차가 붙지 않으므로(validator) 배수와 전자 감액만 곱하면 된다.
+  const alternativeAmount = isAppeal
+    ? applyStampDutyRounding(article2Floor * appealsMultiplier * (electronicMultiplier ?? 1), {
         ...dataset.roundingPolicy,
         floorMinimumWon: 0,
-      });
+      })
+    : finalAmount;
+
+  // 1심 전자 제출(제16조)도 절사 순서가 갈린다. 결정(2026-10-25): 현행(감액 뒤 절사) 유지,
+  // 제2조 제2항 절사를 먼저 마친 금액에 10분의 9 를 곱하고 다시 절사한 금액을 안내한다.
+  const electronicFirstInstanceAlternative =
+    !isAppeal &&
+    electronicMultiplier !== null &&
+    specialMultiplier === null &&
+    !preAmendmentMediation
+      ? applyStampDutyRounding(
+          applyStampDutyRounding(baseLine, dataset.roundingPolicy) * electronicMultiplier,
+          { ...dataset.roundingPolicy, floorMinimumWon: 0 },
+        )
+      : null;
 
   const formulaText = buildFormulaText({
     input: effective,
@@ -552,10 +595,12 @@ function computeStampDutyBase(input: StampDutyInput, deps?: ComputeStampDutyDeps
     electronicMultiplier,
     electronicSkippedNote,
     article2FloorWon,
+    article2Note,
     specialFloorWon,
     preAmendmentMediationBaseWon,
     preRounding,
     finalAmount,
+    noFinalTruncation,
     deemedNote,
   });
 
@@ -564,5 +609,16 @@ function computeStampDutyBase(input: StampDutyInput, deps?: ComputeStampDutyDeps
     formulaText,
     dataVersion: stampDutyVersionTag(dataset),
     computedAt,
+    ...(electronicFirstInstanceAlternative !== null &&
+    electronicFirstInstanceAlternative !== finalAmount
+      ? {
+          roundingOrderNotice: `제16조 10분의 9 를 제2조 금액에 곱한 뒤 100원 절사해 ${won(finalAmount)}원입니다(현행 동작). 제2조 제2항 절사를 먼저 마친 금액에 곱하는 해석으로는 ${won(electronicFirstInstanceAlternative)}원입니다. 제16조에는 절사 순서를 정한 문언이 없습니다.`,
+        }
+      : {}),
+    ...(alternativeAmount !== finalAmount
+      ? {
+          roundingOrderNotice: `제2조 제2항 절사 뒤 제3조 배수를 곱해 ${won(finalAmount)}원입니다. 다른 해석(배수 후 절사)으로는 ${won(alternativeAmount)}원입니다.${electronicMultiplier !== null ? " 제16조 10분의 9 뒤 100원 절사는 현행 동작을 따른 것으로, 제16조에는 절사 준용 문언이 없습니다." : ""}`,
+        }
+      : {}),
   };
 }

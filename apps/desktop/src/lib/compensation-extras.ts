@@ -6,7 +6,7 @@
  * `.lcalc` 에 저장하지 않는다.
  */
 
-import { addDays, addYears, formatCourtDate } from "@lawcalc-kr/core-engine";
+import { addDays, addYears, formatCourtDate, isValidIsoDate } from "@lawcalc-kr/core-engine";
 import {
   buildDelayDamagesOrderText,
   computeDelayDamages,
@@ -33,8 +33,6 @@ import {
 
 import { formatWon, parseWonAmount } from "./format-won";
 import { parseNumberText, readNumber } from "./parse-number";
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function newUid(): string {
   return crypto.randomUUID();
@@ -86,7 +84,7 @@ export function buildLifeExpectancyInput(
   if (!state.enabled) return undefined;
   const input: CompensationLifeExpectancyInput = {};
   if (state.basis === "appraisal") {
-    if (!ISO_DATE.test(state.appraisalDate)) throw new Error("기대여명: 신체감정일을 입력하세요.");
+    if (!isValidIsoDate(state.appraisalDate)) throw new Error("기대여명: 신체감정일을 입력하세요.");
     input.basis = "appraisal";
     input.appraisalDate = state.appraisalDate;
   } else {
@@ -190,8 +188,9 @@ export function buildLostRetirementInput(
   if (state.method === "direct") {
     return { method: "direct", amountWon: parseWonAmount(state.amountText, 0) };
   }
-  if (!ISO_DATE.test(state.retirementDate)) throw new Error("일실퇴직금: 정년예정일을 입력하세요.");
-  if (!ISO_DATE.test(state.separationDate)) throw new Error("일실퇴직금: 퇴직일을 입력하세요.");
+  if (!isValidIsoDate(state.retirementDate))
+    throw new Error("일실퇴직금: 정년예정일을 입력하세요.");
+  if (!isValidIsoDate(state.separationDate)) throw new Error("일실퇴직금: 퇴직일을 입력하세요.");
   let lossRatePercent = 100;
   if (mode === "injury") {
     const value = readNumber(
@@ -511,8 +510,8 @@ export function computeDelayDamagesExport(
 ): { value?: DelayDamagesExport; error?: string } {
   if (!state.enabled) return {};
   const startDate = state.startDate || accidentDate;
-  if (!ISO_DATE.test(state.judgmentDate)) return { error: "판결 선고일을 입력하세요." };
-  if (!ISO_DATE.test(state.endDate)) return { error: "계산 기준일을 입력하세요." };
+  if (!isValidIsoDate(state.judgmentDate)) return { error: "판결 선고일을 입력하세요." };
+  if (!isValidIsoDate(state.endDate)) return { error: "계산 기준일을 입력하세요." };
   try {
     const rows = principals
       .filter((p) => p.won > 0)
@@ -886,12 +885,12 @@ export function computeDocumentExport(
   if (state.format === "judgment") {
     return { value: { scenarios: [], blocks: buildJudgmentBlocks(input, result, delay) } };
   }
-  if (!ISO_DATE.test(state.mediationDate)) return { error: "조정일을 입력하세요." };
+  if (!isValidIsoDate(state.mediationDate)) return { error: "조정일을 입력하세요." };
   if (state.mediationDate < input.base.accidentDate) {
     return { error: "조정일은 사고일 이후여야 합니다." };
   }
   if (state.serviceDate !== "") {
-    if (!ISO_DATE.test(state.serviceDate))
+    if (!isValidIsoDate(state.serviceDate))
       return { error: "소장 송달일 형식이 올바르지 않습니다." };
     if (state.serviceDate < input.base.accidentDate) {
       return { error: "소장 송달일은 사고일 이후여야 합니다." };
@@ -1010,7 +1009,7 @@ export function buildWageScheduleInput(
     if (state.steps.length === 0) throw new Error("호봉승급: 승급 일정을 1건 이상 입력하세요.");
     return {
       incomeSteps: state.steps.map((row, i) => {
-        if (!ISO_DATE.test(row.fromDate)) {
+        if (!isValidIsoDate(row.fromDate)) {
           throw new Error(`호봉승급 ${i + 1}번째: 적용 시작일을 입력하세요.`);
         }
         return { fromDate: row.fromDate, monthlyWageWon: parseWonAmount(row.monthlyText, 0) };

@@ -51,4 +51,9 @@ describe("computeStaleBadge", () => {
     expect(() => computeStaleBadge("2026-01-01", "20260701")).toThrow(RangeError);
     expect(() => computeStaleBadge("2026-13-01", "2026-07-01")).toThrow(RangeError);
   });
+
+  it("존재하지 않는 달력 날짜(2026-02-30)는 거부하고 윤일(2024-02-29)은 받는다", () => {
+    expect(() => computeStaleBadge("2026-02-30", "2026-07-01")).toThrow(RangeError);
+    expect(() => computeStaleBadge("2024-02-29", "2026-07-01")).not.toThrow();
+  });
 });

@@ -283,4 +283,16 @@ describe("buildDelayDamagesOrderText", () => {
     expect(text("2019-06-01")).toContain("특례법이 정한 연 12%");
     expect(text("2019-07-10", "2019-05-20")).toContain("특례법이 정한 연 15%");
   });
+
+  it("존재하지 않는 달력 날짜(2026-02-30)는 거부하고 윤일(2024-02-29)은 받는다", () => {
+    const run = (startDate: string) =>
+      computeDelayDamages({
+        ...base,
+        startDate,
+        judgmentDate: "2026-12-31",
+        endDate: "2026-12-31",
+      });
+    expect(() => run("2026-02-30")).toThrow(RangeError);
+    expect(() => run("2024-02-29")).not.toThrow();
+  });
 });

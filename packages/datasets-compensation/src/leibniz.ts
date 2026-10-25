@@ -1,5 +1,6 @@
 import { DEFAULT_LEIBNIZ_DATASET } from "./leibniz.dataset.generated";
 import type { IsoDate } from "./types";
+import { isRealIsoDate } from "./iso-date";
 
 /**
  * 라이프니츠 복리현가율 표 (월 단위, 할인율 5%/년).
@@ -18,13 +19,11 @@ export interface LeibnizDataset {
   values: number[];
 }
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function validate(dataset: LeibnizDataset): void {
   if (!dataset.version || !dataset.updatedAt) {
     throw new Error("LeibnizDataset: version/updatedAt are required");
   }
-  if (!ISO_DATE_PATTERN.test(dataset.updatedAt)) {
+  if (!isRealIsoDate(dataset.updatedAt)) {
     throw new RangeError(`LeibnizDataset: invalid updatedAt "${dataset.updatedAt}"`);
   }
   if (dataset.values.length !== dataset.monthsCovered) {

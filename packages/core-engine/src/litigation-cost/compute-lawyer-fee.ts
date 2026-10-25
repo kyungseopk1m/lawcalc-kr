@@ -20,7 +20,7 @@ import { validateKoreaLegalAidDiscountScope, validateLawyerFeeInput } from "./va
  *      → { amountWon, multiplier (clamp 후), rawMultiplier, clamped }.
  *      누적 (compound) + clamp [0.0, 1.5] (제6조 제2항 cap).
  *   5. validateKoreaLegalAidDiscountScope(caseType, discounts)  — 비차단 warning. result.koreaLegalAidWarnings 노출.
- *   6. 심급 처리: 본 규칙 제3조 제1항·제4조 제1항 — per_instance_independent. 각 심급마다 별표 그대로
+ *   6. 심급 처리: 본 규칙 제3조 제1항·제4조 제1항, per_instance_independent. 각 심급마다 별표 그대로
  *      적용 (인지법의 ×1.5/×2 누적 배수와 다른 패턴). 항소심/상고심의 소가 = 상소로써 불복하는
  *      범위 — caller 가 input.caseValue 로 입력. engine 은 심급 multiplier 미적용.
  *   7. formulaText 생성 (사건구분 라벨 + 구간 산식 + discount 분기 라벨 + multiplier + clamped + 최종).

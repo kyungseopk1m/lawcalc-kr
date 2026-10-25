@@ -1,5 +1,6 @@
 import { DEFAULT_HOFFMAN_DATASET } from "./hoffman.dataset.generated";
 import type { IsoDate } from "./types";
+import { isRealIsoDate } from "./iso-date";
 
 /**
  * 호프만 단리연금현가율 표 (월 단위, 할인율 5%/년).
@@ -19,13 +20,11 @@ export interface HoffmanDataset {
   values: number[];
 }
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function validate(dataset: HoffmanDataset): void {
   if (!dataset.version || !dataset.updatedAt) {
     throw new Error("HoffmanDataset: version/updatedAt are required");
   }
-  if (!ISO_DATE_PATTERN.test(dataset.updatedAt)) {
+  if (!isRealIsoDate(dataset.updatedAt)) {
     throw new RangeError(`HoffmanDataset: invalid updatedAt "${dataset.updatedAt}"`);
   }
   if (dataset.maxIndex <= 0) {

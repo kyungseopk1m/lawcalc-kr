@@ -7,7 +7,7 @@ import { calculateInterest, type CalcOptions } from "@lawcalc-kr/core-engine";
 import { SegmentTable } from "./SegmentTable";
 
 /**
- * 대조값은 for-claude `personal/lawcalc-kr/docs/data/vk-run-2026-10-20/session-dates.md` 이자 A-3·이율 변경 실측.
+ * 대조값은 외부 계산기로 이자 A-3·이율 변경 구간을 실측한 값.
  * VK 이자 화면은 행마다 원금을 보이고 이자 누계를 행별 절사값의 합으로 쌓는다.
  */
 const PERIOD: CalcOptions = { mode: "period", leapYear: "actual", includeFirstDay: true };

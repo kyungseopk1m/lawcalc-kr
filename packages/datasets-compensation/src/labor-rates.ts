@@ -1,5 +1,6 @@
 import { DEFAULT_LABOR_RATES_DATASET } from "./labor-rates.dataset.generated";
 import type { IsoDate } from "./types";
+import { isRealIsoDate } from "./iso-date";
 
 /**
  * 대한건설협회 시중노임 단가 데이터셋.
@@ -70,10 +71,8 @@ export interface LaborRatesDataset {
   slices: LaborRatesSlice[];
 }
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function validateIsoDate(label: string, value: string): void {
-  if (!ISO_DATE_PATTERN.test(value)) {
+  if (!isRealIsoDate(value)) {
     throw new RangeError(`LaborRatesDataset: invalid ${label} "${value}"`);
   }
 }

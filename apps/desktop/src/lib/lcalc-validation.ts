@@ -9,6 +9,7 @@ import {
   validateLawyerFeeInput,
   validatePeriodInput,
   validateStampDutyInput,
+  isValidIsoDate,
   type AppropriationInput,
   type AppropriationResult,
   type CalcOptions,
@@ -1034,8 +1035,10 @@ function parseExtraHolidays(value: unknown, field: string): ExtraHolidayInput[] 
   return value.map((item, index) => {
     const record = requireRecord(item, `${field}[${index}]`);
     const date = requireString(record.date, `${field}[${index}].date`);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      throw new Error(`.lcalc 파일의 ${field}[${index}].date 필드는 YYYY-MM-DD 형식이어야 합니다.`);
+    if (!isValidIsoDate(date)) {
+      throw new Error(
+        `.lcalc 파일의 ${field}[${index}].date 필드는 YYYY-MM-DD 형식의 실제 날짜여야 합니다.`,
+      );
     }
     const nameKo = requireString(record.nameKo, `${field}[${index}].nameKo`);
     if (nameKo.length > MAX_CASE_TEXT_LENGTH) {

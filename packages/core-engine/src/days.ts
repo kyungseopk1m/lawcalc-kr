@@ -20,6 +20,17 @@ function parseParts(value: IsoDate): { y: number; m: number; d: number } {
   return { y, m, d };
 }
 
+/** 형식과 실제 달력 날짜(2026-02-30 불가)를 모두 만족하는지 검사한다. */
+export function isValidIsoDate(value: unknown): value is IsoDate {
+  if (typeof value !== "string") return false;
+  try {
+    parseParts(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * "YYYY-MM-DD"를 UTC epoch ms로 변환한다. 시간대/DST 영향 배제.
  */

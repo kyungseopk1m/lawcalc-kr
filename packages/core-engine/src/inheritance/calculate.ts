@@ -21,6 +21,7 @@
  * 한국어 toast 메시지 출처: source-extraction-spike-2026-05-09.md 8.3절 (UI strings verbatim).
  */
 
+import { isValidIsoDate } from "../days";
 import { STANDARD_DISCLAIMER } from "../disclaimers";
 import { type BigFraction, simplify, toNumberPair } from "./fraction";
 import { OLD_LAW_DATA_VERSION, OLD_LAW_FROM, hasOldLawFields, oldLawRawShares } from "./old-law";
@@ -36,10 +37,6 @@ const ASCENDANT_UNIT = 2n;
 interface RawShare {
   name: string;
   raw: BigFraction;
-}
-
-function isValidIsoDate(s: string | undefined): s is string {
-  return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
 /** 실제로 지분을 받을 수 있는 대습자 — 생존해 있고 스스로 포기하지도 않은 자. */

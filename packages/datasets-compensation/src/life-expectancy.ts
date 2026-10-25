@@ -1,5 +1,6 @@
 import { DEFAULT_LIFE_EXPECTANCY_DATASET } from "./life-expectancy.dataset.generated";
 import type { IsoDate } from "./types";
+import { isRealIsoDate } from "./iso-date";
 
 /**
  * 통계청 생명표.
@@ -54,10 +55,8 @@ export interface LifeExpectancyDataset {
   years: LifeExpectancyYear[];
 }
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function validateIsoDate(label: string, value: string): void {
-  if (!ISO_DATE_PATTERN.test(value)) {
+  if (!isRealIsoDate(value)) {
     throw new RangeError(`LifeExpectancyDataset: invalid ${label} "${value}"`);
   }
 }

@@ -13,7 +13,7 @@ import {
   type LawyerFeeRuleVersionKey,
 } from "../src";
 
-// 손계산: for-claude personal/lawcalc-kr/docs/plans/vk-p46-cost-assessment-derivation-2026-10-25.md
+// 기대값은 소송비용액 확정 산식을 손계산하여 도출했다.
 const AT = "2026-10-25T00:00:00.000Z";
 
 const none: CostAssessmentPartyCostsInput = {
@@ -288,5 +288,24 @@ describe("lawyer-fee dataset 연혁 검증", () => {
     const ds = loadLawyerFeeDataset();
     const broken = { ...ds, ruleVersions: ds.ruleVersions.slice().reverse() };
     expect(() => loadLawyerFeeDataset(broken)).toThrow(/ascending/);
+  });
+});
+
+describe("접수일 달력 검증", () => {
+  const run = (d: string) =>
+    computeCostAssessment(
+      {
+        instances: [instance(d, 10_000_000)],
+        burden: { plaintiff: 1, defendant: 0 },
+        applicant: "plaintiff",
+        opponentSubmitted: true,
+      },
+      { computedAt: AT },
+    );
+  it("존재하지 않는 날짜는 거부한다", () => {
+    expect(() => run("2026-02-30")).toThrow(RangeError);
+  });
+  it("윤일은 허용한다", () => {
+    expect(() => run("2024-02-29")).not.toThrow();
   });
 });

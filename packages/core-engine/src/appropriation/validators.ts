@@ -1,3 +1,4 @@
+import { isValidIsoDate } from "../days";
 import type {
   AllocationTarget,
   AppropriationAllocationDirective,
@@ -7,7 +8,6 @@ import type {
 } from "./types";
 
 const ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_CLAIMS = 50;
 const MAX_NAME_LENGTH = 200;
 const MAX_PAYMENTS = 200;
@@ -73,7 +73,7 @@ export function validateAppropriationInput(input: AppropriationInput): void {
     }
   }
 
-  if (input.computedAt !== undefined && !ISO_DATE_PATTERN.test(input.computedAt)) {
+  if (input.computedAt !== undefined && !isValidIsoDate(input.computedAt)) {
     throw new RangeError(`${PREFIX}: computedAt 은 YYYY-MM-DD 형식이어야 합니다.`);
   }
 }
@@ -105,7 +105,7 @@ function validateClaim(claim: AppropriationClaimInput): void {
       `${PREFIX}: 채권 ${claim.id} 의 interestBalance`,
     );
   }
-  if (typeof claim.dueAt !== "string" || !ISO_DATE_PATTERN.test(claim.dueAt)) {
+  if (typeof claim.dueAt !== "string" || !isValidIsoDate(claim.dueAt)) {
     throw new RangeError(`${PREFIX}: 채권 ${claim.id} 의 dueAt 은 YYYY-MM-DD 형식이어야 합니다.`);
   }
   if (claim.debtorBenefitRank !== undefined) {
@@ -134,7 +134,7 @@ function validateClaimInterest(claim: AppropriationClaimInput): void {
       throw new RangeError(`${label} interestRate 는 0 초과 1 이하(연 100% 이하)여야 합니다.`);
     }
   }
-  if (claim.interestFrom !== undefined && !ISO_DATE_PATTERN.test(claim.interestFrom)) {
+  if (claim.interestFrom !== undefined && !isValidIsoDate(claim.interestFrom)) {
     throw new RangeError(`${label} interestFrom 은 YYYY-MM-DD 형식이어야 합니다.`);
   }
   const limit = claim.interestLimitAct;
@@ -149,7 +149,7 @@ function validateClaimInterest(claim: AppropriationClaimInput): void {
   if (limit === null || typeof limit !== "object") {
     throw new RangeError(`${label} interestLimitAct 는 객체여야 합니다.`);
   }
-  if (typeof limit.agreedAt !== "string" || !ISO_DATE_PATTERN.test(limit.agreedAt)) {
+  if (typeof limit.agreedAt !== "string" || !isValidIsoDate(limit.agreedAt)) {
     throw new RangeError(`${label} 약정일(agreedAt)은 YYYY-MM-DD 형식이어야 합니다.`);
   }
   if (prepaid !== undefined) {
@@ -175,7 +175,7 @@ function validatePayment(payment: AppropriationPaymentInput, claimIds: Set<strin
   ) {
     throw new RangeError(`${PREFIX}: payment.amount 는 1 이상 정수여야 합니다.`);
   }
-  if (payment.paidAt !== undefined && !ISO_DATE_PATTERN.test(payment.paidAt)) {
+  if (payment.paidAt !== undefined && !isValidIsoDate(payment.paidAt)) {
     throw new RangeError(`${PREFIX}: payment.paidAt 은 YYYY-MM-DD 형식이어야 합니다.`);
   }
   if (payment.kind !== undefined && payment.kind !== "payment" && payment.kind !== "setoff") {

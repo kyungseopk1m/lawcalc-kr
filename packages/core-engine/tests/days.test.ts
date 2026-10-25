@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "../src";
+import {
+  addDays,
+  addYears,
+  containsLeapDay,
+  countDays,
+  daysInYear,
+  isLeapYear,
+  isValidIsoDate,
+} from "../src";
 
 describe("countDays", () => {
   it("includes the end date and respects includeFirstDay=false (default 실무)", () => {
@@ -114,5 +122,14 @@ describe("addDays / addYears", () => {
     expect(addYears("2024-02-29", 1)).toBe("2025-02-28");
     expect(addYears("2024-02-29", 4)).toBe("2028-02-29");
     expect(addYears("2023-05-01", 1)).toBe("2024-05-01");
+  });
+});
+
+describe("isValidIsoDate", () => {
+  it("형식뿐 아니라 실제 달력 날짜를 요구한다", () => {
+    expect(isValidIsoDate("2024-02-29")).toBe(true);
+    expect(isValidIsoDate("2026-02-30")).toBe(false);
+    expect(isValidIsoDate("2025-02-29")).toBe(false);
+    expect(isValidIsoDate("2026-13-01")).toBe(false);
   });
 });

@@ -248,3 +248,85 @@ describe("고유 위자료 - 약관 기준 과실 적용과 상속인 아닌 유
     expect(on.claimants?.[1]).toMatchObject({ solatiumWon: 1_000_001, amountWon: 800_000 });
   });
 });
+
+// 산재 장의비: 산재 수급자의 제3자 상대 청구에서 같은 성질의 손해(장례비)에서 먼저 빼고 과실상계한다
+// (대법원 2022. 4. 14. 선고 2021다252472 이유 3.가, 2021다241618 전원합의체 인용).
+// 1950년생 망인은 사고일에 가동이 끝나 일실수입 0, 장례비 5,000,000원만 남는 입력이다.
+describe("사망 원고별 귀속 - 산재 장의비 공제 후 과실상계", () => {
+  const run = (
+    faultRatio: number,
+    funeralBenefitWon: number | undefined,
+    over: {
+      [K in keyof CompensationAutoDeathInput]?: CompensationAutoDeathInput[K] | undefined;
+    } = {},
+  ) =>
+    computeCompensationDeath(
+      {
+        mode: "death",
+        accidentType: "industrial",
+        base: { birthDate: "1950-01-01", accidentDate: "2025-03-01", sex: "male" },
+        lostIncome: { directWageWon: 1 },
+        funeralExpenseWon: 5_000_000,
+        faultRatio,
+        heirs: {
+          decedent: { deceasedAt: "2025-03-01" },
+          spouse: { name: "배우자", alive: true },
+          linealDescendants: [{ name: "자녀", deceasedBeforeOpening: false }],
+        },
+        claimants: { funeralPayer: "배우자", finalRounding: "won" },
+        ...(funeralBenefitWon !== undefined ? { industrialInsurance: { funeralBenefitWon } } : {}),
+        ...over,
+      } as CompensationAutoDeathInput,
+      { now: NOW },
+    );
+  const payer = (r: ReturnType<typeof run>) => r.inheritanceShares?.[0];
+
+  it.each([
+    // [과실, 장의비, 장례비 손해, 공제액]  장례비 손해 = floor((5,000,000 - min(장의비, 5,000,000)) × (1 - 과실))
+    [0.2, 1_000_000, 3_200_000, 1_000_000], // 보고서 재현값 (종전 3,000,000)
+    [0.2, 0, 4_000_000, 0],
+    [0.2, 5_000_000, 0, 5_000_000],
+    [0.2, 7_000_000, 0, 5_000_000],
+    [0, 1_000_000, 4_000_000, 1_000_000],
+    [1, 1_000_000, 0, 1_000_000],
+    [1, 0, 0, 0],
+  ])("과실 %s, 장의비 %s원 → 장례비 손해 %s원 (공제 %s원)", (fault, benefit, funeral, deducted) => {
+    const r = run(fault, benefit);
+    expect(payer(r)?.funeralWon).toBe(funeral);
+    expect(payer(r)?.funeralBenefitDeductedWon).toBe(deducted);
+    expect(payer(r)?.amountWon).toBe(funeral);
+    expect(r.inheritanceShares?.[1]?.amountWon).toBe(0);
+    expect(r.inheritanceShares?.[1]?.funeralBenefitDeductedWon).toBeUndefined();
+    expect(r.finalWon).toBe(funeral);
+    expect(r.faultOffset.beforeWon).toBe(5_000_000 - deducted);
+    expect(r.faultOffset.afterWon).toBe(funeral);
+  });
+
+  it("장의비가 장례비를 넘어도 남는 몫은 망인 위자료·다른 상속인 몫을 깎지 않는다", () => {
+    const r = run(0.2, 7_000_000, { solatiumWon: 10_000_000 });
+    const [spouse, child] = r.inheritanceShares ?? [];
+    expect(spouse?.amountWon).toBe(6_000_000); // 위자료 10,000,000 × 3/5, 장례비 0
+    expect(child?.amountWon).toBe(4_000_000);
+    expect(r.finalWon).toBe(10_000_000);
+  });
+
+  it("수급권자형(상속인별 유족급여) 경로도 같은 순서다", () => {
+    const r = run(0.2, 1_000_000, {
+      industrialInsurance: {
+        funeralBenefitWon: 1_000_000,
+        recipients: [{ heirName: "배우자", survivorBenefitWon: 0 }],
+      },
+    });
+    expect(payer(r)?.funeralWon).toBe(3_200_000);
+    expect(r.finalWon).toBe(3_200_000);
+  });
+
+  it("지출 상속인 미지정: 장의비 입력은 거부하고(조용히 버리지 않음), 장의비 없으면 장례비를 상속분대로 나눈다", () => {
+    const noPayer = { claimants: { finalRounding: "won" as const } };
+    expect(() => run(0.2, 1_000_000, noPayer)).toThrow(/funeralPayer/);
+    expect(() => run(0.2, 1_000_000, { claimants: undefined })).toThrow(/funeralPayer/);
+    const r = run(0.2, undefined, noPayer);
+    expect(r.inheritanceShares?.map((s) => s.funeralWon)).toEqual([2_400_000, 1_600_000]);
+    expect(r.finalWon).toBe(4_000_000);
+  });
+});

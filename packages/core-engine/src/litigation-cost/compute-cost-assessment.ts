@@ -1,3 +1,4 @@
+import { isValidIsoDate } from "../days";
 import { STANDARD_DISCLAIMER } from "../disclaimers";
 import type { IsoDate } from "../types";
 import { computeDeliveryFee } from "./compute-delivery-fee";
@@ -432,8 +433,10 @@ export function computeCostAssessment(
   const warnings: string[] = [];
   const instances = input.instances.map((instance, i): CostAssessmentInstanceResult => {
     const label = `${i + 1}번째 심급(${LEVEL_LABEL[instance.level] ?? String(instance.level)})`;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(instance.filingDate)) {
-      fail(`${label} 접수일이 YYYY-MM-DD 형식이 아닙니다 (입력: ${String(instance.filingDate)})`);
+    if (!isValidIsoDate(instance.filingDate)) {
+      fail(
+        `${label} 접수일이 실제 달력의 YYYY-MM-DD 날짜가 아닙니다 (입력: ${String(instance.filingDate)})`,
+      );
     }
     assertWon(instance.caseValue, `${label} 소가`);
     const fee = computeInstanceLawyerFee(dataset, instance);

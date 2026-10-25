@@ -593,6 +593,13 @@ describe("computeStampDuty / 전자소송 감액 filingDate 게이트 (제16조 
       computeStampDuty(input({ isElectronicFiling: true, filingDate: "2011/10/19" })),
     ).toThrow(/접수일이 ISO 형식이 아닙니다/);
   });
+
+  it("존재하지 않는 접수일 거부, 윤일 허용", () => {
+    expect(() => computeStampDuty(input({ filingDate: "2026-02-30" }))).toThrow(
+      /접수일이 ISO 형식이 아닙니다/,
+    );
+    expect(() => computeStampDuty(input({ filingDate: "2024-02-29" }))).not.toThrow();
+  });
 });
 
 /**
@@ -651,10 +658,20 @@ describe("computeStampDuty / 제2조 제2항 하한과 배수의 순서", () => 
     expect(at(50_000_000, "supreme")).toBe(460_000);
   });
 
-  it("100원 절사 순서는 건드리지 않았다 — 소가 3,350,000 항소 = 25,100", () => {
-    // 16,750 × 1.5 = 25,125 → 100원 절사 = 25,100.
-    // 절사를 배수 앞으로 옮기면 floor100(16,750) × 1.5 = 25,050 이 되는데 그건 별개 쟁점이다.
-    expect(at(3_350_000, "appeal")).toBe(25_100);
+  it("항소는 제2조 제2항 절사 뒤 제3조 배수: 소가 3,350,000 항소 = 25,050", () => {
+    // 인지법 제2조 제2항(100원 미만 계산하지 않음)을 마친 16,700원의 1.5배(제3조).
+    // 2026-10-25 결정 전에는 배수 뒤 한 번 절사해 25,100원이었다(다른 해석으로 안내).
+    expect(at(3_350_000, "appeal")).toBe(25_050);
+  });
+
+  it("1심 전자 제출은 현행(감액 뒤 절사)을 유지하고, 절사 먼저 해석이 다르면 안내한다", () => {
+    // 소가 23,150,000: 제2조 금액 23,150,000 × 0.0045 + 5,000 = 109,175.
+    // 현행: 109,175 × 0.9 = 98,257.5 → 98,200. 절사 먼저: 109,100 × 0.9 = 98,190 → 98,100.
+    const r = computeStampDuty(input({ caseValue: 23_150_000, isElectronicFiling: true }), {
+      computedAt: FROZEN_AT,
+    });
+    expect(r.amount).toBe(98_200);
+    expect(r.roundingOrderNotice).toContain("98,100");
   });
 
   it("항소 + 전자소송도 배수와 감액이 둘 다 살아난다", () => {
@@ -687,6 +704,46 @@ describe("computeStampDuty / 제2조 제2항 하한과 배수의 순서", () => 
     });
     expect(r.formulaText).toContain("= 1,000원 (제2조 제2항 하한)");
     expect(r.formulaText).toContain("= 1,000원 (제7조 제4항 하한)");
+  });
+});
+
+/**
+ * 항소·상고: 제2조 제2항(하한 + 100원 절사)을 마친 금액에 제3조 배수를 곱한다 (2026-10-25 결정).
+ * 배수 뒤에 한 번 절사하는 해석과 갈리면 roundingOrderNotice 로 다른 해석의 금액을 알린다.
+ */
+describe("computeStampDuty / 항소·상고 절사 후 배수 (제2조 제2항 → 제3조)", () => {
+  const run = (overrides: Partial<StampDutyInput>) =>
+    computeStampDuty(input(overrides), { computedAt: FROZEN_AT });
+
+  it("소가 3,350,000 항소: floor100(16,750) × 1.5 = 25,050, 다른 해석 25,100 고지", () => {
+    const r = run({ caseValue: 3_350_000, appealsLevel: "appeal" });
+    expect(r.amount).toBe(25_050);
+    expect(r.formulaText).toContain("= 16,700원 (제2조 제2항 100원 절사) × 1.5");
+    expect(r.roundingOrderNotice).toContain("다른 해석(배수 후 절사)으로는 25,100원");
+  });
+
+  it("소가 3,350,000 상고: 16,700 × 2 = 33,400, 다른 해석 33,500 고지", () => {
+    const r = run({ caseValue: 3_350_000, appealsLevel: "supreme" });
+    expect(r.amount).toBe(33_400);
+    expect(r.roundingOrderNotice).toContain("33,500원");
+  });
+
+  it("끝수가 50 미만이면 두 해석이 같아 고지가 없다 (소가 3,330,000 항소 24,900)", () => {
+    // 16,650 → 16,600 × 1.5 = 24,900 / 16,650 × 1.5 = 24,975 → 24,900.
+    const r = run({ caseValue: 3_330_000, appealsLevel: "appeal" });
+    expect(r.amount).toBe(24_900);
+    expect(r.roundingOrderNotice).toBeUndefined();
+  });
+
+  it("항소 + 전자: 25,050 × 0.9 = 22,545 → 22,500 (마지막 절사는 현행 유지), 다른 해석 22,600", () => {
+    const r = run({ caseValue: 3_350_000, appealsLevel: "appeal", isElectronicFiling: true });
+    expect(r.amount).toBe(22_500);
+    expect(r.roundingOrderNotice).toContain("22,600원");
+    expect(r.roundingOrderNotice).toContain("제16조");
+  });
+
+  it("1심은 배수가 없어 고지가 없다", () => {
+    expect(run({ caseValue: 3_350_000 }).roundingOrderNotice).toBeUndefined();
   });
 });
 

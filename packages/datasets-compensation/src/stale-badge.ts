@@ -1,4 +1,5 @@
 import type { IsoDate } from "./types";
+import { isRealIsoDate } from "./iso-date";
 
 /**
  * 데이터셋 스냅샷 경과 상태 안내.
@@ -19,13 +20,11 @@ export interface StaleBadgeResult {
   overrideStrongly: boolean;
 }
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 const NEUTRAL_MAX_MONTHS = 6;
 const AMBER_MAX_MONTHS = 12;
 
 function parseIsoDate(label: string, value: IsoDate): Date {
-  if (!ISO_DATE_PATTERN.test(value)) {
+  if (!isRealIsoDate(value)) {
     throw new RangeError(`computeStaleBadge: invalid ${label} "${value}"`);
   }
   const parts = value.split("-").map((part) => Number.parseInt(part, 10));

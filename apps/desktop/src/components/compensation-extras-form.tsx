@@ -699,8 +699,10 @@ export function DeathClaimantsCard({
                 onChange={(e) => patch({ funeralBenefitText: parseWonText(e.target.value) })}
               />
               <span className="text-xs font-normal text-muted-foreground">
-                장례비를 지출한 상속인의 장례비 손해에서만 그 금액을 한도로 공제합니다 (대법원 2022.
-                3. 24. 선고 2021다241618 전원합의체). 장례비 지출 상속인을 골라야 합니다.
+                산재 수급자가 제3자(가해자)를 상대로 청구하는 경우를 전제로, 장례비를 지출한
+                상속인의 장례비 손해에서만 그 금액을 한도로 먼저 빼고 과실상계합니다 (대법원 2022.
+                4. 14. 선고 2021다252472, 2021다241618 전원합의체 인용). 장례비 지출 상속인을 골라야
+                합니다.
               </span>
             </label>
           ) : null}
@@ -806,9 +808,7 @@ export function DeathClaimantsTable({ result }: { result: CompensationAutoDeathR
                 <td className="py-2 text-right">{formatWon(s.ownSolatiumWon ?? 0)}</td>
                 <td className="py-2 text-right">{formatWon(s.funeralWon ?? 0)}</td>
                 {benefit ? (
-                  <td className="py-2 text-right">
-                    {formatWon(-(s.funeralBenefitDeductedWon ?? 0))}
-                  </td>
+                  <td className="py-2 text-right">{formatWon(s.funeralBenefitDeductedWon ?? 0)}</td>
                 ) : null}
                 <td className="py-2 text-right">{formatWon(s.amountWon)}</td>
               </tr>
@@ -836,6 +836,11 @@ export function DeathClaimantsTable({ result }: { result: CompensationAutoDeathR
           상속분 곱셈의 원 미만은 버리고 나머지 원은 배정하지 않아, 원고별 최종액의 합이 상속대상
           금액보다 몇 원 적을 수 있습니다.
         </p>
+        {benefit ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            장례비 열은 장의비 공제 열의 금액을 먼저 뺀 뒤 과실상계한 금액입니다.
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -963,7 +968,7 @@ export function DocumentTextCard({
   return (
     <SectionCard
       title="조정안·판결 이유 형식 문단 (선택)"
-      hint="계산 결과를 조정안 또는 판결 이유 형식의 문단과 별지 일실수입 계산표로 정리합니다. 조정안은 피고 책임비율을 가감 폭만큼 올리고 내린 금액과, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적습니다. 소장 송달일을 넣으면 그 다음 날부터 조정일까지는 소송촉진 등에 관한 특례법 이율(개정 연혁대로)을 적용합니다. 이자는 위자료·장례비를 포함한 최종액 전부에 사고일부터 붙입니다. 불법행위로 인한 손해배상채무는 불법행위일부터 지체책임이 생긴다는 판례 입장에 따른 것이므로, 기산일이 다른 항목은 지연손해금 카드의 기산일 칸을 바꿔 따로 계산하세요. 조정일은 이자 끝날로만 쓰고 일실수입 현가는 사고일 기준 그대로입니다. 복사·PDF·CSV에 함께 실리며 파일에 저장하지 않습니다."
+      hint="계산 결과를 조정안 또는 판결 이유 형식의 문단과 별지 일실수입 계산표로 정리합니다. 조정안은 피고 책임비율을 가감 폭만큼 올리고 내린 금액과, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적습니다. 소장 송달일을 넣으면 그 다음 날부터 조정일까지는 소송촉진 등에 관한 특례법 이율(개정 연혁대로)을 적용합니다. 이는 피고가 이행의무의 존부나 범위를 다투는 것이 타당한 범위가 없다고 본 가정이므로(같은 법 제3조 제2항), 사건에서 그 범위가 다르면 송달일 칸을 비우거나 바꾸세요. 조정안 금액은 합의를 위한 시나리오이고 확정된 배상액이 아닙니다. 이자는 위자료·장례비를 포함한 최종액 전부에 사고일부터 붙입니다. 불법행위로 인한 손해배상채무는 불법행위일부터 지체책임이 생긴다는 판례 입장에 따른 것이므로, 기산일이 다른 항목은 지연손해금 카드의 기산일 칸을 바꿔 따로 계산하세요. 조정일은 이자 끝날로만 쓰고 일실수입 현가는 사고일 기준 그대로입니다. 복사·PDF·CSV에 함께 실리며 파일에 저장하지 않습니다."
       enabled={value.enabled}
       toggleLabel="문단 만들기"
       onToggle={(enabled) => patch({ enabled })}

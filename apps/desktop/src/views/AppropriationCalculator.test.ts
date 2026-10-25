@@ -261,7 +261,7 @@ describe("변제일 (paidAt) 왕복 [APP-3]", () => {
 });
 
 /**
- * P5-4 — 여러 번 변제·상계·이자·이자제한법. 새 키가 있을 때만 `appropriation@3`.
+ * P5-4: 여러 번 변제·상계·이자·이자제한법. 새 키가 있을 때만 `appropriation@3`.
  */
 describe("여러 번 변제·이자 왕복 [P5-4]", () => {
   const loanClaim = claim({

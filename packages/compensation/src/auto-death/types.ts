@@ -100,8 +100,11 @@ export interface CompensationIndustrialInsuranceDeath {
   recipients?: CompensationSurvivorBenefitRecipient[];
   /**
    * 장의비(산업재해보상보험법 제71조 장례비 급여, 원, ≥ 0 정수). `claimants.funeralPayer` 가 있어야 한다.
-   * 장례비를 지출한 원고의 장례비 손해(책임비율 반영 후)에서만 그 금액을 한도로 공제하고, 넘는 부분은
-   * 다른 손해에서 빼지 않는다 (대법원 2022. 3. 24. 선고 2021다241618 전원합의체: 장의비는 장례비와만 대응).
+   * 장례비를 지출한 원고의 장례비 손해에서만 그 금액을 한도로 **과실상계 전에** 공제하고, 넘는 부분은
+   * 다른 손해에서 빼지 않는다: floor((장례비 - min(장의비, 장례비)) × (1 - 과실)).
+   * 산재 수급자가 제3자(가해자)를 상대로 청구하는 경우를 전제로 한다 (대법원 2022. 4. 14. 선고
+   * 2021다252472 이유 3.가, 2021다241618 전원합의체 인용: 같은 성질의 손해에서 보험급여를 먼저 공제한 뒤
+   * 과실상계). 지출 상속인 없이 입력하면 거부한다 (상속분대로 나눈 장례비에서 조용히 빠지지 않게).
    */
   funeralBenefitWon?: number;
 }
@@ -231,7 +234,7 @@ export interface CompensationInheritanceShare {
   denominator: number;
   /**
    * 배정 금액 (원, 정수). 합계는 finalWon 과 일치한다. `claimants` 입력 시에는 원고별 최종액
-   * = `inheritedPecuniaryWon + inheritedSolatiumWon + ownSolatiumWon + funeralWon - funeralBenefitDeductedWon`
+   * = `inheritedPecuniaryWon + inheritedSolatiumWon + ownSolatiumWon + funeralWon`
    * 에 `finalRounding` 을 적용한 값.
    */
   amountWon: number;
@@ -246,9 +249,12 @@ export interface CompensationInheritanceShare {
   inheritedSolatiumWon?: number;
   /** 고유 위자료 (원). `claimants` 입력 시에만. */
   ownSolatiumWon?: number;
-  /** 장례비 손해(책임비율 반영 후, 장의비 공제 전, 원). `claimants` 입력 시에만. */
+  /** 장례비 손해(지출 원고는 장의비 공제 후 책임비율 반영, 원). `claimants` 입력 시에만. */
   funeralWon?: number;
-  /** 장의비 공제 (원). `industrialInsurance.funeralBenefitWon` 입력 시 장례비 지출 원고 행에만. */
+  /**
+   * 과실상계 전에 장례비에서 뺀 장의비 (원, 표시용: `funeralWon` 에 이미 반영).
+   * `industrialInsurance.funeralBenefitWon` 입력 시 장례비 지출 원고 행에만.
+   */
   funeralBenefitDeductedWon?: number;
 }
 

@@ -1,3 +1,4 @@
+import { isValidIsoDate } from "./days";
 import { DEFAULT_INTEREST_LIMITS_DATASET } from "./interest-limits.dataset.generated";
 import type { IsoDate } from "./types";
 
@@ -41,11 +42,9 @@ export interface InterestLimitDataset {
 
 const DEFAULT_DATASET: InterestLimitDataset = DEFAULT_INTEREST_LIMITS_DATASET;
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 function assertIsoDate(value: string, context: string): void {
-  if (!ISO_DATE_PATTERN.test(value)) {
-    throw new RangeError(`${context}: invalid ISO date "${value}"`);
+  if (!isValidIsoDate(value)) {
+    throw new RangeError(`${context}: invalid ISO date "${String(value)}"`);
   }
 }
 
