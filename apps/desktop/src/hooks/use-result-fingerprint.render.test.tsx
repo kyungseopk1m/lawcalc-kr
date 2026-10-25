@@ -279,7 +279,8 @@ describe("열기 → 계산 왕복: 표시값과 지문이 그대로다", () => 
   });
 });
 
-describe("손해배상 사건 파일: 부상·사망 두 view 를 함께 마운트한 뒤", () => {
+// 두 손해배상 view 를 함께 마운트해 CI 러너에서 기본 5초를 넘긴다.
+describe("손해배상 사건 파일: 부상·사망 두 view 를 함께 마운트한 뒤", { timeout: 30_000 }, () => {
   type CaseFile = {
     payload: { calculations: { compensation?: { payload: { input: { mode?: string } } } } };
   };
