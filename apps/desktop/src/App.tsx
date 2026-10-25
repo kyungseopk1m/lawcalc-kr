@@ -55,6 +55,7 @@ import { SegmentTable } from "./components/result/SegmentTable";
 import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
+import { Notice } from "./components/ui/notice";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { useFormShortcuts } from "./hooks/use-form-shortcuts";
 import { useResultFingerprint } from "./hooks/use-result-fingerprint";
@@ -816,7 +817,7 @@ export function App() {
 
       <nav className="border-b border-border bg-background">
         <div
-          className="mx-auto flex w-full max-w-6xl flex-wrap gap-1 px-4 py-2 sm:px-6"
+          className="mx-auto flex w-full max-w-7xl flex-wrap gap-1 px-4 py-2 sm:px-6"
           role="tablist"
         >
           {TABS.map((tab) => (
@@ -873,7 +874,7 @@ export function App() {
       </nav>
 
       {caseToast ? (
-        <div className="mx-auto w-full max-w-6xl px-4 pt-3 sm:px-6">
+        <div className="mx-auto w-full max-w-7xl px-4 pt-3 sm:px-6">
           <ToastMessage toast={caseToast} onDismiss={() => setCaseToast(null)} />
         </div>
       ) : null}
@@ -936,7 +937,7 @@ export function App() {
             두 개로 읽는다. 패널은 입력 상태를 지키려고 계속 마운트해 둔다. */}
         {activeTab === "tools" ? (
           <div
-            className="mx-auto flex w-full max-w-6xl flex-wrap gap-1 px-4 pt-3 sm:px-6"
+            className="mx-auto flex w-full max-w-7xl flex-wrap gap-1 px-4 pt-3 sm:px-6"
             role="tablist"
             aria-label="도구"
             // WAI-ARIA 탭 패턴: 탭 순서에는 선택된 탭 하나만 두고(roving tabindex), 좌우 화살표와
@@ -995,7 +996,7 @@ export function App() {
       {/* 이자 탭의 패널은 이 `main` 자체다. `role="tabpanel"` 을 씌우면 main 랜드마크가
           사라지므로 id 와 라벨만 연결한다 (탭의 `aria-controls` 는 그대로 가리킨다). */}
       <main
-        className={`mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)] ${
+        className={`mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)] ${
           activeTab === "interest" ? "" : "hidden"
         }`}
         id="tabpanel-interest"
@@ -1051,31 +1052,29 @@ export function App() {
                   onChange={(event) => setNote(event.target.value)}
                 />
               </label>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  ref={calculateButtonRef}
-                  type="button"
-                  disabled={hasErrors}
-                  onClick={() => handleCalculate()}
-                >
-                  계산
-                </Button>
-                <Button type="button" variant="outline" onClick={handleReset}>
-                  초기화
-                </Button>
+              <div className="grid gap-2">
+                {calculationError ? <Notice tone="error">{calculationError}</Notice> : null}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    ref={calculateButtonRef}
+                    type="button"
+                    disabled={hasErrors}
+                    onClick={() => handleCalculate()}
+                  >
+                    계산
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleReset}>
+                    초기화
+                  </Button>
+                </div>
               </div>
-              {calculationError ? (
-                <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-                  {calculationError}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
         </section>
 
         <section
           ref={resultSectionRef}
-          className="space-y-4 focus:outline-none"
+          className="result-column space-y-4 focus:outline-none"
           aria-labelledby="result-title"
           tabIndex={-1}
         >
@@ -1135,7 +1134,7 @@ export function App() {
                   action="claim"
                   disabled={resultStale}
                   icon={Clipboard}
-                  label="복사"
+                  label="청구취지 복사"
                   loadingAction={loadingAction}
                   variant="outline"
                   onClick={handleCopyClaim}
@@ -1144,13 +1143,9 @@ export function App() {
             </CardContent>
           </Card>
 
-          <div
-            className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
-            data-testid="interest-disclaimer"
-          >
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <Notice tone="info" testId="interest-disclaimer">
             <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-          </div>
+          </Notice>
 
           <Card>
             <CardHeader>
@@ -1160,7 +1155,16 @@ export function App() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <ActionButton
+                  action="copy"
+                  disabled={resultStale}
+                  icon={Clipboard}
+                  label="결과 복사"
+                  loadingAction={loadingAction}
+                  variant="outline"
+                  onClick={handleCopy}
+                />
                 <ActionButton
                   action="pdf"
                   disabled={resultStale}
@@ -1188,15 +1192,7 @@ export function App() {
                   variant="secondary"
                   onClick={handleExportCsv}
                 />
-                <ActionButton
-                  action="copy"
-                  disabled={resultStale}
-                  icon={Clipboard}
-                  label="복사"
-                  loadingAction={loadingAction}
-                  variant="outline"
-                  onClick={handleCopy}
-                />
+                <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
                 <ActionButton
                   action="save"
                   disabled={resultStale}

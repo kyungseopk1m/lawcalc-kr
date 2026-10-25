@@ -133,7 +133,7 @@ export function DeliveryCodePanel({
               </label>
             </div>
             {row.codes.some((c) => c === "타채" || c === "타기") ? (
-              <p className="text-xs text-amber-900 dark:text-amber-200">
+              <p className="text-xs text-muted-foreground">
                 제3채무자도 송달받는 당사자이므로 당사자 수에 넣으세요. 송달할 필요가 없으면 납부
                 대상에서 빠집니다.
               </p>

@@ -1,4 +1,4 @@
-import { CheckCircle2, Info, Scale } from "lucide-react";
+import { Scale } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -18,6 +18,7 @@ import {
 import { Button } from "../components/ui/button";
 import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { todayIso } from "../lib/today";
@@ -81,7 +82,7 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
   useFormShortcuts({ onReset: handleReset, enabled: active });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[420px_minmax(0,1fr)]">
       <Card className="content-start">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm">우편번호 찾기</CardTitle>
@@ -109,10 +110,9 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
               초기화
             </Button>
           </div>
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <Notice tone="info">
             <span>{CAVEAT}</span>
-          </div>
+          </Notice>
           <p className="text-xs text-muted-foreground" data-testid="postal-snapshot">
             데이터 {postalCodesVersionTag(DATASET)} · 우정사업본부 우편번호 DB {DATASET.baseDate}{" "}
             기준({DATASET.noticeDate} 고시) · 스냅샷 {DATASET.snapshotDate} · 읍·면·동{" "}
@@ -123,7 +123,7 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
         </CardContent>
       </Card>
 
-      <div className="grid content-start gap-4">
+      <div className="result-column grid content-start gap-4">
         {result.mode !== null ? (
           <Card>
             <CardHeader className="p-4 pb-2">
@@ -222,10 +222,9 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
                   )}
                 </div>
               ) : null}
-              <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <Notice tone="info">
                 <span>{STANDARD_DISCLAIMER}</span>
-              </div>
+              </Notice>
             </CardContent>
           </Card>
         ) : null}

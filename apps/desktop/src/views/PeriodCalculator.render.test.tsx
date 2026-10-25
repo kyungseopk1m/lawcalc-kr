@@ -64,6 +64,8 @@ describe("기간 계산 결과 노출", () => {
 
     expect(screen.getByTestId("period-extension-status").textContent).toContain("익일로 연장");
     expect(screen.getByTestId("period-adjustment-reason").textContent).toContain("제161조 적용");
+    // 정상 연장 사유는 법령 설명이라 회색이다.
+    expect(screen.getByTestId("period-adjustment-reason").dataset.tone).toBe("info");
   });
 
   it("커버리지 밖 만료일은 만료일을 내되 판정하지 못했다고 알린다", () => {
@@ -80,6 +82,7 @@ describe("기간 계산 결과 노출", () => {
     expect(screen.getByTestId("period-adjustment-reason").textContent).toContain(
       "제161조 판정 불가",
     );
+    expect(screen.getByTestId("period-adjustment-reason").dataset.tone).toBe("warn");
   });
 
   it("2008-03-22 이전 토요일 말일은 커버리지 안이어도 판정하지 못한 사유를 함께 낸다", () => {
@@ -180,5 +183,6 @@ describe("공휴일 데이터셋 안내", () => {
     const badge = screen.getByTestId("period-stale-badge");
     expect(badge.textContent).toContain("holidays/v");
     expect(badge.textContent).toContain("2027-12-31");
+    expect(badge.dataset.tone).toBe("info");
   });
 });

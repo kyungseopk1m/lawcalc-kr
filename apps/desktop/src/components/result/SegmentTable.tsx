@@ -39,13 +39,11 @@ export function SegmentTable({ result }: SegmentTableProps) {
               />
             );
           })}
-          <tr className="border-t border-amber-200 bg-amber-50 font-semibold text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+          <tr className="border-t-2 border-border font-semibold">
             <td className="px-2 py-3" colSpan={4}>
               합계
             </td>
-            <td className="whitespace-nowrap px-2 py-3 text-right text-amber-700 dark:text-amber-300">
-              {formatWon(result.totalInterest)}
-            </td>
+            <td className="num px-2 py-3">{formatWon(result.totalInterest)}</td>
             <td className="px-2 py-3" />
           </tr>
         </tbody>
@@ -65,16 +63,14 @@ function SegmentRow({ segment, principal, cumulative }: SegmentRowProps) {
   return (
     <>
       <tr className="border-t border-border">
-        <td className="px-2 pt-3">
+        <td className="whitespace-nowrap px-2 pt-3 tabular-nums">
           {segment.from} ~ {segment.to}
         </td>
-        <td className="px-2 pt-3 text-right">{segment.days.toLocaleString("ko-KR")}일</td>
-        <td className="px-2 pt-3 text-right">{formatRate(segment.rate)}</td>
-        <td className="whitespace-nowrap px-2 pt-3 text-right">{formatWon(principal)}</td>
-        <td className="whitespace-nowrap px-2 pt-3 text-right font-medium">
-          {formatWon(segment.interest)}
-        </td>
-        <td className="whitespace-nowrap px-2 pt-3 text-right">{formatWon(cumulative)}</td>
+        <td className="num px-2 pt-3">{segment.days.toLocaleString("ko-KR")}일</td>
+        <td className="num px-2 pt-3">{formatRate(segment.rate)}</td>
+        <td className="num px-2 pt-3">{formatWon(principal)}</td>
+        <td className="num px-2 pt-3 font-medium">{formatWon(segment.interest)}</td>
+        <td className="num px-2 pt-3">{formatWon(cumulative)}</td>
       </tr>
       <tr>
         <td className="px-2 pb-3 pt-1" colSpan={6}>

@@ -379,7 +379,7 @@ export function LostRetirementDetail({ result }: { result: LostRetirementResult 
       <span className="font-medium">일실퇴직금</span>
       <span className="text-right font-medium">{formatWon(result.amountWon)}</span>
       {result.warnings.map((w) => (
-        <span key={w.code} className="col-span-2 text-amber-700 dark:text-amber-300">
+        <span key={w.code} className="col-span-2 text-muted-foreground">
           {w.message}
         </span>
       ))}
@@ -636,7 +636,7 @@ export function DeathClaimantsCard({
       testId="compensation-death-claimants-card"
     >
       {!includeHeirs || names.length === 0 ? (
-        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+        <p role="status" className="text-xs text-muted-foreground">
           상속인을 먼저 입력하세요 (아래 &quot;상속인&quot; 카드의 상속분 분배 사용).
         </p>
       ) : (
@@ -913,7 +913,7 @@ export function DelayDamagesCard({
         </label>
       </div>
       {stale && value.enabled ? (
-        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+        <p role="status" className="text-xs text-muted-foreground">
           입력이 바뀌었습니다. 다시 계산하면 새 최종액으로 지연손해금을 계산합니다.
         </p>
       ) : null}
@@ -1020,7 +1020,7 @@ export function DocumentTextCard({
         </div>
       ) : null}
       {stale ? (
-        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+        <p role="status" className="text-xs text-muted-foreground">
           입력이 바뀌었습니다. 다시 계산하면 새 결과로 문단을 만듭니다.
         </p>
       ) : null}

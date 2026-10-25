@@ -105,6 +105,6 @@ describe("인쇄 CSS", () => {
     for (const selector of ["nav", "header", "button", "input", '[role="tablist"]']) {
       expect(print).toContain(selector);
     }
-    expect(print).toContain('main.grid[class*="grid-cols-[580px"] > :first-child');
+    expect(print).toContain('main.grid[class*="grid-cols-[520px"] > :first-child');
   });
 });

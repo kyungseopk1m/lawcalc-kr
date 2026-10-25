@@ -1,4 +1,3 @@
-import { CheckCircle2, Info, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -14,6 +13,7 @@ import {
 import { Button } from "../components/ui/button";
 import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
@@ -93,7 +93,7 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
   useFormShortcuts({ onReset: handleReset, enabled: active });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[420px_minmax(0,1fr)]">
       <Card className="content-start">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm">관할법원 찾기</CardTitle>
@@ -159,29 +159,16 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
         </CardContent>
       </Card>
 
-      <div className="grid content-start gap-4">
-        {error ? (
-          <div
-            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-            role="alert"
-          >
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+      <div className="result-column grid content-start gap-4">
+        {error ? <Notice tone="error">{error}</Notice> : null}
 
         {missingUnit ? (
-          <div
-            className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-            role="status"
-            data-testid="jurisdiction-missing-unit"
-          >
-            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <Notice tone="warn" testId="jurisdiction-missing-unit">
             <span>
               {date} 시행 판 별표에는 "{province} {unit === DATASET.wholeUnitName ? "전체" : unit}"
               칸이 없습니다. 이 판에서는 지역이 달리 나뉘어 있으니 시·군·구를 다시 고르세요.
             </span>
-          </div>
+          </Notice>
         ) : null}
 
         {result ? (
@@ -220,18 +207,13 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
                 <p className="text-xs text-muted-foreground">보정: {result.correction}</p>
               ) : null}
               {result.upcoming.map((u) => (
-                <div
-                  key={u.effectiveFrom}
-                  className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-                  data-testid="jurisdiction-upcoming"
-                >
-                  <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <Notice key={u.effectiveFrom} tone="info" testId="jurisdiction-upcoming">
                   <span>
                     {u.courts
                       ? `${u.effectiveFrom} 시행(${u.lawNumber})부터: ${COURT_LABELS.map(([k, l]) => `${l} ${courtText(u.courts!, k)}`).join(", ")}`
                       : `${u.effectiveFrom} 시행 판부터는 이 지역이 더 잘게 나뉘어 있습니다. 기준일을 바꿔 다시 찾으세요.`}
                   </span>
-                </div>
+                </Notice>
               ))}
               <div className="flex flex-wrap items-center gap-2">
                 <CopyButton
@@ -239,10 +221,9 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
                   getText={() => formatJurisdictionForClipboard(result, date)}
                 />
               </div>
-              <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <Notice tone="info">
                 <span>{STANDARD_DISCLAIMER}</span>
-              </div>
+              </Notice>
             </CardContent>
           </Card>
         ) : null}

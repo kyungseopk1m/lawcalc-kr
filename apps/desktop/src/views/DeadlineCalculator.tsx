@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   CheckCircle2,
   Clipboard,
   FileJson,
@@ -22,10 +21,10 @@ import {
   type DeadlineItem,
   type HolidayExtensionStatus,
 } from "@lawcalc-kr/core-engine";
-import { computeStaleBadge, type StaleBadgeResult } from "@lawcalc-kr/datasets-compensation";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { FormulaCell } from "../components/result/FormulaCell";
@@ -300,10 +299,6 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
   // 계속 사건 토글은 민법 부칙 근거라 민사 계열 항목에만 보인다.
   const selectedIsCivil =
     selected !== undefined && DEADLINE_DATASET.sourceLaws[selected.lawKey]?.family === "civil";
-  const stale = useMemo<StaleBadgeResult>(
-    () => computeStaleBadge(DEADLINE_DATASET.updatedAt, todayIso()),
-    [],
-  );
 
   const dirtySnapshot = useMemo(() => buildDeadlineDirtySnapshot(form, note), [form, note]);
   const markDeadlineClean = useLcalcDirtyTracker("deadline", dirtySnapshot);
@@ -444,7 +439,7 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
   });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -540,30 +535,22 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
-            <div className="flex gap-2">
-              <Button onClick={handleCalculate} type="button">
-                계산
-              </Button>
-              <Button onClick={handleReset} variant="outline" type="button">
-                초기화
-              </Button>
-            </div>
           </CardContent>
+          <div className="flex gap-2 px-4 pb-4">
+            <Button onClick={handleCalculate} type="button">
+              계산
+            </Button>
+            <Button onClick={handleReset} variant="outline" type="button">
+              초기화
+            </Button>
+          </div>
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        <DeadlineDatasetBadge stale={stale} />
+      <div className="result-column grid gap-4">
+        <DeadlineDatasetBadge />
 
-        {error && !errorStale ? (
-          <div
-            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-            role="alert"
-          >
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+        {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
@@ -612,41 +599,25 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                 </div>
 
                 {hasJustCauseCaveat(result) ? (
-                  <div
-                    className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-                    role="status"
-                    data-testid="deadline-just-cause-warning"
-                  >
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <Notice tone="info" testId="deadline-just-cause-warning">
                     <span>{JUST_CAUSE_WARNING}</span>
-                  </div>
+                  </Notice>
                 ) : null}
 
-                <div
-                  className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
-                    result.immutable === "unstated"
-                      ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-                      : "border-border bg-muted/40 text-foreground"
-                  }`}
-                  role="status"
-                  data-testid="deadline-immutable-notice"
+                <Notice
+                  tone={result.immutable === "unstated" ? "warn" : "info"}
+                  testId="deadline-immutable-notice"
                 >
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>
                     {IMMUTABLE_NOTICE[result.immutable]} (불변기간 근거:{" "}
                     {result.immutableSourceArticle})
                   </span>
-                </div>
+                </Notice>
 
                 {result.holidayRollover.status === "outOfCoverage" ? (
-                  <div
-                    className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-                    role="status"
-                    data-testid="deadline-rollover-reason"
-                  >
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <Notice tone="warn" testId="deadline-rollover-reason">
                     <span>{result.holidayRollover.reasonKo}</span>
-                  </div>
+                  </Notice>
                 ) : null}
 
                 {extraHolidaysSummary(resultExtraHolidays, result.period) ? (
@@ -718,10 +689,9 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
               </div>
             ) : null}
 
-            <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <Notice tone="info">
               <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-            </div>
+            </Notice>
           </>
         ) : null}
 
@@ -740,6 +710,7 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                 resultReady={resultReady}
                 onClick={handleCopy}
               />
+              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
               <ActionButton
                 action="save"
                 icon={FileJson}
@@ -790,38 +761,17 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
 }
 
 /**
- * 법정기한 dataset 스냅샷 경과 배지. 기간 계산 탭·손해배상 탭의 배지와 같은 자리·같은 모양이다.
- *
- * 기준일은 법령 개정이 잦은 쪽인 법정기한 dataset 의 `updatedAt` 을 쓰고, 공휴일 dataset 은
- * 버전 태그와 커버리지만 함께 적는다.
+ * 법정기한·공휴일 데이터셋 기준 한 줄. 법령 개정은 공표 주기가 없어 경과로 경고하지 않는다.
+ * 커버리지 밖 만료일은 결과 행이 따로 노랑으로 알린다.
  */
-function DeadlineDatasetBadge({ stale }: { stale: StaleBadgeResult }) {
-  const palette =
-    stale.level === "red"
-      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-      : stale.level === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-        : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
-  const Icon = stale.level === "neutral" ? CheckCircle2 : AlertTriangle;
-  const message =
-    stale.level === "neutral"
-      ? ""
-      : " (법령 개정 여부와 공휴일 데이터셋 갱신 여부를 확인하고, 만료일을 직접 확인해 주세요.)";
+function DeadlineDatasetBadge() {
   return (
-    <div
-      className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${palette}`}
-      role="status"
-      data-testid="deadline-stale-badge"
-      data-stale-level={stale.level}
-    >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="flex-1">
-        법정기한 데이터셋 {DEADLINES_VERSION_TAG} · 기준일 {DEADLINE_DATASET.updatedAt} · 경과{" "}
-        {stale.monthsElapsed}개월 · 공휴일 데이터셋 {HOLIDAYS_VERSION_TAG} · 커버리지{" "}
-        {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}
-        {message}
+    <Notice tone="info" testId="deadline-stale-badge">
+      <span>
+        법정기한 데이터셋 {DEADLINES_VERSION_TAG} · 기준일 {DEADLINE_DATASET.updatedAt} · 공휴일
+        데이터셋 {HOLIDAYS_VERSION_TAG} · 커버리지 {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}
       </span>
-    </div>
+    </Notice>
   );
 }
 

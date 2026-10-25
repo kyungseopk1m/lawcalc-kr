@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { UpdaterApi, UpdaterState } from "../hooks/useUpdater";
 import { useHasUnsavedLcalcChanges } from "../lib/lcalc-dirty-state";
 import { Button } from "./ui/button";
+import { Notice } from "./ui/notice";
 
 /**
  * 인앱 업데이트 dialog. hop 패턴 5단계 state machine 기반.
@@ -215,9 +216,9 @@ function ReadyBody({
         설치를 적용하려면 앱을 재시작해야 합니다.
       </p>
       {hasUnsavedLcalcChanges ? (
-        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+        <Notice tone="warn" className="mt-3">
           저장하지 않은 .lcalc 변경사항이 있습니다. 먼저 저장한 뒤 재시작해 주세요.
-        </p>
+        </Notice>
       ) : null}
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="ghost" onClick={onDismiss}>

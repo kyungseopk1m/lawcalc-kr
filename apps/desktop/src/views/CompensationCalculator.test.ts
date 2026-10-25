@@ -8,7 +8,7 @@ import {
   type CompensationInput,
   type CompensationResult,
 } from "@lawcalc-kr/compensation";
-import { computeStaleBadge } from "@lawcalc-kr/datasets-compensation";
+import { computeStaleBadge, LABOR_RATES_CADENCE } from "@lawcalc-kr/datasets-compensation";
 
 import {
   defaultOtherDamagesFormState,
@@ -215,25 +215,16 @@ describe("formatCompensationForClipboard + buildCompensationLcalcFile", () => {
   });
 });
 
-describe("computeStaleBadge wire (트랙 D + U 5-1 정원)", () => {
-  it("snapshot ≤ 6m → neutral, override 강조 false", () => {
-    const stale = computeStaleBadge("2026-05-01", "2026-05-18");
+describe("computeStaleBadge wire (시중노임 반기 공표)", () => {
+  it("최신 적용일 2026-01-01 은 다음 판 2026-09-01 + 6개월 전까지 neutral", () => {
+    const stale = computeStaleBadge("2026-01-01", "2027-02-28", LABOR_RATES_CADENCE);
     expect(stale.level).toBe("neutral");
-    expect(stale.overrideStrongly).toBe(false);
+    expect(stale.nextEditionDate).toBe("2026-09-01");
   });
 
-  it("snapshot 7~12m → amber, override 강조 true + 메시지", () => {
-    const stale = computeStaleBadge("2025-08-01", "2026-05-18");
+  it("다음 판 + 6개월이 지나면 amber", () => {
+    const stale = computeStaleBadge("2026-01-01", "2027-03-01", LABOR_RATES_CADENCE);
     expect(stale.level).toBe("amber");
-    expect(stale.overrideStrongly).toBe(true);
-    expect(stale.message).toContain("대한건설협회");
-  });
-
-  it("snapshot > 12m → red, override 강조 true + 갱신 메시지", () => {
-    const stale = computeStaleBadge("2024-01-01", "2026-05-18");
-    expect(stale.level).toBe("red");
-    expect(stale.overrideStrongly).toBe(true);
-    expect(stale.message).toContain("데이터셋 갱신");
   });
 });
 

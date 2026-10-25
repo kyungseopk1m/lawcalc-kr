@@ -1,4 +1,3 @@
-import { CheckCircle2, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -13,6 +12,7 @@ import {
 import { Button } from "../components/ui/button";
 import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
@@ -78,7 +78,7 @@ export function ExpressionCalculator({ active = true }: { active?: boolean }) {
   useFormShortcuts({ onReset: handleReset, enabled: active });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid content-start gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -147,16 +147,8 @@ export function ExpressionCalculator({ active = true }: { active?: boolean }) {
         </Card>
       </div>
 
-      <div className="grid content-start gap-4">
-        {error ? (
-          <div
-            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-            role="alert"
-          >
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+      <div className="result-column grid content-start gap-4">
+        {error ? <Notice tone="error">{error}</Notice> : null}
 
         {result ? (
           <>
@@ -192,10 +184,9 @@ export function ExpressionCalculator({ active = true }: { active?: boolean }) {
               </CardContent>
             </Card>
 
-            <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <Notice tone="info">
               <span>{STANDARD_DISCLAIMER}</span>
-            </div>
+            </Notice>
           </>
         ) : null}
       </div>

@@ -156,6 +156,7 @@ describe("불변기간 3값 표시", () => {
     const notice = screen.getByTestId("deadline-immutable-notice").textContent ?? "";
     expect(notice).toContain("늘이거나 줄일 수 없습니다");
     expect(notice).toContain("민사소송법 제173조");
+    expect(screen.getByTestId("deadline-immutable-notice").dataset.tone).toBe("info");
   });
 
   it("unstated 항목을 불변기간 아님으로 단정하지 않는다", () => {
@@ -167,6 +168,7 @@ describe("불변기간 3값 표시", () => {
     const notice = screen.getByTestId("deadline-immutable-notice").textContent ?? "";
     expect(notice).toContain("판정하지 않았습니다");
     expect(notice).not.toContain("불변기간이 아닙니다");
+    expect(screen.getByTestId("deadline-immutable-notice").dataset.tone).toBe("warn");
   });
 });
 
@@ -177,6 +179,7 @@ describe("정당한 사유 단서", () => {
     calculate();
 
     expect(screen.getByTestId("deadline-just-cause-warning").textContent).toContain("정당한 사유");
+    expect(screen.getByTestId("deadline-just-cause-warning").dataset.tone).toBe("info");
   });
 
   it("단서가 없는 항목에는 경고가 없다", () => {

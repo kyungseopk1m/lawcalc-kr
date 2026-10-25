@@ -361,6 +361,7 @@ describe("R2-a 엔진 대체 처리 경고", () => {
     expect(view.getByTestId("compensation-engine-warnings").textContent).toContain(
       "갱부 직종은 2010-01-01 이후 조사되지 않아",
     );
+    expect(view.getByTestId("compensation-engine-warnings").dataset.tone).toBe("warn");
   });
 });
 

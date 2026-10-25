@@ -29,6 +29,7 @@ import {
 import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
@@ -275,6 +276,14 @@ function appropriationNotices(result: AppropriationResult): string[] {
     ...(result.interestLimits ?? []).map((limit) => `${limit.claimId}: ${limit.notice}`),
     ...(result.interpretationNotices ?? []),
   ];
+}
+
+/**
+ * 결과가 틀릴 수 있어 확인이 필요한 문구(최고이자율 데이터 없음, 미검토)만 노랑으로 보인다.
+ * 나머지 이자제한법·제479조 문구는 법령 근거 설명이라 회색이다.
+ */
+function noticeNeedsReview(notice: string): boolean {
+  return notice.includes("데이터가 없어") || notice.includes("(미검토)");
 }
 
 /** 변제별 충당 표 (화면·클립보드·PDF·CSV 공통). 여러 번 변제 결과에만 있다. */
@@ -678,7 +687,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
   });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -691,52 +700,79 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
           <CardContent className="grid gap-3 p-4 pt-0">
             {claims.map((claim) => (
               <div key={claim.uid} className="grid gap-2 rounded-md border border-input p-3">
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="채권 ID (예: loan-1)"
-                    value={claim.id}
-                    onChange={(e) => updateClaim(claim.uid, { id: e.target.value })}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="채권 삭제"
-                    onClick={() => removeClaim(claim.uid)}
-                    type="button"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="grid gap-1 text-xs">
+                  <label htmlFor={`claim-${claim.uid}-id`}>채권 ID</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id={`claim-${claim.uid}-id`}
+                      placeholder="예: loan-1"
+                      value={claim.id}
+                      onChange={(e) => updateClaim(claim.uid, { id: e.target.value })}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="채권 삭제"
+                      onClick={() => removeClaim(claim.uid)}
+                      type="button"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <Input
-                  placeholder="채권명 (선택, 예: 대여금A)"
-                  value={claim.name}
-                  onChange={(e) => updateClaim(claim.uid, { name: e.target.value })}
-                />
+                <div className="grid gap-1 text-xs">
+                  <label htmlFor={`claim-${claim.uid}-name`}>채권명 (선택)</label>
+                  <Input
+                    id={`claim-${claim.uid}-name`}
+                    placeholder="예: 대여금A"
+                    value={claim.name}
+                    onChange={(e) => updateClaim(claim.uid, { name: e.target.value })}
+                  />
+                </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <Input
-                    inputMode="numeric"
-                    placeholder="비용 잔액"
-                    value={formatWonInput(claim.costBalanceText)}
-                    onChange={(e) =>
-                      updateClaim(claim.uid, { costBalanceText: parseWonText(e.target.value) })
-                    }
-                  />
-                  <Input
-                    inputMode="numeric"
-                    placeholder="이자 잔액"
-                    value={formatWonInput(claim.interestBalanceText)}
-                    onChange={(e) =>
-                      updateClaim(claim.uid, { interestBalanceText: parseWonText(e.target.value) })
-                    }
-                  />
-                  <Input
-                    inputMode="numeric"
-                    placeholder="원본 잔액"
-                    value={formatWonInput(claim.principalBalanceText)}
-                    onChange={(e) =>
-                      updateClaim(claim.uid, { principalBalanceText: parseWonText(e.target.value) })
-                    }
-                  />
+                  <div className="grid gap-1 text-xs">
+                    <label htmlFor={`claim-${claim.uid}-cost`}>비용 잔액</label>
+                    <Input
+                      id={`claim-${claim.uid}-cost`}
+                      className="tabular-nums"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={formatWonInput(claim.costBalanceText)}
+                      onChange={(e) =>
+                        updateClaim(claim.uid, { costBalanceText: parseWonText(e.target.value) })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1 text-xs">
+                    <label htmlFor={`claim-${claim.uid}-interest`}>이자 잔액</label>
+                    <Input
+                      id={`claim-${claim.uid}-interest`}
+                      className="tabular-nums"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={formatWonInput(claim.interestBalanceText)}
+                      onChange={(e) =>
+                        updateClaim(claim.uid, {
+                          interestBalanceText: parseWonText(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1 text-xs">
+                    <label htmlFor={`claim-${claim.uid}-principal`}>원본 잔액</label>
+                    <Input
+                      id={`claim-${claim.uid}-principal`}
+                      className="tabular-nums"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={formatWonInput(claim.principalBalanceText)}
+                      onChange={(e) =>
+                        updateClaim(claim.uid, {
+                          principalBalanceText: parseWonText(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <label className="grid gap-1 text-xs">
@@ -874,25 +910,20 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
-            <div className="flex gap-2">
-              <Button onClick={handleCalculate} type="button">
-                계산
-              </Button>
-              <Button onClick={handleReset} variant="outline" type="button">
-                초기화
-              </Button>
-            </div>
           </CardContent>
+          <div className="flex gap-2 px-4 pb-4">
+            <Button onClick={handleCalculate} type="button">
+              계산
+            </Button>
+            <Button onClick={handleReset} variant="outline" type="button">
+              초기화
+            </Button>
+          </div>
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        {error && !errorStale ? (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+      <div className="result-column grid gap-4">
+        {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
@@ -907,71 +938,90 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                   {appropriationSummaryRows(result).map(([label, value]) => (
                     <Fragment key={label}>
                       <span className="text-muted-foreground">{label}</span>
-                      <span className="text-right">{value}</span>
+                      <span className="num">{value}</span>
                     </Fragment>
                   ))}
                 </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                      <th className="py-2 font-medium">채권</th>
-                      {/* 변제일을 바꿔도 숫자만 움직이고 이유가 안 보이던 것을 드러낸다.
-                          엔진이 이미 채권마다 statutoryRank 를 돌려주고 있었다. */}
-                      <th className="py-2 font-medium">충당 순위</th>
-                      <th className="py-2 text-right font-medium">차감 (비용/이자/원본)</th>
-                      <th className="py-2 text-right font-medium">잔액 (이자/원본)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.claims.map((claim) => (
-                      <tr key={claim.claimId} className="border-b border-border last:border-b-0">
-                        <td className="py-2">{claim.name ?? claim.claimId}</td>
-                        <td className="py-2 text-xs text-muted-foreground">
-                          {claim.statutoryRank?.priorityLabel ?? "-"}
-                        </td>
-                        <td className="py-2 text-right text-xs">
-                          {formatWon(claim.costApplied)} / {formatWon(claim.interestApplied)} /{" "}
-                          {formatWon(claim.principalApplied)}
-                        </td>
-                        <td className="py-2 text-right">
-                          {formatWon(claim.interestBalanceAfter)} /{" "}
-                          {formatWon(claim.principalBalanceAfter)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {result.events ? (
-                  <table className="w-full text-xs" aria-label="변제별 충당">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm [&_td]:px-2 [&_th]:px-2">
                     <thead>
-                      <tr className="border-b border-border text-left text-muted-foreground">
-                        {EVENT_HEADERS.map((header) => (
-                          <th key={header} className="py-2 font-medium">
-                            {header}
-                          </th>
-                        ))}
+                      <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                        <th className="py-2 font-medium" rowSpan={2}>
+                          채권
+                        </th>
+                        {/* 변제일을 바꿔도 숫자만 움직이고 이유가 안 보이던 것을 드러낸다.
+                            엔진이 이미 채권마다 statutoryRank 를 돌려주고 있었다. */}
+                        <th className="py-2 font-medium" rowSpan={2}>
+                          충당 순위
+                        </th>
+                        <th className="pt-2 text-center font-medium" colSpan={3}>
+                          차감
+                        </th>
+                        <th className="pt-2 text-center font-medium" colSpan={2}>
+                          잔액
+                        </th>
+                      </tr>
+                      <tr className="border-b border-border text-xs text-muted-foreground">
+                        <th className="num pb-2 font-medium">비용</th>
+                        <th className="num pb-2 font-medium">이자</th>
+                        <th className="num pb-2 font-medium">원본</th>
+                        <th className="num pb-2 font-medium">이자</th>
+                        <th className="num pb-2 font-medium">원본</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {appropriationEventRows(result).map((row, index) => (
-                        <tr key={index} className="border-b border-border last:border-b-0">
-                          {row.map((cell, cellIndex) => (
-                            <td key={cellIndex} className="py-1.5">
-                              {cell}
-                            </td>
-                          ))}
+                      {result.claims.map((claim) => (
+                        <tr key={claim.claimId} className="border-b border-border last:border-b-0">
+                          <td className="py-2">{claim.name ?? claim.claimId}</td>
+                          <td className="py-2 text-xs text-muted-foreground">
+                            {claim.statutoryRank?.priorityLabel ?? "-"}
+                          </td>
+                          <td className="num py-2">{formatWon(claim.costApplied)}</td>
+                          <td className="num py-2">{formatWon(claim.interestApplied)}</td>
+                          <td className="num py-2">{formatWon(claim.principalApplied)}</td>
+                          <td className="num py-2">{formatWon(claim.interestBalanceAfter)}</td>
+                          <td className="num py-2">{formatWon(claim.principalBalanceAfter)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+                {result.events ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs" aria-label="변제별 충당">
+                      <thead>
+                        <tr className="border-b border-border text-left text-muted-foreground">
+                          {EVENT_HEADERS.map((header, index) => (
+                            <th
+                              key={header}
+                              className={`px-2 py-2 font-medium ${index >= 4 ? "num" : "whitespace-nowrap"}`}
+                            >
+                              {header}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {appropriationEventRows(result).map((row, index) => (
+                          <tr key={index} className="border-b border-border last:border-b-0">
+                            {row.map((cell, cellIndex) => (
+                              <td
+                                key={cellIndex}
+                                className={`px-2 py-1.5 ${cellIndex >= 4 ? "num" : cellIndex === 0 ? "whitespace-nowrap tabular-nums" : ""}`}
+                              >
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : null}
                 {appropriationNotices(result).map((notice) => (
-                  <p
-                    key={notice}
-                    className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-                  >
+                  <Notice key={notice} tone={noticeNeedsReview(notice) ? "warn" : "info"}>
                     {notice}
-                  </p>
+                  </Notice>
                 ))}
                 <div className="grid gap-1 text-xs text-muted-foreground">
                   <span>데이터 버전: {dataVersionText(result)}</span>
@@ -980,10 +1030,9 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
               </CardContent>
             </Card>
 
-            <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <Notice tone="info">
               <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-            </div>
+            </Notice>
           </>
         ) : null}
 
@@ -992,7 +1041,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
             <CardTitle className="text-sm">내보내기</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <ActionButton
                 action="copy"
                 icon={Clipboard}
@@ -1029,6 +1078,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
                 resultReady={resultReady}
                 onClick={() => handleExport("csv")}
               />
+              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
               <ActionButton
                 action="save"
                 icon={FileJson}

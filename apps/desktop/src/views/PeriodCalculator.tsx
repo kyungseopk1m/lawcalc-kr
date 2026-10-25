@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   CheckCircle2,
   Clipboard,
   FileJson,
@@ -25,10 +24,10 @@ import {
   type PeriodResult,
   type PeriodUnit,
 } from "@lawcalc-kr/core-engine";
-import { computeStaleBadge, type StaleBadgeResult } from "@lawcalc-kr/datasets-compensation";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { FormulaCell } from "../components/result/FormulaCell";
@@ -317,10 +316,6 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const input = useMemo(() => buildPeriodTabInput(form), [form]);
-  const stale = useMemo<StaleBadgeResult>(
-    () => computeStaleBadge(HOLIDAY_DATASET.snapshotDate, todayIso()),
-    [],
-  );
 
   const dirtySnapshot = useMemo(() => buildPeriodDirtySnapshot(form, note), [form, note]);
   const markPeriodClean = useLcalcDirtyTracker("period", dirtySnapshot);
@@ -465,7 +460,7 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
   });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -596,30 +591,22 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
-            <div className="flex gap-2">
-              <Button onClick={handleCalculate} type="button">
-                계산
-              </Button>
-              <Button onClick={handleReset} variant="outline" type="button">
-                초기화
-              </Button>
-            </div>
           </CardContent>
+          <div className="flex gap-2 px-4 pb-4">
+            <Button onClick={handleCalculate} type="button">
+              계산
+            </Button>
+            <Button onClick={handleReset} variant="outline" type="button">
+              초기화
+            </Button>
+          </div>
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        <HolidayDatasetBadge stale={stale} />
+      <div className="result-column grid gap-4">
+        <HolidayDatasetBadge />
 
-        {error && !errorStale ? (
-          <div
-            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-            role="alert"
-          >
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+        {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
@@ -652,18 +639,12 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                       </span>
                     </div>
                     {result.adjustmentReasonKo ? (
-                      <div
-                        className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
-                          result.holidayExtension === "outOfCoverage"
-                            ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-                            : "border-border bg-muted/40 text-foreground"
-                        }`}
-                        role="status"
-                        data-testid="period-adjustment-reason"
+                      <Notice
+                        tone={result.holidayExtension === "outOfCoverage" ? "warn" : "info"}
+                        testId="period-adjustment-reason"
                       >
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                         <span>{result.adjustmentReasonKo}</span>
-                      </div>
+                      </Notice>
                     ) : null}
                     {extraHolidaysSummary(resultExtraHolidays, result) ? (
                       <p
@@ -704,10 +685,9 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
               </CardContent>
             </Card>
 
-            <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <Notice tone="info">
               <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-            </div>
+            </Notice>
           </>
         ) : null}
 
@@ -726,6 +706,7 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                 resultReady={resultReady}
                 onClick={handleCopy}
               />
+              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
               <ActionButton
                 action="save"
                 icon={FileJson}
@@ -839,37 +820,17 @@ export function ExtraHolidaysEditor({
 }
 
 /**
- * 공휴일 dataset 스냅샷 경과 배지. 다른 탭(손해배상)의 배지와 같은 자리·같은 모양이다.
- *
- * `computeStaleBadge` 의 `message` 는 시중노임 dataset 전용 문구라 여기서는 쓰지 않고
- * 공휴일 dataset 문구를 따로 낸다. 임계(6개월·12개월)와 색은 그대로 공유한다.
+ * 공휴일 데이터셋 기준 한 줄. 공휴일 표는 정기 공표판이 없어 경과로 경고하지 않는다.
+ * 커버리지 밖 결과는 결과 행이 따로 노랑으로 알린다.
  */
-function HolidayDatasetBadge({ stale }: { stale: StaleBadgeResult }) {
-  const palette =
-    stale.level === "red"
-      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-      : stale.level === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-        : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
-  const Icon = stale.level === "neutral" ? CheckCircle2 : AlertTriangle;
-  const message =
-    stale.level === "neutral"
-      ? ""
-      : " (공휴일 데이터셋 갱신 여부를 확인하고, 만료일이 토요일·공휴일인지 직접 확인해 주세요.)";
+function HolidayDatasetBadge() {
   return (
-    <div
-      className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${palette}`}
-      role="status"
-      data-testid="period-stale-badge"
-      data-stale-level={stale.level}
-    >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="flex-1">
+    <Notice tone="info" testId="period-stale-badge">
+      <span>
         공휴일 데이터셋 {HOLIDAYS_VERSION_TAG} · 기준일 {HOLIDAY_DATASET.snapshotDate} · 커버리지{" "}
-        {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to} · 경과 {stale.monthsElapsed}개월
-        {message}
+        {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}
       </span>
-    </div>
+    </Notice>
   );
 }
 

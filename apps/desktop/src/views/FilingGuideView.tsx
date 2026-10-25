@@ -1,4 +1,4 @@
-import { CheckCircle2, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -15,6 +15,7 @@ import {
 
 import { CopyButton } from "../components/ui/copy-button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { formatWon } from "../lib/format-won";
@@ -86,7 +87,7 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
   useFormShortcuts({ onReset: handleReset, enabled: active });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px]">
       <Card>
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm">{title}</CardTitle>
@@ -116,7 +117,7 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
                   {kind === "criminal" ? <th className={TH}>별표</th> : null}
                   <th className={TH}>서류</th>
                   <th className={TH}>조문</th>
-                  {kind === "civil" ? <th className={TH}>인지액</th> : null}
+                  {kind === "civil" ? <th className={`${TH} text-right`}>인지액</th> : null}
                   <th className={TH}>편철</th>
                 </tr>
               </thead>
@@ -143,7 +144,13 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
                       </button>
                     </td>
                     <td className={TD}>{d.article}</td>
-                    {isCivil(d) ? <td className={TD}>{d.stamp.text}</td> : null}
+                    {isCivil(d) ? (
+                      <td
+                        className={`${TD} text-right tabular-nums ${/^[\d,]+원$|^－$/.test(d.stamp.text) ? "whitespace-nowrap" : ""}`}
+                      >
+                        {d.stamp.text}
+                      </td>
+                    ) : null}
                     <td className={TD}>{d.filingMethod}</td>
                   </tr>
                 ))}
@@ -159,7 +166,7 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
         </CardContent>
       </Card>
 
-      <div className="grid content-start gap-4">
+      <div className="result-column grid content-start gap-4">
         {selected ? (
           <Card>
             <CardHeader className="p-4 pb-2">
@@ -210,10 +217,9 @@ function FilingGuideView({ kind, active }: { kind: Kind; active: boolean }) {
                   okMessage="안내를 클립보드에 복사했습니다."
                 />
               </div>
-              <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <Notice tone="info">
                 <span>{STANDARD_DISCLAIMER}</span>
-              </div>
+              </Notice>
             </CardContent>
           </Card>
         ) : (

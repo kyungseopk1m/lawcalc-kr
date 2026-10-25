@@ -8,7 +8,7 @@
 - `leibniz`: 라이프니츠 복리연금현가율 표
 - `labor-rates`: 대한건설협회 시중노임 직종별 단가
 - `life-expectancy`: 통계청 KOSIS 생명표
-- `computeStaleBadge`: 외부 데이터셋 스냅샷 경과 등급 (6개월 이하 neutral / 6~12개월 amber / 12개월 초과 red)
+- `computeStaleBadge`: 외부 데이터셋 기준일 경과 등급. 공표 주기로 다음 판 예상 시점을 구해 그 뒤 6개월이 지나면 amber, 아니면 neutral. 화면 문구는 호출부가 데이터셋별로 붙인다
 
 ## 데이터 관리
 

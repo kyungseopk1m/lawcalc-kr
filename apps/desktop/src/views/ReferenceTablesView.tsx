@@ -1,17 +1,19 @@
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
   computeStaleBadge,
+  LABOR_RATES_CADENCE,
   laborRatesDatasetVersionTag,
+  LIFE_EXPECTANCY_CADENCE,
   lifeExpectancyDatasetVersionTag,
   loadLaborRatesTable,
   loadLifeExpectancyTable,
-  type StaleBadgeResult,
+  type PublicationCadence,
 } from "@lawcalc-kr/datasets-compensation";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
+import { Notice } from "../components/ui/notice";
 import { Select } from "../components/ui/select";
 import { todayIso } from "../lib/today";
 
@@ -23,23 +25,19 @@ const won = new Intl.NumberFormat("ko-KR");
 function Meta({
   tag,
   dataset,
+  cadence,
   testId,
 }: {
   tag: string;
   dataset: { source: string; sourceUrl: string; snapshotDate: string; license: string };
+  cadence: PublicationCadence;
   testId: string;
 }) {
-  const stale: StaleBadgeResult = useMemo(
-    () => computeStaleBadge(dataset.snapshotDate, todayIso()),
-    [dataset.snapshotDate],
+  // 참고표는 계산에 쓰지 않는 열람 화면이라 경과와 상관없이 회색 한 줄만 둔다.
+  const { monthsElapsed } = useMemo(
+    () => computeStaleBadge(dataset.snapshotDate, todayIso(), cadence),
+    [dataset.snapshotDate, cadence],
   );
-  const palette =
-    stale.level === "red"
-      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-      : stale.level === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-        : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
-  const Icon = stale.level === "neutral" ? CheckCircle2 : AlertTriangle;
   return (
     <div className="space-y-2 text-sm">
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
@@ -54,17 +52,11 @@ function Meta({
         <dt className="text-muted-foreground">라이선스</dt>
         <dd>{dataset.license}</dd>
       </dl>
-      <div
-        className={`flex items-start gap-2 rounded-md border px-3 py-2 ${palette}`}
-        role="status"
-        data-testid={testId}
-        data-stale-level={stale.level}
-      >
-        <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className="flex-1">
-          스냅샷 경과 {stale.monthsElapsed}개월{stale.message ? ` (${stale.message})` : ""}
+      <Notice tone="info" testId={testId}>
+        <span>
+          스냅샷 {dataset.snapshotDate} · 경과 {monthsElapsed}개월
         </span>
-      </div>
+      </Notice>
     </div>
   );
 }
@@ -119,19 +111,19 @@ function LifeExpectancyPanel() {
             />
           </label>
         </div>
-        <div className="max-h-96 overflow-auto rounded-md border border-border">
+        <div className="max-h-96 max-w-sm overflow-auto rounded-md border border-border">
           <table className="w-full text-sm" data-testid="life-table">
             <thead className="sticky top-0 bg-card">
               <tr>
-                <th className={TH}>나이(세)</th>
-                <th className={TH}>잔여 연수</th>
+                <th className={`${TH} text-right`}>나이(세)</th>
+                <th className={`${TH} text-right`}>잔여 연수</th>
               </tr>
             </thead>
             <tbody>
               {rows.slice(0, MAX_ROWS).map((r) => (
                 <tr key={r.age} className="border-t border-border">
-                  <td className={TD}>{r.age}</td>
-                  <td className={TD}>{r.remainingYears}</td>
+                  <td className={`${TD} num`}>{r.age}</td>
+                  <td className={`${TD} num`}>{r.remainingYears}</td>
                 </tr>
               ))}
             </tbody>
@@ -140,6 +132,7 @@ function LifeExpectancyPanel() {
         <Meta
           tag={lifeExpectancyDatasetVersionTag(LIFE)}
           dataset={LIFE}
+          cadence={LIFE_EXPECTANCY_CADENCE}
           testId="reference-life-stale-badge"
         />
       </CardContent>
@@ -202,7 +195,7 @@ function LaborRatesPanel() {
               {rows.slice(0, MAX_ROWS).map(([name, rate]) => (
                 <tr key={name} className="border-t border-border">
                   <td className={TD}>{name}</td>
-                  <td className={`${TD} text-right tabular-nums`}>{won.format(rate)}</td>
+                  <td className={`${TD} num`}>{won.format(rate)}</td>
                 </tr>
               ))}
             </tbody>
@@ -214,6 +207,7 @@ function LaborRatesPanel() {
         <Meta
           tag={laborRatesDatasetVersionTag(LABOR)}
           dataset={LABOR}
+          cadence={LABOR_RATES_CADENCE}
           testId="reference-labor-stale-badge"
         />
       </CardContent>
@@ -225,7 +219,7 @@ function LaborRatesPanel() {
 export function ReferenceTablesView() {
   return (
     <main
-      className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-4 sm:px-6"
+      className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-4 sm:px-6"
       data-testid="reference-tables-view"
     >
       <LifeExpectancyPanel />

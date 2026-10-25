@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   CheckCircle2,
   Clipboard,
   FileDown,
@@ -36,6 +35,7 @@ import {
 import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { useResultFingerprint } from "../hooks/use-result-fingerprint";
@@ -494,7 +494,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -524,7 +524,11 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           </CardContent>
         </Card>
 
-        {oldLaw ? <OldLawCaution /> : null}
+        {oldLaw && !result?.dataVersion.startsWith("inheritance-pre1991") ? (
+          <Notice tone="info">
+            1991-01-01 전 사망은 구 민법으로 계산합니다. 확인할 점은 계산 결과와 함께 안내합니다.
+          </Notice>
+        ) : null}
 
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -647,14 +651,6 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           </CardContent>
         </Card>
 
-        <div className="flex gap-2">
-          <Button onClick={handleCalculate} type="button">
-            계산
-          </Button>
-          <Button onClick={handleReset} variant="outline" type="button">
-            초기화
-          </Button>
-        </div>
         <label className="grid gap-2 text-sm font-medium">
           비고
           <textarea
@@ -665,15 +661,18 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
             onChange={(event) => setNote(event.target.value)}
           />
         </label>
+        <div className="flex gap-2">
+          <Button onClick={handleCalculate} type="button">
+            계산
+          </Button>
+          <Button onClick={handleReset} variant="outline" type="button">
+            초기화
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4">
-        {error && !errorStale ? (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+      <div className="result-column grid gap-4">
+        {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
@@ -688,8 +687,8 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                   <thead>
                     <tr className="border-b border-border text-left text-xs text-muted-foreground">
                       <th className="py-2 font-medium">상속인</th>
-                      <th className="py-2 font-medium">지분 (약분)</th>
-                      <th className="py-2 font-medium">약분 전</th>
+                      <th className="py-2 text-right font-medium">지분 (약분)</th>
+                      <th className="py-2 text-right font-medium">약분 전</th>
                       <th className="py-2 font-medium text-right">백분율 (참고)</th>
                       {result.estateWon !== undefined ? (
                         <th className="py-2 font-medium text-right">금액</th>
@@ -700,19 +699,17 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                     {result.shares.map((s, i) => (
                       <tr key={`${s.name}-${i}`} className="border-b border-border last:border-b-0">
                         <td className="py-2">{s.name}</td>
-                        <td className="py-2 font-mono">
+                        <td className="num py-2 pl-3 font-semibold">
                           {s.numerator}/{s.denominator}
                         </td>
-                        <td className="py-2 font-mono text-xs text-muted-foreground">
+                        <td className="num py-2 pl-3 text-xs text-muted-foreground">
                           {s.rawNumerator}/{s.rawDenominator}
                         </td>
-                        <td className="py-2 text-right text-xs text-muted-foreground">
+                        <td className="num py-2 pl-3 text-xs text-muted-foreground">
                           {formatPercent(s.numerator, s.denominator)}
                         </td>
                         {result.estateWon !== undefined ? (
-                          <td className="py-2 text-right font-mono">
-                            {formatWon(s.amountWon ?? 0)}원
-                          </td>
+                          <td className="num py-2 pl-3">{formatWon(s.amountWon ?? 0)}원</td>
                         ) : null}
                       </tr>
                     ))}
@@ -723,16 +720,14 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                         <td className="pt-2" colSpan={4}>
                           원 미만 내림 끝수 (배정하지 않음)
                         </td>
-                        <td className="pt-2 text-right font-mono">
-                          {formatWon(result.remainderWon ?? 0)}원
-                        </td>
+                        <td className="num pt-2 pl-3">{formatWon(result.remainderWon ?? 0)}원</td>
                       </tr>
                       <tr>
                         <td className="font-medium text-foreground" colSpan={4}>
                           합계 (금액 합 + 끝수 = 상속재산)
                         </td>
                         <td
-                          className="text-right font-mono font-medium text-foreground"
+                          className="num pl-3 font-medium text-foreground"
                           data-testid="inheritance-estate-total"
                         >
                           {formatWon(inheritanceAmountTotal(result))}원
@@ -787,24 +782,18 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
 
             {result.dataVersion.startsWith("inheritance-pre1991") ? <OldLawCaution /> : null}
             {result.warnings && result.warnings.length > 0 ? (
-              <div
-                role="alert"
-                data-testid="inheritance-warnings"
-                className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100"
-              >
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <Notice tone="warn" testId="inheritance-warnings">
                 <ul className="grid gap-1">
                   {result.warnings.map((w, i) => (
                     <li key={i}>{w}</li>
                   ))}
                 </ul>
-              </div>
+              </Notice>
             ) : null}
 
-            <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <Notice tone="info">
               <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-            </div>
+            </Notice>
           </>
         ) : null}
 
@@ -813,7 +802,16 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
             <CardTitle className="text-sm">내보내기</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <ActionButton
+                action="copy"
+                icon={Clipboard}
+                label="복사"
+                loadingAction={loadingAction}
+                requiresResult={true}
+                resultReady={resultReady}
+                onClick={handleCopy}
+              />
               <ActionButton
                 action="pdf"
                 icon={FileDown}
@@ -841,15 +839,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 resultReady={resultReady}
                 onClick={handleExportCsv}
               />
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult={true}
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
+              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
               <ActionButton
                 action="save"
                 icon={FileJson}
@@ -892,24 +882,18 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
   );
 }
 
-/** 구법 사건 경고. 화면 입력부와 결과부에 같이 띄운다. */
+/** 구법 사건 경고. 결과부에만 띄운다(입력부는 회색 한 줄). */
 function OldLawCaution() {
   return (
-    <div
-      role="alert"
-      className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100"
-    >
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <div className="grid gap-1">
-        <strong>구법 사건은 전문가 확인이 필요합니다.</strong>
-        <span className="text-xs">
-          1991-01-01 전 사망은 사망 당시 구 민법(1960~1978 제정 민법, 1979~1990 1977 개정 민법)의
-          호주상속 가산, 여자·출가녀 상속분, 처의 상속분으로 계산합니다. 호적(가적)·혼인·호주상속
-          사실관계에 따라 결과가 달라지며, 대습 호주상속·상속포기·처나 직계존속의 호주상속은
-          계산하지 않습니다.
-        </span>
-      </div>
-    </div>
+    <Notice tone="warn">
+      <strong>구법 사건은 전문가 확인이 필요합니다.</strong>
+      <span className="text-xs">
+        1991-01-01 전 사망은 사망 당시 구 민법(1960~1978 제정 민법, 1979~1990 1977 개정 민법)의
+        호주상속 가산, 여자·출가녀 상속분, 처의 상속분으로 계산합니다. 호적(가적)·혼인·호주상속
+        사실관계에 따라 결과가 달라지며, 대습 호주상속·상속포기·처나 직계존속의 호주상속은 계산하지
+        않습니다.
+      </span>
+    </Notice>
   );
 }
 

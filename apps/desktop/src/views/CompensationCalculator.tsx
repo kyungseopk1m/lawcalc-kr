@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   CheckCircle2,
   Clipboard,
   FileDown,
@@ -34,6 +33,7 @@ import {
 } from "@lawcalc-kr/compensation";
 import {
   computeStaleBadge,
+  LABOR_RATES_CADENCE,
   findOccupationMerge,
   getLaborRateAt,
   laborRatesDatasetVersionTag,
@@ -79,6 +79,7 @@ import { WageScheduleCard } from "../components/compensation-wage-schedule";
 import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
@@ -262,7 +263,6 @@ const DEFAULT_WORKING_DAYS = 20;
 const LABOR_RATES_DATASET = loadLaborRatesTable();
 const LABOR_RATES_VERSION_TAG = laborRatesDatasetVersionTag(LABOR_RATES_DATASET);
 const LATEST_LABOR_RATES_SLICE = latestSliceEffectiveFrom(LABOR_RATES_DATASET);
-const LABOR_RATES_SNAPSHOT_DATE = LABOR_RATES_DATASET.snapshotDate;
 /**
  * 사고일 기준으로 고를 수 있는 직종 목록.
  *
@@ -1619,7 +1619,7 @@ export function CompensationCalculator({ active = true }: { active?: boolean }) 
 
   return (
     <div className="flex w-full flex-1 flex-col">
-      <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 pt-4 sm:px-6">
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 pt-4 sm:px-6">
         <Button
           variant={mode === "injury" ? "default" : "ghost"}
           size="sm"
@@ -1674,7 +1674,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const stale = useMemo<StaleBadgeResult>(
-    () => computeStaleBadge(LABOR_RATES_SNAPSHOT_DATE, todayIso()),
+    () => computeStaleBadge(LATEST_LABOR_RATES_SLICE, todayIso(), LABOR_RATES_CADENCE),
     [],
   );
 
@@ -1939,10 +1939,6 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
       temporary: state.temporary.map((item) => (item.uid === uid ? { ...item, ...patch } : item)),
     });
 
-  const overrideEmphasis = stale.overrideStrongly
-    ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
-    : "";
-
   // 직종 선택지는 사고일이 속한 노임단가 회차에서 나온다. 회차마다 조사 직종이 다르다.
   const occupationOptions = useMemo(
     () => occupationOptionsAt(state.accidentDate, state.occupation),
@@ -1954,7 +1950,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
   );
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -2157,7 +2153,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
             {legacyHospitalNotice ? (
               <p
                 role="status"
-                className="-mt-1 text-xs text-amber-700 dark:text-amber-300"
+                className={`-mt-1 text-xs ${legacyToneClass(resultNotice)}`}
                 data-testid="compensation-legacy-hospitalization-notice"
               >
                 이전 버전 파일이라 입원기간 100% 적용을 끈 상태로 열었습니다. 켜면 사고일부터
@@ -2197,7 +2193,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
           </CardContent>
         </Card>
 
-        <Card className={overrideEmphasis ? `border-2 ${overrideEmphasis}` : ""}>
+        <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">일실수입</CardTitle>
             <p className="text-xs text-muted-foreground">
@@ -2219,7 +2215,15 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 ))}
               </Select>
               {occupationHint ? (
-                <span className="text-xs font-normal text-amber-700 dark:text-amber-300">
+                // 일당이 비어 있으면 계산이 막히므로 빨강, 일당을 넣었으면 참고 안내라 회색.
+                <span
+                  className={`text-xs font-normal ${
+                    state.directWageWonText.trim() === ""
+                      ? "text-red-700 dark:text-red-300"
+                      : "text-muted-foreground"
+                  }`}
+                  data-testid="compensation-occupation-hint"
+                >
                   {occupationHint}
                 </span>
               ) : null}
@@ -2232,10 +2236,13 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 aria-label="일당 직접 입력"
                 value={formatWonInput(state.directWageWonText)}
                 onChange={(e) => update({ directWageWonText: parseWonText(e.target.value) })}
-                className={
-                  stale.overrideStrongly ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : ""
-                }
               />
+              {stale.level === "amber" ? (
+                <span className="text-xs font-normal text-muted-foreground">
+                  시중노임 데이터가 최신 공표분보다 오래됐을 수 있습니다. 최신 단가를 확인해 일당을
+                  직접 넣으세요.
+                </span>
+              ) : null}
             </label>
             <label className="grid gap-2 text-sm font-medium">
               월 가동일수
@@ -2253,7 +2260,12 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 20일을 기본값으로 둡니다 (직접 바꿀 수 있습니다).
               </span>
             </label>
-            <LaborRateTimingFields value={state} onChange={update} notice={legacyNotice} />
+            <LaborRateTimingFields
+              value={state}
+              onChange={update}
+              notice={legacyNotice}
+              noticeClass={legacyToneClass(resultNotice)}
+            />
           </CardContent>
         </Card>
 
@@ -2382,35 +2394,28 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
-
-            <div className="flex gap-2">
-              <Button onClick={handleCalculate} type="button">
-                계산
-              </Button>
-              <Button onClick={handleReset} variant="outline" type="button">
-                초기화
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4">
+      <div className="result-column grid gap-4">
+        {/* 긴 폼이라 계산·초기화를 결과 열 맨 위에 둔다. 넓은 화면에서는 결과 열이 화면에 붙고,
+            결과가 길어 열 안에서 스크롤해도 이 줄은 위에 남는다. */}
+        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 lg:sticky lg:top-0">
+          <Button onClick={handleCalculate} type="button">
+            계산
+          </Button>
+          <Button onClick={handleReset} variant="outline" type="button">
+            초기화
+          </Button>
+        </div>
         <StaleBadge
           stale={stale}
           effectiveFrom={LATEST_LABOR_RATES_SLICE}
           version={LABOR_RATES_VERSION_TAG}
         />
 
-        {error && !errorStale ? (
-          <div
-            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-            role="alert"
-          >
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+        {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
@@ -2541,7 +2546,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const stale = useMemo<StaleBadgeResult>(
-    () => computeStaleBadge(LABOR_RATES_SNAPSHOT_DATE, todayIso()),
+    () => computeStaleBadge(LATEST_LABOR_RATES_SLICE, todayIso(), LABOR_RATES_CADENCE),
     [],
   );
 
@@ -2786,10 +2791,6 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
     enabled: active,
   });
 
-  const overrideEmphasis = stale.overrideStrongly
-    ? "border-amber-400 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
-    : "";
-
   // 직종 선택지는 사고일이 속한 노임단가 회차에서 나온다. 회차마다 조사 직종이 다르다.
   const occupationOptions = useMemo(
     () => occupationOptionsAt(state.accidentDate, state.occupation),
@@ -2801,7 +2802,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
   );
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -2858,7 +2859,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
           </CardContent>
         </Card>
 
-        <Card className={overrideEmphasis ? `border-2 ${overrideEmphasis}` : ""}>
+        <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">일실수입</CardTitle>
             <p className="text-xs text-muted-foreground">
@@ -2880,7 +2881,15 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
                 ))}
               </Select>
               {occupationHint ? (
-                <span className="text-xs font-normal text-amber-700 dark:text-amber-300">
+                // 일당이 비어 있으면 계산이 막히므로 빨강, 일당을 넣었으면 참고 안내라 회색.
+                <span
+                  className={`text-xs font-normal ${
+                    state.directWageWonText.trim() === ""
+                      ? "text-red-700 dark:text-red-300"
+                      : "text-muted-foreground"
+                  }`}
+                  data-testid="compensation-occupation-hint"
+                >
                   {occupationHint}
                 </span>
               ) : null}
@@ -2893,10 +2902,13 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
                 aria-label="일당 직접 입력"
                 value={formatWonInput(state.directWageWonText)}
                 onChange={(e) => update({ directWageWonText: parseWonText(e.target.value) })}
-                className={
-                  stale.overrideStrongly ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30" : ""
-                }
               />
+              {stale.level === "amber" ? (
+                <span className="text-xs font-normal text-muted-foreground">
+                  시중노임 데이터가 최신 공표분보다 오래됐을 수 있습니다. 최신 단가를 확인해 일당을
+                  직접 넣으세요.
+                </span>
+              ) : null}
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium">
@@ -2957,7 +2969,12 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
               호프만 계수 크기에 따라 구간마다 수백 원에 이를 수 있습니다. 어느 쪽을 써야 한다는
               판결 근거는 찾지 못했습니다.
             </p>
-            <LaborRateTimingFields value={state} onChange={update} notice={legacyNotice} />
+            <LaborRateTimingFields
+              value={state}
+              onChange={update}
+              notice={legacyNotice}
+              noticeClass={legacyToneClass(resultNotice)}
+            />
           </CardContent>
         </Card>
 
@@ -3037,7 +3054,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
               {isLegacySurvivorTotal(state) ? (
                 <p
                   role="status"
-                  className="text-xs text-amber-700 dark:text-amber-300"
+                  className={`text-xs ${legacyToneClass(resultNotice)}`}
                   data-testid="compensation-survivor-total-legacy-notice"
                 >
                   이전 방식(유족급여 총액을 먼저 공제한 뒤 상속)으로 계산됩니다. 아래에서
@@ -3225,8 +3242,12 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
           includeHeirs={state.includeHeirs}
           industrial={state.accidentType === "industrial"}
         />
+      </div>
 
-        <div className="flex gap-2">
+      <div className="result-column grid gap-4">
+        {/* 긴 폼이라 계산·초기화를 결과 열 맨 위에 둔다. 넓은 화면에서는 결과 열이 화면에 붙고,
+            결과가 길어 열 안에서 스크롤해도 이 줄은 위에 남는다. */}
+        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 lg:sticky lg:top-0">
           <Button onClick={handleCalculate} type="button">
             계산
           </Button>
@@ -3234,24 +3255,13 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
             초기화
           </Button>
         </div>
-      </div>
-
-      <div className="grid gap-4">
         <StaleBadge
           stale={stale}
           effectiveFrom={LATEST_LABOR_RATES_SLICE}
           version={LABOR_RATES_VERSION_TAG}
         />
 
-        {error && !errorStale ? (
-          <div
-            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-            role="alert"
-          >
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+        {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
@@ -3470,41 +3480,39 @@ function DeathResultCards({
           <CardTitle className="text-sm">일실수입 구간 (생계비 공제 후)</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                <th className="py-2 font-medium">기간 (개월)</th>
-                {hasDates ? <SegmentDateHeaders /> : null}
-                <th className="py-2 text-right font-medium">
-                  {segmentWageHeader(result.segments)}
-                </th>
-                <th className="py-2 text-right font-medium">호프만 (적용)</th>
-                <th className="py-2 text-right font-medium">금액</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.segments.map((segment: CompensationSegment, i) => (
-                <tr key={i} className="border-b border-border last:border-b-0">
-                  <td className="py-2">
-                    {segment.startMonth} ~ {segment.endMonth}
-                  </td>
-                  {hasDates ? <SegmentDateCells segment={segment} /> : null}
-                  <td className="py-2 text-right">{segmentWageText(segment)}</td>
-                  <td className="py-2 text-right">
-                    {segment.appliedHoffman.toFixed(6)}
-                    {result.hoffman240Cap.cappedAtIndex === i ? (
-                      <span className="ml-1 text-xs text-amber-700 dark:text-amber-300">
-                        (한도)
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="py-2 text-right">{formatWon(segment.amountFloorWon)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm [&_td]:px-2 [&_th]:px-2">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="num py-2 font-medium">기간 (개월)</th>
+                  {hasDates ? <SegmentDateHeaders /> : null}
+                  <th className="num py-2 font-medium">{segmentWageHeader(result.segments)}</th>
+                  <th className="num py-2 font-medium">호프만 (적용)</th>
+                  <th className="num py-2 font-medium">금액</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {result.segments.map((segment: CompensationSegment, i) => (
+                  <tr key={i} className="border-b border-border last:border-b-0">
+                    <td className="num py-2">
+                      {segment.startMonth} ~ {segment.endMonth}
+                    </td>
+                    {hasDates ? <SegmentDateCells segment={segment} /> : null}
+                    <td className="num py-2">{segmentWageText(segment)}</td>
+                    <td className="num py-2">
+                      {segment.appliedHoffman.toFixed(6)}
+                      {result.hoffman240Cap.cappedAtIndex === i ? (
+                        <span className="ml-1 text-xs text-muted-foreground">(한도)</span>
+                      ) : null}
+                    </td>
+                    <td className="num py-2">{formatWon(segment.amountFloorWon)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {result.hoffman240Cap.cappedAtIndex !== null ? (
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+            <p className="mt-2 text-xs text-muted-foreground">
               {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가 240을 넘어 호프만 240
               한도를 적용했습니다.
             </p>
@@ -3578,13 +3586,9 @@ function DeathResultCards({
         </CardContent>
       </Card>
 
-      <div
-        className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
-        data-testid="compensation-death-disclaimer"
-      >
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <Notice tone="info" testId="compensation-death-disclaimer">
         <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-      </div>
+      </Notice>
     </>
   );
 }
@@ -3593,8 +3597,8 @@ function DeathResultCards({
 function SegmentDateHeaders() {
   return (
     <>
-      <th className="py-2 font-medium">초일</th>
-      <th className="py-2 font-medium">말일</th>
+      <th className="whitespace-nowrap py-2 font-medium">초일</th>
+      <th className="whitespace-nowrap py-2 font-medium">말일</th>
     </>
   );
 }
@@ -3602,8 +3606,8 @@ function SegmentDateHeaders() {
 function SegmentDateCells({ segment }: { segment: CompensationSegment }) {
   return (
     <>
-      <td className="py-2 whitespace-nowrap">{segment.startDate ?? ""}</td>
-      <td className="py-2 whitespace-nowrap">{segment.endDate ?? ""}</td>
+      <td className="whitespace-nowrap py-2 tabular-nums">{segment.startDate ?? ""}</td>
+      <td className="whitespace-nowrap py-2 tabular-nums">{segment.endDate ?? ""}</td>
     </>
   );
 }
@@ -3887,10 +3891,12 @@ function LaborRateTimingFields({
   value,
   onChange,
   notice,
+  noticeClass,
 }: {
   value: LaborRateTimingFormState;
   onChange: (patch: Partial<LaborRateTimingFormState>) => void;
   notice: string | null;
+  noticeClass: string;
 }) {
   return (
     <div className="grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
@@ -3927,7 +3933,7 @@ function LaborRateTimingFields({
       {notice ? (
         <p
           role="status"
-          className="text-xs text-amber-700 sm:col-span-2 dark:text-amber-300"
+          className={`text-xs sm:col-span-2 ${noticeClass}`}
           data-testid="compensation-legacy-labor-rate-notice"
         >
           {notice}
@@ -3937,6 +3943,10 @@ function LaborRateTimingFields({
   );
 }
 
+/**
+ * 시중노임 데이터셋 기준 한 줄. 다음 판 예상 시점에서 6개월이 지나도 갱신되지 않았을 때만
+ * 노랑으로 최신 단가 확인을 권한다. 문구는 이 데이터셋 전용이다.
+ */
 function StaleBadge({
   stale,
   effectiveFrom,
@@ -3946,33 +3956,27 @@ function StaleBadge({
   effectiveFrom: string;
   version: string;
 }) {
-  const palette =
-    stale.level === "red"
-      ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-      : stale.level === "amber"
-        ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-        : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200";
-  const Icon = stale.level === "neutral" ? CheckCircle2 : AlertTriangle;
   return (
-    <div
-      className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${palette}`}
-      role="status"
-      data-testid="compensation-stale-badge"
-      data-stale-level={stale.level}
-    >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="flex-1">
+    <Notice tone={stale.level === "amber" ? "warn" : "info"} testId="compensation-stale-badge">
+      <span>
         기준 데이터셋 {version} · 최근 적용일 {effectiveFrom} · 경과 {stale.monthsElapsed}개월
-        {stale.message ? ` (${stale.message})` : ""}
+        {stale.level === "amber"
+          ? ` (다음 판 예상 시점 ${stale.nextEditionDate}이 지났습니다. 대한건설협회 최신 시중노임을 확인해 일당을 직접 입력하는 것을 권장합니다.)`
+          : ""}
       </span>
-    </div>
+    </Notice>
   );
+}
+
+/** 구버전 파일 안내 글씨색. 다시 계산한 금액이 저장 당시와 같으면 회색, 다르면 노랑. */
+function legacyToneClass(resultNotice: string | null): string {
+  return resultNotice ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground";
 }
 
 /**
  * 결과 카드 기타손해 라인 (개호비 · 치료비 · 보조구 + 소계). 부상·사망 결과 카드 공용.
  * 부모 grid(`grid-cols-2`)에 직접 span 쌍을 흘려보낸다 (Fragment). 개호비 240 cap·치료비/보조구
- * 수치합계 20 cap 적용 시 빨간 배지를 노출한다.
+ * 수치합계 20 cap 적용 시 회색 표시를 붙인다 (법정 상한의 정상 적용).
  */
 function OtherDamagesResultRows({ otherDamages }: { otherDamages: OtherDamagesResult }) {
   const attendant240Capped =
@@ -3991,21 +3995,21 @@ function OtherDamagesResultRows({ otherDamages }: { otherDamages: OtherDamagesRe
       <span className="text-right" data-testid="compensation-other-attendant">
         {formatWon(otherDamages.attendantCareWon)}
         {attendant240Capped ? (
-          <span className="ml-1 text-xs text-red-600 dark:text-red-400">호프만 240 제한</span>
+          <span className="ml-1 text-xs text-muted-foreground">호프만 240 제한</span>
         ) : null}
       </span>
       <span className="text-muted-foreground">치료비</span>
       <span className="text-right" data-testid="compensation-other-treatment">
         {formatWon(otherDamages.treatmentWon)}
         {treatment20Capped ? (
-          <span className="ml-1 text-xs text-red-600 dark:text-red-400">수치합계 20 제한</span>
+          <span className="ml-1 text-xs text-muted-foreground">수치합계 20 제한</span>
         ) : null}
       </span>
       <span className="text-muted-foreground">보조구</span>
       <span className="text-right" data-testid="compensation-other-appliance">
         {formatWon(otherDamages.applianceWon)}
         {appliance20Capped ? (
-          <span className="ml-1 text-xs text-red-600 dark:text-red-400">수치합계 20 제한</span>
+          <span className="ml-1 text-xs text-muted-foreground">수치합계 20 제한</span>
         ) : null}
       </span>
       <span className="text-muted-foreground">기타손해 소계</span>
@@ -4013,20 +4017,18 @@ function OtherDamagesResultRows({ otherDamages }: { otherDamages: OtherDamagesRe
         {formatWon(otherDamages.subtotalWon)}
       </span>
       {splitSuspected ? (
-        // 금액 신뢰도 경고다. 같은 화면의 다른 경고와 같은 테두리·배경·아이콘을 쓰고,
-        // `role="status"` 로 스크린리더에도 알린다 (종전에는 각주처럼 읽히는 한 줄이었다).
-        <span
-          className="col-span-2 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-          role="status"
-          data-testid="compensation-other-split-warning"
+        // 금액 신뢰도 경고다. 같은 화면의 다른 경고와 같은 노랑 안내 상자를 쓴다.
+        <Notice
+          tone="warn"
+          className="col-span-2 text-xs leading-5"
+          testId="compensation-other-split-warning"
         >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span className="flex-1">
+          <span>
             단가와 주기가 같고 기간이 겹치거나 이어지는 항목이 있습니다. 같은 지출을 나눠 입력하면
             수치합계 상한이 항목마다 따로 걸려 합계가 커집니다. 하나의 지출이라면 한 항목으로 합쳐
             주세요.
           </span>
-        </span>
+        </Notice>
       ) : null}
     </>
   );
@@ -4073,19 +4075,16 @@ function EngineWarningRows({
 }) {
   if (!result.warnings || result.warnings.length === 0) return null;
   return (
-    <span
-      className="col-span-2 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-      role="status"
-      data-testid="compensation-engine-warnings"
+    <Notice
+      tone="warn"
+      className="col-span-2 text-xs leading-5"
+      testId="compensation-engine-warnings"
     >
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="grid flex-1 gap-1">
-        {result.warnings.map((warning, i) => (
-          // 직종이 없는 경고(`hoffmanCoverageClamped`)가 여럿이면 code 만으로는 겹친다.
-          <span key={`${warning.code}-${warning.occupation ?? ""}-${i}`}>{warning.message}</span>
-        ))}
-      </span>
-    </span>
+      {result.warnings.map((warning, i) => (
+        // 직종이 없는 경고(`hoffmanCoverageClamped`)가 여럿이면 code 만으로는 겹친다.
+        <span key={`${warning.code}-${warning.occupation ?? ""}-${i}`}>{warning.message}</span>
+      ))}
+    </Notice>
   );
 }
 
@@ -4244,54 +4243,52 @@ function ResultCards({
           <CardTitle className="text-sm">일실수입 구간</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                <th className="py-2 font-medium">기간 (개월)</th>
-                {hasDates ? <SegmentDateHeaders /> : null}
-                <th className="py-2 font-medium">상실률</th>
-                <th className="py-2 text-right font-medium">
-                  {segmentWageHeader(result.segments)}
-                </th>
-                <th className="py-2 text-right font-medium">호프만 (적용)</th>
-                <th className="py-2 text-right font-medium">금액</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.segments.map((segment: CompensationSegment, i) => (
-                <tr key={i} className="border-b border-border last:border-b-0">
-                  <td className="py-2">
-                    {segment.startMonth} ~ {segment.endMonth}
-                  </td>
-                  {hasDates ? <SegmentDateCells segment={segment} /> : null}
-                  <td className="py-2">{formatRatioPercent(segment.lossRate)}</td>
-                  <td className="py-2 text-right">{segmentWageText(segment)}</td>
-                  <td className="py-2 text-right">
-                    {segment.appliedHoffman.toFixed(6)}
-                    {result.hoffman240Cap.cappedAtIndex === i ? (
-                      <span className="ml-1 text-xs text-amber-700 dark:text-amber-300">
-                        (한도)
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="py-2 text-right">
-                    {formatWon(segment.amountFloorWon)}
-                    {segment.livingCostDeducted === true ? (
-                      <span
-                        className="ml-0.5 text-xs text-muted-foreground"
-                        title="기대여명 이후 구간: 생계비 1/3 공제"
-                        data-testid="compensation-living-cost-segment"
-                      >
-                        *
-                      </span>
-                    ) : null}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm [&_td]:px-2 [&_th]:px-2">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                  <th className="num py-2 font-medium">기간 (개월)</th>
+                  {hasDates ? <SegmentDateHeaders /> : null}
+                  <th className="num py-2 font-medium">상실률</th>
+                  <th className="num py-2 font-medium">{segmentWageHeader(result.segments)}</th>
+                  <th className="num py-2 font-medium">호프만 (적용)</th>
+                  <th className="num py-2 font-medium">금액</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {result.segments.map((segment: CompensationSegment, i) => (
+                  <tr key={i} className="border-b border-border last:border-b-0">
+                    <td className="num py-2">
+                      {segment.startMonth} ~ {segment.endMonth}
+                    </td>
+                    {hasDates ? <SegmentDateCells segment={segment} /> : null}
+                    <td className="num py-2">{formatRatioPercent(segment.lossRate)}</td>
+                    <td className="num py-2">{segmentWageText(segment)}</td>
+                    <td className="num py-2">
+                      {segment.appliedHoffman.toFixed(6)}
+                      {result.hoffman240Cap.cappedAtIndex === i ? (
+                        <span className="ml-1 text-xs text-muted-foreground">(한도)</span>
+                      ) : null}
+                    </td>
+                    <td className="num py-2">
+                      {formatWon(segment.amountFloorWon)}
+                      {segment.livingCostDeducted === true ? (
+                        <span
+                          className="ml-0.5 text-xs text-muted-foreground"
+                          title="기대여명 이후 구간: 생계비 1/3 공제"
+                          data-testid="compensation-living-cost-segment"
+                        >
+                          *
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {result.hoffman240Cap.cappedAtIndex !== null ? (
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+            <p className="mt-2 text-xs text-muted-foreground">
               {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가 240을 넘어 호프만 240
               한도를 적용했습니다.
             </p>
@@ -4318,13 +4315,9 @@ function ResultCards({
         </CardContent>
       </Card>
 
-      <div
-        className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
-        data-testid="compensation-disclaimer"
-      >
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <Notice tone="info" testId="compensation-disclaimer">
         <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-      </div>
+      </Notice>
     </>
   );
 }

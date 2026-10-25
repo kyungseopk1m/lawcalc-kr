@@ -73,6 +73,7 @@ describe("관할법원 찾기", () => {
     fireEvent.change(screen.getByLabelText("기준일"), { target: { value: "2028-03-01" } });
     expect(screen.queryByTestId("jurisdiction-highCourt")).toBeNull();
     expect(text("jurisdiction-missing-unit")).toContain('"인천광역시 전체" 칸이 없습니다');
+    expect(screen.getByTestId("jurisdiction-missing-unit").dataset.tone).toBe("warn");
     fireEvent.change(screen.getByLabelText("시·군·구"), { target: { value: "영종구" } });
     expect(screen.queryByTestId("jurisdiction-missing-unit")).toBeNull();
   });

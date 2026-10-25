@@ -41,5 +41,5 @@ export {
 export type { LeibnizDataset } from "./leibniz";
 export { getLeibnizAt, leibnizDatasetVersionTag, loadLeibnizTable } from "./leibniz";
 
-export type { StaleBadgeLevel, StaleBadgeResult } from "./stale-badge";
-export { computeStaleBadge } from "./stale-badge";
+export type { PublicationCadence, StaleBadgeLevel, StaleBadgeResult } from "./stale-badge";
+export { computeStaleBadge, LABOR_RATES_CADENCE, LIFE_EXPECTANCY_CADENCE } from "./stale-badge";

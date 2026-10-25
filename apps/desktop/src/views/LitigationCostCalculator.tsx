@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   CheckCircle2,
   Clipboard,
   FileDown,
@@ -56,6 +55,7 @@ import { ProportionalPillInput } from "../components/form/ProportionalPillInput"
 import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Notice } from "../components/ui/notice";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
@@ -708,6 +708,8 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     stale: errorStale,
   } = useResultFingerprint<string>(resultFingerprint);
   const resultReady = result !== null && !resultStale;
+  // 구버전 파일 안내: 다시 계산한 금액이 저장 당시와 같으면 회색, 다르면 노랑.
+  const legacyNoticeTone = resultNotice ? "warn" : "info";
 
   const handleCalculate = () => {
     if (numberFieldError) {
@@ -853,7 +855,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     });
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl flex-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[580px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -907,10 +909,10 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               </Select>
             </label>
             {caseValueBasis !== "amount" ? (
-              <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              <Notice tone="info">
                 「민사소송 등 인지규칙」제18조의2에 따라 소가를 간주합니다. 입력한 소가 금액은
                 인지대·변호사보수 산정에 쓰이지 않습니다.
-              </p>
+              </Notice>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium">
@@ -1021,10 +1023,10 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               </>
             ) : null}
             {!stampDutyApplies ? (
-              <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              <Notice tone="info">
                 이 사건구분은 「민사소송 등 인지법」제2조의 누진 산식 대상이 아닙니다. 인지액은 별도
                 예규가 정하는 정액이라 계산하지 않고 0원으로 두며, 송달료만 산출합니다.
-              </p>
+              </Notice>
             ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium">
@@ -1116,19 +1118,19 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 </p>
               ) : null}
               {legacyPaymentOrder && !isProvisionalCase ? (
-                <div className="flex items-start justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                <Notice tone={legacyNoticeTone} className="text-xs leading-5">
                   <span>
                     이전 버전에서 지급명령 인지대 감액(제7조 제2항 1/10)이 적용된 상태로 저장된
-                    파일입니다. 감액을 유지한 채 계산합니다. 사건구분을 바꾸면 해제됩니다.
+                    파일입니다. 감액을 유지한 채 계산합니다. 사건구분을 바꾸면 해제됩니다.{" "}
+                    <button
+                      type="button"
+                      className="underline underline-offset-2"
+                      onClick={() => setLegacyPaymentOrder(false)}
+                    >
+                      해제
+                    </button>
                   </span>
-                  <button
-                    type="button"
-                    className="shrink-0 underline underline-offset-2"
-                    onClick={() => setLegacyPaymentOrder(false)}
-                  >
-                    해제
-                  </button>
-                </div>
+                </Notice>
               ) : null}
               <label className="flex items-center gap-2">
                 <input
@@ -1153,10 +1155,10 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0 text-sm">
             {!lawyerFeeApplies ? (
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              <Notice tone="info">
                 선택한 사건구분은 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항 본안 사건에
                 해당하지 않아 변호사보수가 산입되지 않습니다. 인지대·송달료만 계산됩니다.
-              </div>
+              </Notice>
             ) : null}
             <fieldset disabled={!lawyerFeeApplies} className="grid gap-3 disabled:opacity-60">
               <label className="grid gap-2 font-medium">
@@ -1316,20 +1318,22 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 onChange={(e) => setNote(e.target.value)}
               />
             </label>
-            <Button onClick={handleCalculate} type="button">
-              계산
-            </Button>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4">
-        {error && !errorStale ? (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-            <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-        ) : null}
+      <div className="result-column grid gap-4">
+        {/* 긴 폼이라 계산·초기화를 결과 열 맨 위에 둔다. 넓은 화면에서는 결과 열이 화면에 붙고,
+            결과가 길어 열 안에서 스크롤해도 이 줄은 위에 남는다. */}
+        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 lg:sticky lg:top-0">
+          <Button onClick={handleCalculate} type="button">
+            계산
+          </Button>
+          <Button onClick={handleReset} variant="outline" type="button">
+            초기화
+          </Button>
+        </div>
+        {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
@@ -1357,7 +1361,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 />
                 <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
                   <span>합계</span>
-                  <span>{formatWon(result.totalAmount)}</span>
+                  <span className="num">{formatWon(result.totalAmount)}</span>
                 </div>
                 <div className="grid gap-1 text-xs text-muted-foreground">
                   <span>
@@ -1369,11 +1373,18 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               </CardContent>
             </Card>
 
-            {buildLitigationCostExportWarnings(result).length > 0 ? (
-              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{buildLitigationCostExportWarnings(result).join(" / ")}</span>
-              </div>
+            {/* 공단 범위 밖·이중 감액은 결과가 틀릴 수 있어 노랑, 절사 순서는 다른 해석의 금액이라 회색. */}
+            {result.lawyerFee.koreaLegalAidWarnings.length > 0 ? (
+              <Notice tone="warn" testId="litigation-legal-aid-warnings">
+                {result.lawyerFee.koreaLegalAidWarnings.map((w) => (
+                  <span key={w.messageKo}>{w.messageKo}</span>
+                ))}
+              </Notice>
+            ) : null}
+            {result.stampDuty.roundingOrderNotice !== undefined ? (
+              <Notice tone="info" testId="litigation-rounding-notice">
+                인지대: {result.stampDuty.roundingOrderNotice}
+              </Notice>
             ) : null}
 
             {result.distribution ? (
@@ -1393,7 +1404,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                       {result.distribution.perParty.map((amount, index) => (
                         <tr key={index} className="border-b border-border last:border-b-0">
                           <td className="py-2">당사자 {index + 1}</td>
-                          <td className="py-2 text-right font-medium">{formatWon(amount)}</td>
+                          <td className="num py-2 font-medium">{formatWon(amount)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1402,10 +1413,9 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
               </Card>
             ) : null}
 
-            <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <Notice tone="info">
               <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
-            </div>
+            </Notice>
           </>
         ) : null}
 
@@ -1414,7 +1424,16 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
             <CardTitle className="text-sm">내보내기</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <ActionButton
+                action="copy"
+                icon={Clipboard}
+                label="복사"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={resultReady}
+                onClick={handleCopy}
+              />
               <ActionButton
                 action="pdf"
                 icon={FileDown}
@@ -1442,15 +1461,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 resultReady={resultReady}
                 onClick={handleExportCsv}
               />
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
+              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
               <ActionButton
                 action="save"
                 icon={FileJson}
@@ -1494,7 +1505,7 @@ function ResultLine({
     <div className="grid gap-1 border-b border-border pb-3 last:border-b-0">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">{label}</span>
-        <span className="font-semibold">{formatWon(amount)}</span>
+        <span className="num font-semibold">{formatWon(amount)}</span>
       </div>
       <p className="text-xs leading-5 text-muted-foreground">{formula}</p>
     </div>

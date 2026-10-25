@@ -16,6 +16,16 @@ describe("여명표·노임표 보기", () => {
     expect(screen.getAllByText("출처 URL")).toHaveLength(2);
   });
 
+  it("경과 배지는 두 표 모두 회색 안내이고, 여명표에 시중노임 문구가 붙지 않는다", () => {
+    render(<ReferenceTablesView />);
+    const life = screen.getByTestId("reference-life-stale-badge");
+    const labor = screen.getByTestId("reference-labor-stale-badge");
+    expect(life.dataset.tone).toBe("info");
+    expect(labor.dataset.tone).toBe("info");
+    expect(life.textContent).not.toContain("시중노임");
+    expect(life.textContent).toContain("경과");
+  });
+
   it("나이 검색은 행을 줄인다", () => {
     render(<ReferenceTablesView />);
     const before = within(screen.getByTestId("life-table")).getAllByRole("row").length;

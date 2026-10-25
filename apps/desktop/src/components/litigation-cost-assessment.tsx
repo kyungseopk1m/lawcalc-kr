@@ -24,6 +24,7 @@ import { todayIso } from "../lib/today";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
+import { Notice } from "./ui/notice";
 import { Select } from "./ui/select";
 
 /**
@@ -595,12 +596,9 @@ function CostAssessmentResultView({
         <p className="text-xs text-muted-foreground">{result.net.formulaText}</p>
       </div>
       {result.warnings.map((w) => (
-        <p
-          key={w}
-          className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
-        >
+        <Notice key={w} tone="warn" className="text-xs">
           {w}
-        </p>
+        </Notice>
       ))}
       <p className="text-xs text-muted-foreground">{result.disclaimer}</p>
       <div className="flex items-center gap-2">
