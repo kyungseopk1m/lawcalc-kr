@@ -82,6 +82,28 @@ pub struct InheritanceShareView {
     pub amount_won: Option<f64>,
 }
 
+/// 변제충당 계산서. 표·요약 문구는 frontend 가 단일 출처(`buildAppropriationExportView`)에서
+/// 만들어 넘긴다. 클립보드·화면과 같은 문구를 쓰고, 여기서는 배치만 한다.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppropriationExportView {
+    pub summary: Vec<(String, String)>,
+    pub tables: Vec<ExportTableView>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
+    pub disclaimer: String,
+    pub data_version: String,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportTableView {
+    pub title: String,
+    pub headers: Vec<String>,
+    pub rows: Vec<Vec<String>>,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LitigationCostResultView {
@@ -264,6 +286,11 @@ pub struct CompensationSegmentView {
     /// 기대여명 이후라 생계비 1/3 을 공제한 구간 (부상 `lifeExpectancy` 결과에만 `true`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub living_cost_deducted: Option<bool>,
+    /// 월소득을 직접 정한 행 (`"step"` 호봉승급, `"manual"` 표 직접 편집). 구 결과는 키 없음.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wage_basis: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monthly_wage_won: Option<f64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -470,6 +497,30 @@ pub fn segments_have_living_cost(segments: &[CompensationSegmentView]) -> bool {
     segments
         .iter()
         .any(|s| s.living_cost_deducted == Some(true))
+}
+
+/// 구간표 단가 칸. 월소득을 직접 정한 행은 월소득에 "/월" 을, 직접 편집 행은 "(편집)" 을 붙인다.
+/// 구간표 단가 열 머리글. 월소득을 직접 정한 행(호봉승급·직접 편집)이 있으면 월 단위도 밝힌다.
+pub fn segment_wage_header(segments: &[CompensationSegmentView]) -> &'static str {
+    if segments
+        .iter()
+        .any(|s| s.wage_basis.is_some() && s.monthly_wage_won.is_some())
+    {
+        "단가(원/일·원/월)"
+    } else {
+        "단가(원/일)"
+    }
+}
+
+pub fn segment_wage_text(segment: &CompensationSegmentView) -> String {
+    match (segment.wage_basis.as_deref(), segment.monthly_wage_won) {
+        (Some(basis), Some(monthly)) => format!(
+            "{}/월{}",
+            format_currency(monthly),
+            if basis == "manual" { " (편집)" } else { "" }
+        ),
+        _ => format_currency(segment.daily_wage_won),
+    }
 }
 
 /// 원고별 귀속(사망) 결과인지. 상속인 행에 원고별 항목이 있으면 그렇다.
@@ -790,6 +841,35 @@ mod tests {
         }))
         .unwrap();
         assert!(segments_have_dates(&[dated]));
+    }
+
+    #[test]
+    fn segment_wage_text_shows_monthly_income_rows() {
+        let daily: CompensationSegmentView = serde_json::from_value(json!({
+            "startMonth": 0, "endMonth": 12, "lossRate": 1, "dailyWageWon": 100000,
+            "appliedHoffman": 1, "amountFloorWon": 1, "monthlyWageWon": 2000000
+        }))
+        .unwrap();
+        assert_eq!(segment_wage_text(&daily), "100,000");
+        let step: CompensationSegmentView = serde_json::from_value(json!({
+            "startMonth": 0, "endMonth": 12, "lossRate": 1, "dailyWageWon": 0,
+            "appliedHoffman": 1, "amountFloorWon": 1, "monthlyWageWon": 2320000, "wageBasis": "step"
+        }))
+        .unwrap();
+        assert_eq!(segment_wage_text(&step), "2,320,000/월");
+        assert_eq!(
+            segment_wage_header(std::slice::from_ref(&daily)),
+            "단가(원/일)"
+        );
+        assert_eq!(
+            segment_wage_header(&[daily.clone(), step.clone()]),
+            "단가(원/일·원/월)"
+        );
+        let manual = CompensationSegmentView {
+            wage_basis: Some("manual".into()),
+            ..step
+        };
+        assert_eq!(segment_wage_text(&manual), "2,320,000/월 (편집)");
 
         let share: CompensationInheritanceShareView = serde_json::from_value(json!({
             "name": "배우자", "numerator": 3, "denominator": 7, "amountWon": 100

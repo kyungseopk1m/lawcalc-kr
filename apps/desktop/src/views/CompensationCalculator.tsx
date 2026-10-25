@@ -75,6 +75,7 @@ import {
   LostRetirementDetail,
   previewLifeExpectancy,
 } from "../components/compensation-extras-form";
+import { WageScheduleCard } from "../components/compensation-wage-schedule";
 import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -96,6 +97,13 @@ import {
   defaultDelayDamagesFormState,
   defaultInjuryClaimantsFormState,
   defaultLifeExpectancyFormState,
+  defaultWageScheduleFormState,
+  applyWageScheduleInput,
+  buildWageScheduleInput,
+  segmentWageHeader,
+  segmentWageText,
+  wageScheduleForDirtySnapshot,
+  type WageScheduleFormState,
   defaultLostRetirementFormState,
   delayDamagesClipboardLines,
   delayPrincipalsOf,
@@ -152,7 +160,7 @@ const APP_VERSION = __APP_VERSION__;
 
 const DEFAULT_FUNERAL_EXPENSE = 5_000_000;
 
-type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
+type ActionName = "pdf" | "hwpx" | "csv" | "copy" | "save" | "load";
 
 interface ToastState {
   type: "success" | "error";
@@ -243,6 +251,8 @@ export interface CompensationFormState extends DeductionsFormState, LaborRateTim
   lostRetirement: LostRetirementFormState;
   /** 원고별 귀속 (끄면 키 없음). */
   claimants: InjuryClaimantsFormState;
+  /** 호봉승급 일정 · 일실수입 표 직접 편집 (자동이면 키 없음). */
+  wageSchedule: WageScheduleFormState;
 }
 
 const DEFAULT_OCCUPATION = "보통인부";
@@ -563,6 +573,7 @@ export function defaultCompensationFormState(): CompensationFormState {
     disabilityBenefitWonText: "",
     otherDamages: defaultOtherDamagesFormState(),
     lifeExpectancy: defaultLifeExpectancyFormState(),
+    wageSchedule: defaultWageScheduleFormState(),
     lostRetirement: defaultLostRetirementFormState(),
     claimants: defaultInjuryClaimantsFormState(),
   };
@@ -603,6 +614,7 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
   };
   if (occupation.length > 0) lostIncome.occupation = occupation;
   if (directWageWon > 0) lostIncome.directWageWon = directWageWon;
+  Object.assign(lostIncome, buildWageScheduleInput(state.wageSchedule));
 
   const lossRate: CompensationInput["lossRate"] = {};
   if (permanent.length > 0) lossRate.permanent = permanent;
@@ -698,6 +710,7 @@ export function applyLoadedCompensationInput(input: CompensationInput): Compensa
         : String(input.industrialInsurance.disabilityBenefitWon),
     otherDamages: applyOtherDamagesInput(input.otherDamages),
     lifeExpectancy: applyLifeExpectancyInput(input.lifeExpectancy),
+    wageSchedule: applyWageScheduleInput(input.lostIncome),
     lostRetirement: applyLostRetirementInput(input.lostRetirement),
     claimants: applyInjuryClaimantsInput(input.claimants),
   };
@@ -849,6 +862,10 @@ function stateForDirtySnapshot(state: CompensationFormState) {
     ...deductionsForDirtySnapshot(state),
     otherDamages: otherDamagesForDirtySnapshot(state.otherDamages),
     lifeExpectancy: state.lifeExpectancy,
+    // 자동 구간은 키를 두지 않는다 (이 기능이 없던 저장 파일과 지문이 같다).
+    ...(state.wageSchedule.mode !== "auto"
+      ? { wageSchedule: wageScheduleForDirtySnapshot(state.wageSchedule) }
+      : {}),
     lostRetirement: state.lostRetirement,
     claimants: injuryClaimantsForDirtySnapshot(state.claimants),
   };
@@ -911,7 +928,7 @@ export function formatCompensationForClipboard(
   const segmentRows = result.segments
     .map(
       (segment, i) =>
-        `${i + 1}\t${segmentPeriodText(segment)}\t${formatRatioPercent(segment.lossRate)}\t${formatWon(segment.dailyWageWon)}/일\t호프만 ${segment.appliedHoffman.toFixed(
+        `${i + 1}\t${segmentPeriodText(segment)}\t${formatRatioPercent(segment.lossRate)}\t${segmentWageText(segment, "/일")}\t호프만 ${segment.appliedHoffman.toFixed(
           6,
         )}\t${formatWon(segment.amountFloorWon)}${
           livingCost ? `\t${segment.livingCostDeducted === true ? "생계비 1/3 공제*" : ""}` : ""
@@ -1107,6 +1124,8 @@ export interface CompensationDeathFormState extends DeductionsFormState, LaborRa
   lostRetirement: LostRetirementFormState;
   /** 원고별 귀속 (상속인 필요). */
   claimants: DeathClaimantsFormState;
+  /** 호봉승급 일정 · 일실수입 표 직접 편집 (자동이면 키 없음). */
+  wageSchedule: WageScheduleFormState;
   includeHeirs: boolean;
   decedent: DecedentInput;
   spouse: SpouseInput;
@@ -1142,6 +1161,7 @@ export function defaultCompensationDeathFormState(): CompensationDeathFormState 
     courtTruncation: true,
     truncateEachStep: false,
     lifeExpectancy: defaultLifeExpectancyFormState(),
+    wageSchedule: defaultWageScheduleFormState(),
     lostRetirement: defaultLostRetirementFormState(),
     claimants: defaultDeathClaimantsFormState(),
     includeHeirs: false,
@@ -1167,6 +1187,7 @@ export function buildCompensationDeathInput(
   };
   if (occupation.length > 0) lostIncome.occupation = occupation;
   if (directWageWon > 0) lostIncome.directWageWon = directWageWon;
+  Object.assign(lostIncome, buildWageScheduleInput(state.wageSchedule));
 
   const input: CompensationAutoDeathInput = {
     mode: "death",
@@ -1305,6 +1326,7 @@ export function applyLoadedCompensationDeathInput(
     courtTruncation: input.base.courtTruncation === true,
     truncateEachStep: input.base.truncateEachStep === true,
     lifeExpectancy: applyLifeExpectancyInput(input.lifeExpectancy),
+    wageSchedule: applyWageScheduleInput(input.lostIncome),
     lostRetirement: applyLostRetirementInput(input.lostRetirement),
     claimants: applyDeathClaimantsInput(
       input.claimants,
@@ -1340,7 +1362,7 @@ export function formatCompensationDeathForClipboard(
   const segmentRows = result.segments
     .map(
       (segment, i) =>
-        `${i + 1}\t${segmentPeriodText(segment)}\t${formatWon(segment.dailyWageWon)}/일\t호프만 ${segment.appliedHoffman.toFixed(6)}\t${formatWon(segment.amountFloorWon)}`,
+        `${i + 1}\t${segmentPeriodText(segment)}\t${segmentWageText(segment, "/일")}\t호프만 ${segment.appliedHoffman.toFixed(6)}\t${formatWon(segment.amountFloorWon)}`,
     )
     .join("\n");
 
@@ -1488,6 +1510,10 @@ function deathStateForDirtySnapshot(state: CompensationDeathFormState) {
     courtTruncation: state.courtTruncation,
     ...(state.truncateEachStep ? { truncateEachStep: true } : {}),
     lifeExpectancy: state.lifeExpectancy,
+    // 자동 구간은 키를 두지 않는다 (이 기능이 없던 저장 파일과 지문이 같다).
+    ...(state.wageSchedule.mode !== "auto"
+      ? { wageSchedule: wageScheduleForDirtySnapshot(state.wageSchedule) }
+      : {}),
     lostRetirement: state.lostRetirement,
     claimants: deathClaimantsForDirtySnapshot(state.claimants, heirNamesOf(state)),
     includeHeirs: state.includeHeirs,
@@ -1777,6 +1803,21 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
         ),
       );
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
+    });
+
+  const handleExportHwpx = () =>
+    runAction("hwpx", async () => {
+      if (!result || resultStale) throw new Error("계산 후 HWPX를 저장해 주세요.");
+      const path = await ipc.exportHwpx(
+        "compensation",
+        withCompensationExportWarnings(
+          result,
+          timingOf(state),
+          delayComputed.value,
+          docComputed.value?.blocks,
+        ),
+      );
+      return path ? `HWPX 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
@@ -2224,6 +2265,14 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
           mode="injury"
         />
 
+        <WageScheduleCard
+          value={state.wageSchedule}
+          onChange={(wageSchedule) => update({ wageSchedule })}
+          mode="injury"
+          accidentDate={state.accidentDate}
+          segments={result?.segments}
+        />
+
         <LostRetirementCard
           value={state.lostRetirement}
           onChange={(lostRetirement) => update({ lostRetirement })}
@@ -2407,6 +2456,15 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 requiresResult
                 resultReady={resultReady}
                 onClick={handleExportPdf}
+              />
+              <ActionButton
+                action="hwpx"
+                icon={FileDown}
+                label="HWPX 저장"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={resultReady}
+                onClick={handleExportHwpx}
               />
               <ActionButton
                 action="csv"
@@ -2614,6 +2672,21 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
         ),
       );
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
+    });
+
+  const handleExportHwpx = () =>
+    runAction("hwpx", async () => {
+      if (!result || resultStale) throw new Error("계산 후 HWPX를 저장해 주세요.");
+      const path = await ipc.exportHwpx(
+        "compensation-death",
+        withCompensationExportWarnings(
+          result,
+          timingOf(state),
+          delayComputed.value,
+          docComputed.value?.blocks,
+        ),
+      );
+      return path ? `HWPX 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
@@ -2894,6 +2967,14 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
           onChange={(lifeExpectancy) => update({ lifeExpectancy })}
           preview={lifePreview}
           mode="death"
+        />
+
+        <WageScheduleCard
+          value={state.wageSchedule}
+          onChange={(wageSchedule) => update({ wageSchedule })}
+          mode="death"
+          accidentDate={state.accidentDate}
+          segments={result?.segments}
         />
 
         <LostRetirementCard
@@ -3214,6 +3295,15 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
                 onClick={handleExportPdf}
               />
               <ActionButton
+                action="hwpx"
+                icon={FileDown}
+                label="HWPX 저장"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={resultReady}
+                onClick={handleExportHwpx}
+              />
+              <ActionButton
                 action="csv"
                 icon={FileSpreadsheet}
                 label="CSV"
@@ -3386,7 +3476,9 @@ function DeathResultCards({
               <tr className="border-b border-border text-left text-xs text-muted-foreground">
                 <th className="py-2 font-medium">기간 (개월)</th>
                 {hasDates ? <SegmentDateHeaders /> : null}
-                <th className="py-2 text-right font-medium">단가 (원/일)</th>
+                <th className="py-2 text-right font-medium">
+                  {segmentWageHeader(result.segments)}
+                </th>
                 <th className="py-2 text-right font-medium">호프만 (적용)</th>
                 <th className="py-2 text-right font-medium">금액</th>
               </tr>
@@ -3398,7 +3490,7 @@ function DeathResultCards({
                     {segment.startMonth} ~ {segment.endMonth}
                   </td>
                   {hasDates ? <SegmentDateCells segment={segment} /> : null}
-                  <td className="py-2 text-right">{formatWon(segment.dailyWageWon)}</td>
+                  <td className="py-2 text-right">{segmentWageText(segment)}</td>
                   <td className="py-2 text-right">
                     {segment.appliedHoffman.toFixed(6)}
                     {result.hoffman240Cap.cappedAtIndex === i ? (
@@ -4159,7 +4251,9 @@ function ResultCards({
                 <th className="py-2 font-medium">기간 (개월)</th>
                 {hasDates ? <SegmentDateHeaders /> : null}
                 <th className="py-2 font-medium">상실률</th>
-                <th className="py-2 text-right font-medium">단가 (원/일)</th>
+                <th className="py-2 text-right font-medium">
+                  {segmentWageHeader(result.segments)}
+                </th>
                 <th className="py-2 text-right font-medium">호프만 (적용)</th>
                 <th className="py-2 text-right font-medium">금액</th>
               </tr>
@@ -4172,7 +4266,7 @@ function ResultCards({
                   </td>
                   {hasDates ? <SegmentDateCells segment={segment} /> : null}
                   <td className="py-2">{formatRatioPercent(segment.lossRate)}</td>
-                  <td className="py-2 text-right">{formatWon(segment.dailyWageWon)}</td>
+                  <td className="py-2 text-right">{segmentWageText(segment)}</td>
                   <td className="py-2 text-right">
                     {segment.appliedHoffman.toFixed(6)}
                     {result.hoffman240Cap.cappedAtIndex === i ? (

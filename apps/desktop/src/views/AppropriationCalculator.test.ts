@@ -4,12 +4,15 @@ import { computeAppropriation, STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engi
 
 import {
   applyLoadedAppropriationInput,
+  appropriationSummaryRows,
+  buildAppropriationExportView,
   buildAppropriationInput,
   buildAppropriationLcalcFile,
   formatAppropriationForClipboard,
   type ClaimInputState,
   type PaymentInputState,
 } from "./AppropriationCalculator";
+import { validateLcalcEnvelope } from "../lib/lcalc-validation";
 
 function claim(overrides: Partial<ClaimInputState> = {}): ClaimInputState {
   return {
@@ -254,5 +257,130 @@ describe("변제일 (paidAt) 왕복 [APP-3]", () => {
       before.claims.map((c) => c.totalApplied),
     );
     expect(after.claims.find((c) => c.claimId === "late")?.totalApplied).toBe(50000);
+  });
+});
+
+/**
+ * P5-4 — 여러 번 변제·상계·이자·이자제한법. 새 키가 있을 때만 `appropriation@3`.
+ */
+describe("여러 번 변제·이자 왕복 [P5-4]", () => {
+  const loanClaim = claim({
+    principalBalanceText: "10000000",
+    dueAt: "2025-12-31",
+    interestRateText: "12",
+    interestFrom: "2025-01-01",
+  });
+  const first: PaymentInputState = {
+    amountText: "1000000",
+    allocationType: "legal",
+    paidAt: "2025-03-31",
+    targets: [],
+  };
+  const second: PaymentInputState = {
+    uid: "p2",
+    amountText: "2000000",
+    allocationType: "legal",
+    paidAt: "2025-06-30",
+    kind: "setoff",
+    targets: [],
+  };
+
+  it("이율·추가 변제·상계가 도메인 입력으로 넘어간다", () => {
+    const input = buildAppropriationInput([loanClaim], first, "2026-10-25", [second]);
+    expect(input.claims[0]).toMatchObject({ interestRate: 0.12, interestFrom: "2025-01-01" });
+    expect(input.additionalPayments).toEqual([
+      { amount: 2000000, allocation: { type: "legal" }, paidAt: "2025-06-30", kind: "setoff" },
+    ]);
+    const result = computeAppropriation(input);
+    // 골든 case-007 과 같은 값 (변제 1: 이자 295,890 / 변제 2: 이자 278,112).
+    expect(result.events!.map((e) => e.claims[0]!.interestAccrued)).toEqual([295890, 278112]);
+  });
+
+  it("새 키가 있으면 appropriation@3, 없으면 종전 capability", () => {
+    const extended = buildAppropriationInput([loanClaim], first, "2026-10-25", [second]);
+    const file = buildAppropriationLcalcFile(extended, computeAppropriation(extended), "");
+    expect(file.envelopeFeatures).toEqual(["appropriation@3"]);
+    expect(() => validateLcalcEnvelope(file)).not.toThrow();
+
+    const plain = buildAppropriationInput([claim()], first, "2026-10-25");
+    const plainFile = buildAppropriationLcalcFile(plain, computeAppropriation(plain), "");
+    expect(plainFile.envelopeFeatures).toEqual(["appropriation@2"]);
+    expect(plain).not.toHaveProperty("additionalPayments");
+    expect(plain.claims[0]).not.toHaveProperty("interestRate");
+  });
+
+  it("불러오기에서 이율·이자제한법·추가 변제가 복원되고 결과가 같다", () => {
+    const limited = claim({
+      ...loanClaim,
+      interestRateText: "30",
+      limitEnabled: true,
+      limitAgreedAt: "2025-01-01",
+      prepaidText: "100000",
+    });
+    const input = buildAppropriationInput([limited], first, "2026-10-25", [second]);
+    const reloaded = applyLoadedAppropriationInput(input);
+    expect(reloaded.claims[0]).toMatchObject({
+      interestRateText: "30",
+      limitEnabled: true,
+      limitAgreedAt: "2025-01-01",
+      prepaidText: "100000",
+    });
+    expect(reloaded.additionalPayments[0]).toMatchObject({ paidAt: "2025-06-30", kind: "setoff" });
+    const again = buildAppropriationInput(
+      reloaded.claims,
+      reloaded.payment,
+      "2026-10-25",
+      reloaded.additionalPayments,
+    );
+    expect(again).toEqual(input);
+    expect(computeAppropriation(again).totals).toEqual(computeAppropriation(input).totals);
+  });
+
+  it("PDF·CSV 계산서에 변제별 표와 이자제한법 문구가 들어간다", () => {
+    const limited = claim({
+      ...loanClaim,
+      interestRateText: "30",
+      limitEnabled: true,
+      limitAgreedAt: "2025-01-01",
+    });
+    const result = computeAppropriation(
+      buildAppropriationInput([limited], first, "2026-10-25", [second]),
+    );
+    const view = buildAppropriationExportView(result, "메모");
+    expect(view.tables.map((t) => t.title)).toEqual(["채권별 결과", "변제별 충당"]);
+    expect(view.tables[1]!.rows).toHaveLength(2);
+    expect(view.notes[0]).toContain("이자제한법 제2조 제3항");
+    expect(view.notes).toContain("비고: 메모");
+    expect(view.dataVersion).toContain("interest-limits/");
+    expect(formatAppropriationForClipboard(result)).toContain("변제별");
+  });
+
+  it("요약은 변제마다 충당 방식을 적고, 상계 미충당액은 잉여(반환)와 따로 적는다", () => {
+    // 채권 1,000,000. 변제 300,000(채무자 지정) → 상계 900,000 중 700,000 충당, 200,000 남음 →
+    // 변제 50,000 은 갚을 채권이 없어 반환할 잉여.
+    const result = computeAppropriation({
+      claims: [{ id: "a", principalBalance: 1_000_000, dueAt: "2025-01-01" }],
+      payment: {
+        amount: 300_000,
+        paidAt: "2025-06-30",
+        allocation: { type: "debtorDesignation", targets: [{ claimId: "a", amount: 300_000 }] },
+      },
+      additionalPayments: [
+        { amount: 900_000, paidAt: "2025-07-31", kind: "setoff", allocation: { type: "legal" } },
+        { amount: 50_000, paidAt: "2025-08-31", allocation: { type: "legal" } },
+      ],
+      computedAt: "2026-10-25",
+    });
+    expect(appropriationSummaryRows(result)).toEqual([
+      ["변제액", "1,250,000원 (채무자 지정, 법정충당, 법정충당)"],
+      ["충당 합계", "1,000,000원"],
+      ["잉여 (반환)", "50,000원"],
+      ["상계 후 남은 자동채권", "200,000원"],
+    ]);
+    expect(formatAppropriationForClipboard(result)).toContain("잉여 (반환): 50,000원");
+    expect(buildAppropriationExportView(result, "").summary).toContainEqual([
+      "상계 후 남은 자동채권",
+      "200,000원",
+    ]);
   });
 });

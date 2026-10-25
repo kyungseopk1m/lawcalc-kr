@@ -1,7 +1,8 @@
 import { Monitor, Moon, Settings, Sun, X, type LucideIcon } from "lucide-react";
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { useTheme, type ThemePreference } from "../../contexts/ThemeContext";
+import { readDateStyle, writeDateStyle } from "../../lib/output-format";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 
@@ -45,6 +46,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const radioRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const [courtDates, setCourtDates] = useState(() => readDateStyle() === "court");
 
   useEffect(() => {
     if (!open) {
@@ -212,6 +214,30 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 );
               })}
             </div>
+          </section>
+
+          <section aria-labelledby="settings-date-style">
+            <h3 id="settings-date-style" className="font-medium">
+              날짜 표기
+            </h3>
+            <label className="mt-2 flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={courtDates}
+                onChange={(event) => {
+                  setCourtDates(event.target.checked);
+                  writeDateStyle(event.target.checked ? "court" : "iso");
+                }}
+              />
+              <span>
+                법원식 날짜·요일 (예: 2026. 10. 25.(일))
+                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                  복사·PDF·CSV·HWPX 로 내보내는 결과의 날짜에 적용합니다. 끄면 2026-10-25
+                  형식입니다.
+                </span>
+              </span>
+            </label>
           </section>
         </div>
 

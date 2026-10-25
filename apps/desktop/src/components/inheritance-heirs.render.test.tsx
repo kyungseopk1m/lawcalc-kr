@@ -121,3 +121,53 @@ describe("대습 원인과 대습상속인 포기 입력", () => {
     expect(next[0]!.representatives[0]!.renounced).toBe(true);
   });
 });
+
+describe("구법 입력 (oldLaw)", () => {
+  function OldHarness({ onState }: { onState: (h: HeirInput[]) => void }) {
+    const [heirs, setHeirs] = useState<HeirInput[]>([{ ...emptyHeir(), name: "딸" }]);
+    return (
+      <HeirGroupCard
+        title="직계비속"
+        hint="테스트용"
+        heirs={heirs}
+        allowRepresentation
+        defaultLabel="자녀"
+        oldLaw
+        allowHoju
+        onChange={(next) => {
+          setHeirs(next);
+          onState(next);
+        }}
+      />
+    );
+  }
+
+  it("여자를 고르면 동일가적 선택이 나오고, 기본값은 비어 있다 (1/4 로 조용히 계산되지 않음)", () => {
+    const seen = vi.fn();
+    render(<OldHarness onState={seen} />);
+    expect(screen.queryByLabelText("동일가적 여부")).toBeNull();
+    fireEvent.change(screen.getByLabelText("성별"), { target: { value: "female" } });
+    const register = screen.getByLabelText<HTMLSelectElement>("동일가적 여부");
+    expect(register.value).toBe("");
+    fireEvent.change(register, { target: { value: "false" } });
+    expect(seen).toHaveBeenLastCalledWith([
+      expect.objectContaining({ sex: "female", sameFamilyRegister: false }),
+    ]);
+    expect(screen.getByLabelText(/호주상속인/)).toBeTruthy();
+  });
+
+  it("구법 대습 원인에는 상속권 상실선고(1991 이후 신설)가 없다", () => {
+    render(<OldHarness onState={vi.fn()} />);
+    fireEvent.click(deceasedBox());
+    const values = Array.from(screen.getByLabelText<HTMLSelectElement>(/대습 원인/).options).map(
+      (o) => o.value,
+    );
+    expect(values).toEqual(["death", "disqualified"]);
+  });
+
+  it("oldLaw 가 없으면 구법 입력이 보이지 않는다 (손해배상 탭 등 종전 화면)", () => {
+    render(<Harness initial={[{ ...emptyHeir(), name: "자녀" }]} onState={vi.fn()} />);
+    expect(screen.queryByLabelText("성별")).toBeNull();
+    expect(screen.queryByLabelText(/호주상속인/)).toBeNull();
+  });
+});

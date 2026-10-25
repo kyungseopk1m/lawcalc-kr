@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   CheckCircle2,
   Clipboard,
   FileDown,
@@ -24,8 +25,10 @@ import {
   HeirGroupCard,
   applyInheritanceInput,
   buildInheritanceInput,
+  hasInheritanceOldLawFields,
   hasInheritanceV2Fields,
   heirsForDirtySnapshot,
+  isOldLawDate,
   type DecedentInput,
   type HeirInput,
   type SpouseInput,
@@ -45,7 +48,7 @@ import { parseLoadedInheritanceLcalcInput, validateLcalcEnvelope } from "../lib/
 
 const APP_VERSION = __APP_VERSION__;
 
-type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
+type ActionName = "pdf" | "hwpx" | "csv" | "copy" | "save" | "load";
 
 interface ToastState {
   type: "success" | "error";
@@ -59,11 +62,16 @@ function heirsFromNodesForDirtySnapshot(heirs: HeirNode[] | undefined, defaultDe
       deceasedBeforeOpening: heir.deceasedBeforeOpening,
       renounced: heir.renounced ?? false,
       degree: heir.degree ?? defaultDegree,
+      sex: heir.sex,
+      sameFamilyRegister: heir.sameFamilyRegister,
+      hojuSuccessor: heir.hojuSuccessor || undefined,
       representatives:
         heir.representatives?.map((representative) => ({
           name: representative.name ?? "",
           isSpouseOfRepresented: representative.isSpouseOfRepresented ?? false,
           renounced: representative.renounced ?? false,
+          sex: representative.sex,
+          sameFamilyRegister: representative.sameFamilyRegister,
         })) ?? [],
     })) ?? []
   );
@@ -109,6 +117,7 @@ function buildLoadedInheritanceDirtySnapshot(input: InheritanceInput, note: stri
     spouse: {
       alive: input.spouse?.alive ?? false,
       name: input.spouse?.name ?? "",
+      relation: input.spouse?.relation,
     },
     linealDescendants: heirsFromNodesForDirtySnapshot(input.linealDescendants),
     linealAscendants: heirsFromNodesForDirtySnapshot(input.linealAscendants, 1),
@@ -148,8 +157,8 @@ export function computeInheritance(input: InheritanceInput): InheritanceResult {
 }
 
 /**
- * 저장 capability. 상속재산 금액이 있으면 `inheritance@3` (구앱이 키를 버리면 금액 없는 결과를
- * 그대로 보여 준다), 포기·대습 원인이 있으면 `@2`, 둘 다 없으면 `@1`.
+ * 저장 capability. 구법 필드가 있으면 `inheritance@4`, 상속재산 금액이 있으면 `inheritance@3`
+ * (구앱이 키를 버리면 금액 없는 결과를 그대로 보여 준다), 포기·대습 원인이 있으면 `@2`, 없으면 `@1`.
  */
 /**
  * 파일 열기 때 저장 결과와 재계산 결과를 견주는 핵심 값. 지분이 같아도 상속재산 금액이나
@@ -166,6 +175,8 @@ export function summarizeInheritanceResult(r: InheritanceResult): string {
 }
 
 export function inheritanceCapability(input: InheritanceInput): string {
+  // 구법 필드(성별·가적·호주상속·처/남편)를 구앱이 버리면 1991 전 사망이 거부되거나 지분이 달라진다.
+  if (hasInheritanceOldLawFields(input)) return "inheritance@4";
   if (input.estateWon !== undefined) return "inheritance@3";
   return hasInheritanceV2Fields(input) ? "inheritance@2" : "inheritance@1";
 }
@@ -203,6 +214,7 @@ export function formatInheritanceForClipboard(result: InheritanceResult): string
     "",
     `상속인\t지분(약분)\t약분 전\t백분율(참고)${hasAmount ? "\t금액" : ""}`,
     rows,
+    ...(result.warnings && result.warnings.length > 0 ? ["", "경고", ...result.warnings] : []),
     ...(result.trace && result.trace.length > 0 ? ["", "전개식", ...result.trace] : []),
     "",
     STANDARD_DISCLAIMER,
@@ -300,6 +312,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     stale: errorStale,
   } = useResultFingerprint<string>(resultFingerprint);
   const resultReady = result !== null && !resultStale;
+  const oldLaw = isOldLawDate(decedent.deceasedAt);
 
   const buildInput = (): InheritanceInput =>
     withEstate(
@@ -382,6 +395,15 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
       }
       const path = await ipc.exportInheritancePdf(result);
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
+    });
+
+  const handleExportHwpx = () =>
+    runAction("hwpx", async () => {
+      if (!result || resultStale) {
+        throw new Error("계산 후 HWPX를 저장해 주세요.");
+      }
+      const path = await ipc.exportHwpx("inheritance", result);
+      return path ? `HWPX 파일을 저장했습니다: ${path}` : null;
     });
 
   const handleExportCsv = () =>
@@ -478,7 +500,8 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">피상속인</CardTitle>
             <p className="text-xs text-muted-foreground">
-              1991-01-01 이후 사망 사건만 지원합니다 (1990 개정민법 시행).
+              1991-01-01 이후 사망은 현행 민법, 1960-01-01 ~ 1990-12-31 사망은 사망 당시 구 민법으로
+              계산합니다. 1960년 전 사망(관습법)은 계산하지 않습니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -501,6 +524,8 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           </CardContent>
         </Card>
 
+        {oldLaw ? <OldLawCaution /> : null}
+
         <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">배우자</CardTitle>
@@ -517,6 +542,26 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
               />
               배우자 생존
             </label>
+            {spouse.alive && oldLaw ? (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                피상속인과의 관계
+                <select
+                  aria-label="배우자 관계"
+                  className="rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground"
+                  value={spouse.relation ?? ""}
+                  onChange={(e) =>
+                    setSpouse({
+                      ...spouse,
+                      relation: (e.target.value || undefined) as SpouseInput["relation"],
+                    })
+                  }
+                >
+                  <option value="">선택</option>
+                  <option value="wife">처 (피상속인이 남자)</option>
+                  <option value="husband">남편 (피상속인이 여자, 구 민법 제1002조)</option>
+                </select>
+              </label>
+            ) : null}
             {spouse.alive ? (
               <label className="grid gap-2 text-sm font-medium">
                 이름 (선택)
@@ -537,6 +582,8 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           onChange={setLinealDescendants}
           allowRepresentation={true}
           defaultLabel="자녀"
+          oldLaw={oldLaw}
+          allowHoju={true}
         />
 
         <HeirGroupCard
@@ -546,6 +593,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           onChange={setLinealAscendants}
           allowRepresentation={false}
           defaultLabel="직계존속"
+          oldLaw={oldLaw}
           degreeOptions={[
             { value: 1, label: "부모 (1촌)" },
             { value: 2, label: "조부모 (2촌)" },
@@ -560,19 +608,21 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           onChange={setSiblings}
           allowRepresentation={true}
           defaultLabel="형제자매"
+          oldLaw={oldLaw}
         />
 
         <HeirGroupCard
-          title="4순위 4촌 이내 방계혈족"
+          title={oldLaw ? "4순위 8촌 이내 방계혈족 (구법)" : "4순위 4촌 이내 방계혈족"}
           hint={HEIR_GROUP_HINTS.collaterals}
           heirs={collateralFourth}
           onChange={setCollateralFourth}
           allowRepresentation={false}
           defaultLabel="방계혈족"
-          degreeOptions={[
-            { value: 3, label: "3촌" },
-            { value: 4, label: "4촌" },
-          ]}
+          oldLaw={oldLaw}
+          degreeOptions={(oldLaw ? [3, 4, 5, 6, 7, 8] : [3, 4]).map((value) => ({
+            value,
+            label: `${value}촌`,
+          }))}
         />
 
         <Card>
@@ -734,6 +784,22 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
               </CardContent>
             </Card>
 
+            {result.dataVersion.startsWith("inheritance-pre1991") ? <OldLawCaution /> : null}
+            {result.warnings && result.warnings.length > 0 ? (
+              <div
+                role="alert"
+                data-testid="inheritance-warnings"
+                className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <ul className="grid gap-1">
+                  {result.warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             <div className="flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
@@ -755,6 +821,15 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 requiresResult={true}
                 resultReady={resultReady}
                 onClick={handleExportPdf}
+              />
+              <ActionButton
+                action="hwpx"
+                icon={FileDown}
+                label="HWPX 저장"
+                loadingAction={loadingAction}
+                requiresResult={true}
+                resultReady={resultReady}
+                onClick={handleExportHwpx}
               />
               <ActionButton
                 action="csv"
@@ -813,6 +888,27 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
         ) : null}
       </div>
     </main>
+  );
+}
+
+/** 구법 사건 경고. 화면 입력부와 결과부에 같이 띄운다. */
+function OldLawCaution() {
+  return (
+    <div
+      role="alert"
+      className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100"
+    >
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <div className="grid gap-1">
+        <strong>구법 사건은 전문가 확인이 필요합니다.</strong>
+        <span className="text-xs">
+          1991-01-01 전 사망은 사망 당시 구 민법(1960~1978 제정 민법, 1979~1990 1977 개정 민법)의
+          호주상속 가산, 여자·출가녀 상속분, 처의 상속분으로 계산합니다. 호적(가적)·혼인·호주상속
+          사실관계에 따라 결과가 달라지며, 대습 호주상속·상속포기·처나 직계존속의 호주상속은
+          계산하지 않습니다.
+        </span>
+      </div>
+    </div>
   );
 }
 

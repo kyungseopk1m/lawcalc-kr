@@ -1939,6 +1939,7 @@ version = "0.12.2"
 dependencies = [
  "csv",
  "printpdf",
+ "quick-xml",
  "serde",
  "serde_json",
  "tauri",
@@ -1949,6 +1950,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-updater",
  "thiserror 1.0.69",
+ "zip",
 ]
 
 [[package]]

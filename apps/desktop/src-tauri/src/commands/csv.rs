@@ -7,14 +7,15 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::error::Error;
 
+use super::result_view::AppropriationExportView;
 use super::result_view::{
     compensation_deduction_rows, disclaimer_text, format_currency, format_rate_percent,
     heir_excess_dropped_row, heir_rounding_row, industrial_benefit_value_text, options_summary,
-    segments_have_dates, segments_have_living_cost, shares_have_claimant_breakdown,
-    shares_have_survivor_benefit, CompensationDeathResultView, CompensationDelayDamagesView,
-    CompensationDocumentTextView, CompensationOtherDamagesView, CompensationResultView,
-    CompensationSegmentView, InheritanceResultView, LitigationCostResultView, ResultView,
-    LIVING_COST_AFTER_LIFE_NOTE, LIVING_COST_SEGMENT_MARK,
+    segment_wage_header, segment_wage_text, segments_have_dates, segments_have_living_cost,
+    shares_have_claimant_breakdown, shares_have_survivor_benefit, CompensationDeathResultView,
+    CompensationDelayDamagesView, CompensationDocumentTextView, CompensationOtherDamagesView,
+    CompensationResultView, CompensationSegmentView, InheritanceResultView,
+    LitigationCostResultView, ResultView, LIVING_COST_AFTER_LIFE_NOTE, LIVING_COST_SEGMENT_MARK,
 };
 
 /// CSV formula injection defense.
@@ -405,6 +406,82 @@ pub fn render_litigation_cost_csv_bytes(view: &LitigationCostResultView) -> Resu
     Ok(out)
 }
 
+#[tauri::command]
+pub async fn export_appropriation_csv(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: AppropriationExportView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("CSV", &["csv"])
+            .set_file_name("appropriation-calculation.csv")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_appropriation_csv_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
+}
+
+pub fn render_appropriation_csv_bytes(view: &AppropriationExportView) -> Result<Vec<u8>, Error> {
+    let mut wtr = csv::WriterBuilder::new()
+        .delimiter(b',')
+        .flexible(true)
+        .from_writer(vec![]);
+
+    for (label, value) in &view.summary {
+        let label_cell = escape_csv_cell(label).into_owned();
+        let value_cell = escape_csv_cell(value).into_owned();
+        wtr.write_record([label_cell.as_str(), value_cell.as_str()])?;
+    }
+    for table in &view.tables {
+        wtr.write_record([""])?;
+        let title_cell = escape_csv_cell(&table.title).into_owned();
+        wtr.write_record([title_cell.as_str()])?;
+        wtr.write_record(
+            table
+                .headers
+                .iter()
+                .map(|h| escape_csv_cell(h).into_owned()),
+        )?;
+        for row in &table.rows {
+            wtr.write_record(row.iter().map(|c| escape_csv_cell(c).into_owned()))?;
+        }
+    }
+    wtr.write_record([""])?;
+    write_export_warnings(&mut wtr, &view.notes)?;
+    let version_cell = escape_csv_cell(&view.data_version).into_owned();
+    wtr.write_record(["데이터 버전", version_cell.as_str()])?;
+    let computed_cell = escape_csv_cell(view.computed_at.as_str()).into_owned();
+    wtr.write_record(["계산 시각", computed_cell.as_str()])?;
+    let disclaimer_cell = escape_csv_cell(disclaimer_text(Some(&view.disclaimer))).into_owned();
+    wtr.write_record(["면책 고지", disclaimer_cell.as_str()])?;
+
+    let inner = wtr
+        .into_inner()
+        .map_err(|e| Error::Other(format!("CSV 마무리 실패: {e}")))?;
+
+    let mut out = Vec::with_capacity(inner.len() + 3);
+    out.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+    out.extend_from_slice(&inner);
+    Ok(out)
+}
+
 fn format_inheritance_percent(numerator: i64, denominator: i64) -> String {
     if denominator == 0 {
         return "-".to_string();
@@ -439,10 +516,21 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         if dated {
             header.extend(["초일", "말일"]);
         }
-        header.extend(["상실률", "단가(원/일)", "호프만(적용)", "금액(원)", "비고"]);
+        header.extend([
+            "상실률",
+            segment_wage_header(&view.segments),
+            "호프만(적용)",
+            "금액(원)",
+            "비고",
+        ]);
         wtr.write_record(&header)?;
     } else {
-        write_segment_header(&mut wtr, dated, &["상실률"])?;
+        write_segment_header(
+            &mut wtr,
+            dated,
+            &["상실률"],
+            segment_wage_header(&view.segments),
+        )?;
     }
     for (i, segment) in view.segments.iter().enumerate() {
         let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
@@ -637,13 +725,14 @@ fn write_segment_header(
     wtr: &mut csv::Writer<Vec<u8>>,
     dated: bool,
     middle: &[&str],
+    wage_header: &str,
 ) -> Result<(), Error> {
     let mut header = vec!["기간(개월)"];
     if dated {
         header.extend(["초일", "말일"]);
     }
     header.extend(middle);
-    header.extend(["단가(원/일)", "호프만(적용)", "금액(원)"]);
+    header.extend([wage_header, "호프만(적용)", "금액(원)"]);
     wtr.write_record(&header)?;
     Ok(())
 }
@@ -674,7 +763,7 @@ fn write_segment_row_with_note(
     }
     row.extend(middle.iter().cloned());
     row.extend([
-        format_currency(segment.daily_wage_won),
+        segment_wage_text(segment),
         format!("{:.6}{}", segment.applied_hoffman, cap_marker),
         format_currency(segment.amount_floor_won),
     ]);
@@ -861,7 +950,7 @@ pub fn render_compensation_death_csv_bytes(
         .from_writer(vec![]);
 
     let dated = segments_have_dates(&view.segments);
-    write_segment_header(&mut wtr, dated, &[])?;
+    write_segment_header(&mut wtr, dated, &[], segment_wage_header(&view.segments))?;
     for (i, segment) in view.segments.iter().enumerate() {
         let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
             " (한도)"
@@ -1068,9 +1157,33 @@ pub fn render_compensation_death_csv_bytes(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::commands::result_view::{OptionsView, SegmentView, DISCLAIMER_KO};
+
+    #[test]
+    fn appropriation_csv_writes_tables_and_escapes_cells() {
+        let view: AppropriationExportView = serde_json::from_value(serde_json::json!({
+            "summary": [["변제 합계", "3,000,000원"]],
+            "tables": [{
+                "title": "변제별 충당",
+                "headers": ["변제일", "채권"],
+                "rows": [["2025-03-31", "=대여금"]]
+            }],
+            "notes": ["상한 적용"],
+            "disclaimer": "",
+            "dataVersion": "appropriation/policy-v1",
+            "computedAt": "2026-10-25"
+        }))
+        .expect("view");
+        let bytes = render_appropriation_csv_bytes(&view).expect("render");
+        let text = String::from_utf8(bytes[3..].to_vec()).expect("utf8");
+        assert!(text.starts_with("변제 합계,"));
+        assert!(text.contains("변제일,채권"));
+        assert!(text.contains("2025-03-31,'=대여금"));
+        assert!(text.contains("확인 필요,상한 적용"));
+        assert!(text.contains(DISCLAIMER_KO));
+    }
 
     fn sample() -> ResultView {
         ResultView {
@@ -1297,7 +1410,7 @@ mod tests {
         );
     }
 
-    fn compensation_sample() -> CompensationResultView {
+    pub(crate) fn compensation_sample() -> CompensationResultView {
         use crate::commands::result_view::{
             CompensationDataVersionsView, CompensationDeductionsView, CompensationFaultOffsetView,
             CompensationHoffman240CapView, CompensationSegmentView, DISCLAIMER_KO,
@@ -1314,6 +1427,8 @@ mod tests {
                 applied_hoffman: 219.610067,
                 amount_floor_won: 249_399_909.0,
                 living_cost_deducted: None,
+                wage_basis: None,
+                monthly_wage_won: None,
             }],
             lost_income_subtotal_won: 249_399_909.0,
             solatium_won: 0.0,
@@ -1565,6 +1680,8 @@ mod tests {
                 applied_hoffman: 219.610067,
                 amount_floor_won: 554_222_020.0,
                 living_cost_deducted: None,
+                wage_basis: None,
+                monthly_wage_won: None,
             }],
             lost_income_subtotal_won: 554_222_020.0,
             solatium_won: 80_000_000.0,

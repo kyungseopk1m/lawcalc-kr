@@ -25,6 +25,23 @@ import type {
   CompensationResult,
 } from "@lawcalc-kr/compensation";
 
+import {
+  applyDateStyle,
+  applyDateStyleDeep,
+  clipboardTextToHtml,
+  readDateStyle,
+} from "./output-format";
+
+/** 변제충당 PDF·CSV 계산서. 문구는 `buildAppropriationExportView` 가 단일 출처로 만든다. */
+export interface AppropriationExportView {
+  summary: Array<[string, string]>;
+  tables: Array<{ title: string; headers: string[]; rows: string[][] }>;
+  notes: string[];
+  disclaimer: string;
+  dataVersion: string;
+  computedAt: string;
+}
+
 export interface PdfOptions {
   /**
    * Optional default file name suggested in the save dialog. The Rust shell
@@ -308,6 +325,18 @@ export type LcalcFile =
 
 export type LoadableLcalcFile = LcalcFile | LcalcFileV2 | LcalcFileV1;
 
+/** HWPX 로 내보낼 수 있는 결과 종류 (Rust `export_hwpx` 의 `kind`). */
+export type HwpxKind =
+  | "interest"
+  | "inheritance"
+  | "litigation-cost"
+  | "compensation"
+  | "compensation-death"
+  | "appropriation";
+
+/** 설정한 날짜 표기를 내보내기 view 에 적용한다 (기본 `iso` 는 원본 그대로). */
+const styled = <T>(value: T): T => applyDateStyleDeep(value, readDateStyle());
+
 export const ipc = {
   /**
    * Opens a save dialog and writes a PDF report. Resolves to the chosen path,
@@ -317,7 +346,7 @@ export const ipc = {
   exportPdf(result: InterestResult, options?: PdfOptions): Promise<string | null> {
     const note = options?.note;
     return invoke<string | null>("export_pdf", {
-      result: { ...result, disclaimer: STANDARD_DISCLAIMER },
+      result: styled({ ...result, disclaimer: STANDARD_DISCLAIMER }),
       options: note !== undefined ? { note } : null,
     });
   },
@@ -329,32 +358,38 @@ export const ipc = {
   exportCsv(result: InterestResult, ...legacyPath: [string?]): Promise<string | null> {
     void legacyPath;
     return invoke<string | null>("export_csv", {
-      result: { ...result, disclaimer: STANDARD_DISCLAIMER },
+      result: styled({ ...result, disclaimer: STANDARD_DISCLAIMER }),
     });
   },
   exportInheritancePdf(result: InheritanceResult): Promise<string | null> {
-    return invoke<string | null>("export_inheritance_pdf", { result });
+    return invoke<string | null>("export_inheritance_pdf", { result: styled(result) });
   },
   exportInheritanceCsv(result: InheritanceResult): Promise<string | null> {
-    return invoke<string | null>("export_inheritance_csv", { result });
+    return invoke<string | null>("export_inheritance_csv", { result: styled(result) });
   },
   exportLitigationCostPdf(result: LitigationCostResult): Promise<string | null> {
-    return invoke<string | null>("export_litigation_cost_pdf", { result });
+    return invoke<string | null>("export_litigation_cost_pdf", { result: styled(result) });
   },
   exportLitigationCostCsv(result: LitigationCostResult): Promise<string | null> {
-    return invoke<string | null>("export_litigation_cost_csv", { result });
+    return invoke<string | null>("export_litigation_cost_csv", { result: styled(result) });
   },
   exportCompensationPdf(result: CompensationResult): Promise<string | null> {
-    return invoke<string | null>("export_compensation_pdf", { result });
+    return invoke<string | null>("export_compensation_pdf", { result: styled(result) });
   },
   exportCompensationCsv(result: CompensationResult): Promise<string | null> {
-    return invoke<string | null>("export_compensation_csv", { result });
+    return invoke<string | null>("export_compensation_csv", { result: styled(result) });
+  },
+  exportAppropriationPdf(view: AppropriationExportView): Promise<string | null> {
+    return invoke<string | null>("export_appropriation_pdf", { result: styled(view) });
+  },
+  exportAppropriationCsv(view: AppropriationExportView): Promise<string | null> {
+    return invoke<string | null>("export_appropriation_csv", { result: styled(view) });
   },
   exportCompensationDeathPdf(result: CompensationAutoDeathResult): Promise<string | null> {
-    return invoke<string | null>("export_compensation_death_pdf", { result });
+    return invoke<string | null>("export_compensation_death_pdf", { result: styled(result) });
   },
   exportCompensationDeathCsv(result: CompensationAutoDeathResult): Promise<string | null> {
-    return invoke<string | null>("export_compensation_death_csv", { result });
+    return invoke<string | null>("export_compensation_death_csv", { result: styled(result) });
   },
   /**
    * Opens a save dialog and writes the payload as pretty-printed JSON.
@@ -370,7 +405,16 @@ export const ipc = {
   loadLcalc(): Promise<LoadableLcalcFile | null> {
     return invoke<LoadableLcalcFile | null>("load_lcalc");
   },
+  /**
+   * 보고 있는 결과를 `.hwpx` (한글 문서)로 저장한다. 내용은 같은 view 의 CSV 와 같다.
+   * 사용자가 대화 상자를 닫으면 `null`.
+   */
+  exportHwpx(kind: HwpxKind, result: unknown): Promise<string | null> {
+    return invoke<string | null>("export_hwpx", { kind, result: styled(result) });
+  },
+  /** 일반 텍스트와 HTML 표 판을 함께 싣는다. 일반 텍스트는 날짜 표기 설정만 반영한다. */
   copyToClipboard(text: string): Promise<void> {
-    return invoke("copy_to_clipboard", { text });
+    const styledText = applyDateStyle(text, readDateStyle());
+    return invoke("copy_to_clipboard", { text: styledText, html: clipboardTextToHtml(styledText) });
   },
 };

@@ -20,6 +20,16 @@ export interface RepInput {
   isSpouseOfRepresented?: boolean;
   /** 대습상속인 본인의 상속포기. */
   renounced?: boolean;
+  /** 구법(1991 전 사망) 전용. 성별·동일가적 여부 (구 민법 제1009조). */
+  sex?: Sex | undefined;
+  sameFamilyRegister?: boolean | undefined;
+}
+
+export type Sex = "male" | "female";
+
+/** 구법 입력을 받는 사망일 (1991-01-01 전). 1960 전은 엔진이 관습법 안내로 거부한다. */
+export function isOldLawDate(deceasedAt: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(deceasedAt) && deceasedAt < "1991-01-01";
 }
 
 export type RepresentationCause = "death" | "disqualified" | "forfeited";
@@ -37,6 +47,10 @@ export interface HeirInput {
   renounced?: boolean;
   /** 촌수 — 직계존속·방계 4순위에서 최근친 우선 판정(제1000조 제2항). 그 외 그룹은 미사용. */
   degree?: number;
+  /** 구법 전용. 성별·동일가적 여부·호주상속 (구 민법 제1009조). 1991 이후 사망이면 싣지 않는다. */
+  sex?: Sex | undefined;
+  sameFamilyRegister?: boolean | undefined;
+  hojuSuccessor?: boolean;
   representatives: RepInput[];
 }
 
@@ -49,6 +63,8 @@ export interface DegreeOption {
 export interface SpouseInput {
   alive: boolean;
   name: string;
+  /** 구법 전용. 처(제1003조·제1009조 제3항)와 남편(제1002조)을 다르게 다룬다. */
+  relation?: "wife" | "husband" | undefined;
 }
 
 export interface DecedentInput {
@@ -64,7 +80,20 @@ export function emptyHeir(): HeirInput {
   return { id: newHeirId(), name: "", deceasedBeforeOpening: false, representatives: [] };
 }
 
-export function toHeirNode(h: HeirInput, allowRepresentation: boolean): HeirNode {
+/** 구법 필드 복사. 여자일 때만 동일가적 여부를 싣는다 (남자는 상속분에 영향 없음). */
+function oldLawFields(p: {
+  sex?: Sex | undefined;
+  sameFamilyRegister?: boolean | undefined;
+}): Partial<HeirNode> {
+  return {
+    ...(p.sex ? { sex: p.sex } : {}),
+    ...(p.sex === "female" && p.sameFamilyRegister !== undefined
+      ? { sameFamilyRegister: p.sameFamilyRegister }
+      : {}),
+  };
+}
+
+export function toHeirNode(h: HeirInput, allowRepresentation: boolean, oldLaw = false): HeirNode {
   const node: HeirNode = {
     deceasedBeforeOpening: h.deceasedBeforeOpening,
   };
@@ -81,6 +110,9 @@ export function toHeirNode(h: HeirInput, allowRepresentation: boolean): HeirNode
   if (h.degree !== undefined) {
     node.degree = h.degree;
   }
+  if (oldLaw) {
+    Object.assign(node, oldLawFields(h), h.hojuSuccessor ? { hojuSuccessor: true } : {});
+  }
   if (allowRepresentation && h.deceasedBeforeOpening && h.representatives.length > 0) {
     node.representatives = h.representatives.map((r) => {
       const representative: HeirNode = { deceasedBeforeOpening: false };
@@ -93,6 +125,9 @@ export function toHeirNode(h: HeirInput, allowRepresentation: boolean): HeirNode
       }
       if (r.renounced) {
         representative.renounced = true;
+      }
+      if (oldLaw && !r.isSpouseOfRepresented) {
+        Object.assign(representative, oldLawFields(r));
       }
       return representative;
     });
@@ -123,6 +158,27 @@ export function hasInheritanceV2Fields(input: InheritanceInput): boolean {
   ].some(walk);
 }
 
+/**
+ * `inheritance@4` 로 올려야 하는 파일인지. 구법 필드가 담겼는지 본다. 구앱은 이 필드를 버리고
+ * 1991 전 사망을 거부하거나 다른 지분을 낼 수 있으므로 capability 로 막는다.
+ */
+export function hasInheritanceOldLawFields(input: InheritanceInput): boolean {
+  const walk = (nodes: HeirNode[] | undefined): boolean =>
+    (nodes ?? []).some(
+      (n) =>
+        n.sex !== undefined ||
+        n.sameFamilyRegister !== undefined ||
+        n.hojuSuccessor !== undefined ||
+        walk(n.representatives),
+    );
+  return (
+    input.spouse?.relation !== undefined ||
+    [input.linealDescendants, input.linealAscendants, input.siblings, input.collateralFourth].some(
+      walk,
+    )
+  );
+}
+
 export function fromHeirNode(h: HeirNode): HeirInput {
   return {
     id: newHeirId(),
@@ -131,12 +187,19 @@ export function fromHeirNode(h: HeirNode): HeirInput {
     ...(h.representationCause ? { representationCause: h.representationCause } : {}),
     ...(h.renounced ? { renounced: true } : {}),
     ...(h.degree !== undefined ? { degree: h.degree } : {}),
+    ...(h.sex ? { sex: h.sex } : {}),
+    ...(h.sameFamilyRegister !== undefined ? { sameFamilyRegister: h.sameFamilyRegister } : {}),
+    ...(h.hojuSuccessor ? { hojuSuccessor: true } : {}),
     representatives:
       h.representatives?.map((representative) => ({
         id: newHeirId(),
         name: representative.name ?? "",
         ...(representative.isSpouseOfRepresented ? { isSpouseOfRepresented: true } : {}),
         ...(representative.renounced ? { renounced: true } : {}),
+        ...(representative.sex ? { sex: representative.sex } : {}),
+        ...(representative.sameFamilyRegister !== undefined
+          ? { sameFamilyRegister: representative.sameFamilyRegister }
+          : {}),
       })) ?? [],
   };
 }
@@ -152,28 +215,32 @@ export interface HeirGroupsState {
 
 /** 상속인 입력 그룹 → `InheritanceInput` 변환 (배우자/순위별 누락 시 생략). */
 export function buildInheritanceInput(state: HeirGroupsState): InheritanceInput {
+  // 구법 필드는 1991 전 사망일 때만 싣는다. 1991 이후 입력은 종전과 바이트 단위로 같다.
+  const oldLaw = isOldLawDate(state.decedent.deceasedAt);
   return {
     decedent: state.decedent.name.trim()
       ? { name: state.decedent.name.trim(), deceasedAt: state.decedent.deceasedAt }
       : { deceasedAt: state.decedent.deceasedAt },
     ...(state.spouse.alive
       ? {
-          spouse: state.spouse.name.trim()
-            ? { name: state.spouse.name.trim(), alive: true }
-            : { alive: true },
+          spouse: {
+            ...(state.spouse.name.trim() ? { name: state.spouse.name.trim() } : {}),
+            alive: true,
+            ...(oldLaw && state.spouse.relation ? { relation: state.spouse.relation } : {}),
+          },
         }
       : {}),
     ...(state.linealDescendants.length > 0
-      ? { linealDescendants: state.linealDescendants.map((h) => toHeirNode(h, true)) }
+      ? { linealDescendants: state.linealDescendants.map((h) => toHeirNode(h, true, oldLaw)) }
       : {}),
     ...(state.linealAscendants.length > 0
-      ? { linealAscendants: state.linealAscendants.map((h) => toHeirNode(h, false)) }
+      ? { linealAscendants: state.linealAscendants.map((h) => toHeirNode(h, false, oldLaw)) }
       : {}),
     ...(state.siblings.length > 0
-      ? { siblings: state.siblings.map((h) => toHeirNode(h, true)) }
+      ? { siblings: state.siblings.map((h) => toHeirNode(h, true, oldLaw)) }
       : {}),
     ...(state.collateralFourth.length > 0
-      ? { collateralFourth: state.collateralFourth.map((h) => toHeirNode(h, false)) }
+      ? { collateralFourth: state.collateralFourth.map((h) => toHeirNode(h, false, oldLaw)) }
       : {}),
   };
 }
@@ -188,6 +255,7 @@ export function applyInheritanceInput(input: InheritanceInput): HeirGroupsState 
     spouse: {
       alive: input.spouse?.alive ?? false,
       name: input.spouse?.name ?? "",
+      ...(input.spouse?.relation ? { relation: input.spouse.relation } : {}),
     },
     linealDescendants: input.linealDescendants?.map(fromHeirNode) ?? [],
     // 직계존속·방계는 촌수 그룹 — 미지정 legacy 입력은 최근친(부모 1촌 / 삼촌 3촌)으로 기본 표기.
@@ -205,10 +273,16 @@ export function heirsForDirtySnapshot(heirs: HeirInput[]) {
     deceasedBeforeOpening: heir.deceasedBeforeOpening,
     renounced: heir.renounced ?? false,
     degree: heir.degree,
+    // 구법 필드는 값이 있을 때만 싣는다. JSON 스냅숏에서 undefined 는 빠지므로 종전 스냅숏과 같다.
+    sex: heir.sex,
+    sameFamilyRegister: heir.sameFamilyRegister,
+    hojuSuccessor: heir.hojuSuccessor || undefined,
     representatives: heir.representatives.map((representative) => ({
       name: representative.name,
       isSpouseOfRepresented: representative.isSpouseOfRepresented ?? false,
       renounced: representative.renounced ?? false,
+      sex: representative.sex,
+      sameFamilyRegister: representative.sameFamilyRegister,
     })),
   }));
 }
@@ -235,6 +309,62 @@ export interface HeirGroupCardProps {
   defaultLabel: string;
   /** 촌수 선택 옵션 (직계존속·방계 4순위). 지정 시 각 상속인에 촌수 select 표시 + 추가 시 최근친 기본값. */
   degreeOptions?: DegreeOption[];
+  /** 구법(1991 전 사망) 입력. 성별·동일가적 여부를 받는다. 미지정이면 종전 화면 그대로. */
+  oldLaw?: boolean;
+  /** 구법 호주상속인 체크 표시 (1순위 직계비속 카드만). */
+  allowHoju?: boolean;
+}
+
+const selectClass =
+  "rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground";
+
+/**
+ * 구법 성별·동일가적 입력. 동일가적 여부는 체크박스가 아니라 선택으로 받는다. 기본값이
+ * "가적 밖" 으로 잡히면 아무 표시 없이 남자의 4분의 1로 계산되기 때문이다.
+ */
+function OldLawPersonFields({
+  value,
+  onChange,
+}: {
+  value: { sex?: Sex | undefined; sameFamilyRegister?: boolean | undefined };
+  onChange: (patch: { sex?: Sex | undefined; sameFamilyRegister?: boolean | undefined }) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <label className="flex items-center gap-1">
+        성별
+        <select
+          aria-label="성별"
+          className={selectClass}
+          value={value.sex ?? ""}
+          onChange={(e) => onChange({ sex: (e.target.value || undefined) as Sex | undefined })}
+        >
+          <option value="">선택</option>
+          <option value="male">남자</option>
+          <option value="female">여자</option>
+        </select>
+      </label>
+      {value.sex === "female" ? (
+        <label className="flex items-center gap-1">
+          가적
+          <select
+            aria-label="동일가적 여부"
+            className={selectClass}
+            value={value.sameFamilyRegister === undefined ? "" : String(value.sameFamilyRegister)}
+            onChange={(e) =>
+              onChange({
+                sameFamilyRegister: e.target.value === "" ? undefined : e.target.value === "true",
+              })
+            }
+          >
+            <option value="">선택</option>
+            <option value="true">피상속인과 동일가적</option>
+            <option value="false">동일가적 밖 (출가 등), 남자의 1/4</option>
+          </select>
+        </label>
+      ) : null}
+    </div>
+  );
 }
 
 export function HeirGroupCard({
@@ -245,6 +375,8 @@ export function HeirGroupCard({
   allowRepresentation,
   defaultLabel,
   degreeOptions,
+  oldLaw = false,
+  allowHoju = false,
 }: HeirGroupCardProps) {
   const update = (idx: number, patch: Partial<HeirInput>) => {
     onChange(heirs.map((h, i) => (i === idx ? { ...h, ...patch } : h)));
@@ -329,6 +461,19 @@ export function HeirGroupCard({
                 <span className="text-[11px]">최근친만 상속 (제1000조 제2항)</span>
               </label>
             ) : null}
+            {oldLaw ? (
+              <OldLawPersonFields value={h} onChange={(patch) => update(idx, patch)} />
+            ) : null}
+            {oldLaw && allowHoju && !h.deceasedBeforeOpening ? (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={h.hojuSuccessor ?? false}
+                  onChange={(e) => update(idx, { hojuSuccessor: e.target.checked })}
+                />
+                호주상속인, 고유 상속분 5할 가산 (구 민법 제1009조 제1항)
+              </label>
+            ) : null}
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
@@ -339,7 +484,8 @@ export function HeirGroupCard({
                     representatives: e.target.checked ? h.representatives : [],
                     // 포기와 배타 — 상속개시 전에 사망한 사람은 포기할 수 없고, 결격자는
                     // 포기할 지분이 없다. 엔진도 이 조합을 거부한다.
-                    ...(e.target.checked ? { renounced: false } : {}),
+                    // 대습 호주상속 가산은 계산하지 않으므로 호주 표시도 함께 지운다.
+                    ...(e.target.checked ? { renounced: false, hojuSuccessor: false } : {}),
                   })
                 }
               />
@@ -357,7 +503,8 @@ export function HeirGroupCard({
                 >
                   <option value="death">상속개시 전 사망</option>
                   <option value="disqualified">상속결격 (제1004조)</option>
-                  <option value="forfeited">상속권 상실선고 (제1004조의2)</option>
+                  {/* 상속권 상실선고는 1991 이후 신설 제도라 구법 사건에는 없다 (엔진도 거부). */}
+                  {oldLaw ? null : <option value="forfeited">상속권 상실선고 (제1004조의2)</option>}
                 </select>
               </label>
             ) : null}
@@ -413,8 +560,16 @@ export function HeirGroupCard({
                           updateRep(idx, repIdx, { isSpouseOfRepresented: e.target.checked })
                         }
                       />
-                      피대습자의 배우자, 5할 가산 (제1009조 제2항)
+                      {oldLaw
+                        ? "피대습자의 처 (구 민법 제1003조 제2항, 사위 대습 없음)"
+                        : "피대습자의 배우자, 5할 가산 (제1009조 제2항)"}
                     </label>
+                    {oldLaw && !r.isSpouseOfRepresented ? (
+                      <OldLawPersonFields
+                        value={r}
+                        onChange={(patch) => updateRep(idx, repIdx, patch)}
+                      />
+                    ) : null}
                     <label className="flex items-center gap-2 text-xs text-muted-foreground">
                       <input
                         type="checkbox"

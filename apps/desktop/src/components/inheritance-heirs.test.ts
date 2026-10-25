@@ -4,6 +4,7 @@ import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 
 import {
   applyInheritanceInput,
+  buildInheritanceInput,
   emptyHeir,
   fromHeirNode,
   hasInheritanceV2Fields,
@@ -261,5 +262,58 @@ describe("hasInheritanceV2Fields", () => {
         ],
       }),
     ).toBe(false);
+  });
+});
+
+describe("inheritance-heirs / 구법 필드", () => {
+  const state = (deceasedAt: string) => ({
+    decedent: { name: "", deceasedAt },
+    spouse: { alive: true, name: "을", relation: "wife" as const },
+    linealDescendants: [
+      { ...emptyHeir(), name: "병", sex: "male" as const, hojuSuccessor: true },
+      {
+        ...emptyHeir(),
+        name: "정",
+        deceasedBeforeOpening: true,
+        sex: "male" as const,
+        representatives: [
+          { id: "r1", name: "신", isSpouseOfRepresented: true, sex: "female" as const },
+          { id: "r2", name: "경", sex: "female" as const, sameFamilyRegister: false },
+        ],
+      },
+    ],
+    linealAscendants: [],
+    siblings: [],
+    collateralFourth: [],
+  });
+
+  it("1991 이후 사망이면 구법 필드를 싣지 않는다 (종전 입력과 같은 모양)", () => {
+    expect(buildInheritanceInput(state("2020-01-01"))).toEqual({
+      decedent: { deceasedAt: "2020-01-01" },
+      spouse: { name: "을", alive: true },
+      linealDescendants: [
+        { name: "병", deceasedBeforeOpening: false },
+        {
+          name: "정",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "신", deceasedBeforeOpening: false, isSpouseOfRepresented: true },
+            { name: "경", deceasedBeforeOpening: false },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("1991 전 사망이면 구법 필드를 싣고, 피대습자의 처에는 성별을 싣지 않는다", () => {
+    const input = buildInheritanceInput(state("1985-01-01"));
+    expect(input.spouse).toEqual({ name: "을", alive: true, relation: "wife" });
+    expect(input.linealDescendants?.[0]).toMatchObject({ sex: "male", hojuSuccessor: true });
+    expect(input.linealDescendants?.[1]?.representatives).toEqual([
+      { name: "신", deceasedBeforeOpening: false, isSpouseOfRepresented: true },
+      { name: "경", deceasedBeforeOpening: false, sex: "female", sameFamilyRegister: false },
+    ]);
+    // 불러오기 → 다시 만들기 왕복
+    expect(buildInheritanceInput(applyInheritanceInput(input))).toEqual(input);
   });
 });

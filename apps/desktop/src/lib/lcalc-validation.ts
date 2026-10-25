@@ -73,10 +73,12 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "inheritance@1",
   "inheritance@2",
   "inheritance@3",
+  "inheritance@4",
   "litigation-cost@1",
   "litigation-cost@2",
   "appropriation@1",
   "appropriation@2",
+  "appropriation@3",
   "compensation@1",
   "compensation@2",
   "compensation@3",
@@ -357,6 +359,23 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
     }
   }
 
+  // 구법(1991 전 사망) 필드 (inheritance@4). 버리면 1991 전 사망이 거부되거나 지분이 달라진다.
+  const sex = record.sex;
+  if (sex !== undefined) {
+    if (sex !== "male" && sex !== "female") {
+      throw new Error(`.lcalc 파일의 ${field}.sex 필드는 "male" 또는 "female" 이어야 합니다.`);
+    }
+    node.sex = sex;
+  }
+  for (const key of ["sameFamilyRegister", "hojuSuccessor"] as const) {
+    const flag = record[key];
+    if (flag === undefined) continue;
+    if (typeof flag !== "boolean") {
+      throw new Error(`.lcalc 파일의 ${field}.${key} 필드는 true 또는 false 여야 합니다.`);
+    }
+    node[key] = flag;
+  }
+
   return node;
 }
 
@@ -446,6 +465,14 @@ function parseInheritanceResult(value: unknown): InheritanceResult {
             }),
       };
     }),
+    // 구법(1991 전) 결과의 경고. 버리면 저장 결과를 그대로 보일 때 경고가 빠진다.
+    ...(result.warnings === undefined
+      ? {}
+      : {
+          warnings: (Array.isArray(result.warnings) ? result.warnings : [null]).map((w, i) =>
+            requireString(w, `payload.result.warnings[${i}]`),
+          ),
+        }),
     ...(result.estateWon === undefined
       ? {}
       : { estateWon: requireNonNegativeSafeInteger(result.estateWon, "payload.result.estateWon") }),
@@ -501,6 +528,15 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
         ".lcalc 파일의 payload.input.spouse.alive 필드는 true 또는 false 여야 합니다.",
       );
     }
+    if (
+      spouseRecord.relation !== undefined &&
+      spouseRecord.relation !== "wife" &&
+      spouseRecord.relation !== "husband"
+    ) {
+      throw new Error(
+        '.lcalc 파일의 payload.input.spouse.relation 필드는 "wife" 또는 "husband" 여야 합니다.',
+      );
+    }
   }
 
   const inheritanceInput: InheritanceInput = {
@@ -514,6 +550,9 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
           spouse: {
             ...(typeof spouseRecord.name === "string" ? { name: spouseRecord.name } : {}),
             alive: spouseRecord.alive as boolean,
+            ...(spouseRecord.relation === "wife" || spouseRecord.relation === "husband"
+              ? { relation: spouseRecord.relation }
+              : {}),
           },
         }),
     ...(linealDescendants === undefined ? {} : { linealDescendants }),

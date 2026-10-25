@@ -74,7 +74,7 @@ import { todayIso } from "../lib/today";
 
 const APP_VERSION = __APP_VERSION__;
 
-type ActionName = "pdf" | "csv" | "copy" | "save" | "load";
+type ActionName = "pdf" | "hwpx" | "csv" | "copy" | "save" | "load";
 type DistributionMode = "equal" | "proportional";
 
 interface ToastState {
@@ -763,6 +763,16 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
+  const handleExportHwpx = () =>
+    runAction("hwpx", async () => {
+      if (!result || resultStale) throw new Error("계산 후 HWPX를 저장해 주세요.");
+      const path = await ipc.exportHwpx(
+        "litigation-cost",
+        withLitigationCostExportWarnings(result),
+      );
+      return path ? `HWPX 파일을 저장했습니다: ${path}` : null;
+    });
+
   const handleExportCsv = () =>
     runAction("csv", async () => {
       if (!result || resultStale) throw new Error("계산 후 CSV를 저장해 주세요.");
@@ -1411,6 +1421,15 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 requiresResult
                 resultReady={resultReady}
                 onClick={handleExportPdf}
+              />
+              <ActionButton
+                action="hwpx"
+                icon={FileDown}
+                label="HWPX 저장"
+                loadingAction={loadingAction}
+                requiresResult
+                resultReady={resultReady}
+                onClick={handleExportHwpx}
               />
               <ActionButton
                 action="csv"

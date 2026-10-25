@@ -19,6 +19,7 @@ import {
   type CompensationAutoDeathResult,
   type CompensationInput,
   type CompensationLifeExpectancyInput,
+  type CompensationLostIncomeInput,
   type CompensationResult,
   type LifeExpectancyResult,
   type LifeShortening,
@@ -643,7 +644,10 @@ function segmentPeriod(segment: CompensationSegment): string {
 /** 구간에 곱한 생계비 공제 후 비율 (없으면 undefined). 사망은 전 구간, 부상은 기대여명 이후 구간. */
 function segmentKeep(result: AnyResult, segment: CompensationSegment): string | undefined {
   if ("mode" in result && result.mode === "death") {
-    return keepText(result.livingCostDeductionRatio);
+    // 직접 편집 행에서 생계비 공제를 끈 구간은 `livingCostDeducted: false` 다.
+    return segment.livingCostDeducted === false
+      ? undefined
+      : keepText(result.livingCostDeductionRatio);
   }
   return segment.livingCostDeducted === true ? "2/3" : undefined;
 }
@@ -910,4 +914,196 @@ export function computeDocumentExport(
 export function documentClipboardLines(doc: DocumentExport | undefined): string[] {
   if (doc === undefined) return [];
   return doc.blocks.flatMap((b) => ["", b.title, ...b.lines]);
+}
+
+/* ------------------------------------------------------------------ 호봉승급 · 일실수입 표 직접 편집 */
+
+/** `"auto"` = 자동 구간, `"steps"` = 호봉승급 일정, `"manual"` = 표 행 직접 편집. */
+export type WageScheduleMode = "auto" | "steps" | "manual";
+
+export const WAGE_SCHEDULE_MODE_LABELS: Record<WageScheduleMode, string> = {
+  auto: "자동 구간 (직종 단가·일당)",
+  steps: "호봉승급 일정 (승급일·월소득)",
+  manual: "일실수입 표 직접 편집",
+};
+
+export interface IncomeStepRow {
+  uid: string;
+  fromDate: string;
+  monthlyText: string;
+}
+
+export interface ManualIncomeRow {
+  uid: string;
+  startMonthText: string;
+  endMonthText: string;
+  monthlyText: string;
+  lossPercentText: string;
+  livingCost: boolean;
+}
+
+export interface WageScheduleFormState {
+  mode: WageScheduleMode;
+  steps: IncomeStepRow[];
+  rows: ManualIncomeRow[];
+}
+
+export function defaultWageScheduleFormState(): WageScheduleFormState {
+  return { mode: "auto", steps: [], rows: [] };
+}
+
+export function emptyIncomeStep(fromDate = "", monthlyText = ""): IncomeStepRow {
+  return { uid: newUid(), fromDate, monthlyText };
+}
+
+export function emptyManualIncomeRow(
+  startMonth = 0,
+  lossPercentText = "",
+  livingCost = false,
+): ManualIncomeRow {
+  return {
+    uid: newUid(),
+    startMonthText: String(startMonth),
+    endMonthText: "",
+    monthlyText: "",
+    lossPercentText,
+    livingCost,
+  };
+}
+
+/** `date` 에서 `months` 개월 뒤 같은 날 (없는 날은 그 달 말일). 승급 간격 채우기용. */
+export function shiftIsoMonths(date: string, months: number): string {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const index = y * 12 + (m - 1) + months;
+  const ty = Math.floor(index / 12);
+  const tm = (index % 12) + 1;
+  const last = new Date(Date.UTC(ty, tm, 0)).getUTCDate();
+  return `${String(ty).padStart(4, "0")}-${String(tm).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
+const MONTH_FORMAT = { integer: true, min: 0, max: 1440 } as const;
+
+/** 화면 상태 → 엔진 `lostIncome` 추가 키. 자동 구간이면 빈 객체 (키 없음 = 종전 계산). */
+export function buildWageScheduleInput(
+  state: WageScheduleFormState,
+): Pick<CompensationLostIncomeInput, "incomeSteps" | "manualRows"> {
+  if (state.mode === "steps") {
+    if (state.steps.length === 0) throw new Error("호봉승급: 승급 일정을 1건 이상 입력하세요.");
+    return {
+      incomeSteps: state.steps.map((row, i) => {
+        if (!ISO_DATE.test(row.fromDate)) {
+          throw new Error(`호봉승급 ${i + 1}번째: 적용 시작일을 입력하세요.`);
+        }
+        return { fromDate: row.fromDate, monthlyWageWon: parseWonAmount(row.monthlyText, 0) };
+      }),
+    };
+  }
+  if (state.mode === "manual") {
+    if (state.rows.length === 0) throw new Error("일실수입 표: 행을 1개 이상 입력하세요.");
+    return {
+      manualRows: state.rows.map((row, i) => {
+        const label = `일실수입 표 ${i + 1}행`;
+        const startMonth = readNumber(
+          `${label} 시작 월수`,
+          parseNumberText(row.startMonthText, MONTH_FORMAT),
+        );
+        const endMonth = readNumber(
+          `${label} 끝 월수`,
+          parseNumberText(row.endMonthText, MONTH_FORMAT),
+        );
+        const lossPercent = readNumber(
+          `${label} 상실률`,
+          parseNumberText(row.lossPercentText, LOSS_RATE_PERCENT_FORMAT),
+        );
+        if (startMonth === undefined || endMonth === undefined || lossPercent === undefined) {
+          throw new Error(`${label}: 시작·끝 월수와 상실률을 입력하세요.`);
+        }
+        return {
+          startMonth,
+          endMonth,
+          monthlyWageWon: parseWonAmount(row.monthlyText, 0),
+          lossRate: lossPercent / 100,
+          livingCostDeducted: row.livingCost,
+        };
+      }),
+    };
+  }
+  return {};
+}
+
+export function applyWageScheduleInput(
+  input: Pick<CompensationLostIncomeInput, "incomeSteps" | "manualRows">,
+): WageScheduleFormState {
+  if (input.manualRows !== undefined) {
+    return {
+      mode: "manual",
+      steps: [],
+      rows: input.manualRows.map((row) => ({
+        uid: newUid(),
+        startMonthText: String(row.startMonth),
+        endMonthText: String(row.endMonth),
+        monthlyText: String(row.monthlyWageWon),
+        lossPercentText: percentInputText(row.lossRate),
+        livingCost: row.livingCostDeducted,
+      })),
+    };
+  }
+  if (input.incomeSteps !== undefined) {
+    return {
+      mode: "steps",
+      steps: input.incomeSteps.map((s) => emptyIncomeStep(s.fromDate, String(s.monthlyWageWon))),
+      rows: [],
+    };
+  }
+  return defaultWageScheduleFormState();
+}
+
+function percentInputText(ratio: number): string {
+  return String(Number((ratio * 100).toPrecision(12)));
+}
+
+/** 결과 구간을 직접 편집 표의 시작값으로 옮긴다. 사망은 생계비 공제 키가 없으면 공제한 구간이다. */
+export function manualRowsFromSegments(
+  segments: readonly CompensationSegment[],
+  death: boolean,
+): ManualIncomeRow[] {
+  return segments
+    .filter((s) => s.endMonth > s.startMonth)
+    .map((s) => ({
+      uid: newUid(),
+      startMonthText: String(s.startMonth),
+      endMonthText: String(s.endMonth),
+      monthlyText: String(s.monthlyWageWon),
+      lossPercentText: percentInputText(s.lossRate),
+      livingCost: death ? s.livingCostDeducted !== false : s.livingCostDeducted === true,
+    }));
+}
+
+export function wageScheduleForDirtySnapshot(state: WageScheduleFormState) {
+  if (state.mode === "auto") return undefined;
+  return {
+    mode: state.mode,
+    steps: state.steps.map(({ fromDate, monthlyText }) => ({ fromDate, monthlyText })),
+    rows: state.rows.map((r) => [
+      r.startMonthText,
+      r.endMonthText,
+      r.monthlyText,
+      r.lossPercentText,
+      r.livingCost,
+    ]),
+  };
+}
+
+/**
+ * 구간표 단가 칸. 월소득을 직접 정한 행(호봉승급·직접 편집)은 월소득에 "/월" 을, 직접 편집 행은
+ * "(편집)" 을 붙인다. 그 밖의 행은 일당에 `dailySuffix` 를 붙인다 (종전 표시 그대로).
+ */
+/** 구간표 단가 열 머리글. 월소득을 직접 정한 행이 있으면 월 단위도 밝힌다 (Rust `segment_wage_header` 와 같다). */
+export function segmentWageHeader(segments: readonly CompensationSegment[]): string {
+  return segments.some((s) => s.wageBasis !== undefined) ? "단가 (원/일·원/월)" : "단가 (원/일)";
+}
+
+export function segmentWageText(segment: CompensationSegment, dailySuffix = ""): string {
+  if (segment.wageBasis === undefined) return `${formatWon(segment.dailyWageWon)}${dailySuffix}`;
+  return `${formatWon(segment.monthlyWageWon)}/월${segment.wageBasis === "manual" ? " (편집)" : ""}`;
 }

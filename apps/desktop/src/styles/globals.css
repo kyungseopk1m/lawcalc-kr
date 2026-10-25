@@ -74,3 +74,49 @@ select,
 textarea {
   font: inherit;
 }
+
+/* 인쇄: 결과 카드와 면책 고지만 남긴다. 탭·머리말·입력 열·버튼은 숨긴다.
+   계산 화면은 `main` 그리드의 첫 열이 입력, 다음 열이 결과다. */
+@media print {
+  :root,
+  [data-theme="dark"] {
+    color-scheme: light;
+    --color-background: #fff;
+    --color-foreground: #000;
+    --color-card: #fff;
+    --color-card-foreground: #000;
+    --color-muted: #fff;
+    --color-muted-foreground: #333;
+    --color-border: #999;
+  }
+
+  header,
+  nav,
+  footer,
+  [role="tablist"],
+  [role="dialog"],
+  button,
+  input,
+  select,
+  textarea,
+  main.grid[class*="grid-cols-[580px"] > :first-child,
+  main.grid[class*="grid-cols-[420px"] > :first-child {
+    display: none !important;
+  }
+
+  body,
+  main.grid {
+    min-height: 0 !important;
+  }
+
+  main.grid:not(.hidden) {
+    display: block !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  main.grid > * > * {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+}

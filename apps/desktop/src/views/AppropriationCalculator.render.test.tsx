@@ -30,3 +30,22 @@ describe("충당 순위 노출", () => {
     expect(label.textContent).not.toContain("—");
   });
 });
+
+describe("여러 번 변제 [P5-4]", () => {
+  it("변제를 추가하면 변제별 충당 표가 나온다", () => {
+    render(<AppropriationCalculator />);
+    fireEvent.change(screen.getByLabelText(/변제일/), { target: { value: "2025-03-31" } });
+    fireEvent.click(screen.getByRole("button", { name: /변제·상계 추가/ }));
+    const dates = screen.getAllByLabelText(/^변제일/);
+    expect(dates).toHaveLength(2);
+    fireEvent.change(dates[1]!, { target: { value: "2025-06-30" } });
+    fireEvent.change(screen.getAllByLabelText(/변제 금액/)[1]!, {
+      target: { value: "100000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "계산" }));
+
+    const events = screen.getByRole("table", { name: "변제별 충당" });
+    expect(within(events).getAllByRole("row")).toHaveLength(3);
+    expect(within(events).getByText("2025-06-30")).toBeTruthy();
+  });
+});

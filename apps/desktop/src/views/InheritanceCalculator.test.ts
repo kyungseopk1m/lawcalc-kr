@@ -143,3 +143,60 @@ describe("상속 .lcalc capability·왕복", () => {
     expect(() => roundTrip(file)).toThrow(/0 이상 정수/);
   });
 });
+
+describe("구법 상속 (1991 전 사망) capability·왕복", () => {
+  const OLD: InheritanceInput = {
+    decedent: { deceasedAt: "1985-06-01" },
+    spouse: { name: "을", alive: true, relation: "wife" },
+    linealDescendants: [
+      { name: "병", deceasedBeforeOpening: false, sex: "male", hojuSuccessor: true },
+      { name: "정", deceasedBeforeOpening: false, sex: "female", sameFamilyRegister: true },
+      { name: "무", deceasedBeforeOpening: false, sex: "female", sameFamilyRegister: false },
+    ],
+  };
+
+  it("구법 필드가 있으면 inheritance@4, 없으면 종전 capability 그대로", () => {
+    expect(inheritanceCapability(OLD)).toBe("inheritance@4");
+    expect(inheritanceCapability(withEstate(OLD, "10"))).toBe("inheritance@4");
+    expect(inheritanceCapability(withEstate(BASE, "10"))).toBe("inheritance@3");
+  });
+
+  it("저장·열기 왕복에서 구법 필드와 VK E-4a 지분이 살아남는다", () => {
+    const result = computeInheritance(OLD);
+    const file = buildInheritanceLcalcFile(OLD, result, "");
+    expect(file.envelopeFeatures).toEqual(["inheritance@4"]);
+    const loaded = roundTrip(file);
+    expect(loaded.input).toEqual(OLD);
+    expect(summarizeInheritanceResult(computeInheritance(loaded.input))).toBe(
+      "을 6/17, 병 6/17, 정 4/17, 무 1/17",
+    );
+  });
+
+  it("엔진 경고(남편 생존 + 호주상속 가산)가 결과와 클립보드에 실린다, 경고 없으면 절 없음", () => {
+    const result = computeInheritance({
+      decedent: { deceasedAt: "1985-06-01" },
+      spouse: { name: "남편", alive: true, relation: "husband" },
+      linealDescendants: [OLD.linealDescendants![0]!, OLD.linealDescendants![1]!],
+    });
+    expect(result.warnings).toHaveLength(1);
+    expect(formatInheritanceForClipboard(result)).toContain(`경고\n${result.warnings![0]}`);
+    expect(formatInheritanceForClipboard(computeInheritance(OLD))).not.toContain("경고");
+  });
+
+  it("저장 결과의 경고도 파일 열기에서 살아남는다", () => {
+    const input = {
+      decedent: { deceasedAt: "1985-06-01" },
+      spouse: { name: "남편", alive: true, relation: "husband" as const },
+      linealDescendants: [OLD.linealDescendants![0]!, OLD.linealDescendants![1]!],
+    };
+    const result = computeInheritance(input);
+    const loaded = roundTrip(buildInheritanceLcalcFile(input, result, ""));
+    expect(loaded.result?.warnings).toEqual(result.warnings);
+  });
+
+  it("구법 필드 값이 잘못된 파일은 열지 않는다", () => {
+    const file = buildInheritanceLcalcFile(OLD, computeInheritance(OLD), "");
+    (file.payload as { input: { spouse: { relation: string } } }).input.spouse.relation = "x";
+    expect(() => roundTrip(file)).toThrow(/relation/);
+  });
+});

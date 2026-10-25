@@ -104,7 +104,7 @@ describe("도구 하위 탭", () => {
     const tabs = tools.getAllByRole("tab");
     const last = tabs.length - 1;
     const order = (selected: number) => tabs.map((_, i) => (i === selected ? 0 : -1));
-    expect(tabs).toHaveLength(7);
+    expect(tabs).toHaveLength(8);
     expect(tabs.map((t) => t.tabIndex)).toEqual(order(0));
 
     fireEvent.keyDown(tabs[0]!, { key: "ArrowRight" });

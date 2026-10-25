@@ -48,6 +48,7 @@ import {
 import { OptionsPanel } from "./components/form/OptionsPanel";
 import { PrincipalInput } from "./components/form/PrincipalInput";
 import { RateSegmentInput } from "./components/form/RateSegmentInput";
+import { ServiceDateSwitch } from "./components/form/ServiceDateSwitch";
 import { LegalCitation } from "./components/result/LegalCitation";
 import { ResultFreshnessNotice } from "./components/result/ResultFreshnessNotice";
 import { SegmentTable } from "./components/result/SegmentTable";
@@ -96,6 +97,7 @@ import { ReferenceTablesView } from "./views/ReferenceTablesView";
 import { ServiceEffectCalculator } from "./views/ServiceEffectCalculator";
 import { CivilFilingGuide, CriminalFilingGuide } from "./views/FilingGuideView";
 import { CourtJurisdictionView } from "./views/CourtJurisdictionView";
+import { PostalCodeView } from "./views/PostalCodeView";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
@@ -115,7 +117,8 @@ const defaultInput: InterestInput = {
 
 const APP_VERSION = __APP_VERSION__;
 
-type ActionName = "pdf" | "csv" | "copy" | "claim" | "save" | "load" | "caseSave" | "caseLoad";
+type ActionName =
+  "pdf" | "hwpx" | "csv" | "copy" | "claim" | "save" | "load" | "caseSave" | "caseLoad";
 
 type TabId =
   | "interest"
@@ -149,7 +152,8 @@ type ToolId =
   | "referenceTables"
   | "civilFilings"
   | "criminalFilings"
-  | "jurisdiction";
+  | "jurisdiction"
+  | "postal";
 
 /**
  * 사건 파일에 싣지 않는 보조 도구. 상단 탭이 이미 여덟 개라 하나씩 늘리면 탭 줄이 두 줄로
@@ -167,6 +171,7 @@ const TOOLS: ReadonlyArray<{
   { id: "civilFilings", label: "민사서류 안내", View: CivilFilingGuide },
   { id: "criminalFilings", label: "형사서류 안내", View: CriminalFilingGuide },
   { id: "jurisdiction", label: "관할법원 찾기", View: CourtJurisdictionView },
+  { id: "postal", label: "우편번호", View: PostalCodeView },
 ];
 
 const TAB_BY_CALCULATION: Record<LcalcCaseCalculationKey, TabId> = {
@@ -775,6 +780,15 @@ export function App() {
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
 
+  const handleExportHwpx = () =>
+    runAction("hwpx", async () => {
+      const path = await ipc.exportHwpx("interest", {
+        ...result,
+        disclaimer: STANDARD_DISCLAIMER,
+      });
+      return path ? `HWPX 파일을 저장했습니다: ${path}` : null;
+    });
+
   const handleExportCsv = () =>
     runAction("csv", async () => {
       const path = await ipc.exportCsv(result, "lawcalc-interest.csv");
@@ -1013,6 +1027,13 @@ export function App() {
                 onValueChange={setPreset}
                 onCustomRateChange={setCustomRate}
               />
+              <ServiceDateSwitch
+                preset={preset}
+                customRate={customRate}
+                startDate={startDate}
+                endDate={endDate}
+                onApply={setSegments}
+              />
               <RateSegmentInput
                 fallbackLabel={fallbackLabel}
                 value={segments}
@@ -1148,6 +1169,15 @@ export function App() {
                   loadingAction={loadingAction}
                   variant="secondary"
                   onClick={handleExportPdf}
+                />
+                <ActionButton
+                  action="hwpx"
+                  disabled={resultStale}
+                  icon={FileDown}
+                  label="HWPX 저장"
+                  loadingAction={loadingAction}
+                  variant="secondary"
+                  onClick={handleExportHwpx}
                 />
                 <ActionButton
                   action="csv"

@@ -17,13 +17,16 @@ pub fn run() {
             commands::pdf::export_litigation_cost_pdf,
             commands::pdf::export_compensation_pdf,
             commands::pdf::export_compensation_death_pdf,
+            commands::pdf::export_appropriation_pdf,
             commands::csv::export_csv,
             commands::csv::export_inheritance_csv,
             commands::csv::export_litigation_cost_csv,
             commands::csv::export_compensation_csv,
             commands::csv::export_compensation_death_csv,
+            commands::csv::export_appropriation_csv,
             commands::lcalc::save_lcalc,
             commands::lcalc::load_lcalc,
+            commands::hwpx::export_hwpx,
             commands::clipboard::copy_to_clipboard,
         ])
         .run(tauri::generate_context!())

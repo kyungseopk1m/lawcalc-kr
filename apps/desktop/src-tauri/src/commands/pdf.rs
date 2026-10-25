@@ -27,12 +27,13 @@ use crate::error::Error;
 use super::result_view::{
     compensation_deduction_rows, disclaimer_text, format_currency, format_rate_percent,
     heir_excess_dropped_row, heir_rounding_row, industrial_benefit_value_text, options_summary,
-    segments_have_dates, segments_have_living_cost, shares_have_claimant_breakdown,
-    shares_have_survivor_benefit, CompensationDeathResultView, CompensationDeductionsView,
-    CompensationDelayDamagesView, CompensationDocumentTextView, CompensationOtherDamagesView,
-    CompensationResultView, InheritanceResultView, LitigationCostResultView, ResultView,
-    LIVING_COST_AFTER_LIFE_NOTE,
+    segment_wage_header, segment_wage_text, segments_have_dates, segments_have_living_cost,
+    shares_have_claimant_breakdown, shares_have_survivor_benefit, CompensationDeathResultView,
+    CompensationDeductionsView, CompensationDelayDamagesView, CompensationDocumentTextView,
+    CompensationOtherDamagesView, CompensationResultView, InheritanceResultView,
+    LitigationCostResultView, ResultView, LIVING_COST_AFTER_LIFE_NOTE,
 };
+use super::result_view::{AppropriationExportView, ExportTableView};
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
 
@@ -320,6 +321,68 @@ pub fn render_litigation_cost_pdf_bytes(view: &LitigationCostResultView) -> Resu
     writer.draw_litigation_cost_distribution(view);
     writer.draw_export_warnings(&view.export_warnings);
     writer.draw_litigation_cost_footer(view);
+
+    let bytes = doc
+        .save_to_bytes()
+        .map_err(|e| Error::Other(format!("PDF 저장 실패: {e}")))?;
+    Ok(bytes)
+}
+
+#[tauri::command]
+pub async fn export_appropriation_pdf(
+    app: AppHandle,
+    result: Value,
+) -> Result<Option<String>, Error> {
+    let view: AppropriationExportView = serde_json::from_value(result)?;
+
+    let app2 = app.clone();
+    async_runtime::spawn_blocking(move || -> Result<Option<String>, Error> {
+        let picked = app2
+            .dialog()
+            .file()
+            .add_filter("PDF", &["pdf"])
+            .set_file_name("appropriation-calculation.pdf")
+            .blocking_save_file();
+
+        let Some(file_path) = picked else {
+            return Ok(None);
+        };
+
+        let path: PathBuf = file_path
+            .into_path()
+            .map_err(|e| Error::InvalidPath(e.to_string()))?;
+
+        let bytes = render_appropriation_pdf_bytes(&view)?;
+        std::fs::write(&path, bytes)?;
+        Ok(Some(path.to_string_lossy().into_owned()))
+    })
+    .await
+    .map_err(|e| Error::Other(format!("파일 대화 상자 작업 실패: {e}")))?
+}
+
+pub fn render_appropriation_pdf_bytes(view: &AppropriationExportView) -> Result<Vec<u8>, Error> {
+    let title = "LawCalc Korea 변제충당 계산서";
+    let (doc, page1, layer1) = PdfDocument::new(title, Mm(PAGE_W_MM), Mm(PAGE_H_MM), "Layer 1");
+
+    let font = doc
+        .add_external_font_with_subsetting(PRETENDARD_REGULAR, true)
+        .map_err(|e| Error::Other(format!("PDF 한글 폰트 임베딩 실패: {e}")))?;
+    let _builtin_helvetica = doc
+        .add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
+
+    let mut writer = PageWriter::new(&doc, page1, layer1, font);
+    writer.draw_title(title);
+    writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
+    writer.draw_summary_lines(&view.summary, 45.0);
+    let inner_w = PAGE_W_MM - 2.0 * MARGIN_MM;
+    for table in &view.tables {
+        let widths = fit_column_widths(&natural_column_widths(table), inner_w);
+        let headers: Vec<&str> = table.headers.iter().map(String::as_str).collect();
+        writer.draw_simple_table(&table.title, &headers, &widths, &table.rows);
+    }
+    writer.draw_export_warnings(&view.notes);
+    writer.draw_appropriation_footer(view);
 
     let bytes = doc
         .save_to_bytes()
@@ -930,6 +993,29 @@ impl<'a> PageWriter<'a> {
         self.advance(2.0);
     }
 
+    /// 표 한 행. 셀마다 열 폭에 맞춰 줄바꿈하고, 가장 긴 셀의 줄 수만큼 행을 높인다. 행이
+    /// 쪽 하단(면책 고지 자리)을 넘으면 행 전체를 다음 쪽으로 넘긴다.
+    fn draw_wrapped_row(&mut self, cells: &[String], widths: &[f32], height: f32, baseline: f32) {
+        let lines: Vec<Vec<String>> = cells
+            .iter()
+            .zip(widths.iter())
+            .map(|(cell, width)| wrap_to_width(cell, width - TABLE_CELL_PAD_MM, TABLE_FONT_PT))
+            .collect();
+        let extra = (lines.iter().map(Vec::len).max().unwrap_or(1).max(1) - 1) as f32 * 4.2;
+        if self.y - height - extra < MARGIN_MM + FOOTER_RESERVE_MM {
+            self.new_page();
+        }
+        self.y -= height + extra;
+        let top = self.y + extra - baseline;
+        let mut x = self.left();
+        for (cell_lines, width) in lines.iter().zip(widths.iter()) {
+            for (i, line) in cell_lines.iter().enumerate() {
+                self.text(line, TABLE_FONT_PT, x + 1.0, top - 4.2 * i as f32);
+            }
+            x += width;
+        }
+    }
+
     /// 제목 있는 단순 표 (원고별 표·지연손해금 표).
     fn draw_simple_table(
         &mut self,
@@ -943,21 +1029,13 @@ impl<'a> PageWriter<'a> {
         self.text(title, 10.0, self.left(), self.y - 4.0);
         self.advance(5.6);
         self.hline(self.left(), right, self.y);
-        self.advance(5.0);
-        let mut x = self.left();
-        for (header, width) in headers.iter().zip(widths.iter()) {
-            self.text(header, 8.5, x + 1.0, self.y - 3.5);
-            x += width;
-        }
+        // 열 폭을 넘는 셀은 줄바꿈하고 그 행을 줄 수만큼 높인다 (머리글 포함).
+        let header_cells: Vec<String> = headers.iter().map(|h| h.to_string()).collect();
+        self.draw_wrapped_row(&header_cells, widths, 5.0, 3.5);
         self.advance(5.0);
         self.hline(self.left(), right, self.y);
         for row in rows {
-            self.advance(5.4);
-            let mut x = self.left();
-            for (cell, width) in row.iter().zip(widths.iter()) {
-                self.text(cell, 8.5, x + 1.0, self.y - 1.0);
-                x += width;
-            }
+            self.draw_wrapped_row(row, widths, 5.4, 1.0);
         }
         self.advance(5.4);
         self.hline(self.left(), right, self.y);
@@ -1152,7 +1230,12 @@ impl<'a> PageWriter<'a> {
         if dated {
             headers.extend(["초일", "말일"]);
         }
-        headers.extend(["상실률", "단가(원/일)", "호프만(적용)", "금액(원)"]);
+        headers.extend([
+            "상실률",
+            segment_wage_header(&view.segments),
+            "호프만(적용)",
+            "금액(원)",
+        ]);
         let mut x = self.left();
         for (header, width) in headers.iter().zip(widths.iter()) {
             self.text(header, 9.0, x + 1.0, self.y - 3.5);
@@ -1184,7 +1267,7 @@ impl<'a> PageWriter<'a> {
             }
             cells.extend([
                 format!("{:.2}%", segment.loss_rate * 100.0),
-                format_currency(segment.daily_wage_won),
+                segment_wage_text(segment),
                 format!("{:.6}{}", segment.applied_hoffman, cap_marker),
                 format_currency(segment.amount_floor_won),
             ]);
@@ -1358,7 +1441,11 @@ impl<'a> PageWriter<'a> {
         if dated {
             headers.extend(["초일", "말일"]);
         }
-        headers.extend(["단가(원/일)", "호프만(적용)", "금액(원)"]);
+        headers.extend([
+            segment_wage_header(&view.segments),
+            "호프만(적용)",
+            "금액(원)",
+        ]);
         let mut x = self.left();
         for (header, width) in headers.iter().zip(widths.iter()) {
             self.text(header, 9.0, x + 1.0, self.y - 3.5);
@@ -1380,7 +1467,7 @@ impl<'a> PageWriter<'a> {
                 cells.push(segment.end_date.clone().unwrap_or_default());
             }
             cells.extend([
-                format_currency(segment.daily_wage_won),
+                segment_wage_text(segment),
                 format!("{:.6}{}", segment.applied_hoffman, cap_marker),
                 format_currency(segment.amount_floor_won),
             ]);
@@ -1561,6 +1648,27 @@ impl<'a> PageWriter<'a> {
         );
     }
 
+    fn draw_appropriation_footer(&mut self, view: &AppropriationExportView) {
+        let inner_right = PAGE_W_MM - MARGIN_MM;
+        let footer_y = MARGIN_MM + 14.0;
+        self.hline(self.left(), inner_right, footer_y);
+        self.text(
+            disclaimer_text(Some(&view.disclaimer)),
+            8.0,
+            self.left(),
+            footer_y - 4.0,
+        );
+        self.text(
+            &format!(
+                "데이터 버전 {}  |  계산 시각 {}",
+                view.data_version, view.computed_at
+            ),
+            7.0,
+            self.left(),
+            footer_y - 9.0,
+        );
+    }
+
     fn draw_litigation_cost_footer(&mut self, view: &LitigationCostResultView) {
         let inner_right = PAGE_W_MM - MARGIN_MM;
         let footer_y = MARGIN_MM + 14.0;
@@ -1594,6 +1702,111 @@ fn inheritance_percent(numerator: i64, denominator: i64) -> String {
         return "-".to_string();
     }
     format!("{:.2}%", (numerator as f64 / denominator as f64) * 100.0)
+}
+
+/// 표 셀 글자 크기 (pt) 와 셀 좌우 여백 합 (mm).
+const TABLE_FONT_PT: f32 = 8.5;
+const TABLE_CELL_PAD_MM: f32 = 2.0;
+
+/// 글자 폭 추정 (mm). 폰트 메트릭 없이 보수적으로 한글·전각은 1.0em, 그 밖은 0.6em 으로 잡는다.
+// ponytail: 글자별 고정 em, 실제 Pretendard 메트릭이 필요해지면 글리프 폭 표를 쓴다.
+fn estimate_text_width_mm(text: &str, size_pt: f32) -> f32 {
+    let em: f32 = text
+        .chars()
+        .map(|c| if (c as u32) >= 0x1100 { 1.0 } else { 0.6 })
+        .sum();
+    em * size_pt * 0.3528
+}
+
+/// 폭(mm)에 맞춰 줄바꿈. 공백·`/` 뒤에서 끊기를 우선하고(금액 안 `,` 에서는 끊지 않는다),
+/// 없으면 글자 단위로 끊는다.
+fn wrap_to_width(text: &str, width_mm: f32, size_pt: f32) -> Vec<String> {
+    let fits = |s: &str| estimate_text_width_mm(s, size_pt) <= width_mm;
+    let mut lines = Vec::new();
+    let mut line = String::new();
+    for c in text.chars() {
+        let mut candidate = line.clone();
+        candidate.push(c);
+        if !line.is_empty() && !fits(&candidate) {
+            let rest = match line.rfind([' ', '/']) {
+                Some(i) if i + 1 < line.len() => line.split_off(i + 1),
+                _ => String::new(),
+            };
+            lines.push(line.trim_end().to_string());
+            line = rest.trim_start().to_string();
+            if !line.is_empty() && !fits(&format!("{line}{c}")) {
+                lines.push(std::mem::take(&mut line));
+            }
+        }
+        if !(line.is_empty() && c == ' ') {
+            line.push(c);
+        }
+    }
+    lines.push(line);
+    lines
+}
+
+/// 열마다 (한 줄에 다 쓸 때 폭, 끊을 수 없는 가장 긴 토막 폭). 둘 다 여백 포함.
+fn natural_column_widths(table: &ExportTableView) -> Vec<(f32, f32)> {
+    let width = |t: &str| estimate_text_width_mm(t, TABLE_FONT_PT) + TABLE_CELL_PAD_MM;
+    (0..table.headers.len())
+        .map(|i| {
+            std::iter::once(&table.headers[i])
+                .chain(table.rows.iter().filter_map(|r| r.get(i)))
+                .fold((0.0f32, 0.0f32), |(full, token), t| {
+                    let longest = t.split([' ', '/']).map(width).fold(0.0f32, f32::max);
+                    (full.max(width(t)), token.max(longest))
+                })
+        })
+        .collect()
+}
+
+/// 전체 폭에 열 폭을 나눈다. 다 들어가면 비례로 늘린다. 넘치면 한 줄 폭에 비례해 줄이되
+/// 끊을 수 없는 토막(금액·날짜)보다 좁히지 않는다. 그래도 넘치면 글자 단위로 끊긴다.
+fn fit_column_widths(natural: &[(f32, f32)], total: f32) -> Vec<f32> {
+    let sum: f32 = natural.iter().map(|n| n.0).sum();
+    if sum <= 0.0 {
+        return vec![total / natural.len().max(1) as f32; natural.len()];
+    }
+    if sum <= total {
+        return natural.iter().map(|n| n.0 * total / sum).collect();
+    }
+    // 토막 하한은 균등 몫까지만 (아주 긴 토막 하나가 다른 열을 밀어내지 않게).
+    let even = total / natural.len() as f32;
+    let natural: Vec<(f32, f32)> = natural.iter().map(|&(f, t)| (f, t.min(even))).collect();
+    let mut fixed = vec![false; natural.len()];
+    loop {
+        let (used, open): (f32, f32) =
+            natural
+                .iter()
+                .zip(&fixed)
+                .fold((0.0, 0.0), |(used, open), (n, &f)| {
+                    if f {
+                        (used + n.1, open)
+                    } else {
+                        (used, open + n.0)
+                    }
+                });
+        let k = if open > 0.0 {
+            (total - used) / open
+        } else {
+            0.0
+        };
+        let mut changed = false;
+        for (i, n) in natural.iter().enumerate() {
+            if !fixed[i] && n.0 * k < n.1 {
+                fixed[i] = true;
+                changed = true;
+            }
+        }
+        if !changed {
+            return natural
+                .iter()
+                .zip(&fixed)
+                .map(|(n, &f)| if f { n.1 } else { n.0 * k })
+                .collect();
+        }
+    }
 }
 
 /// Conservative width-aware text wrap. We don't have access to font metrics
@@ -1757,6 +1970,82 @@ mod tests {
     }
 
     #[test]
+    fn appropriation_result_renders_pdf() {
+        let view = appropriation_sample();
+        let bytes = render_appropriation_pdf_bytes(&view).expect("render");
+        assert!(bytes.starts_with(b"%PDF-"));
+    }
+
+    /// 변제별 충당 표의 긴 셀(충당 순위 문구·금액 묶음)이 옆 열을 덮지 않는다.
+    #[test]
+    fn appropriation_table_cells_fit_their_columns() {
+        let mut view = appropriation_sample();
+        view.tables[0].headers = [
+            "변제일",
+            "구분",
+            "채권",
+            "충당 순위",
+            "새 이자",
+            "충당 (비용/이자/원본)",
+            "잔액 (이자/원본)",
+        ]
+        .map(String::from)
+        .to_vec();
+        view.tables[0].rows.push(
+            [
+                "2025-03-31",
+                "상계 1,234,567,890원",
+                "아주긴채권이름이들어간대여금채권2021년약정분",
+                "상계 잉여 법정충당 1순위 (변제기 도래, 변제이익 순위 0)",
+                "123,456,789원",
+                "1,234,567원 / 123,456,789원 / 1,234,567,890원",
+                "123,456,789원 / 1,234,567,890원",
+            ]
+            .map(String::from)
+            .to_vec(),
+        );
+        let inner_w = PAGE_W_MM - 2.0 * MARGIN_MM;
+        for table in &view.tables {
+            let widths = fit_column_widths(&natural_column_widths(table), inner_w);
+            assert!(
+                (widths.iter().sum::<f32>() - inner_w).abs() < 0.01,
+                "{widths:?}"
+            );
+            for row in std::iter::once(&table.headers).chain(table.rows.iter()) {
+                for (cell, width) in row.iter().zip(&widths) {
+                    let lines = wrap_to_width(cell, width - TABLE_CELL_PAD_MM, TABLE_FONT_PT);
+                    assert_eq!(lines.concat().replace(' ', ""), cell.replace(' ', ""));
+                    for line in &lines {
+                        let w = estimate_text_width_mm(line, TABLE_FONT_PT);
+                        assert!(
+                            w <= width - TABLE_CELL_PAD_MM,
+                            "{line:?} {w}mm > column {width}mm"
+                        );
+                    }
+                }
+            }
+        }
+        let bytes = render_appropriation_pdf_bytes(&view).expect("render");
+        assert!(bytes.starts_with(b"%PDF-"));
+    }
+
+    pub(crate) fn appropriation_sample() -> AppropriationExportView {
+        serde_json::from_value(serde_json::json!({
+            "summary": [["변제 합계", "3,000,000원"], ["충당 합계", "3,000,000원"]],
+            "tables": [{
+                "title": "변제별 충당",
+                "headers": ["변제일", "구분", "채권", "새 이자", "이자 충당", "원본 충당", "원본 잔액"],
+                "rows": [["2025-03-31", "변제", "대여금", "295,890", "295,890", "704,110", "9,295,890"]]
+            }],
+            "notes": ["약정이율 연 30% 가 최고이자율 연 20% 를 넘어 연 20% 로 계산했습니다."],
+            "disclaimer": "",
+            "dataVersion": "appropriation/policy-v1",
+            "computedAt": "2026-10-25"
+        }))
+        .expect("sample")
+    }
+
+    #[test]
     fn inheritance_result_renders_pdf() {
         let bytes = render_inheritance_pdf_bytes(&inheritance_sample()).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF-"), "missing PDF header");
@@ -1780,6 +2069,8 @@ mod tests {
                 applied_hoffman: 219.610067,
                 amount_floor_won: 249_399_909.0,
                 living_cost_deducted: None,
+                wage_basis: None,
+                monthly_wage_won: None,
             }],
             lost_income_subtotal_won: 249_399_909.0,
             solatium_won: 0.0,
@@ -1867,6 +2158,8 @@ mod tests {
                 applied_hoffman: 219.610067,
                 amount_floor_won: 554_222_020.0,
                 living_cost_deducted: None,
+                wage_basis: None,
+                monthly_wage_won: None,
             }],
             lost_income_subtotal_won: 554_222_020.0,
             solatium_won: 80_000_000.0,
