@@ -36,21 +36,33 @@ describe("computeClaimAmendmentStampDuty / 인지법 제5조", () => {
     expect(r.amount).toBe(r.differenceAmount);
   });
 
-  it("제2심은 변경 후 항에만 1.5 를 곱한다", () => {
+  it("제2심은 변경 후 항에 1.5 를 곱하고, 변경 전 항 기본값은 항소장 인지액이다", () => {
     const r = computeClaimAmendmentStampDuty(input({ appealsLevel: "appeal" }), { computedAt });
     expect(r.afterAmount).toBe(paper(30_000_000) * 1.5);
-    // 변경 전 항은 제5조 문언상 "납부한 인지액" 이라 배수를 곱하지 않는다.
-    expect(r.beforeAmount).toBe(paper(10_000_000));
+    // 2026-10-25 결정: 항소심에서 이미 낸 변경 전 인지액은 항소장 인지액(제3조, × 1.5)으로 본다.
+    // 종전 기대값은 1심 금액(50,000)이었다. 다른 해석 금액은 산식 문구에 안내한다.
+    expect(r.beforeAmount).toBe(paper(10_000_000) * 1.5);
+    expect(r.formulaText).toContain("1심 인지액을 빼는 해석");
+  });
+
+  it("항소심 변경 전 실제 납부액을 직접 넣으면 그 값을 쓴다", () => {
+    const r = computeClaimAmendmentStampDuty(
+      input({ appealsLevel: "appeal", beforeStampDutyWon: 50_000 }),
+      { computedAt },
+    );
+    expect(r.beforeAmount).toBe(50_000);
+    expect(r.formulaText).not.toContain("1심 인지액을 빼는 해석");
   });
 
   it("제2심 배수는 제2조 제2항 절사를 마친 금액에 곱하고 다시 끊지 않는다 (제3조와 같은 원칙)", () => {
-    // 변경 후 3,350,000: 16,750 → 16,700 (제2조 제2항) × 1.5 = 25,050. 변경 전 1,000,000: 5,000.
+    // 변경 후 3,350,000: 16,750 → 16,700 (제2조 제2항) × 1.5 = 25,050.
+    // 변경 전 1,000,000: 5,000 × 1.5 = 7,500 (항소장 인지액, 2026-10-25 결정).
     const r = computeClaimAmendmentStampDuty(
       input({ appealsLevel: "appeal", beforeCaseValue: 1_000_000, afterCaseValue: 3_350_000 }),
       { computedAt },
     );
     expect(r.afterAmount).toBe(25_050);
-    expect(r.amount).toBe(20_050);
+    expect(r.amount).toBe(17_550);
   });
 
   it("전자소송 감액은 차액에 한 번만 건다 (항마다 곱하지 않는다)", () => {

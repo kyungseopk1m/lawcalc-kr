@@ -72,12 +72,19 @@ export function computeClaimAmendmentStampDuty(
   // 제5조 제2호 항소심 배수는 제2조 제2항 절사를 마친 금액에 곱하고 다시 끊지 않는다
   // (항소장 제3조와 같은 원칙, 2026-10-25 결정). 절사 금액은 100원 단위라 ×1.5 는 50원 단위 정수다.
   const afterAmount = Math.round(afterBase * afterMultiplier);
-  const beforeAmount =
-    input.beforeStampDutyWon ??
-    applyStampDutyRounding(
-      paperStampDuty(dataset, input, input.beforeCaseValue, computedAt) * rule.beforeMultiplier,
-      { ...dataset.roundingPolicy, floorMinimumWon: 0 },
-    );
+  // 항소심 변경 전 인지액 기본값은 변경 전 소가로 낸 항소장 인지액(제3조, 1심 금액 × 1.5,
+  // 다시 끊지 않음)으로 본다. 변경이 없으면 추가 인지가 0 이 되고, 처음부터 변경 후 소가로
+  // 항소한 경우와 총액이 같다(2026-10-25 결정, 법원 안내·판례 미확인). 1심은 종전과 같다.
+  const beforePaper = paperStampDuty(dataset, input, input.beforeCaseValue, computedAt);
+  const firstInstanceBefore = applyStampDutyRounding(beforePaper * rule.beforeMultiplier, {
+    ...dataset.roundingPolicy,
+    floorMinimumWon: 0,
+  });
+  const defaultBefore =
+    input.appealsLevel === "appeal"
+      ? Math.round(beforePaper * afterMultiplier)
+      : firstInstanceBefore;
+  const beforeAmount = input.beforeStampDutyWon ?? defaultBefore;
 
   const rawDifference = afterAmount - beforeAmount;
   const difference = rawDifference > 0 ? rawDifference : 0;
@@ -102,6 +109,12 @@ export function computeClaimAmendmentStampDuty(
       (input.beforeStampDutyWon === undefined ? "" : " (실제 납부액 직접 입력)"),
     `차액 ${difference.toLocaleString("en-US")}원`,
   ];
+  if (input.appealsLevel === "appeal" && input.beforeStampDutyWon === undefined) {
+    const otherDifference = Math.max(0, afterAmount - firstInstanceBefore);
+    segments.push(
+      `변경 전 인지액을 항소장 인지액(1심 기준 × ${afterMultiplier})으로 보았습니다. 1심 인지액을 빼는 해석으로는 차액 ${otherDifference.toLocaleString("en-US")}원입니다. 실제 납부액은 직접 입력할 수 있고, 전자 제출로 낸 금액은 종이 기준으로 환산해 넣으세요`,
+    );
+  }
   if (rawDifference <= 0) {
     segments.push("청구가 확장되지 않아 추가 납부 인지액이 없습니다");
   }
