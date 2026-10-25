@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import { computeCompensation } from "../../src/auto-injury/compute";
+import { floorEachStep } from "../../src/internal";
 import type { CompensationInput } from "../../src/auto-injury/types";
 
 const FIXED_NOW = () => new Date("2026-05-18T00:00:00.000Z");
@@ -510,5 +511,42 @@ describe("2026-10-04 정확성 정정", () => {
       expect(result.segments).toHaveLength(1);
       expect(result.lostIncomeSubtotalWon).toBe(126_011_661);
     });
+  });
+});
+
+describe("단계마다 원 미만 절사 (truncateEachStep)", () => {
+  function vkB1(ratio: number, truncateEachStep: boolean): CompensationInput {
+    return {
+      base: {
+        birthDate: "1980-01-01",
+        accidentDate: "2010-01-01",
+        treatmentEndDate: "2010-01-01",
+        sex: "male",
+        retirementAge: 60,
+        courtTruncation: true,
+        ...(truncateEachStep ? { truncateEachStep: true } : {}),
+      },
+      lossRate: { permanent: [{ ratio }], hospitalizationFullLoss: false },
+      lostIncome: { directWageWon: 68_965, workingDaysPerMonth: 22 },
+    };
+  }
+
+  it("월급여 × 상실률을 먼저 버린 뒤 호프만을 곱한다", () => {
+    // 1,517,230 × 33.3% = 505,237.59 → 505,237 × 219.6100 = 110,955,097.57 → 110,955,097.
+    const each = computeCompensation(vkB1(0.333, true), { now: FIXED_NOW });
+    expect(each.lostIncomeSubtotalWon).toBe(110_955_097);
+    // 마지막에 한 번: 1,517,230 × 0.333 × 219.61 = 110,955,227.13 → 110,955,227.
+    const last = computeCompensation(vkB1(0.333, false), { now: FIXED_NOW });
+    expect(last.lostIncomeSubtotalWon).toBe(110_955_227);
+  });
+
+  it("계수마다 버린다: 34,512,092 × 0.409 × 1.589 → 22,429,442 (한 번에 버리면 22,429,443)", () => {
+    expect(floorEachStep(34_512_092, [0.409, 1.589])).toBe(22_429_442);
+    expect(floorEachStep(1_517_230, [{ num: 2n, den: 3n }, 240])).toBe(242_756_640);
+  });
+
+  it("나누어떨어지면 두 방식이 같다 (VK B-1 99,959,664)", () => {
+    const each = computeCompensation(vkB1(0.3, true), { now: FIXED_NOW });
+    expect(each.lostIncomeSubtotalWon).toBe(99_959_664);
   });
 });

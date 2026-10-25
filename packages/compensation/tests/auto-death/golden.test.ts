@@ -209,8 +209,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사망 — derivation)", () => {
-  it("loads exactly 8 cases", () => {
-    expect(cases).toHaveLength(8);
+  it("loads exactly 9 cases", () => {
+    expect(cases).toHaveLength(9);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {

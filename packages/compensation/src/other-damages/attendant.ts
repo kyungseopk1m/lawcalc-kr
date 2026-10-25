@@ -10,7 +10,9 @@
 import type { IsoDate } from "@lawcalc-kr/core-engine";
 import { applyHoffman240Cap } from "@lawcalc-kr/datasets-compensation";
 import {
+  decimalRatio,
   dropUnchangedLaborRates,
+  floorProduct,
   floorTimesComplements,
   laborRateChanges,
   laborRateDateAt,
@@ -158,9 +160,22 @@ export function computeAttendantCare(
     const daysPerMonth = seg.daysPerMonth ?? DEFAULT_ATTENDANT_DAYS_PER_MONTH;
     // 365/12 환산은 원 미만이 생기므로 1인 월 개호비를 원 단위로 반올림한다 (매뉴얼 계산표 기준).
     // 정수 일수 입력은 반올림해도 값이 같다.
-    const monthlyAttendant = Math.round(dailyWage * daysPerMonth) * seg.personCount;
+    // 반올림·곱셈 모두 분수로 정확히 한다 (365/12 는 정확히 365/12): round(x) = floor((2x + 1) / 2).
+    const days =
+      Math.abs(daysPerMonth - 365 / 12) < 1e-12
+        ? { num: 365n, den: 12n }
+        : decimalRatio(daysPerMonth);
+    const monthlyPerPerson = Number(
+      (2n * BigInt(dailyWage) * days.num + days.den) / (2n * days.den),
+    );
     const appliedHoffman = capResult.appliedHoffman[i] as number;
-    futureWon += Math.floor(monthlyAttendant * appliedHoffman * (1 - (seg.priorRatio ?? 0)));
+    const prior = decimalRatio(seg.priorRatio ?? 0);
+    // 인원은 0.5 같은 소수일 수 있어 정수 곱하지 않고 계수로 넣는다.
+    futureWon += floorProduct(monthlyPerPerson, [
+      seg.personCount,
+      appliedHoffman,
+      { num: prior.den - prior.num, den: prior.den },
+    ]);
   }
   // 표 범위를 넘어 clamp 된 조각이 240 한도 전이면 계수가 실제보다 작다. 한도가 그 조각이나
   // 그 앞에서 걸렸으면 clamp 해도 적용 계수가 같아 경고하지 않는다.

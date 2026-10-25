@@ -90,6 +90,9 @@ function validateBase(base: CompensationBaseInput): void {
   if (base.courtTruncation !== undefined && typeof base.courtTruncation !== "boolean") {
     throw new RangeError(`${PREFIX}: base.courtTruncation 은 boolean 이어야 합니다.`);
   }
+  if (base.truncateEachStep !== undefined && typeof base.truncateEachStep !== "boolean") {
+    throw new RangeError(`${PREFIX}: base.truncateEachStep 은 boolean 이어야 합니다.`);
+  }
   if (base.sex !== "male" && base.sex !== "female") {
     throw new RangeError(`${PREFIX}: base.sex 는 "male" 또는 "female" 여야 합니다.`);
   }

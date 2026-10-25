@@ -128,4 +128,21 @@ describe("자×사망 법원 예시 절사 (courtTruncation)", () => {
     expect(plain).not.toHaveProperty("lostRetirementSubtotalWon");
     expect(plain).not.toHaveProperty("lifeExpectancy");
   });
+
+  it("단계마다 절사(truncateEachStep): 월급여 × 2/3 을 먼저 버린다 (VK 242,756,640)", () => {
+    const input = c1();
+    input.base.truncateEachStep = true;
+    const r = computeCompensationDeath(input, { now: FIXED_NOW });
+    // 1,517,230 × 2/3 = 1,011,486.67 → 1,011,486 × 240.
+    expect(r.lostIncomeSubtotalWon).toBe(242_756_640);
+    expect(r.faultOffset.afterWon).toBe(222_980_976);
+  });
+
+  it("단계마다 절사는 절사표 없이도 쓴다 (courtTruncation 끔)", () => {
+    const input = c1();
+    input.base.courtTruncation = false;
+    input.base.truncateEachStep = true;
+    const r = computeCompensationDeath(input, { now: FIXED_NOW });
+    expect(r.lostIncomeSubtotalWon).toBe(1_011_486 * 240);
+  });
 });

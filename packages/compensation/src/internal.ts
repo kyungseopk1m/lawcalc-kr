@@ -246,7 +246,7 @@ export function laborRateDateAt(
  * 값이 된다. double 의 이진 정확값을 쓰면 0.1 이 0.1000000000000000055... 가 되어 같은 오차가 되살아난다.
  * 금액은 0 이상 정수여야 한다.
  */
-function decimalRatio(ratio: number): { num: bigint; den: bigint } {
+export function decimalRatio(ratio: number): { num: bigint; den: bigint } {
   // 화면은 "38.88" 을 38.88 / 100 = 0.38880000000000003 으로 넘긴다. 유효숫자 15자리로 정규화해
   // 입력 의도(0.3888)를 되살린다. 1/3 은 0.333333333333333 이 되어 1e9 × (1 - r) 는 666,666,666 그대로.
   const [mantissa = "0", exponentText = "0"] = String(Number(ratio.toPrecision(15)))
@@ -261,10 +261,46 @@ function decimalRatio(ratio: number): { num: bigint; den: bigint } {
 }
 
 /**
- * 법원 예시 절사 상실률: `1 - Π(1 - ratio_i)` 에 `(1 - priorRatio)` 를 곱한 값을 % 소수 2자리에서
- * 버린다 (정수 연산). 실수로 곱하면 38.23% 가 0.38229999... 가 되어 38.22% 로 잘릴 수 있다.
+ * 단계마다 원 미만 절사 (`base.truncateEachStep`). 금액에 계수를 하나씩 곱할 때마다 원 미만을 버린다.
+ * 예: 34,512,092 × 0.409 × 1.589 → 14,115,445 × 1.589 → 22,429,442 (마지막에 한 번 버리면 22,429,443).
+ * 계수는 `decimalRatio` 와 같은 십진 유리수(또는 2/3 같은 분수)로 정확히 곱한다. 금액은 0 이상 정수.
  */
-export function floorLossRatePercent2(ratios: readonly number[], priorRatio: number): number {
+export function floorEachStep(
+  amount: number,
+  factors: readonly (number | { num: bigint; den: bigint })[],
+): number {
+  let won = BigInt(amount);
+  for (const factor of factors) {
+    const { num, den } = typeof factor === "number" ? decimalRatio(factor) : factor;
+    won = (won * num) / den;
+  }
+  return Number(won);
+}
+
+/**
+ * 계수를 모두 정확히 곱한 뒤 원 미만을 한 번만 버린다: `floor(amount × Π factor)`.
+ * 계수는 `decimalRatio` 와 같은 십진 유리수(또는 2/3 같은 분수)다. 실수로 곱하면 정수가 되는 곱이
+ * 1원 모자랄 수 있다 (1,517,230 × 240 × 0.7 → 254,894,639.99...). 금액은 0 이상 정수.
+ */
+export function floorProduct(
+  amount: number,
+  factors: readonly (number | { num: bigint; den: bigint })[],
+): number {
+  let num = BigInt(amount);
+  let den = 1n;
+  for (const factor of factors) {
+    const f = typeof factor === "number" ? decimalRatio(factor) : factor;
+    num *= f.num;
+    den *= f.den;
+  }
+  return Number(num / den);
+}
+
+/** 상실률 `[1 - Π(1 - ratio_i)] × (1 - priorRatio)` 의 정확한 분수. */
+export function lossRateFraction(
+  ratios: readonly number[],
+  priorRatio: number,
+): { num: bigint; den: bigint } {
   let keep = 1n;
   let den = 1n;
   for (const ratio of ratios) {
@@ -273,8 +309,16 @@ export function floorLossRatePercent2(ratios: readonly number[], priorRatio: num
     den *= r.den;
   }
   const prior = decimalRatio(priorRatio);
-  const loss = (den - keep) * (prior.den - prior.num);
-  return Number((loss * 10000n) / (den * prior.den)) / 10000;
+  return { num: (den - keep) * (prior.den - prior.num), den: den * prior.den };
+}
+
+/**
+ * 법원 예시 절사 상실률: `1 - Π(1 - ratio_i)` 에 `(1 - priorRatio)` 를 곱한 값을 % 소수 2자리에서
+ * 버린다 (정수 연산). 실수로 곱하면 38.23% 가 0.38229999... 가 되어 38.22% 로 잘릴 수 있다.
+ */
+export function floorLossRatePercent2(ratios: readonly number[], priorRatio: number): number {
+  const loss = lossRateFraction(ratios, priorRatio);
+  return Number((loss.num * 10000n) / loss.den) / 10000;
 }
 
 /**

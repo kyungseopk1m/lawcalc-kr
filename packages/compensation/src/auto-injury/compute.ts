@@ -38,7 +38,10 @@ const FINAL_FLOOR_UNIT = 100;
 import {
   applyDeductions,
   dropUnchangedLaborRates,
+  floorEachStep,
   floorLossRatePercent2,
+  floorProduct,
+  lossRateFraction,
   floorTimesComplements,
   getCumulativeHoffmanClamped,
   resolveOccupationRate,
@@ -108,6 +111,8 @@ export function computeCompensation(
   const priorImpairmentFactor = 1 - priorImpairmentRatio;
   // 법원 예시 절사 (상실률 % 2자리, 누적 호프만 4자리). 일실수입에만 적용한다.
   const courtTruncation = input.base.courtTruncation === true;
+  // 단계마다 원 미만 절사 (월급여 × 상실률 → 버림 → × 2/3 → 버림 → × 호프만 → 버림). 일실수입 구간만.
+  const truncateEachStep = input.base.truncateEachStep === true;
 
   // 2. segment 분해 (Option B 기간식 — 한시장해는 실제 한시기간 [0, 종료월) 에만 적용)
   const retirementAge = input.base.retirementAge ?? DEFAULT_RETIREMENT_AGE;
@@ -150,6 +155,8 @@ export function computeCompensation(
     startDate: IsoDate;
     nextDate: IsoDate;
     lossRate: number;
+    /** `lossRate` 의 정확한 분수 (절사 없는 경로의 금액 계산용). */
+    lossFraction: { num: bigint; den: bigint };
     livingCostDeducted: boolean;
   }
   // 입원기간은 상실률 100% (외부 reference 매뉴얼 본문과 계산표 예시 1·2행).
@@ -221,22 +228,24 @@ export function computeCompensation(
     for (const t of temporaries) {
       if (t.endMonth > cursor.month) factor *= 1 - t.ratio;
     }
+    const liveRatios = [
+      ...permanentItems.map((item) => item.ratio),
+      ...temporaries.filter((t) => t.endMonth > cursor.month).map((t) => t.ratio),
+    ];
     const disabilityRate = courtTruncation
-      ? floorLossRatePercent2(
-          [
-            ...permanentItems.map((item) => item.ratio),
-            ...temporaries.filter((t) => t.endMonth > cursor.month).map((t) => t.ratio),
-          ],
-          priorImpairmentRatio,
-        )
+      ? floorLossRatePercent2(liveRatios, priorImpairmentRatio)
       : (1 - factor) * priorImpairmentFactor;
+    const inHospital = cursor.month < hospitalMonths;
     firstDisabilityRate ??= disabilityRate;
     segmentPlans.push({
       startMonth: cursor.month,
       endMonth: event.month,
       startDate: cursor.date,
       nextDate: event.date,
-      lossRate: cursor.month < hospitalMonths ? 1 : disabilityRate,
+      lossRate: inHospital ? 1 : disabilityRate,
+      lossFraction: inHospital
+        ? { num: 1n, den: 1n }
+        : lossRateFraction(liveRatios, priorImpairmentRatio),
       livingCostDeducted: afterLife,
     });
     if (event === lifeEvent) afterLife = true;
@@ -307,24 +316,26 @@ export function computeCompensation(
     // 기대여명 이후 구간은 × 2/3 을 같은 정수 연산 안에서 한다 (선절사 없음).
     const keepNum = plan.livingCostDeducted ? 2n : 1n;
     const keepDen = plan.livingCostDeducted ? 3n : 1n;
-    const amountFloorWon = courtTruncation
-      ? Number(
-          (BigInt(monthlyWageWon) *
-            BigInt(Math.round(plan.lossRate * 1e4)) *
-            BigInt(Math.round(appliedHoffman * 1e4)) *
-            keepNum) /
-            (100000000n * keepDen),
-        )
-      : plan.livingCostDeducted
-        ? // 상실률은 소수 12자리, 계수는 데이터셋 자릿수(8자리)로 반올림한 정수 (실수 곱 오차 제거).
-          Number(
+    const amountFloorWon = truncateEachStep
+      ? floorEachStep(monthlyWageWon, [
+          plan.lossRate,
+          ...(plan.livingCostDeducted ? [{ num: 2n, den: 3n }] : []),
+          appliedHoffman,
+        ])
+      : courtTruncation
+        ? Number(
             (BigInt(monthlyWageWon) *
-              BigInt(Math.round(plan.lossRate * 1e12)) *
-              BigInt(Math.round(appliedHoffman * 1e8)) *
-              2n) /
-              (10n ** 20n * 3n),
+              BigInt(Math.round(plan.lossRate * 1e4)) *
+              BigInt(Math.round(appliedHoffman * 1e4)) *
+              keepNum) /
+              (100000000n * keepDen),
           )
-        : Math.floor(monthlyWageWon * plan.lossRate * appliedHoffman);
+        : // 상실률·2/3·계수를 분수로 정확히 곱해 한 번만 버린다 (실수 곱은 정수가 되는 곱에서 1원 모자람).
+          floorProduct(monthlyWageWon, [
+            plan.lossFraction,
+            ...(plan.livingCostDeducted ? [{ num: 2n, den: 3n }] : []),
+            appliedHoffman,
+          ]);
     return {
       startMonth: plan.startMonth,
       endMonth: plan.endMonth,

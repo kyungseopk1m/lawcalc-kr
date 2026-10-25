@@ -89,3 +89,11 @@ export type {
 export { computeLostRetirement, validateLostRetirementInput } from "./lost-retirement";
 
 export { combineDisabilityRatesPercent } from "./internal";
+
+export type { MediationInterestResult } from "./mediation";
+export {
+  computeMediationInterest,
+  faultRatioOfResponsibilityPercent,
+  MEDIATION_DEFAULT_SPREAD_PERCENT,
+  mediationResponsibilityPercents,
+} from "./mediation";

@@ -40,6 +40,8 @@ const FINAL_FLOOR_UNIT = 100;
 import {
   applyDeductions,
   dropUnchangedLaborRates,
+  floorEachStep,
+  floorProduct,
   floorTimesComplements,
   getCumulativeHoffmanClamped,
   livingCostKeepFraction,
@@ -175,6 +177,7 @@ export function computeCompensationDeath(
   // 표 범위(1,440개월)를 넘는 월수는 clamp 한다. 240 한도가 414개월에서 걸려 금액 영향 없음 (`../internal` 참조).
   // 법원 예시 절사면 누적 계수를 4자리에서 버린 표를 쓴다 (일실수입만, 개호비는 원 표).
   const courtTruncation = input.base.courtTruncation === true;
+  const truncateEachStep = input.base.truncateEachStep === true;
   const lostIncomeHoffman = courtTruncation ? truncateHoffman4(hoffman) : hoffman;
   const rawHoffmanList: number[] = [];
   let cursorMonth = 0;
@@ -213,12 +216,15 @@ export function computeCompensationDeath(
       monthlyWageWon,
       rawHoffman,
       appliedHoffman,
-      amountFloorWon: courtTruncation
-        ? Number(
-            (BigInt(monthlyWageWon) * BigInt(Math.round(appliedHoffman * 1e4)) * keep.num) /
-              (10000n * keep.den),
-          )
-        : Math.floor(monthlyWageWon * appliedHoffman * (1 - livingCostDeductionRatio)),
+      // 단계마다 절사면 월급여 × (1 - 생계비) 를 먼저 버린 뒤 호프만을 곱한다.
+      amountFloorWon: truncateEachStep
+        ? floorEachStep(monthlyWageWon, [keep, appliedHoffman])
+        : courtTruncation
+          ? Number(
+              (BigInt(monthlyWageWon) * BigInt(Math.round(appliedHoffman * 1e4)) * keep.num) /
+                (10000n * keep.den),
+            )
+          : floorProduct(monthlyWageWon, [appliedHoffman, keep]),
     };
   });
   const lostIncomeSubtotalWon = segments.reduce((acc, segment) => acc + segment.amountFloorWon, 0);

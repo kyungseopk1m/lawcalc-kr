@@ -14,6 +14,7 @@
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
     "test:golden": "pnpm -r --if-present test:golden",
+    "sync:datasets": "pnpm -r --if-present sync:datasets",
     "tauri:dev": "pnpm --filter @lawcalc-kr/desktop tauri dev",
     "tauri:build": "pnpm --filter @lawcalc-kr/desktop tauri build",
     "build:icons": "node scripts/build-icons.mjs",
