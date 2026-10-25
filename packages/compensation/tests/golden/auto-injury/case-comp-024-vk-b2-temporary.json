@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-024-vk-b2-temporary",
+  "title": "VK 대조 B-2 — 한시장해 30% 24개월, 과실 20%, 법원식 절사",
+  "source": "manual-derivation",
+  "notes": "VK 실측: 한시 24개월 호프만 22.8290, 10,391,053, 책임 80% 8,312,842. 손계산: 1,517,230 × 0.3 × 22.8290 = 10,391,053.10 → 10,391,053; × 0.8 = 8,312,842.4 → 8,312,842. 24~360개월 구간은 상실률 0 이라 금액 0 행.",
+  "input": {
+    "mode": "injury",
+    "accidentType": "auto",
+    "base": {
+      "birthDate": "1980-01-01",
+      "accidentDate": "2010-01-01",
+      "sex": "male",
+      "courtTruncation": true,
+      "treatmentEndDate": "2010-01-01",
+      "retirementAge": 60,
+      "laborRateEffectiveRule": "published"
+    },
+    "lossRate": {
+      "hospitalizationFullLoss": false,
+      "permanent": [],
+      "temporary": [
+        {
+          "ratio": 0.3,
+          "years": 2
+        }
+      ]
+    },
+    "lostIncome": {
+      "directWageWon": 68965,
+      "workingDaysPerMonth": 22,
+      "discountMethod": "hoffman"
+    },
+    "faultRatio": 0.2,
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    }
+  },
+  "expected": {
+    "lostIncomeSubtotalWon": 10391053,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 10391053,
+    "faultOffset": {
+      "ratio": 0.2,
+      "beforeWon": 10391053,
+      "afterWon": 8312842
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 8312842
+    },
+    "finalWon": 8312800,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.1.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 24,
+        "lossRate": 0.3,
+        "dailyWageWon": 68965,
+        "monthlyWageWon": 1517230,
+        "rawHoffman": 22.829,
+        "appliedHoffman": 22.829,
+        "amountFloorWon": 10391053
+      },
+      {
+        "startMonth": 24,
+        "endMonth": 360,
+        "lossRate": 0,
+        "dailyWageWon": 68965,
+        "monthlyWageWon": 1517230,
+        "rawHoffman": 196.781,
+        "appliedHoffman": 196.781,
+        "amountFloorWon": 0
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [22.829, 196.781],
+    "combinedLossRate": 0.3
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-22",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 2부"
+  }
+}

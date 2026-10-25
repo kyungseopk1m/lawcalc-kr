@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1",
+  "id": "case-life-006-subtract-5-5",
+  "title": "기대여명: 년수(차감) 5.5년, 30.83 - 5.5 = 25.33년, 2041-02-02",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-b7-2026-10-04.md G6. 합성. 25.33 x 365 = 9,245.45일 버림.",
+  "input": {
+    "sex": "male",
+    "birthDate": "1965-02-08",
+    "accidentDate": "2015-10-12",
+    "shortening": {
+      "method": "subtractYears",
+      "years": 5.5
+    }
+  },
+  "expected": {
+    "baseDate": "2015-10-12",
+    "age": 50,
+    "tableYear": 2015,
+    "remainingYears": 30.83,
+    "normalEndDate": "2046-08-02",
+    "shortenedRemainingYears": 25.33,
+    "shortenedEndDate": "2041-02-02",
+    "endDate": "2041-02-02",
+    "warningCodes": [],
+    "endDateOverridden": false
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-life-006"
+  }
+}

@@ -112,6 +112,25 @@ export function computeAttendantCare(
     }
   }
 
+  // 기간이 겹치는 구간은 240 한도를 나눠 쓴다. 부산지법 2014. 11. 19. 선고 2013가합2002(인원 2),
+  // 서울고법 2017. 4. 4. 선고 2013나2010343(인원 0.5) 은 같은 기간 개호를 한 구간에 인원을 곱해
+  // 계산했다. 계산은 바꾸지 않고 안내만 한다. 끝날과 다음 시작일이 같은 이어진 구간은 겹침으로
+  // 보지 않는다.
+  const overlaps = futureItems.some((a, i) =>
+    futureItems.some((b, j) => j > i && a.startDate < b.endDate && b.startDate < a.endDate),
+  );
+  if (
+    overlaps &&
+    ctx.warnings &&
+    !ctx.warnings.some((w) => w.code === "attendantSegmentsOverlap")
+  ) {
+    ctx.warnings.push({
+      code: "attendantSegmentsOverlap",
+      message:
+        "향후개호 구간 중 기간이 겹치는 구간이 있습니다. 기간이 겹치는 개호 구간은 240 한도를 나눠 씁니다. 같은 기간 여러 명 개호는 한 구간에 인원을 늘려 입력하세요.",
+    });
+  }
+
   // 240 누적은 시작 월수 순(같으면 입력 순, 안정 정렬). 85다카819 는 240 을 넘는 뒤쪽 기간에
   // 240 을 적용하므로 입력 순서와 무관하게 시간상 뒤 조각이 잘린다.
   // 열린 질문: 시작월이 같은 겹치는 조각(동시 개호 2명 등)은 입력 순서에 따라 240 배분이 달라진다 (판례 근거 미확인).

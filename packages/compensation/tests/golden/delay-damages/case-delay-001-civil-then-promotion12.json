@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1",
+  "id": "case-delay-001-civil-then-promotion12",
+  "title": "지연손해금: 사고일~선고일 민법 5%, 다음 날~기준일 소촉법 12%",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-2026-10-04.md B9 G1. 5% 구간 1년 1회 + 214/365, 12% 구간 31/365, raw 합 25,940,271.165781 절사.",
+  "input": {
+    "principalWon": 289813253,
+    "startDate": "2025-03-01",
+    "judgmentDate": "2026-09-30",
+    "endDate": "2026-10-31"
+  },
+  "expected": {
+    "segments": [
+      { "from": "2025-03-01", "to": "2026-09-30", "rate": 0.05, "interest": 22986558 },
+      { "from": "2026-10-01", "to": "2026-10-31", "rate": 0.12, "interest": 2953713 }
+    ],
+    "totalInterest": 25940271,
+    "grandTotal": 315753524
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-delay-001"
+  }
+}

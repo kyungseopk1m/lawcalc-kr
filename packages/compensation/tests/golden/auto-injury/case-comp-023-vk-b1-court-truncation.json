@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-023-vk-b1-court-truncation",
+  "title": "VK 대조 B-1 — 영구 30%, 가동 60세, 과실 20%, 법원식 절사",
+  "source": "manual-derivation",
+  "notes": "VK 실측(2026-10-22, 수치만): 360개월, H 219.6100, 일실소득 99,959,664, 책임 80% 79,967,731. 손계산: 1,517,230 × 0.3000 × 219.6100 = 99,959,664.18 → 99,959,664 (H4[360]=219.6100, 상실률 30.00%). × 0.8 = 79,967,731.2 → 79,967,731. 최종 100원 미만 절사 79,967,700 (VK 는 원 단위).",
+  "input": {
+    "mode": "injury",
+    "accidentType": "auto",
+    "base": {
+      "birthDate": "1980-01-01",
+      "accidentDate": "2010-01-01",
+      "sex": "male",
+      "courtTruncation": true,
+      "treatmentEndDate": "2010-01-01",
+      "retirementAge": 60,
+      "laborRateEffectiveRule": "published"
+    },
+    "lossRate": {
+      "hospitalizationFullLoss": false,
+      "permanent": [
+        {
+          "ratio": 0.3
+        }
+      ],
+      "temporary": []
+    },
+    "lostIncome": {
+      "directWageWon": 68965,
+      "workingDaysPerMonth": 22,
+      "discountMethod": "hoffman"
+    },
+    "faultRatio": 0.2,
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    }
+  },
+  "expected": {
+    "lostIncomeSubtotalWon": 99959664,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 99959664,
+    "faultOffset": {
+      "ratio": 0.2,
+      "beforeWon": 99959664,
+      "afterWon": 79967731
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 79967731
+    },
+    "finalWon": 79967700,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.1.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 360,
+        "lossRate": 0.3,
+        "dailyWageWon": 68965,
+        "monthlyWageWon": 1517230,
+        "rawHoffman": 219.61,
+        "appliedHoffman": 219.61,
+        "amountFloorWon": 99959664
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [219.61],
+    "combinedLossRate": 0.3
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-22",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 2부"
+  }
+}

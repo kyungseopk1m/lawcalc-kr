@@ -16,6 +16,8 @@ import {
 } from "@lawcalc-kr/datasets-compensation";
 import type { CompensationInput, CompensationResult, CompensationSegment } from "./types";
 import { computeOtherDamages } from "../other-damages/compute";
+import { computeLifeExpectancy } from "../life-expectancy/compute";
+import { computeLostRetirement } from "../lost-retirement/compute";
 import { validateCompensationInput } from "./validators";
 
 /** compute(input) 의 dataset 주입 / 시간 주입 deps. 미지정 시 default dataset + 실시간 now. */
@@ -119,6 +121,28 @@ export function computeCompensation(
   const totalMonths = Math.max(0, rawTotalMonths);
   const retirementAgeReached = totalMonths === 0;
 
+  // 기대여명 (입력 시). 여명종료일 다음 날이 가동종료일보다 앞서면 그날을 경계로 더하고 그 뒤 구간은
+  // 생계비 1/3 을 공제한다 (서울고법 2022. 2. 18. 선고 2020나2039267). 월수는 가동종료 경계와 같이
+  // "다음 구간 초일" 기준 `monthsBetween(사고일, 여명종료일 + 1일)` 이다.
+  const lifeExpectancyResult =
+    input.lifeExpectancy === undefined
+      ? undefined
+      : computeLifeExpectancy(
+          {
+            ...input.lifeExpectancy,
+            sex: input.base.sex,
+            birthDate: input.base.birthDate,
+            accidentDate: input.base.accidentDate,
+          },
+          { lifeExpectancy },
+        );
+  const lifeNextDate =
+    lifeExpectancyResult !== undefined ? addDays(lifeExpectancyResult.endDate, 1) : undefined;
+  const lifeEvent =
+    lifeNextDate !== undefined && lifeNextDate < retirementEndDate
+      ? { month: monthsBetween(input.base.accidentDate, lifeNextDate), date: lifeNextDate }
+      : undefined;
+
   interface SegmentPlan {
     startMonth: number;
     endMonth: number;
@@ -126,6 +150,7 @@ export function computeCompensation(
     startDate: IsoDate;
     nextDate: IsoDate;
     lossRate: number;
+    livingCostDeducted: boolean;
   }
   // 입원기간은 상실률 100% (외부 reference 매뉴얼 본문과 계산표 예시 1·2행).
   // 기왕증 기여도를 입원기간에도 곱할지는 원문으로 확인하지 못해 곱하지 않는다.
@@ -173,6 +198,7 @@ export function computeCompensation(
     { month: hospitalMonths, date: addDays(input.base.treatmentEndDate, 1) },
     ...temporaries.map((t) => ({ month: t.endMonth, date: shiftMonths(accidentDate, t.endMonth) })),
     ...laborChanges,
+    ...(lifeEvent !== undefined ? [lifeEvent] : []),
   ]
     .filter((e) => (e.month > 0 || laborChanges.includes(e)) && e.month < totalMonths)
     .sort((a, b) => a.month - b.month || (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
@@ -180,10 +206,16 @@ export function computeCompensation(
   const segmentPlans: SegmentPlan[] = [];
   let firstDisabilityRate: number | undefined;
   let cursor = { month: 0, date: accidentDate };
+  // 여명 경계를 지났는지. 여명이 사고 후 한 달 안에 끝나면(월수 0) 처음부터 공제한다.
+  let afterLife = lifeEvent !== undefined && lifeEvent.month === 0;
   for (const event of events) {
     // 월수가 줄지 않는 한 같은 월수의 다른 날짜도 따로 둔다 (기준일 있을 때만, 금액 0 인 행).
     const sameMonth = event.month === cursor.month;
-    if (sameMonth && (calculationDate === undefined || event.date <= cursor.date)) continue;
+    if (sameMonth && (calculationDate === undefined || event.date <= cursor.date)) {
+      // 같은 월수 경계로 합쳐진 여명 경계도 그 뒤 구간부터 공제한다.
+      if (event === lifeEvent) afterLife = true;
+      continue;
+    }
     // 이 구간 동안 살아있는 한시장해(종료월 > 시작월)만 영구분과 중복.
     let factor = permFactor;
     for (const t of temporaries) {
@@ -205,7 +237,9 @@ export function computeCompensation(
       startDate: cursor.date,
       nextDate: event.date,
       lossRate: cursor.month < hospitalMonths ? 1 : disabilityRate,
+      livingCostDeducted: afterLife,
     });
+    if (event === lifeEvent) afterLife = true;
     cursor = event;
   }
   // combinedLossRate = 첫 segment 의 장해율(한시기간 포함 최고율, 입원 100% 제외). 영구만일 때 = permanentTotal.
@@ -270,14 +304,27 @@ export function computeCompensation(
         : dailyWageWon;
     const monthlyWageWon = segmentDailyWageWon * workingDays;
     // 절사 경로의 상실률·계수는 만분율 정수라 BigInt 로 곱한다 (실수 곱은 정수가 되는 곱에서 1원 모자람).
+    // 기대여명 이후 구간은 × 2/3 을 같은 정수 연산 안에서 한다 (선절사 없음).
+    const keepNum = plan.livingCostDeducted ? 2n : 1n;
+    const keepDen = plan.livingCostDeducted ? 3n : 1n;
     const amountFloorWon = courtTruncation
       ? Number(
           (BigInt(monthlyWageWon) *
             BigInt(Math.round(plan.lossRate * 1e4)) *
-            BigInt(Math.round(appliedHoffman * 1e4))) /
-            100000000n,
+            BigInt(Math.round(appliedHoffman * 1e4)) *
+            keepNum) /
+            (100000000n * keepDen),
         )
-      : Math.floor(monthlyWageWon * plan.lossRate * appliedHoffman);
+      : plan.livingCostDeducted
+        ? // 상실률은 소수 12자리, 계수는 데이터셋 자릿수(8자리)로 반올림한 정수 (실수 곱 오차 제거).
+          Number(
+            (BigInt(monthlyWageWon) *
+              BigInt(Math.round(plan.lossRate * 1e12)) *
+              BigInt(Math.round(appliedHoffman * 1e8)) *
+              2n) /
+              (10n ** 20n * 3n),
+          )
+        : Math.floor(monthlyWageWon * plan.lossRate * appliedHoffman);
     return {
       startMonth: plan.startMonth,
       endMonth: plan.endMonth,
@@ -294,6 +341,8 @@ export function computeCompensation(
       rawHoffman,
       appliedHoffman,
       amountFloorWon,
+      // 기대여명 공제 구간에만 키를 싣는다 → 기존 골든/.lcalc byte-identical (회귀 0).
+      ...(plan.livingCostDeducted ? { livingCostDeducted: true } : {}),
     };
   });
   const lostIncomeSubtotalWon = segments.reduce((acc, segment) => acc + segment.amountFloorWon, 0);
@@ -311,6 +360,13 @@ export function computeCompensation(
         })
       : null) ?? undefined;
   const otherDamagesSubtotalWon = otherDamagesResult?.subtotalWon ?? 0;
+
+  // 6.6. 일실퇴직금 (재산상 손해, 과실상계 전 합산). 미지정 시 0 → byte-identical (회귀 0).
+  const lostRetirementResult =
+    input.lostRetirement === undefined
+      ? undefined
+      : computeLostRetirement(input.lostRetirement, accidentDate);
+  const lostRetirementSubtotalWon = lostRetirementResult?.amountWon ?? 0;
 
   // 6.7. 산재보험급여(장해급여) 공제 — 같은 성질의 손해(일실수입=소극손해) 한도에서
   //      먼저 공제한 뒤 과실상계 한다 (대법원 2022. 3. 24. 선고 2021다241618 전원합의체
@@ -330,6 +386,7 @@ export function computeCompensation(
   const pecuniaryDamagesSubtotalWon =
     lostIncomeAfterIndustrialWon +
     otherDamagesSubtotalWon +
+    lostRetirementSubtotalWon +
     (solatiumInFaultBase ? solatiumWon : 0);
 
   // 8. 과실상계
@@ -367,7 +424,35 @@ export function computeCompensation(
   // 2020나2039267 은 선급금·치료비를 재산상 손해에서만 공제했고, 산재 급여도 위자료를
   // 잠식하지 않는다(6.7). 이와 다른 동작이며 정책은 미확정이다.
   const finalRawWon = Math.max(0, deductionsAfterWon + (solatiumInFaultBase ? 0 : solatiumWon));
-  const finalWon = Math.floor(finalRawWon / FINAL_FLOOR_UNIT) * FINAL_FLOOR_UNIT;
+  // 원고별 귀속(claimants): 피해자 본인 행 + 가족 원고 위자료 행, finalWon = 원고별 합.
+  const claimantsInput = input.claimants;
+  const unit = claimantsInput?.finalRounding === "hundred" ? FINAL_FLOOR_UNIT : 1;
+  const claimants =
+    claimantsInput === undefined
+      ? undefined
+      : [
+          {
+            role: "victim" as const,
+            solatiumWon,
+            amountWon: Math.floor(finalRawWon / unit) * unit,
+          },
+          // 가족 위자료도 보험약관 지급기준이면 피해자 위자료처럼 과실을 곱한다 (판결 방식은 그대로).
+          ...(claimantsInput.family ?? []).map((f) => ({
+            role: "family" as const,
+            name: f.name,
+            solatiumWon: f.solatiumWon,
+            amountWon:
+              Math.floor(
+                (solatiumInFaultBase
+                  ? floorTimesComplements(f.solatiumWon, [faultRatio])
+                  : f.solatiumWon) / unit,
+              ) * unit,
+          })),
+        ];
+  const finalWon =
+    claimants === undefined
+      ? Math.floor(finalRawWon / FINAL_FLOOR_UNIT) * FINAL_FLOOR_UNIT
+      : claimants.reduce((acc, c) => acc + c.amountWon, 0);
 
   const computedAtIso = (deps.now ?? (() => new Date()))().toISOString();
 
@@ -381,6 +466,11 @@ export function computeCompensation(
     ...(otherDamagesResult !== undefined
       ? { otherDamagesSubtotalWon, otherDamages: otherDamagesResult }
       : {}),
+    // 입력 시에만 포함 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(lostRetirementResult !== undefined
+      ? { lostRetirementSubtotalWon, lostRetirement: lostRetirementResult }
+      : {}),
+    ...(lifeExpectancyResult !== undefined ? { lifeExpectancy: lifeExpectancyResult } : {}),
     solatiumWon,
     // 산재만 포함 — 자동차 모드 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
     ...(accidentType === "industrial"
@@ -413,6 +503,8 @@ export function computeCompensation(
       afterWon: deductionsAfterWon,
     },
     finalWon,
+    // 원고별 귀속 입력 시에만 포함 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(claimants !== undefined ? { claimants } : {}),
     hoffman240Cap: {
       appliedHoffman: capResult.appliedHoffman,
       cappedAtIndex: capResult.cappedAtIndex,

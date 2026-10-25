@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1",
+  "id": "case-life-008-appraisal-percent-35",
+  "title": "기대여명: 감정일 기준 + 백분율 35, 29.66 x 35% = 10.381년, 2027-09-20",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-b7-2026-10-04.md G8. 합성. 단축 시작점 = 감정일, 년수에 비율을 곱한 뒤 x 365 버림(3,789.065 -> 3,789일). 일수에 곱하면 3,788일이 되어 갈리는 사례.",
+  "input": {
+    "sex": "male",
+    "birthDate": "1965-02-08",
+    "accidentDate": "2015-10-12",
+    "basis": "appraisal",
+    "appraisalDate": "2017-05-06",
+    "shortening": {
+      "method": "percent",
+      "percent": 35
+    }
+  },
+  "expected": {
+    "baseDate": "2017-05-06",
+    "age": 52,
+    "tableYear": 2017,
+    "remainingYears": 29.66,
+    "normalEndDate": "2046-12-25",
+    "shortenedRemainingYears": 10.381,
+    "shortenedEndDate": "2027-09-20",
+    "endDate": "2027-09-20",
+    "warningCodes": [],
+    "endDateOverridden": false
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-life-008"
+  }
+}

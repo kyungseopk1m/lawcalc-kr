@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "id": "case-life-007-latest-table-fallback",
+  "title": "기대여명: 2025년 표 없음, 수록된 최신 2023년 표 + 경고",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-b7-2026-10-04.md G7. 합성. 여 44세 2023년 표 43.4, 43.4 x 365 = 15,841일.",
+  "input": {
+    "sex": "female",
+    "birthDate": "1980-07-15",
+    "accidentDate": "2025-03-10"
+  },
+  "expected": {
+    "baseDate": "2025-03-10",
+    "age": 44,
+    "tableYear": 2023,
+    "remainingYears": 43.4,
+    "normalEndDate": "2068-07-23",
+    "endDate": "2068-07-23",
+    "warningCodes": ["lifeTableFallback"],
+    "endDateOverridden": false
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-life-007"
+  }
+}

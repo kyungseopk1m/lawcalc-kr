@@ -107,8 +107,13 @@ export interface CompensationWarning {
    * - `laborRateSurveyFallback`: 조사 시점 규약으로 사고일 단가를 찾지 못해 공표 적용일 단가를 썼다.
    * - `hoffmanCoverageClamped`: 향후개호 기간 끝이 호프만표 범위를 넘어 clamp 됐고, 240 한도에
    *   걸리지 않아 적용 계수가 실제보다 작다.
+   * - `attendantSegmentsOverlap`: 향후개호 구간끼리 기간이 겹친다 (금액은 그대로, 안내만).
    */
-  code: "laborRateCarriedForward" | "laborRateSurveyFallback" | "hoffmanCoverageClamped";
+  code:
+    | "laborRateCarriedForward"
+    | "laborRateSurveyFallback"
+    | "hoffmanCoverageClamped"
+    | "attendantSegmentsOverlap";
   /** 단가 경고의 직종. `hoffmanCoverageClamped` 에는 없다. */
   occupation?: string;
   message: string;
@@ -281,6 +286,45 @@ export function truncateHoffman4(dataset: HoffmanDataset): HoffmanDataset {
     ...dataset,
     values: dataset.values.map((v) => Math.floor(Math.round(v * 1e8) / 1e4) / 1e4),
   };
+}
+
+/**
+ * 생계비 공제 후 남는 비율 `1 - ratio` 의 정확한 분수. 화면은 1/3 을 실수 `1/3` 로 저장하므로
+ * 1/3 과 1e-12 안이면 정확히 2/3 으로 본다. 그 밖의 값은 십진 유리수(소수 6자리까지 검증)로 바꾼다.
+ */
+export function livingCostKeepFraction(ratio: number): { num: bigint; den: bigint } {
+  if (Math.abs(ratio - 1 / 3) < 1e-12) return { num: 2n, den: 3n };
+  const r = decimalRatio(ratio);
+  return { num: r.den - r.num, den: r.den };
+}
+
+/**
+ * 중복장해율(%) = `(1 - Π(1 - r_i/100)) × 100` 을 소수 2자리에서 버린다 (정수 연산).
+ * 입력은 % 소수 2자리까지, 0 이상 100 미만, 20건 이하. 예: [33.3, 15.5] → 43.63 (반올림이면 43.64).
+ */
+export function combineDisabilityRatesPercent(ratesPercent: readonly number[]): number {
+  if (!Array.isArray(ratesPercent) || ratesPercent.length > 20) {
+    throw new RangeError("중복장해율 계산 실패: 장해율은 20건 이하 배열이어야 합니다.");
+  }
+  let keep = 1n;
+  let den = 1n;
+  ratesPercent.forEach((rate, i) => {
+    const scaled = Math.round(rate * 100);
+    if (
+      typeof rate !== "number" ||
+      !Number.isFinite(rate) ||
+      rate < 0 ||
+      rate >= 100 ||
+      Math.abs(rate * 100 - scaled) > 1e-6
+    ) {
+      throw new RangeError(
+        `중복장해율 계산 실패: ${i + 1}번째 장해율은 0 이상 100 미만, 소수 둘째 자리까지여야 합니다.`,
+      );
+    }
+    keep *= 10000n - BigInt(scaled);
+    den *= 10000n;
+  });
+  return Number(((den - keep) * 10000n) / den) / 100;
 }
 
 /** `floor(amount × Π(1 - ratio_i) / divisor)`. `divisor` 는 1e-4 단위 수치합계 등 정수 환산용. */

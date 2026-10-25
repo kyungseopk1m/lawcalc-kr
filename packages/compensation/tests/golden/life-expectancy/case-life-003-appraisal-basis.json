@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1",
+  "id": "case-life-003-appraisal-basis",
+  "title": "기대여명: 감정일 기준, 감정 연도 2017년 표 52세 29.66, 2046-12-25",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-b7-2026-10-04.md G3. BIN0020 화면 재현. 감정일 2017-05-06 + floor(10,825.9).",
+  "input": {
+    "sex": "male",
+    "birthDate": "1965-02-08",
+    "accidentDate": "2015-10-12",
+    "basis": "appraisal",
+    "appraisalDate": "2017-05-06"
+  },
+  "expected": {
+    "baseDate": "2017-05-06",
+    "age": 52,
+    "tableYear": 2017,
+    "remainingYears": 29.66,
+    "normalEndDate": "2046-12-25",
+    "endDate": "2046-12-25",
+    "warningCodes": [],
+    "endDateOverridden": false
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-life-003"
+  }
+}

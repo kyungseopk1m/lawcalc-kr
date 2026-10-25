@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-025-vk-b3-claimants-won",
+  "title": "VK 대조 B-3 — B-1 + 위자료 500만 + 전액공제 300만, 원고별 원 단위",
+  "source": "manual-derivation",
+  "notes": "VK 실측: 81,967,731 (전액공제는 과실상계 뒤 재산상 손해에서, 위자료는 과실상계 없이 가산). 손계산: 79,967,731 − 3,000,000 + 5,000,000 = 81,967,731. claimants finalRounding won 이라 원 단위.",
+  "input": {
+    "mode": "injury",
+    "accidentType": "auto",
+    "base": {
+      "birthDate": "1980-01-01",
+      "accidentDate": "2010-01-01",
+      "sex": "male",
+      "courtTruncation": true,
+      "treatmentEndDate": "2010-01-01",
+      "retirementAge": 60,
+      "laborRateEffectiveRule": "published"
+    },
+    "lossRate": {
+      "hospitalizationFullLoss": false,
+      "permanent": [
+        {
+          "ratio": 0.3
+        }
+      ],
+      "temporary": []
+    },
+    "lostIncome": {
+      "directWageWon": 68965,
+      "workingDaysPerMonth": 22,
+      "discountMethod": "hoffman"
+    },
+    "faultRatio": 0.2,
+    "deductions": {
+      "ratio": [],
+      "absolute": [
+        {
+          "label": "합의금 등",
+          "amount": 3000000
+        }
+      ]
+    },
+    "solatiumWon": 5000000,
+    "claimants": {
+      "finalRounding": "won"
+    }
+  },
+  "expected": {
+    "lostIncomeSubtotalWon": 99959664,
+    "solatiumWon": 5000000,
+    "pecuniaryDamagesSubtotalWon": 99959664,
+    "faultOffset": {
+      "ratio": 0.2,
+      "beforeWon": 99959664,
+      "afterWon": 79967731
+    },
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 3000000,
+      "afterWon": 76967731
+    },
+    "finalWon": 81967731,
+    "hoffman240CapCappedAtIndex": null,
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.1.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 360,
+        "lossRate": 0.3,
+        "dailyWageWon": 68965,
+        "monthlyWageWon": 1517230,
+        "rawHoffman": 219.61,
+        "appliedHoffman": 219.61,
+        "amountFloorWon": 99959664
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [219.61],
+    "combinedLossRate": 0.3,
+    "claimants": [
+      {
+        "role": "victim",
+        "solatiumWon": 5000000,
+        "amountWon": 81967731
+      }
+    ]
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-22",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 2부"
+  }
+}

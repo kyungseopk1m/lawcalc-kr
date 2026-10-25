@@ -1,4 +1,7 @@
 export type {
+  CompensationClaimantRounding,
+  CompensationInjuryClaimant,
+  CompensationInjuryClaimantsInput,
   CompensationAbsoluteDeduction,
   CompensationAccidentType,
   CompensationBaseInput,
@@ -25,6 +28,10 @@ export type {
 export { computeCompensation, validateCompensationInput } from "./auto-injury";
 
 export type {
+  CompensationClaimantSolatium,
+  CompensationDeathOtherClaimant,
+  CompensationDeathOtherClaimantInput,
+  CompensationDeathClaimantsInput,
   CompensationAutoDeathInput,
   CompensationAutoDeathResult,
   CompensationDeathBaseInput,
@@ -54,3 +61,31 @@ export {
   validateOtherDamagesInput,
   type OtherDamagesContext,
 } from "./other-damages";
+
+export type { DelayDamagesDeps, DelayDamagesInput, DelayDamagesResult } from "./delay-damages";
+export {
+  buildDelayDamagesOrderText,
+  computeDelayDamages,
+  DELAY_DAMAGES_DEFAULT_OPTIONS,
+  validateDelayDamagesInput,
+} from "./delay-damages";
+
+export type {
+  CompensationLifeExpectancyInput,
+  LifeExpectancyDeps,
+  LifeExpectancyInput,
+  LifeExpectancyResult,
+  LifeExpectancyWarning,
+  LifeShortening,
+} from "./life-expectancy";
+export { computeLifeExpectancy, validateLifeExpectancyInput } from "./life-expectancy";
+
+export type {
+  LostRetirementInput,
+  LostRetirementMethod,
+  LostRetirementResult,
+  LostRetirementWarning,
+} from "./lost-retirement";
+export { computeLostRetirement, validateLostRetirementInput } from "./lost-retirement";
+
+export { combineDisabilityRatesPercent } from "./internal";

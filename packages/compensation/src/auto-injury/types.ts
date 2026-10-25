@@ -11,6 +11,11 @@
 import type { STANDARD_DISCLAIMER, IsoDate, LegalRatePreset } from "@lawcalc-kr/core-engine";
 import type { OtherDamagesInput, OtherDamagesResult } from "../other-damages/types";
 import type { CompensationWarning, LaborRateEffectiveRule } from "../internal";
+import type {
+  CompensationLifeExpectancyInput,
+  LifeExpectancyResult,
+} from "../life-expectancy/types";
+import type { LostRetirementInput, LostRetirementResult } from "../lost-retirement/types";
 
 export type { CompensationWarning, LaborRateEffectiveRule } from "../internal";
 
@@ -69,13 +74,13 @@ export interface CompensationBaseInput {
   laborRateEffectiveRule?: LaborRateEffectiveRule;
   /**
    * 법원 손해배상 프로그램 예시의 절사를 따른다. default false (절사 없음, 종전 결과 그대로).
-   * 자×부상 일실수입에만 적용한다.
+   * 일실수입에만 적용한다 (자×사망은 같은 이름의 `CompensationDeathBaseInput.courtTruncation`).
    * - 노동능력상실률: 구간 상실률(영구·한시 중복, 기왕증 기여도 반영 후)을 % 소수 2자리에서 버린다
    *   (예: 53.2468% → 53.24%).
    * - 호프만: 누적 단리연금현가율을 소수 4자리에서 버린 뒤 구간 계수 `H[끝] - H[시작]` 을 낸다
    *   (예: 3.9588 - 1.9875 = 1.9713).
    * 근거: 법원 손해배상 프로그램 일실수입 예시(사고 2010. 4. 21.) 계산표가 두 절사를 함께 써야
-   * 원 단위로 맞는다. 자×사망·기타손해(개호비)에는 적용하지 않는다.
+   * 원 단위로 맞는다. 기타손해(개호비)에는 적용하지 않는다.
    */
   courtTruncation?: boolean;
 }
@@ -177,6 +182,36 @@ export interface CompensationIndustrialInsuranceInjury {
 }
 
 /** 손해배상 입력. */
+/** 원고별 최종액 절사 단위. `"won"` 은 원 미만만 버리고(정수 연산이라 그대로), `"hundred"` 는 100원 미만을 버린다. */
+export type CompensationClaimantRounding = "won" | "hundred";
+
+/**
+ * 원고별 귀속 입력 (부상). 지정하면 피해자 본인 행과 가족 원고 행으로 결과를 나눈다.
+ * 가족 원고의 청구는 고유 위자료뿐이고 책임비율을 곱하지 않는다 (서울고법 2022. 2. 18. 선고 2020나2039267).
+ * 보험약관 지급기준(`applyFaultToSolatium`)이면 피해자 위자료처럼 floor(위자료 × (1 - 과실)) 로 줄인다.
+ */
+export interface CompensationInjuryClaimantsInput {
+  /** 가족 원고 위자료 목록. */
+  family?: { name: string; solatiumWon: number }[];
+  /** 원고별 최종액 절사. default `"won"`. */
+  finalRounding?: CompensationClaimantRounding;
+}
+
+/** 원고 1명의 최종액 (부상). */
+export interface CompensationInjuryClaimant {
+  /** `"victim"` = 피해자 본인, `"family"` = 가족 원고. */
+  role: "victim" | "family";
+  /** 가족 원고 이름. 피해자 본인 행에는 없다. */
+  name?: string;
+  /** 위자료 (원). 피해자 본인 행은 `solatiumWon` 입력값. */
+  solatiumWon: number;
+  /**
+   * 최종액 (원). 피해자 본인은 재산상 손해(공제 후) + 위자료, 가족은 위자료
+   * (`applyFaultToSolatium` 이면 floor(위자료 × (1 - 과실))). `finalRounding` 적용.
+   */
+  amountWon: number;
+}
+
 export interface CompensationInput {
   /** 사건종류. default "auto" (자동차). */
   accidentType?: CompensationAccidentType;
@@ -200,6 +235,18 @@ export interface CompensationInput {
    * 미지정 시 기존 경로 byte-identical (회귀 0). 재산상 손해 pool 에 과실상계 전 합산.
    */
   otherDamages?: OtherDamagesInput;
+  /** 원고별 귀속 (선택). 미지정이면 종전 계산 그대로. */
+  claimants?: CompensationInjuryClaimantsInput;
+  /**
+   * 기대여명 (선택). 성별·생년월일·사고일은 `base` 를 쓴다. 결과 `lifeExpectancy` 에 실린다.
+   * 여명종료일이 가동종료일보다 앞서면 여명종료일 다음 날을 일실수입 구간 경계로 더하고
+   * (월수 = `monthsBetween(사고일, 여명종료일 + 1일)`, 가동종료 경계와 같은 규칙), 그 경계 이후 구간은
+   * 생계비 1/3 을 공제한다 (서울고법 2022. 2. 18. 선고 2020나2039267: 기대여명 이후부터 가동종료일까지
+   * 일실수입의 1/3 을 생계비로 공제). 여명종료일이 가동종료일 이후면 금액은 그대로다.
+   */
+  lifeExpectancy?: CompensationLifeExpectancyInput;
+  /** 일실퇴직금 (선택). 재산상 손해(소극손해)로 과실상계 전에 합산한다. */
+  lostRetirement?: LostRetirementInput;
 }
 
 /** 일실수입 segment 1건. */
@@ -226,6 +273,11 @@ export interface CompensationSegment {
   appliedHoffman: number;
   /** segment 금액 = `monthlyWage × lossRate × appliedHoffman` 의 floor (원, 정수). */
   amountFloorWon: number;
+  /**
+   * 기대여명 이후 구간이라 생계비 1/3 을 공제했다 (금액 = floor(월급여 × 상실률 × 계수 × 2/3)).
+   * 부상 `lifeExpectancy` 입력으로 공제된 구간에만 `true` 로 실린다.
+   */
+  livingCostDeducted?: boolean;
 }
 
 export interface CompensationFaultOffset {
@@ -322,6 +374,12 @@ export interface CompensationResult {
   otherDamagesSubtotalWon?: number;
   /** 기타손해 상세 (입력 시에만, transparency). */
   otherDamages?: OtherDamagesResult;
+  /** 일실퇴직금 (원). `lostRetirement` 입력 시에만. 과실상계 대상 소계에 들어간다. */
+  lostRetirementSubtotalWon?: number;
+  /** 일실퇴직금 상세 (입력 시에만). */
+  lostRetirement?: LostRetirementResult;
+  /** 기대여명 결과 (`lifeExpectancy` 입력 시에만). */
+  lifeExpectancy?: LifeExpectancyResult;
   /** 위자료 (원). */
   solatiumWon: number;
   /**
@@ -330,7 +388,8 @@ export interface CompensationResult {
    */
   industrialBenefit?: CompensationIndustrialBenefitResult;
   /**
-   * 과실상계 대상 소계 = `일실수입 + otherDamagesSubtotalWon` (`applyFaultToSolatium` 이면 `+ solatiumWon`).
+   * 과실상계 대상 소계 = `일실수입 + otherDamagesSubtotalWon + lostRetirementSubtotalWon`
+   * (`applyFaultToSolatium` 이면 `+ solatiumWon`).
    * 산재는 산재보험급여 공제 후 일실수입 (`industrialBenefit.lostIncomeAfterWon`) 기준.
    */
   pecuniaryDamagesSubtotalWon: number;
@@ -338,8 +397,13 @@ export interface CompensationResult {
   faultOffset: CompensationFaultOffset;
   /** 공제 결과. */
   deductions: CompensationDeductionsResult;
-  /** 최종 합계 = `max(0, deductions.afterWon)` → 100원 미만 절사 후 정수. */
+  /**
+   * 최종 합계 = `max(0, deductions.afterWon)` → 100원 미만 절사 후 정수.
+   * `claimants` 입력 시에는 원고별 최종액(`claimants[].amountWon`)의 합.
+   */
   finalWon: number;
+  /** 원고별 최종액. `claimants` 입력 시에만 (피해자 본인 행이 먼저, 이어서 가족 행). */
+  claimants?: CompensationInjuryClaimant[];
   /** 240 cap 적용표 (segments 와 동일 길이, transparency). */
   hoffman240Cap: Hoffman240CapTable;
   /** dataset 식별자 4종. */

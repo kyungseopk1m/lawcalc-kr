@@ -1,4 +1,7 @@
 export type {
+  CompensationClaimantRounding,
+  CompensationInjuryClaimant,
+  CompensationInjuryClaimantsInput,
   CompensationAbsoluteDeduction,
   CompensationAccidentType,
   CompensationBaseInput,

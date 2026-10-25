@@ -160,6 +160,32 @@ describe("개호비 (attendant care)", () => {
     expect(warningsOf("2026-01-01", "2150-01-01")).toEqual([]);
   });
 
+  it("향후개호 구간 기간이 겹치면 attendantSegmentsOverlap 경고 1개, 금액은 그대로", () => {
+    const item = { directDailyWageWon: 100000, personCount: 1, daysPerMonth: 30 };
+    const runWith = (future: { startDate: string; endDate: string }[]) => {
+      const warnings: CompensationWarning[] = [];
+      const r = computeOtherDamages(
+        { attendantCare: { future: future.map((f) => ({ ...item, ...f })) } },
+        { ...ctx, warnings },
+      );
+      return { codes: warnings.map((w) => w.code), futureWon: r?.attendantCare?.futureWon };
+    };
+    const a = { startDate: "2026-01-01", endDate: "2030-01-01" };
+    const b = { startDate: "2028-01-01", endDate: "2032-01-01" };
+    const c = { startDate: "2029-01-01", endDate: "2031-01-01" };
+    const overlapped = runWith([a, b, c]);
+    expect(overlapped.codes).toEqual(["attendantSegmentsOverlap"]);
+    expect(overlapped.futureWon).toBe(
+      computeOtherDamages(
+        { attendantCare: { future: [a, b, c].map((f) => ({ ...item, ...f })) } },
+        ctx,
+      )?.attendantCare?.futureWon,
+    );
+    // 끝날 = 다음 시작일인 이어진 구간은 겹침이 아니다.
+    expect(runWith([a, { startDate: "2030-01-01", endDate: "2032-01-01" }]).codes).toEqual([]);
+    expect(runWith([a]).codes).toEqual([]);
+  });
+
   it("항목 모두 비면 null 반환 (회귀 0)", () => {
     expect(computeOtherDamages({ attendantCare: { past: [], future: [] } }, ctx)).toBeNull();
   });

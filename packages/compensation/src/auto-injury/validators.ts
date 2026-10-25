@@ -8,10 +8,13 @@ import type {
   TemporaryDisabilityInput,
 } from "./types";
 import { validateOtherDamagesInput } from "../other-damages/validators";
+import { validateLifeExpectancyInput } from "../life-expectancy/validators";
+import { validateLostRetirementInput } from "../lost-retirement/validators";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DEDUCTION_ITEMS = 50;
 const MAX_DISABILITY_ITEMS = 20;
+const MAX_FAMILY_CLAIMANTS = 20;
 const PREFIX = "손해배상 입력 검증 실패";
 
 function assertIsoDate(label: string, value: unknown): void {
@@ -299,5 +302,46 @@ export function validateCompensationInput(input: CompensationInput): void {
   }
   if (input.otherDamages !== undefined) {
     validateOtherDamagesInput(input.otherDamages, input.base.accidentDate);
+  }
+  if (input.lifeExpectancy !== undefined) {
+    if (input.lifeExpectancy === null || typeof input.lifeExpectancy !== "object") {
+      throw new RangeError(`${PREFIX}: lifeExpectancy 객체가 필요합니다.`);
+    }
+    validateLifeExpectancyInput({
+      ...input.lifeExpectancy,
+      sex: input.base.sex,
+      birthDate: input.base.birthDate,
+      accidentDate: input.base.accidentDate,
+    });
+  }
+  if (input.lostRetirement !== undefined) {
+    validateLostRetirementInput(input.lostRetirement, input.base.accidentDate);
+  }
+  if (input.claimants !== undefined) {
+    const claimants = input.claimants;
+    if (claimants === null || typeof claimants !== "object") {
+      throw new RangeError(`${PREFIX}: claimants 객체가 필요합니다.`);
+    }
+    const family = claimants.family ?? [];
+    if (!Array.isArray(family) || family.length > MAX_FAMILY_CLAIMANTS) {
+      throw new RangeError(
+        `${PREFIX}: claimants.family 는 ${MAX_FAMILY_CLAIMANTS}명 이하 배열이어야 합니다.`,
+      );
+    }
+    family.forEach((f, i) => {
+      if (f === null || typeof f !== "object" || typeof f.name !== "string") {
+        throw new RangeError(`${PREFIX}: claimants.family[${i}].name 은 문자열이어야 합니다.`);
+      }
+      assertNonNegativeInteger(`claimants.family[${i}].solatiumWon`, f.solatiumWon);
+    });
+    if (
+      claimants.finalRounding !== undefined &&
+      claimants.finalRounding !== "won" &&
+      claimants.finalRounding !== "hundred"
+    ) {
+      throw new RangeError(
+        `${PREFIX}: claimants.finalRounding 은 "won" 또는 "hundred" 여야 합니다.`,
+      );
+    }
   }
 }

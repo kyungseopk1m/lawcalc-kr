@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "id": "case-life-001-newborn",
+  "title": "기대여명: 남 0세(사고 다음 날), 2022년 표 79.86, 2102-03-20",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-b7-2026-10-04.md G1. BIN0017 화면 재현. 79.86 x 365 = 29,148.9일 버림.",
+  "input": {
+    "sex": "male",
+    "birthDate": "2022-05-29",
+    "accidentDate": "2022-05-30"
+  },
+  "expected": {
+    "baseDate": "2022-05-30",
+    "age": 0,
+    "tableYear": 2022,
+    "remainingYears": 79.86,
+    "normalEndDate": "2102-03-20",
+    "endDate": "2102-03-20",
+    "warningCodes": [],
+    "endDateOverridden": false
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-life-001"
+  }
+}

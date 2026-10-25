@@ -22,9 +22,12 @@ import type { ComputeCompensationDeps } from "../auto-injury/compute";
 import type {
   CompensationAutoDeathInput,
   CompensationAutoDeathResult,
+  CompensationDeathOtherClaimant,
   CompensationInheritanceShare,
 } from "./types";
 import { computeOtherDamages } from "../other-damages/compute";
+import { computeLifeExpectancy } from "../life-expectancy/compute";
+import { computeLostRetirement } from "../lost-retirement/compute";
 import { validateCompensationDeathInput } from "./validators";
 
 // 대법원 2024. 4. 25. 선고 2020다271650 (월 가동일수 20일 초과 인정 곤란). 부상 엔진과 같다.
@@ -39,12 +42,14 @@ import {
   dropUnchangedLaborRates,
   floorTimesComplements,
   getCumulativeHoffmanClamped,
+  livingCostKeepFraction,
   resolveOccupationRate,
   type CompensationWarning,
   laborRateChanges,
   laborRateDateAt,
   monthsBetween,
   sumCourtDeductions,
+  truncateHoffman4,
 } from "../internal";
 
 /**
@@ -82,6 +87,7 @@ function distributeFinal(
  *    위자료는 과실상계 대상이 아니다 (`applyFaultToSolatium` 이면 이전처럼 포함).
  * 4. 공제(비율/전액) 적용 → 위자료 가산 → `max(0, ...)` → 100원 미만 절사 = finalWon.
  * 5. heirs 입력 시 finalWon 을 상속분(numerator/denominator)으로 분배 (floor + 잔여원 선순위).
+ *    `claimants` 가 있으면 원고별 귀속(상속대상 → 상속분 floor → 고유 위자료·장례비)으로 대신한다.
  */
 export function computeCompensationDeath(
   input: CompensationAutoDeathInput,
@@ -167,18 +173,23 @@ export function computeCompensationDeath(
 
   // 3. 호프만 + 240 cap
   // 표 범위(1,440개월)를 넘는 월수는 clamp 한다. 240 한도가 414개월에서 걸려 금액 영향 없음 (`../internal` 참조).
+  // 법원 예시 절사면 누적 계수를 4자리에서 버린 표를 쓴다 (일실수입만, 개호비는 원 표).
+  const courtTruncation = input.base.courtTruncation === true;
+  const lostIncomeHoffman = courtTruncation ? truncateHoffman4(hoffman) : hoffman;
   const rawHoffmanList: number[] = [];
   let cursorMonth = 0;
   for (const boundary of boundaries) {
     rawHoffmanList.push(
-      getCumulativeHoffmanClamped(hoffman, boundary.month) -
-        getCumulativeHoffmanClamped(hoffman, cursorMonth),
+      getCumulativeHoffmanClamped(lostIncomeHoffman, boundary.month) -
+        getCumulativeHoffmanClamped(lostIncomeHoffman, cursorMonth),
     );
     cursorMonth = boundary.month;
   }
   const capResult = applyHoffman240Cap(rawHoffmanList);
 
   // 4. 일실수입 (생계비 공제 반영, 노동능력 100% 상실)
+  // 절사 경로는 floor(월급여 × 계수 × (1 - 생계비)) 를 정수·분수로 정확히 (1/3 은 정확히 2/3).
+  const keep = livingCostKeepFraction(livingCostDeductionRatio);
   let cursor = { month: 0, date: accidentDate };
   const segments: CompensationSegment[] = boundaries.map((boundary, i) => {
     const start = cursor;
@@ -202,7 +213,12 @@ export function computeCompensationDeath(
       monthlyWageWon,
       rawHoffman,
       appliedHoffman,
-      amountFloorWon: Math.floor(monthlyWageWon * appliedHoffman * (1 - livingCostDeductionRatio)),
+      amountFloorWon: courtTruncation
+        ? Number(
+            (BigInt(monthlyWageWon) * BigInt(Math.round(appliedHoffman * 1e4)) * keep.num) /
+              (10000n * keep.den),
+          )
+        : Math.floor(monthlyWageWon * appliedHoffman * (1 - livingCostDeductionRatio)),
     };
   });
   const lostIncomeSubtotalWon = segments.reduce((acc, segment) => acc + segment.amountFloorWon, 0);
@@ -221,6 +237,30 @@ export function computeCompensationDeath(
       : null) ?? undefined;
   const otherDamagesSubtotalWon = otherDamagesResult?.subtotalWon ?? 0;
 
+  // 4.6. 일실퇴직금 (망인의 재산상 손해, 상실률 100). 기대여명은 표시용으로만 계산한다.
+  const lostRetirementResult =
+    input.lostRetirement === undefined
+      ? undefined
+      : computeLostRetirement(
+          input.lostRetirement.method === "direct"
+            ? input.lostRetirement
+            : { ...input.lostRetirement, lossRatePercent: 100 },
+          accidentDate,
+        );
+  const lostRetirementSubtotalWon = lostRetirementResult?.amountWon ?? 0;
+  const lifeExpectancyResult =
+    input.lifeExpectancy === undefined
+      ? undefined
+      : computeLifeExpectancy(
+          {
+            ...input.lifeExpectancy,
+            sex: input.base.sex,
+            birthDate: input.base.birthDate,
+            accidentDate,
+          },
+          { lifeExpectancy },
+        );
+
   // 4.7. 산재보험급여(유족급여) 공제 — 같은 성질의 손해(생계비 공제 후 일실수입=소극손해)
   //      한도에서 먼저 공제한 뒤 과실상계 한다 (대법원 2022. 3. 24. 선고 2021다241618
   //      전원합의체 "공제 후 과실상계"). 위자료·장례비·기타손해는 잠식하지 않는다.
@@ -238,9 +278,12 @@ export function computeCompensationDeath(
   const solatiumWon = input.solatiumWon ?? 0;
   const solatiumInFaultBase = input.applyFaultToSolatium === true;
   const funeralExpenseWon = input.funeralExpenseWon ?? DEFAULT_FUNERAL_EXPENSE_WON;
-  // 일실수입이 아닌 재산상 손해 (장례비·기타손해, 약관 기준이면 위자료).
+  // 일실수입이 아닌 재산상 손해 (장례비·기타손해·일실퇴직금, 약관 기준이면 위자료).
   const otherPecuniaryWon =
-    otherDamagesSubtotalWon + funeralExpenseWon + (solatiumInFaultBase ? solatiumWon : 0);
+    otherDamagesSubtotalWon +
+    lostRetirementSubtotalWon +
+    funeralExpenseWon +
+    (solatiumInFaultBase ? solatiumWon : 0);
   const faultRatio = input.faultRatio ?? 0;
   // 공제. 비율공제·지급치료비 = 항목 금액 × [1 - (1 - 기왕증)(1 - 과실)], 사망은 기왕증 0 이라 × 과실.
   const deductions = input.deductions ?? {};
@@ -251,37 +294,49 @@ export function computeCompensationDeath(
   let absoluteTotalWon = 0;
   for (const item of deductions.absolute ?? []) absoluteTotalWon += item.amount;
 
-  // 6~9. 과실상계 → 공제 → 위자료 가산 → 100원 미만 절사. 총액 1회 또는 상속인별로 쓴다.
-  // 비율공제·지급치료비는 재산상 손해 한도에서만 빼고, 전액공제(선급금 등)가 재산상 손해를 넘으면
-  // 그 초과분은 위자료를 차감한다 (`applyDeductions`, 원장 결정 9 재검토).
+  // 6~9. 과실상계 → 공제 → 위자료 가산 → 장례비 가산 → 100원 미만 절사. 총액 1회 또는 상속인별로 쓴다.
+  // 비율공제·지급치료비는 장례비를 뺀 재산상 손해 한도에서만 빼고, 전액공제(선급금 등)가 그 한도를
+  // 넘으면 초과분은 위자료를 차감한다 (`applyDeductions`, 원장 결정 9 재검토). 장례비 손해(과실상계 후)는
+  // 공제로 깎지 않고 마지막에 그대로 더한다 (2026-10-25 결정, 원고별 귀속 경로와 같은 한도).
   const settle = (
     lostIncomeAfterWon: number,
     otherWon: number,
+    funeralWon: number,
     solatiumAddWon: number,
     absoluteWon: number,
     propertyOnlyWon: number,
   ) => {
+    // `otherWon` 은 장례비를 포함한다 (과실상계 대상 소계는 종전 그대로).
     const pecuniaryWon = lostIncomeAfterWon + otherWon;
     const afterFaultWon = floorTimesComplements(pecuniaryWon, [faultRatio]);
-    // 구 파일 금액 유지(결정 5): 종전 실수식 그대로.
-    const legacyRatioWon = Math.floor(afterFaultWon * legacyRatioSum);
-    const { afterWon: afterDeductionWon, propertyOnlyAppliedWon } = applyDeductions(
-      afterFaultWon,
+    // 과실상계 후 총액에서 장례비 몫을 뗀다. 총액 floor 를 유지해 초과가 없으면 종전 금액과 같다.
+    const funeralClaimWon = floorTimesComplements(funeralWon, [faultRatio]);
+    const estateAfterFaultWon = afterFaultWon - funeralClaimWon;
+    // 구 파일 금액 유지(결정 5): 종전 실수식 그대로. 다만 장례비를 깎지 않도록 장례비 뺀 재산상 손해를
+    // 넘는 몫은 버린다 (비율공제와 같은 한도).
+    const legacyRatioWon = Math.min(
+      Math.floor(afterFaultWon * legacyRatioSum),
+      estateAfterFaultWon,
+    );
+    const { afterWon: estateAfterDeductionWon, propertyOnlyAppliedWon } = applyDeductions(
+      estateAfterFaultWon,
       legacyRatioWon,
       propertyOnlyWon,
       absoluteWon,
     );
-    // 전액공제가 재산상 손해를 넘은 부분: 위자료에서 빠진 몫과 위자료까지 넘어 버려진 몫.
-    const overWon = Math.max(0, -afterDeductionWon);
+    // 전액공제가 장례비 뺀 재산상 손해를 넘은 부분: 위자료에서 빠진 몫과 위자료까지 넘어 버려진 몫.
+    const overWon = Math.max(0, -estateAfterDeductionWon);
     const solatiumReducedWon = Math.min(solatiumAddWon, overWon);
-    const finalRawWon = Math.max(0, afterDeductionWon + solatiumAddWon);
+    const finalRawWon = Math.max(0, estateAfterDeductionWon + solatiumAddWon) + funeralClaimWon;
     return {
       pecuniaryWon,
       afterFaultWon,
       legacyRatioWon,
       propertyOnlyAppliedWon,
       absoluteWon,
-      afterDeductionWon,
+      // 공제 후 재산상 손해 = 장례비 뺀 공제 후 금액(음수 가능) + 장례비 손해. 항등식
+      // 최종액(절사 전) = afterDeductionWon + 위자료 가산 + 버린 초과분 이 성립한다.
+      afterDeductionWon: estateAfterDeductionWon + funeralClaimWon,
       solatiumReducedWon,
       absoluteExcessDroppedWon: overWon - solatiumReducedWon,
       finalWon: Math.floor(finalRawWon / FINAL_FLOOR_UNIT) * FINAL_FLOOR_UNIT,
@@ -302,7 +357,160 @@ export function computeCompensationDeath(
   let totals: ReturnType<typeof settle>;
   let benefitWon = industrialBenefitInputWon;
   let deductedWon = industrialDeductedWon;
-  if (recipients !== undefined && input.heirs !== undefined) {
+  const claimants = input.claimants;
+  let estateWon: number | undefined;
+  let otherClaimants: CompensationDeathOtherClaimant[] | undefined;
+  // 고유 위자료(상속인·상속인 아닌 유족). 판결 방식은 책임비율을 곱하지 않고, 보험약관 지급기준이면
+  // 망인 위자료처럼 floor(위자료 × (1 - 과실)) 로 줄인다 (2026-10-25 결정).
+  const ownSolatiumOf = (won: number) =>
+    solatiumInFaultBase ? floorTimesComplements(won, [faultRatio]) : won;
+  if (claimants !== undefined && input.heirs !== undefined) {
+    // 원고별 귀속 (판결 방식, 2008가단245503·2003가단361721). 장례비는 지출한 원고의 손해라
+    // 상속대상에 넣지 않는다. 공제는 상속대상에서 뺀다 (재산상 손해가 모자랄 때 위자료 잠식은 settle 과 같은 규칙).
+    // 상속인별 floor(상속대상 × 상속분) 의 나머지 원은 배정하지 않는다 (finalWon = 원고별 합).
+    const shares = calculateInheritance(input.heirs).shares;
+    rawInheritanceShares = shares;
+    const estatePecuniaryWon = lostIncomeAfterIndustrialWon + otherPecuniaryWon - funeralExpenseWon;
+    const afterFaultWon = floorTimesComplements(estatePecuniaryWon, [faultRatio]);
+    const legacyRatioWon = Math.floor(afterFaultWon * legacyRatioSum);
+    // 비율공제·지급치료비는 재산상 손해 한도에서만 빼고, 전액공제만 모자라면 망인 위자료까지
+    // 깎는다. 원고별 귀속이 없는 경로(`settle`)와 같은 규칙이다 (R2-a 결정 9).
+    const { afterWon: afterDeductionWon, propertyOnlyAppliedWon } = applyDeductions(
+      afterFaultWon,
+      legacyRatioWon,
+      ratioSubtotalWon + paidTreatmentSubtotalWon,
+      absoluteTotalWon,
+    );
+    const overWon = Math.max(0, -afterDeductionWon);
+    const solatiumReducedWon = Math.min(solatiumAddWon, overWon);
+    const estate = Math.max(0, afterDeductionWon + solatiumAddWon);
+    const estateSolatiumWon = Math.min(solatiumAddWon, estate);
+    const funeralClaimWon = floorTimesComplements(funeralExpenseWon, [faultRatio]);
+    const funeralBenefitWon =
+      accidentType === "industrial" ? input.industrialInsurance?.funeralBenefitWon : undefined;
+    const unit = claimants.finalRounding === "hundred" ? FINAL_FLOOR_UNIT : 1;
+    if (recipients !== undefined) {
+      benefitWon = recipients.reduce((acc, r) => acc + r.survivorBenefitWon, 0);
+      deductedWon = 0;
+    }
+    estateWon = estate;
+    // 수급권자형은 상속인별로 유족급여를 먼저 빼고(2008다13104, 2021다241618 공제 후 과실상계)
+    // 과실상계·공제·위자료 잠식을 상속인 몫마다 한다. 원고별 귀속이 없는 수급권자 경로와 같은
+    // 순서이고, 장례비만 상속대상에서 뺀다.
+    const recipientTotals =
+      recipients === undefined
+        ? undefined
+        : {
+            estateWon: 0,
+            afterFaultWon: 0,
+            legacyRatioWon: 0,
+            propertyOnlyAppliedWon: 0,
+            afterDeductionWon: 0,
+            solatiumReducedWon: 0,
+            absoluteExcessDroppedWon: 0,
+          };
+    inheritanceShares = shares.map((share) => {
+      const part = (won: number) => Math.floor((won * share.numerator) / share.denominator);
+      let inheritedSolatiumWon = part(estateSolatiumWon);
+      let inheritedPecuniaryWon = part(estate) - inheritedSolatiumWon;
+      let survivorBenefitDeductedWon: number | undefined;
+      if (recipients !== undefined && recipientTotals !== undefined) {
+        const lostIncomeShareWon = part(lostIncomeSubtotalWon);
+        const benefitShareWon = recipients
+          .filter((r) => r.heirName === share.name)
+          .reduce((acc, r) => acc + r.survivorBenefitWon, 0);
+        survivorBenefitDeductedWon = Math.min(benefitShareWon, lostIncomeShareWon);
+        deductedWon += survivorBenefitDeductedWon;
+        const solatiumShareWon = part(solatiumAddWon);
+        const heir = settle(
+          lostIncomeShareWon - survivorBenefitDeductedWon,
+          part(otherPecuniaryWon - funeralExpenseWon),
+          0,
+          solatiumShareWon,
+          part(absoluteTotalWon),
+          part(ratioSubtotalWon + paidTreatmentSubtotalWon),
+        );
+        const heirEstateWon = Math.max(0, heir.afterDeductionWon + solatiumShareWon);
+        inheritedSolatiumWon = Math.min(solatiumShareWon, heirEstateWon);
+        inheritedPecuniaryWon = heirEstateWon - inheritedSolatiumWon;
+        recipientTotals.estateWon += heirEstateWon;
+        recipientTotals.afterFaultWon += heir.afterFaultWon;
+        recipientTotals.legacyRatioWon += heir.legacyRatioWon;
+        recipientTotals.propertyOnlyAppliedWon += heir.propertyOnlyAppliedWon;
+        recipientTotals.afterDeductionWon += heir.afterDeductionWon;
+        recipientTotals.solatiumReducedWon += heir.solatiumReducedWon;
+        recipientTotals.absoluteExcessDroppedWon += heir.absoluteExcessDroppedWon;
+      }
+      const isPayer = claimants.funeralPayer === share.name;
+      const funeralWon =
+        claimants.funeralPayer === undefined
+          ? part(funeralClaimWon)
+          : isPayer
+            ? funeralClaimWon
+            : 0;
+      // 장의비는 장례비 손해에서만, 그 금액 한도로 (2021다241618).
+      const funeralBenefitDeductedWon =
+        isPayer && funeralBenefitWon !== undefined ? Math.min(funeralBenefitWon, funeralWon) : 0;
+      const ownSolatiumWon = ownSolatiumOf(
+        (claimants.ownSolatium ?? [])
+          .filter((o) => o.heirName === share.name)
+          .reduce((acc, o) => acc + o.solatiumWon, 0),
+      );
+      const rawWon =
+        inheritedPecuniaryWon +
+        inheritedSolatiumWon +
+        ownSolatiumWon +
+        funeralWon -
+        funeralBenefitDeductedWon;
+      return {
+        name: share.name,
+        numerator: share.numerator,
+        denominator: share.denominator,
+        amountWon: Math.floor(rawWon / unit) * unit,
+        ...(survivorBenefitDeductedWon !== undefined ? { survivorBenefitDeductedWon } : {}),
+        inheritedPecuniaryWon,
+        inheritedSolatiumWon,
+        ownSolatiumWon,
+        funeralWon,
+        ...(isPayer && funeralBenefitWon !== undefined ? { funeralBenefitDeductedWon } : {}),
+      };
+    });
+    otherClaimants = claimants.otherClaimants?.map((o) => {
+      // 상속인 행의 ownSolatiumWon 과 같은 기준(과실 적용 후, 절사 전)으로 싣는다.
+      const solatiumWon = ownSolatiumOf(o.solatiumWon);
+      return { name: o.name, solatiumWon, amountWon: Math.floor(solatiumWon / unit) * unit };
+    });
+    const finalWon = [...inheritanceShares, ...(otherClaimants ?? [])].reduce(
+      (acc, s) => acc + s.amountWon,
+      0,
+    );
+    if (recipientTotals !== undefined) {
+      estateWon = recipientTotals.estateWon;
+      totals = {
+        pecuniaryWon: lostIncomeSubtotalWon - deductedWon + otherPecuniaryWon,
+        afterFaultWon: recipientTotals.afterFaultWon + funeralClaimWon,
+        legacyRatioWon: recipientTotals.legacyRatioWon,
+        propertyOnlyAppliedWon: recipientTotals.propertyOnlyAppliedWon,
+        absoluteWon: absoluteTotalWon,
+        afterDeductionWon: recipientTotals.afterDeductionWon,
+        solatiumReducedWon: recipientTotals.solatiumReducedWon,
+        absoluteExcessDroppedWon: recipientTotals.absoluteExcessDroppedWon,
+        finalWon,
+      };
+    } else {
+      totals = {
+        pecuniaryWon: estatePecuniaryWon + funeralExpenseWon,
+        afterFaultWon: afterFaultWon + funeralClaimWon,
+        legacyRatioWon,
+        propertyOnlyAppliedWon,
+        absoluteWon: absoluteTotalWon,
+        afterDeductionWon,
+        solatiumReducedWon,
+        absoluteExcessDroppedWon: overWon - solatiumReducedWon,
+        finalWon,
+      };
+    }
+  } else if (recipients !== undefined && input.heirs !== undefined) {
     const shares = calculateInheritance(input.heirs).shares;
     rawInheritanceShares = shares;
     benefitWon = recipients.reduce((acc, r) => acc + r.survivorBenefitWon, 0);
@@ -329,6 +537,7 @@ export function computeCompensationDeath(
       const heir = settle(
         lostIncomeShareWon - survivorBenefitDeductedWon,
         part(otherPecuniaryWon),
+        part(funeralExpenseWon),
         part(solatiumAddWon),
         part(absoluteTotalWon),
         part(ratioSubtotalWon + paidTreatmentSubtotalWon),
@@ -346,6 +555,7 @@ export function computeCompensationDeath(
     totals = settle(
       lostIncomeAfterIndustrialWon,
       otherPecuniaryWon,
+      funeralExpenseWon,
       solatiumAddWon,
       absoluteTotalWon,
       ratioSubtotalWon + paidTreatmentSubtotalWon,
@@ -363,7 +573,11 @@ export function computeCompensationDeath(
   const absoluteSubtotalWon = totals.absoluteWon;
   const deductionsAfterWon = totals.afterDeductionWon;
   const finalWon = totals.finalWon;
-  const byHeir = recipients !== undefined && input.heirs !== undefined;
+  const byHeir = recipients !== undefined && input.heirs !== undefined && claimants === undefined;
+  const totalPathOverflow =
+    !byHeir &&
+    claimants === undefined &&
+    totals.solatiumReducedWon + totals.absoluteExcessDroppedWon > 0;
   const propertyOnlyWon = ratioSubtotalWon + paidTreatmentSubtotalWon;
   const hasPropertyOnly =
     (deductions.ratio?.length ?? 0) + (deductions.paidTreatment?.length ?? 0) > 0;
@@ -381,6 +595,11 @@ export function computeCompensationDeath(
     ...(otherDamagesResult !== undefined
       ? { otherDamagesSubtotalWon, otherDamages: otherDamagesResult }
       : {}),
+    // 입력 시에만 포함 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(lostRetirementResult !== undefined
+      ? { lostRetirementSubtotalWon, lostRetirement: lostRetirementResult }
+      : {}),
+    ...(lifeExpectancyResult !== undefined ? { lifeExpectancy: lifeExpectancyResult } : {}),
     solatiumWon,
     // 산재만 포함 — 자동차 모드 키 생략 → 기존 골든/.lcalc byte-identical (회귀 0).
     ...(accidentType === "industrial"
@@ -412,6 +631,14 @@ export function computeCompensationDeath(
         : {}),
       absoluteSubtotalWon,
       afterWon: deductionsAfterWon,
+      // 총액 계산에서 전액공제가 장례비 뺀 재산상 손해를 넘었을 때만: 위자료 감액과 버린 초과분.
+      // `afterWon` 이 장례비 손해를 포함해 양수일 수 있어 화면이 `-afterWon` 으로 역산할 수 없다.
+      ...(totalPathOverflow
+        ? {
+            solatiumReducedWon: totals.solatiumReducedWon,
+            absoluteExcessDroppedWon: totals.absoluteExcessDroppedWon,
+          }
+        : {}),
       // 상속인별 계산(recipients)일 때만: 행 합 = 최종액이 되게 하는 상속인별 합계.
       ...(byHeir
         ? {
@@ -423,6 +650,9 @@ export function computeCompensationDeath(
         : {}),
     },
     finalWon,
+    // 원고별 귀속(claimants)일 때만 포함 → 기존 골든/.lcalc byte-identical (회귀 0).
+    ...(estateWon !== undefined ? { estateWon } : {}),
+    ...(otherClaimants !== undefined ? { otherClaimants } : {}),
     ...(inheritanceShares !== undefined ? { inheritanceShares } : {}),
     ...(rawInheritanceShares !== undefined ? { rawInheritanceShares } : {}),
     hoffman240Cap: {

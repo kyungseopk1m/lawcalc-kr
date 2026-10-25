@@ -1,4 +1,8 @@
 export type {
+  CompensationClaimantSolatium,
+  CompensationDeathOtherClaimant,
+  CompensationDeathOtherClaimantInput,
+  CompensationDeathClaimantsInput,
   CompensationAutoDeathInput,
   CompensationAutoDeathResult,
   CompensationDeathBaseInput,

@@ -18,6 +18,7 @@ import type {
 } from "@lawcalc-kr/core-engine";
 import type {
   CompensationAccidentType,
+  CompensationClaimantRounding,
   CompensationDataVersions,
   CompensationDeductionsInput,
   CompensationDeductionsResult,
@@ -29,6 +30,11 @@ import type {
 } from "../auto-injury/types";
 import type { OtherDamagesInput, OtherDamagesResult } from "../other-damages/types";
 import type { CompensationWarning, LaborRateEffectiveRule } from "../internal";
+import type {
+  CompensationLifeExpectancyInput,
+  LifeExpectancyResult,
+} from "../life-expectancy/types";
+import type { LostRetirementInput, LostRetirementResult } from "../lost-retirement/types";
 
 /** 사망 손해배상 기초사항. 부상 모드와 달리 입원치료 종료일이 없다. */
 export interface CompensationDeathBaseInput {
@@ -57,6 +63,14 @@ export interface CompensationDeathBaseInput {
    * `"survey"` 는 조사 시점(5/1·9/1)으로 같은 단가를 4개월 앞당긴다.
    */
   laborRateEffectiveRule?: LaborRateEffectiveRule;
+  /**
+   * 법원 예시 절사. default false (종전 결과 그대로). 일실수입에만 적용한다.
+   * 누적 호프만 계수를 소수 4자리에서 버린 뒤 구간 계수 `H[끝] - H[시작]` 을 내고, 구간 금액은
+   * `floor(월급여 × 계수 × (1 - 생계비비율))` 을 정수·분수로 정확히 계산한다 (생계비 1/3 은 정확히 2/3,
+   * 생계비 공제 후 월소득을 먼저 버리지 않는다). 근거: 광주지법 1994. 7. 22. 선고 93가합9479
+   * (54.0738 = 185.2966 - 131.2228, H[175] = 131.2228909 를 반올림하지 않고 버림).
+   */
+  courtTruncation?: boolean;
 }
 
 /** 상속인 입력. inheritance 도메인 입력을 그대로 재사용한다 (1991-01-01 이후 사망 대상). */
@@ -74,9 +88,15 @@ export interface CompensationIndustrialInsuranceDeath {
    * 대법원 2009. 5. 21. 선고 2008다13104 전원합의체: 유족급여는 수급권자가 상속한 일실수입
    * 채권을 한도로 그 채권에서만 공제한다. `heirName` 이 없으면 (사실혼 배우자 등 상속인 아닌
    * 수급권자) 어느 상속인 몫에서도 공제하지 않는다. `heirName` 이 상속인 이름과 맞지 않으면 거부한다.
-   * 장례비·위자료·전액공제는 상속분대로 나눈다 (유족 고유 위자료·장례비 부담자 귀속은 미지원).
+   * 장례비·위자료·전액공제는 상속분대로 나눈다 (고유 위자료·장례비 지출 원고 귀속은 `claimants`).
    */
   recipients?: CompensationSurvivorBenefitRecipient[];
+  /**
+   * 장의비(산업재해보상보험법 제71조 장례비 급여, 원, ≥ 0 정수). `claimants.funeralPayer` 가 있어야 한다.
+   * 장례비를 지출한 원고의 장례비 손해(책임비율 반영 후)에서만 그 금액을 한도로 공제하고, 넘는 부분은
+   * 다른 손해에서 빼지 않는다 (대법원 2022. 3. 24. 선고 2021다241618 전원합의체: 장의비는 장례비와만 대응).
+   */
+  funeralBenefitWon?: number;
 }
 
 /** 유족급여 수급권자 1명. */
@@ -85,6 +105,55 @@ export interface CompensationSurvivorBenefitRecipient {
   heirName?: string;
   /** 지급액 (원, ≥ 0 정수). */
   survivorBenefitWon: number;
+}
+
+/**
+ * 원고별 귀속 입력. 지정하면 판결의 원고별 계산 방식으로 바꾼다 (`heirs` 필요):
+ * 망인 손해(재산상 손해 × 책임비율 - 공제 + 망인 위자료) = 상속대상, 상속인별 floor(상속대상 × 상속분)
+ * (나머지 원은 배정하지 않는다), 여기에 고유 위자료와 장례비(지출한 원고)를 더한다.
+ * 공제는 상속대상에서 뺀다. 비율공제·지급치료비는 재산상 손해 한도까지만, 전액공제는 모자라면 망인 위자료까지 깎는다.
+ * 예: 서울중앙지법 2009. 7. 9. 선고 2008가단245503, 2005. 8. 3. 선고 2003가단361721.
+ */
+export interface CompensationDeathClaimantsInput {
+  /**
+   * 상속인별 고유 위자료. 목록에 없는 상속인은 0. 위자료라 책임비율을 곱하지 않는다
+   * (보험약관 지급기준 `applyFaultToSolatium` 이면 floor(위자료 × (1 - 과실))).
+   */
+  ownSolatium?: CompensationClaimantSolatium[];
+  /**
+   * 상속인이 아닌 유족(예: 후순위 직계존속·형제자매·사실혼 배우자)의 고유 위자료. 결과 `otherClaimants` 행이 되고
+   * `finalWon` 에 들어간다. 이름은 상속인 이름과 겹치면 안 된다. 과실 처리는 `ownSolatium` 과 같다.
+   */
+  otherClaimants?: CompensationDeathOtherClaimantInput[];
+  /** 장례비를 지출한 상속인 이름. 미지정이면 장례비 손해도 상속분대로 나눈다. */
+  funeralPayer?: string;
+  /** 원고별 최종액 절사. default `"won"`. */
+  finalRounding?: CompensationClaimantRounding;
+}
+
+/** 상속인이 아닌 유족 1명의 고유 위자료 입력. */
+export interface CompensationDeathOtherClaimantInput {
+  /** 원고 이름 (상속인 이름과 달라야 한다). */
+  name: string;
+  /** 위자료 (원, ≥ 0 정수). */
+  solatiumWon: number;
+}
+
+/** 상속인이 아닌 유족 원고 1명의 결과 행. */
+export interface CompensationDeathOtherClaimant {
+  name: string;
+  /** 고유 위자료 (원). 약관 기준이면 floor(입력 × (1 - 과실)), 아니면 입력 그대로. 절사 전. */
+  solatiumWon: number;
+  /** 최종액 (원). `solatiumWon` 에 `finalRounding` 적용. */
+  amountWon: number;
+}
+
+/** 고유 위자료 1건. */
+export interface CompensationClaimantSolatium {
+  /** `heirs` 결과의 상속인 이름. */
+  heirName: string;
+  /** 위자료 (원, ≥ 0 정수). */
+  solatiumWon: number;
 }
 
 /**
@@ -125,12 +194,27 @@ export interface CompensationAutoDeathInput {
   /**
    * 상속인 입력 (선택). 지정 시 최종액을 상속분으로 분배한다.
    * `industrialInsurance.recipients` 를 함께 주면 상속인별로 계산하는데, 이때도 장례비·위자료·
-   * 전액공제·비율공제는 상속분대로 나눈다. 유족 고유 위자료와 장례비 부담자 귀속은 지원하지 않는다.
+   * 전액공제·비율공제는 상속분대로 나눈다. 고유 위자료와 장례비 지출 원고 귀속은 `claimants` 로 한다.
    */
   heirs?: CompensationHeirsInput;
+  /** 원고별 귀속 (선택). 미지정이면 종전 계산 그대로. */
+  claimants?: CompensationDeathClaimantsInput;
+  /**
+   * 기대여명 (선택, 표시용). 결과 `lifeExpectancy` 에만 실리고 금액은 바뀌지 않는다
+   * (망인의 일실수입 기간은 여기서 기대여명으로 줄이지 않는다).
+   */
+  lifeExpectancy?: CompensationLifeExpectancyInput;
+  /**
+   * 일실퇴직금 (선택). 망인의 재산상 손해로 과실상계 전에 합산한다 (상속대상).
+   * 사망은 노동능력 100% 상실이라 `lossRatePercent` 는 무시하고 100 으로 계산한다.
+   */
+  lostRetirement?: LostRetirementInput;
 }
 
-/** 상속인별 분배 1건. floor 분배 + 잔여원 선순위 배정 결과. */
+/**
+ * 상속인(원고)별 분배 1건. 종전 방식은 floor 분배 + 잔여원 선순위 배정 결과다.
+ * `claimants` 입력 시에는 원고별 귀속 결과이고 아래 원고별 항목이 함께 실린다.
+ */
 export interface CompensationInheritanceShare {
   /** 상속인 표시명. */
   name: string;
@@ -138,10 +222,27 @@ export interface CompensationInheritanceShare {
   numerator: number;
   /** 약분된 상속분 분모. */
   denominator: number;
-  /** 배정 금액 (원, 정수). 합계는 finalWon 과 일치한다. */
+  /**
+   * 배정 금액 (원, 정수). 합계는 finalWon 과 일치한다. `claimants` 입력 시에는 원고별 최종액
+   * = `inheritedPecuniaryWon + inheritedSolatiumWon + ownSolatiumWon + funeralWon - funeralBenefitDeductedWon`
+   * 에 `finalRounding` 을 적용한 값.
+   */
   amountWon: number;
   /** 이 상속인 몫에서 공제한 유족급여 (원). `industrialInsurance.recipients` 입력 시에만 포함된다. */
   survivorBenefitDeductedWon?: number;
+  /**
+   * 상속한 재산상 손해 몫 (원). `claimants` 입력 시에만. floor(상속대상 × 상속분) 에서 위자료 몫을 뺀 값이고,
+   * 유족급여 수급권자면 공제 후 과실상계로 줄어든 만큼 더 뺀다 (0 하한, 위자료 몫은 건드리지 않는다).
+   */
+  inheritedPecuniaryWon?: number;
+  /** 상속한 망인 위자료 몫 = floor(공제 뒤 남은 망인 위자료 × 상속분) (원). `claimants` 입력 시에만. */
+  inheritedSolatiumWon?: number;
+  /** 고유 위자료 (원). `claimants` 입력 시에만. */
+  ownSolatiumWon?: number;
+  /** 장례비 손해(책임비율 반영 후, 장의비 공제 전, 원). `claimants` 입력 시에만. */
+  funeralWon?: number;
+  /** 장의비 공제 (원). `industrialInsurance.funeralBenefitWon` 입력 시 장례비 지출 원고 행에만. */
+  funeralBenefitDeductedWon?: number;
 }
 
 /** 자×사망 손해배상 계산 결과. */
@@ -165,6 +266,12 @@ export interface CompensationAutoDeathResult {
   otherDamagesSubtotalWon?: number;
   /** 기타손해 상세 (입력 시에만, transparency). */
   otherDamages?: OtherDamagesResult;
+  /** 일실퇴직금 (원). `lostRetirement` 입력 시에만. 과실상계 대상 소계에 들어간다. */
+  lostRetirementSubtotalWon?: number;
+  /** 일실퇴직금 상세 (입력 시에만, 상실률 100). */
+  lostRetirement?: LostRetirementResult;
+  /** 기대여명 결과 (`lifeExpectancy` 입력 시에만, 표시용). */
+  lifeExpectancy?: LifeExpectancyResult;
   /** 위자료 (원). */
   solatiumWon: number;
   /**
@@ -173,7 +280,7 @@ export interface CompensationAutoDeathResult {
    */
   industrialBenefit?: CompensationIndustrialBenefitResult;
   /**
-   * 과실상계 대상 소계 = `일실수입 + otherDamagesSubtotalWon + funeralExpenseWon`
+   * 과실상계 대상 소계 = `일실수입 + otherDamagesSubtotalWon + lostRetirementSubtotalWon + funeralExpenseWon`
    * (`applyFaultToSolatium` 이면 `+ solatiumWon`).
    * 산재는 유족급여 공제 후 일실수입 (`industrialBenefit.lostIncomeAfterWon`) 기준.
    */
@@ -182,11 +289,28 @@ export interface CompensationAutoDeathResult {
   faultOffset: CompensationFaultOffset;
   /** 장례비 (원). 적극손해로 과실상계 대상 소계에 포함 (대법원 판례). */
   funeralExpenseWon: number;
-  /** 공제 결과 (과실상계 후 base 에 적용). */
+  /**
+   * 공제 결과 (과실상계 후 base 에 적용). 공제 한도는 장례비를 뺀 재산상 손해다 (2026-10-25 결정):
+   * 비율공제·지급치료비·구 비율공제는 그 한도를 넘는 몫을 버리고, 전액공제 초과분은 위자료만 깎는다.
+   * 장례비 손해(과실상계 후)는 공제로 깎지 않는다.
+   * - `afterWon`: 원고별 귀속이 없으면 장례비 뺀 공제 후 금액(음수 가능) + 장례비 손해. 초과가 없으면 종전 값과 같다.
+   *   원고별 귀속이면 상속대상(장례비 제외)의 공제 후 금액이다.
+   * - `solatiumReducedWon`·`absoluteExcessDroppedWon`: 총액 계산은 전액공제 초과가 있을 때만, 상속인별 계산(recipients)은 항상 싣는다.
+   */
   deductions: CompensationDeductionsResult;
-  /** 최종 합계 = `max(0, 과실상계 후 - 공제)` → 100원 미만 절사 후 정수. */
+  /**
+   * 최종 합계 = `max(0, 장례비 뺀 과실상계 후 - 공제 + 위자료) + 장례비 손해` → 100원 미만 절사 후 정수.
+   * `claimants` 입력 시에는 원고별 최종액(상속인이 아닌 유족 행 포함)의 합 (상속분 곱의 원 미만 버림 때문에 상속대상보다 최대 상속인 수 - 1원 적을 수 있고, 장례비 지출 상속인을 정하지 않으면 장례비 쪽에서도 그만큼 더 적을 수 있다).
+   */
   finalWon: number;
-  /** 상속인별 분배 (heirs 입력 시에만). 합계 = finalWon. */
+  /** 상속대상금액 = max(0, 재산상 손해 × 책임비율 - 공제 + 망인 위자료) (원). `claimants` 입력 시에만. */
+  estateWon?: number;
+  /**
+   * 상속인이 아닌 유족 원고 행 (`claimants.otherClaimants` 입력 시에만). `finalWon` 은
+   * `inheritanceShares` 와 이 행들의 `amountWon` 합이다.
+   */
+  otherClaimants?: CompensationDeathOtherClaimant[];
+  /** 상속인별 분배 (heirs 입력 시에만). 합계 = finalWon (`otherClaimants` 가 있으면 그 합을 뺀 값). */
   inheritanceShares?: CompensationInheritanceShare[];
   /** 분배에 사용된 상속분 원본 (heirs 입력 시에만, transparency). */
   rawInheritanceShares?: InheritanceShare[];

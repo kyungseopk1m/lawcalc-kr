@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "2",
+  "id": "case-comp-027-vk-c2-claimants",
+  "title": "VK 대조 C-2 — C-1 + 배우자·자녀 1, 장례비 배우자 지출, 원고별 원 단위",
+  "source": "manual-derivation",
+  "notes": "VK 실측: 망인 218,480,976 → 배우자 3/5 131,088,585, 자녀 2/5 87,392,390, 장례비 4,500,000 배우자, 합 222,980,975. lawcalc 는 일실소득이 160원 크다(C-1). 손계산: 상속대상 242,756,800 × 0.9 = 218,481,120; 배우자 floor(× 3/5) = 131,088,672 + 장례비 4,500,000 = 135,588,672; 자녀 floor(× 2/5) = 87,392,448; 합 222,981,120. VK 와 차 +87·+58·+145 는 모두 C-1 의 160원 × 0.9 에서 나온다.",
+  "input": {
+    "mode": "death",
+    "accidentType": "auto",
+    "base": {
+      "birthDate": "1980-01-01",
+      "accidentDate": "2010-01-01",
+      "sex": "male",
+      "courtTruncation": true,
+      "retirementAge": 65,
+      "laborRateEffectiveRule": "published"
+    },
+    "lostIncome": {
+      "directWageWon": 68965,
+      "workingDaysPerMonth": 22,
+      "discountMethod": "hoffman"
+    },
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "funeralExpenseWon": 5000000,
+    "faultRatio": 0.1,
+    "deductions": {
+      "ratio": [],
+      "absolute": []
+    },
+    "heirs": {
+      "decedent": {
+        "deceasedAt": "2010-01-01"
+      },
+      "spouse": {
+        "name": "배우자",
+        "alive": true
+      },
+      "linealDescendants": [
+        {
+          "name": "자녀",
+          "deceasedBeforeOpening": false
+        }
+      ]
+    },
+    "claimants": {
+      "funeralPayer": "배우자",
+      "finalRounding": "won"
+    }
+  },
+  "expected": {
+    "livingCostDeductionRatio": 0.3333333333333333,
+    "lostIncomeSubtotalWon": 242756800,
+    "solatiumWon": 0,
+    "pecuniaryDamagesSubtotalWon": 247756800,
+    "faultOffset": {
+      "ratio": 0.1,
+      "beforeWon": 247756800,
+      "afterWon": 222981120
+    },
+    "funeralExpenseWon": 5000000,
+    "deductions": {
+      "ratioSubtotalWon": 0,
+      "absoluteSubtotalWon": 0,
+      "afterWon": 218481120
+    },
+    "finalWon": 222981120,
+    "hoffman240CapCappedAtIndex": 0,
+    "inheritanceShares": [
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 5,
+        "amountWon": 135588672,
+        "inheritedPecuniaryWon": 131088672,
+        "inheritedSolatiumWon": 0,
+        "ownSolatiumWon": 0,
+        "funeralWon": 4500000
+      },
+      {
+        "name": "자녀",
+        "numerator": 2,
+        "denominator": 5,
+        "amountWon": 87392448,
+        "inheritedPecuniaryWon": 87392448,
+        "inheritedSolatiumWon": 0,
+        "ownSolatiumWon": 0,
+        "funeralWon": 0
+      }
+    ],
+    "dataVersions": {
+      "laborRates": "labor-rates/v1.1.0",
+      "lifeExpectancy": "life-expectancy/v1.1.0",
+      "hoffman": "hoffman/v1.1.0",
+      "leibniz": "leibniz/v1.0.0"
+    },
+    "segments": [
+      {
+        "startMonth": 0,
+        "endMonth": 420,
+        "lossRate": 1,
+        "dailyWageWon": 68965,
+        "monthlyWageWon": 1517230,
+        "rawHoffman": 242.4663,
+        "appliedHoffman": 240,
+        "amountFloorWon": 242756800
+      }
+    ],
+    "hoffman240CapAppliedHoffman": [240],
+    "mode": "death",
+    "rawInheritanceShares": [
+      {
+        "name": "배우자",
+        "numerator": 3,
+        "denominator": 5,
+        "rawNumerator": 3,
+        "rawDenominator": 5
+      },
+      {
+        "name": "자녀",
+        "numerator": 2,
+        "denominator": 5,
+        "rawNumerator": 2,
+        "rawDenominator": 5
+      }
+    ],
+    "estateWon": 218481120
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-22",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 2부"
+  }
+}

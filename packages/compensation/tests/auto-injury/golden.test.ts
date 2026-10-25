@@ -46,6 +46,12 @@ interface ExpectedShape {
   /** 구간 전체를 고정한다. 소계만 맞고 구간 내부가 어긋나는 회귀를 잡기 위해서다. */
   segments: ExpectedSegment[];
   combinedLossRate: number;
+  claimants?: {
+    role: "victim" | "family";
+    name?: string;
+    solatiumWon: number;
+    amountWon: number;
+  }[];
   hoffman240CapAppliedHoffman: number[];
   lostIncomeSubtotalWon: number;
   solatiumWon: number;
@@ -117,6 +123,9 @@ const COVERAGE: GoldenCoverage = {
     "pecuniaryDamagesSubtotalWon",
     "otherDamagesSubtotalWon",
     "finalWon",
+    "claimants[].role",
+    "claimants[].solatiumWon",
+    "claimants[].amountWon",
     "disclaimer",
     "segments[].startMonth",
     "segments[].endMonth",
@@ -167,8 +176,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴얼 derivation)", () => {
-  it("loads exactly 14 cases", () => {
-    expect(cases).toHaveLength(14);
+  it("loads exactly 17 cases", () => {
+    expect(cases).toHaveLength(17);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -219,6 +228,8 @@ describe("compensation golden cases (v0.5.0-A 코어 + v0.7.0 산재 — 매뉴�
         c.expected.deductions.afterWon,
       );
       expect(result.finalWon, `${c.id} finalWon`).toBe(c.expected.finalWon);
+      // 원고별 귀속은 입력에 있을 때만 결과에 실린다.
+      expect(result.claimants, `${c.id} claimants`).toEqual(c.expected.claimants);
       expect(result.hoffman240Cap.cappedAtIndex, `${c.id} cappedAtIndex`).toBe(
         c.expected.hoffman240CapCappedAtIndex,
       );

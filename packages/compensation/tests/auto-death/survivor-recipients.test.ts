@@ -74,12 +74,15 @@ describe("유족급여 수급권자별 공제 (2008다13104 전합)", () => {
     c.lostIncome = { directWageWon: 150000 };
     c.deductions = { paidTreatment: [{ amount: 60000000 }] };
     const result = computeCompensationDeath(c, { now: FIXED_NOW });
-    expect(result.inheritanceShares?.map((s) => s.amountWon)).toEqual([60000000, 127777300]);
+    // 2026-10-25 장례비 완충 제거: 지급치료비는 장례비 손해를 깎지 않는다. 배우자 몫 일실수입은 유족급여로
+    // 0 이 되고 장례비 손해 floor(3,000,000 × 0.7) = 2,100,000 은 남는다 (종전 60,000,000 → 62,100,000).
+    // 지급치료비 배우자 몫 10,800,000 은 전부 버려지고(종전 2,100,000 적용) 자녀 몫 7,200,000 만 적용된다.
+    expect(result.inheritanceShares?.map((s) => s.amountWon)).toEqual([62100000, 127777300]);
     expect(result.deductions).toMatchObject({
       paidTreatmentSubtotalWon: 18000000,
-      propertyOnlyAppliedWon: 9300000,
-      propertyOnlyDiscardedWon: 8700000,
-      afterWon: 87777382,
+      propertyOnlyAppliedWon: 7200000,
+      propertyOnlyDiscardedWon: 10800000,
+      afterWon: 89877382,
       solatiumReducedWon: 0,
       absoluteExcessDroppedWon: 0,
       roundingWon: 82,

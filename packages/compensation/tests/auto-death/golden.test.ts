@@ -18,6 +18,12 @@ interface ExpectedInheritanceShare {
   amountWon: number;
   /** 유족급여 수급권자 입력 골든에만 있다. */
   survivorBenefitDeductedWon?: number;
+  /** 원고별 귀속(claimants) 골든에만 있다. */
+  inheritedPecuniaryWon?: number;
+  inheritedSolatiumWon?: number;
+  ownSolatiumWon?: number;
+  funeralWon?: number;
+  funeralBenefitDeductedWon?: number;
 }
 
 interface ExpectedSegment {
@@ -90,6 +96,8 @@ interface ExpectedShape {
     appliance: ExpectedTreatment | null;
   };
   inheritanceShares: ExpectedInheritanceShare[] | null;
+  /** 원고별 귀속(claimants) 입력 시에만. */
+  estateWon?: number;
   /** 약분 전 상속분. 상속인이 없으면 null. */
   rawInheritanceShares: ExpectedRawShare[] | null;
   dataVersions: {
@@ -180,6 +188,11 @@ const COVERAGE: GoldenCoverage = {
     "inheritanceShares[].denominator",
     "inheritanceShares[].amountWon",
     "inheritanceShares[].survivorBenefitDeductedWon",
+    "inheritanceShares[].inheritedPecuniaryWon",
+    "inheritanceShares[].inheritedSolatiumWon",
+    "inheritanceShares[].ownSolatiumWon",
+    "inheritanceShares[].funeralWon",
+    "estateWon",
     "rawInheritanceShares[].name",
     "rawInheritanceShares[].numerator",
     "rawInheritanceShares[].denominator",
@@ -196,8 +209,8 @@ const COVERAGE: GoldenCoverage = {
 };
 
 describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사망 — derivation)", () => {
-  it("loads exactly 6 cases", () => {
-    expect(cases).toHaveLength(6);
+  it("loads exactly 8 cases", () => {
+    expect(cases).toHaveLength(8);
   });
 
   it("all fixtures match GOLDEN_FIXTURE_SCHEMA and use manual-derivation oracle", () => {
@@ -305,6 +318,7 @@ describe("compensation death golden cases (v0.6.0 자×사망 + v0.7.0 산×사�
         const sum = (result.inheritanceShares ?? []).reduce((acc, s) => acc + s.amountWon, 0);
         expect(sum, `${c.id} inheritance round-trip`).toBe(result.finalWon);
       }
+      expect(result.estateWon, `${c.id} estateWon`).toBe(c.expected.estateWon);
       expect(result.rawInheritanceShares, `${c.id} rawInheritanceShares`).toEqual(
         c.expected.rawInheritanceShares ?? undefined,
       );

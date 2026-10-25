@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1",
+  "id": "case-life-005-remaining-14",
+  "title": "기대여명: 년수(여명) 14년, 사고 2017-03-29 부터 5,110일, 2031-03-26",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-b7-2026-10-04.md G5. 서울고법 2020나2039267 원문 여명종료일 재현. 생년월일은 판결에 없어 만 24세가 되는 합성값(2017년 표 56.2 는 판결 원문과 같다).",
+  "input": {
+    "sex": "male",
+    "birthDate": "1992-06-01",
+    "accidentDate": "2017-03-29",
+    "shortening": {
+      "method": "remainingYears",
+      "years": 14
+    }
+  },
+  "expected": {
+    "baseDate": "2017-03-29",
+    "age": 24,
+    "tableYear": 2017,
+    "remainingYears": 56.2,
+    "normalEndDate": "2073-05-27",
+    "shortenedRemainingYears": 14,
+    "shortenedEndDate": "2031-03-26",
+    "endDate": "2031-03-26",
+    "warningCodes": [],
+    "endDateOverridden": false
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-04",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-life-005"
+  }
+}

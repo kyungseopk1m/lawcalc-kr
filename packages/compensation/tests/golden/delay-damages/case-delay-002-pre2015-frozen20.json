@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1",
+  "id": "case-delay-002-pre2015-frozen20",
+  "title": "지연손해금: 2015-10-01 이전 선고, 부칙 경과조치로 소촉법 20% 유지",
+  "source": "manual-derivation",
+  "notes": "r2b2-golden-derivation-2026-10-04.md B9 G2. 변론종결일 미입력이라 선고일로 판정, 20% 구간 1년 4회 + 275/366(2020-02-29). 2026-10-22 행별 절사 재유도: 5% 150,000,000 × 5% × 351/365 = 7,212,328.77 → 7,212,328, 20% 120,000,000 + 30,000,000 × 275/366 (22,540,983.61) = 142,540,983.61 → 142,540,983, 합 149,753,311 (종전 raw 합 149,753,312.38 절사 149,753,312).",
+  "input": {
+    "principalWon": 150000000,
+    "startDate": "2014-07-15",
+    "judgmentDate": "2015-06-30",
+    "endDate": "2020-03-31"
+  },
+  "expected": {
+    "segments": [
+      { "from": "2014-07-15", "to": "2015-06-30", "rate": 0.05, "interest": 7212328 },
+      { "from": "2015-07-01", "to": "2020-03-31", "rate": 0.2, "interest": 142540983 }
+    ],
+    "totalInterest": 149753311,
+    "grandTotal": 299753311
+  },
+  "metadata": {
+    "oracle": "manual-derivation",
+    "derivedAt": "2026-10-22",
+    "derivedBy": "vk-p1-golden-derivation-2026-10-22.md 1부 결과 표 case-delay-002 · 2부 재유도(행별 절사 합)"
+  }
+}
