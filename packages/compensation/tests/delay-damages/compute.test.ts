@@ -277,7 +277,7 @@ describe("buildDelayDamagesOrderText", () => {
         principalWon: 10_000,
         startDate: "2018-01-01",
         judgmentDate,
-        firstInstanceClosingDate,
+        ...(firstInstanceClosingDate === undefined ? {} : { firstInstanceClosingDate }),
       });
     expect(text("2019-05-31")).toContain("특례법이 정한 연 15%");
     expect(text("2019-06-01")).toContain("특례법이 정한 연 12%");

@@ -72,7 +72,7 @@ describe("computeLostRetirement: VK 실측", () => {
       vk("bothDiscounted", "2012-01-01", 43.635),
       vk("bothDiscounted", "2009-12-31"),
       vk("bothDiscounted", "2040-01-01"),
-      { ...vk("bothDiscounted", "2012-01-01"), payAtRetirementWon: 1.5 },
+      { ...vk("bothDiscounted", "2012-01-01"), payAtRetirementWon: 1.5 } as LostRetirementInput,
       { method: "direct", amountWon: -1 },
     ];
     for (const input of bad)
