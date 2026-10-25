@@ -250,7 +250,7 @@ export function oldLawRawShares(
   const traceReps = (heirs: HeirNode[]) => {
     for (const h of heirs.filter((x) => x.deceasedBeforeOpening)) {
       t(
-        `대습: ${h.name ?? "피대습자"} 의 상속분을 ${livingReps(h)
+        `대습: ${h.name ?? "피대습자"}의 상속분을 ${livingReps(h)
           .map((r) => r.name ?? "대습자")
           .join(", ")} 이(가) 제1009조 비율로 나눔 (구 민법 제1001조, 제1003조 제2항, 제1010조)`,
       );

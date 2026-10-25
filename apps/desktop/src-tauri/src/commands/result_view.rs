@@ -679,14 +679,14 @@ pub fn options_summary(options: &OptionsView) -> String {
         other => other,
     };
     let leap_ko = match options.leap_year.as_str() {
-        "fixed365" => "365일 고정",
+        "fixed365" => "고정 365일",
         "actual" => "실제 일수(윤년 366)",
         other => other,
     };
     let first_ko = if options.include_first_day {
         "초일 산입"
     } else {
-        "초일 미산입"
+        "초일 불산입"
     };
     let rounding_ko = match options.rounding.as_deref().unwrap_or("floor") {
         "floor" => "절사",
@@ -924,7 +924,7 @@ mod tests {
         };
         assert_eq!(
             options_summary(&opts),
-            "기간식 · 365일 고정 · 초일 미산입 · 끝수 처리: 절사"
+            "기간식 · 고정 365일 · 초일 불산입 · 끝수 처리: 절사"
         );
     }
 

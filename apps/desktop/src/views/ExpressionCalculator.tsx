@@ -148,8 +148,8 @@ export function ExpressionCalculator({ active = true }: { active?: boolean }) {
               </label>
             </div>
             <p className="text-xs text-muted-foreground">
-              음수의 절사·절상은 수직선 방향입니다 (-1.234 를 2자리 절사하면 -1.24, 절상하면 -1.23).
-              반올림은 0 에서 먼 쪽으로 올립니다.
+              음수의 절사·절상은 수직선 방향입니다 (-1.234를 2자리 절사하면 -1.24, 절상하면 -1.23).
+              반올림은 0에서 먼 쪽으로 올립니다.
             </p>
             <div className="flex gap-2">
               <Button onClick={handleReset} variant="outline" type="button">
@@ -193,7 +193,7 @@ export function ExpressionCalculator({ active = true }: { active?: boolean }) {
                 </div>
                 {result.moreDigits ? (
                   <span className="text-xs text-muted-foreground">
-                    소수 10자리 뒤에도 0 이 아닌 자리가 남아 잘라서 보였습니다.
+                    소수 10자리 뒤에도 0이 아닌 자리가 남아 잘라서 보였습니다.
                   </span>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-2">

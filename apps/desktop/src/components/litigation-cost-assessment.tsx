@@ -175,7 +175,7 @@ export function formatCostAssessmentForClipboard(result: CostAssessmentResult): 
   lines.push(`결과: ${result.net.formulaText}`);
   for (const w of result.warnings) lines.push(`주의: ${w}`);
   lines.push(
-    "최저액을 먼저 적용한 뒤 1/2 로 나누는 순서는 규칙 문언에 따른 것이며 판례로 확인하지 않았습니다.",
+    "최저액을 먼저 적용한 뒤 1/2로 나누는 순서는 규칙 문언에 따른 것이며 판례로 확인하지 않았습니다.",
     STANDARD_DISCLAIMER,
   );
   return lines.join("\n");
@@ -318,8 +318,8 @@ export function CostAssessmentPanel() {
         <p className="text-xs text-muted-foreground">
           심급마다 접수일(1심 소 제기일, 상소심 상소 제기일)로 「변호사보수의 소송비용 산입에 관한
           규칙」 판을 고릅니다. 경과규정이 없는 2003·2020판도 같은 기준이며 판은 직접 바꿀 수
-          있습니다. 최저액을 먼저 적용한 뒤 1/2 로 나누는 순서는 규칙 문언에 따른 것이고 판례로
-          확인하지 않았습니다. 이 패널의 입력은 .lcalc 에 저장되지 않습니다.
+          있습니다. 최저액을 먼저 적용한 뒤 1/2로 나누는 순서는 규칙 문언에 따른 것이고 판례로
+          확인하지 않았습니다. 이 패널의 입력은 .lcalc 파일에 저장되지 않습니다.
         </p>
 
         {instances.map((d, i) => {

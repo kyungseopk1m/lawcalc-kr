@@ -233,8 +233,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               <span>
                 법원식 날짜·요일 (예: 2026. 10. 25.(일))
                 <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                  복사·PDF·CSV·HWPX 로 내보내는 결과의 날짜에 적용합니다. 끄면 2026-10-25
-                  형식입니다.
+                  복사·PDF·CSV·HWPX로 내보내는 결과의 날짜에 적용합니다. 끄면 2026-10-25 형식입니다.
                 </span>
               </span>
             </label>

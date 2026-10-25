@@ -206,7 +206,7 @@ export function DetentionCalculator({ active = true }: { active?: boolean }) {
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm">기준일까지 일수표</CardTitle>
               <p className="text-xs text-muted-foreground">
-                날짜마다 그날을 구금 시작일로 넣었을 때 {baseLabel} {form.baseDate} 까지의
+                날짜마다 그날을 구금 시작일로 넣었을 때 {baseLabel} {form.baseDate}까지의
                 미결구금일수입니다.
               </p>
             </CardHeader>

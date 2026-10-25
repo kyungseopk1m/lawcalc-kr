@@ -260,7 +260,7 @@ function optionalBoolean(record: Record<string, unknown>, key: string, field: st
     return undefined;
   }
   if (typeof value !== "boolean") {
-    throw new Error(`.lcalc 파일의 ${field} 필드는 true 또는 false 여야 합니다.`);
+    throw new Error(`.lcalc 파일의 ${field} 필드는 true 또는 false여야 합니다.`);
   }
   return value;
 }
@@ -295,7 +295,7 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
   }
   if (typeof deceasedBeforeOpening !== "boolean") {
     throw new Error(
-      `.lcalc 파일의 ${field}.deceasedBeforeOpening 필드는 true 또는 false 여야 합니다.`,
+      `.lcalc 파일의 ${field}.deceasedBeforeOpening 필드는 true 또는 false여야 합니다.`,
     );
   }
 
@@ -325,7 +325,7 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
   if (isSpouseOfRepresented !== undefined) {
     if (typeof isSpouseOfRepresented !== "boolean") {
       throw new Error(
-        `.lcalc 파일의 ${field}.isSpouseOfRepresented 필드는 true 또는 false 여야 합니다.`,
+        `.lcalc 파일의 ${field}.isSpouseOfRepresented 필드는 true 또는 false여야 합니다.`,
       );
     }
     if (isSpouseOfRepresented) {
@@ -353,7 +353,7 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
   const renounced = record.renounced;
   if (renounced !== undefined) {
     if (typeof renounced !== "boolean") {
-      throw new Error(`.lcalc 파일의 ${field}.renounced 필드는 true 또는 false 여야 합니다.`);
+      throw new Error(`.lcalc 파일의 ${field}.renounced 필드는 true 또는 false여야 합니다.`);
     }
     if (renounced) {
       node.renounced = true;
@@ -364,7 +364,7 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
   const sex = record.sex;
   if (sex !== undefined) {
     if (sex !== "male" && sex !== "female") {
-      throw new Error(`.lcalc 파일의 ${field}.sex 필드는 "male" 또는 "female" 이어야 합니다.`);
+      throw new Error(`.lcalc 파일의 ${field}.sex 필드는 "male" 또는 "female"이어야 합니다.`);
     }
     node.sex = sex;
   }
@@ -372,7 +372,7 @@ function parseHeirNode(value: unknown, field: string): HeirNode {
     const flag = record[key];
     if (flag === undefined) continue;
     if (typeof flag !== "boolean") {
-      throw new Error(`.lcalc 파일의 ${field}.${key} 필드는 true 또는 false 여야 합니다.`);
+      throw new Error(`.lcalc 파일의 ${field}.${key} 필드는 true 또는 false여야 합니다.`);
     }
     node[key] = flag;
   }
@@ -526,7 +526,7 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
     }
     if (typeof spouseRecord.alive !== "boolean") {
       throw new Error(
-        ".lcalc 파일의 payload.input.spouse.alive 필드는 true 또는 false 여야 합니다.",
+        ".lcalc 파일의 payload.input.spouse.alive 필드는 true 또는 false여야 합니다.",
       );
     }
     if (
@@ -535,7 +535,7 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
       spouseRecord.relation !== "husband"
     ) {
       throw new Error(
-        '.lcalc 파일의 payload.input.spouse.relation 필드는 "wife" 또는 "husband" 여야 합니다.',
+        '.lcalc 파일의 payload.input.spouse.relation 필드는 "wife" 또는 "husband"여야 합니다.',
       );
     }
   }
@@ -809,7 +809,7 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
   }
 
   throw new Error(
-    '.lcalc 파일의 payload.input.distribution.mode 필드는 "equal" 또는 "proportional" 이어야 합니다.',
+    '.lcalc 파일의 payload.input.distribution.mode 필드는 "equal" 또는 "proportional"이어야 합니다.',
   );
 }
 
@@ -1012,7 +1012,7 @@ function parseCompensationPayload(
 function parsePeriodInput(value: unknown): PeriodTabInput {
   const input = requireRecord(value, "payload.input");
   if (input.mode !== "expiry" && input.mode !== "span") {
-    throw new Error('.lcalc 파일의 payload.input.mode 필드는 "expiry" 또는 "span" 이어야 합니다.');
+    throw new Error('.lcalc 파일의 payload.input.mode 필드는 "expiry" 또는 "span"이어야 합니다.');
   }
   // 필드별 재조립 대신 도메인 validator (한국어 RangeError) 에 위임하고 원본을 그대로
   // 돌려준다. 입력에 필드가 늘어도 여기서 한 줄을 빠뜨려 값이 조용히 기본값으로
@@ -1051,7 +1051,7 @@ function parseExtraHolidays(value: unknown, field: string): ExtraHolidayInput[] 
 function parsePeriodResult(value: unknown): LcalcPeriodResult {
   const result = requireRecord(value, "payload.result");
   if (result.mode !== "expiry" && result.mode !== "span") {
-    throw new Error('.lcalc 파일의 payload.result.mode 필드는 "expiry" 또는 "span" 이어야 합니다.');
+    throw new Error('.lcalc 파일의 payload.result.mode 필드는 "expiry" 또는 "span"이어야 합니다.');
   }
   return {
     ...(result as unknown as LcalcPeriodResult),
@@ -1226,14 +1226,12 @@ function parseCasePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcCasePayl
   const calculations: LcalcCasePayload["calculations"] = {};
   for (const [key, value] of entries) {
     if (!isCaseCalculationKey(key)) {
-      throw new Error(
-        `.lcalc 사건 파일의 calculations["${key}"] 는 지원하지 않는 계산 유형입니다.`,
-      );
+      throw new Error(`.lcalc 사건 파일의 calculations["${key}"]는 지원하지 않는 계산 유형입니다.`);
     }
     const nested = requireRecord(value, `payload.calculations["${key}"]`);
     if (nested.kind !== key) {
       throw new Error(
-        `.lcalc 사건 파일의 calculations["${key}"] 항목의 kind 가 "${key}" 와 일치해야 합니다.`,
+        `.lcalc 사건 파일의 calculations["${key}"] 항목의 kind가 "${key}"와 일치해야 합니다.`,
       );
     }
     // key 가 5개 도메인으로 제한되므로 사건 중첩(kind: "case")은 위에서 차단된다.
@@ -1356,17 +1354,15 @@ function parseOptions(value: unknown): CalcOptions {
   const rounding = value.rounding;
 
   if (typeof mode !== "string" || !optionModes.has(mode as CalcOptions["mode"])) {
-    throw new Error('.lcalc 파일의 options.mode 필드는 "period" 또는 "totalDays" 여야 합니다.');
+    throw new Error('.lcalc 파일의 options.mode 필드는 "period" 또는 "totalDays"여야 합니다.');
   }
 
   if (typeof leapYear !== "string" || !leapYearModes.has(leapYear as CalcOptions["leapYear"])) {
-    throw new Error(
-      '.lcalc 파일의 options.leapYear 필드는 "fixed365" 또는 "actual" 이어야 합니다.',
-    );
+    throw new Error('.lcalc 파일의 options.leapYear 필드는 "fixed365" 또는 "actual"이어야 합니다.');
   }
 
   if (typeof includeFirstDay !== "boolean") {
-    throw new Error(".lcalc 파일의 options.includeFirstDay 필드는 true 또는 false 여야 합니다.");
+    throw new Error(".lcalc 파일의 options.includeFirstDay 필드는 true 또는 false여야 합니다.");
   }
 
   if (
@@ -1447,7 +1443,7 @@ export function parseLoadedLcalcInput(file: LcalcFile): ParsedLcalcInput {
 
   if (!isRecord(legalRatePreset) || !Object.hasOwn(legalRatePreset, "customRate")) {
     throw new Error(
-      '.lcalc 파일의 legalRatePreset 필드는 "civil", "commercial", "promotion" 중 하나이거나 customRate 를 가진 객체여야 합니다.',
+      '.lcalc 파일의 legalRatePreset 필드는 "civil", "commercial", "promotion" 중 하나이거나 customRate를 가진 객체여야 합니다.',
     );
   }
 

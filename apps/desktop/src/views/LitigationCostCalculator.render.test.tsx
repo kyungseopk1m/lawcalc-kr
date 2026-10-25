@@ -247,7 +247,7 @@ describe("송달료 사건부호표 패널 (재일 87-4 별표 1)", () => {
     expect(screen.getByText(/\(75회\)/)).toBeTruthy();
     // 본 계산기에 같은 사건구분이 없는 행은 적용 버튼이 없다.
     expect(screen.queryByRole("button", { name: /^사건구분/ })).toBeNull();
-    expect(screen.getByText(/맞는 사건구분이 본 계산기에 없어/)).toBeTruthy();
+    expect(screen.getByText(/맞는 사건구분이 이 계산기에 없어/)).toBeTruthy();
   });
 
   it("타채 행은 제3채무자를 당사자 수에 넣으라고 안내한다", () => {

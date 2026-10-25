@@ -98,7 +98,7 @@ pub async fn load_lcalc(app: AppHandle) -> Result<Option<LcalcFile>, Error> {
 fn validate_file_size(bytes_len: u64) -> Result<(), Error> {
     if bytes_len > MAX_LCALC_BYTES {
         return Err(Error::Other(format!(
-            ".lcalc 파일이 너무 큽니다. 최대 {} bytes 까지 허용되며 현재 파일은 {} bytes 입니다.",
+            ".lcalc 파일이 너무 큽니다. 최대 {}바이트까지 열 수 있는데 이 파일은 {}바이트입니다.",
             MAX_LCALC_BYTES, bytes_len
         )));
     }

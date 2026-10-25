@@ -59,7 +59,7 @@ describe("계산기 (실측 대조)", () => {
   it("0 으로 나누면 오류를 낸다", () => {
     render(<ExpressionCalculator />);
     fireEvent.change(screen.getByLabelText("계산식"), { target: { value: "1/0" } });
-    expect(screen.getByRole("alert").textContent).toContain("0 으로 나눌 수 없습니다");
+    expect(screen.getByRole("alert").textContent).toContain("0으로 나눌 수 없습니다");
   });
 
   it("복사 문구는 식과 답을 담고 면책 문구로 끝난다", async () => {

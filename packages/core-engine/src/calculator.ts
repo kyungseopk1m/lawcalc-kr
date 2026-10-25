@@ -80,7 +80,7 @@ function normalizeChars(text: string): string {
   }
   if (/(?:^|[^\d.,])0[xX]/.test(half)) {
     throw new RangeError(
-      `${PREFIX}: '0x' 는 16진 표기로 읽힐 수 있어 계산하지 않습니다. 곱하기라면 0 × 10 처럼 띄우세요.`,
+      `${PREFIX}: '0x'는 16진 표기로 읽힐 수 있어 계산하지 않습니다. 곱하기라면 0 × 10처럼 띄어 쓰세요.`,
     );
   }
   return half
@@ -163,7 +163,7 @@ class Parser {
       if (t.op === "*") {
         left = make(left.n * right.n, left.d * right.d);
       } else {
-        if (right.n === 0n) throw new RangeError(`${PREFIX}: 0 으로 나눌 수 없습니다.`);
+        if (right.n === 0n) throw new RangeError(`${PREFIX}: 0으로 나눌 수 없습니다.`);
         left = make(left.n * right.d, left.d * right.n);
       }
       t = this.tokens[this.pos];

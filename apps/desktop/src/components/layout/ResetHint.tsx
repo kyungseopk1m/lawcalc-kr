@@ -34,7 +34,7 @@ export function ResetHint() {
       role="status"
       className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md border border-border bg-background px-4 py-2 text-sm shadow-md"
     >
-      Esc 를 한 번 더 누르면 입력을 모두 초기화합니다.
+      Esc를 한 번 더 누르면 입력을 모두 초기화합니다.
     </div>
   );
 }

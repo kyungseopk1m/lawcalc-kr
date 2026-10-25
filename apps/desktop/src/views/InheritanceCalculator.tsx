@@ -530,7 +530,8 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">배우자</CardTitle>
             <p className="text-xs text-muted-foreground">
-              1·2순위와 동순위 공동 (민법 제1003조). 배우자는 한 명만 입력할 수 있습니다.
+              1·2순위 상속인과 같은 순위로 공동상속합니다 (민법 제1003조). 배우자는 한 명만 입력할
+              수 있습니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -880,8 +881,8 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                근거: 민법 제1000·1001·1003·1009·1010조. 본 버전은 1차 대습까지만 지원하며, 2차 이상
-                대습은 거부됩니다.
+                근거: 민법 제1000·1001·1003·1009·1010조. 이 버전은 1차 대습까지만 계산하고, 2차 이상
+                대습은 계산하지 않습니다.
               </p>
             </CardContent>
           </Card>

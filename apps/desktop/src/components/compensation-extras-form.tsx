@@ -182,14 +182,14 @@ export function LifeExpectancyCard({
             onChange={(e) => patch({ shorteningMethod: e.target.value as ShorteningMethod })}
           >
             <option value="none">없음</option>
-            <option value="subtractYears">년수 차감</option>
-            <option value="remainingYears">남은 여명 년수</option>
+            <option value="subtractYears">연수 차감</option>
+            <option value="remainingYears">남은 여명 연수</option>
             <option value="percent">백분율 (남는 비율)</option>
           </Select>
         </label>
         {value.shorteningMethod !== "none" ? (
           <label className="grid gap-2 text-sm font-medium">
-            {value.shorteningMethod === "percent" ? "남는 비율 (%)" : "년수"}
+            {value.shorteningMethod === "percent" ? "남는 비율 (%)" : "연수"}
             <Input
               inputMode="decimal"
               aria-label="기대여명 단축 값"

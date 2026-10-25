@@ -234,7 +234,7 @@ const COL_WIDTHS: [f32; 8] = [
 /// Build the PDF byte stream for a single calculation result.
 pub fn render_pdf_bytes(view: &ResultView, options: &PdfOptions) -> Result<Vec<u8>, Error> {
     let (doc, page1, layer1) = PdfDocument::new(
-        "LawCalc Korea — 이자 계산서",
+        "LawCalc Korea 이자 계산서",
         Mm(PAGE_W_MM),
         Mm(PAGE_H_MM),
         "Layer 1",
@@ -252,7 +252,7 @@ pub fn render_pdf_bytes(view: &ResultView, options: &PdfOptions) -> Result<Vec<u
 
     let mut writer = PageWriter::new(&doc, page1, layer1, font);
 
-    writer.draw_title("LawCalc Korea — 이자 계산서");
+    writer.draw_title("LawCalc Korea 이자 계산서");
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_summary_block(view);
     writer.draw_segment_table(view);
@@ -273,7 +273,7 @@ pub fn render_pdf_bytes(view: &ResultView, options: &PdfOptions) -> Result<Vec<u
 
 pub fn render_inheritance_pdf_bytes(view: &InheritanceResultView) -> Result<Vec<u8>, Error> {
     let (doc, page1, layer1) = PdfDocument::new(
-        "LawCalc Korea — 상속분 간이 계산서",
+        "LawCalc Korea 상속분 간이 계산서",
         Mm(PAGE_W_MM),
         Mm(PAGE_H_MM),
         "Layer 1",
@@ -287,7 +287,7 @@ pub fn render_inheritance_pdf_bytes(view: &InheritanceResultView) -> Result<Vec<
         .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
 
     let mut writer = PageWriter::new(&doc, page1, layer1, font);
-    writer.draw_title("LawCalc Korea — 상속분 간이 계산서");
+    writer.draw_title("LawCalc Korea 상속분 간이 계산서");
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_inheritance_summary(view);
     writer.draw_inheritance_table(view);
@@ -301,7 +301,7 @@ pub fn render_inheritance_pdf_bytes(view: &InheritanceResultView) -> Result<Vec<
 
 pub fn render_litigation_cost_pdf_bytes(view: &LitigationCostResultView) -> Result<Vec<u8>, Error> {
     let (doc, page1, layer1) = PdfDocument::new(
-        "LawCalc Korea — 소송비용 계산서",
+        "LawCalc Korea 소송비용 계산서",
         Mm(PAGE_W_MM),
         Mm(PAGE_H_MM),
         "Layer 1",
@@ -315,7 +315,7 @@ pub fn render_litigation_cost_pdf_bytes(view: &LitigationCostResultView) -> Resu
         .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
 
     let mut writer = PageWriter::new(&doc, page1, layer1, font);
-    writer.draw_title("LawCalc Korea — 소송비용 계산서");
+    writer.draw_title("LawCalc Korea 소송비용 계산서");
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_litigation_cost_summary(view);
     writer.draw_litigation_cost_distribution(view);
@@ -392,7 +392,7 @@ pub fn render_appropriation_pdf_bytes(view: &AppropriationExportView) -> Result<
 
 pub fn render_compensation_pdf_bytes(view: &CompensationResultView) -> Result<Vec<u8>, Error> {
     let (doc, page1, layer1) = PdfDocument::new(
-        "LawCalc Korea — 자×부상 손해배상 계산서",
+        "LawCalc Korea 부상 손해배상 계산서",
         Mm(PAGE_W_MM),
         Mm(PAGE_H_MM),
         "Layer 1",
@@ -406,7 +406,7 @@ pub fn render_compensation_pdf_bytes(view: &CompensationResultView) -> Result<Ve
         .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
 
     let mut writer = PageWriter::new(&doc, page1, layer1, font);
-    writer.draw_title("LawCalc Korea — 자×부상 손해배상 계산서");
+    writer.draw_title("LawCalc Korea 부상 손해배상 계산서");
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_compensation_summary(view);
     writer.draw_wrapped_block("기대여명", std::slice::from_ref(&view.life_expectancy_text));
@@ -428,7 +428,7 @@ pub fn render_compensation_death_pdf_bytes(
     view: &CompensationDeathResultView,
 ) -> Result<Vec<u8>, Error> {
     let (doc, page1, layer1) = PdfDocument::new(
-        "LawCalc Korea — 자×사망 손해배상 계산서",
+        "LawCalc Korea 사망 손해배상 계산서",
         Mm(PAGE_W_MM),
         Mm(PAGE_H_MM),
         "Layer 1",
@@ -442,7 +442,7 @@ pub fn render_compensation_death_pdf_bytes(
         .map_err(|e| Error::Other(format!("PDF 내장 폰트 등록 실패: {e}")))?;
 
     let mut writer = PageWriter::new(&doc, page1, layer1, font);
-    writer.draw_title("LawCalc Korea — 자×사망 손해배상 계산서");
+    writer.draw_title("LawCalc Korea 사망 손해배상 계산서");
     writer.draw_subtitle(&format!("계산 시각  {}", view.computed_at));
     writer.draw_compensation_death_summary(view);
     writer.draw_wrapped_block("기대여명", std::slice::from_ref(&view.life_expectancy_text));
@@ -911,7 +911,7 @@ impl<'a> PageWriter<'a> {
         // 산재보험급여 (장해급여) — 일실수입 한도 선공제 (2021다241618 전합).
         if let Some(ib) = &view.industrial_benefit {
             lines.push((
-                "산재급여 공제 (장해급여·휴업급여)".into(),
+                "산재보험급여 공제 (장해급여·휴업급여)".into(),
                 industrial_benefit_value_text(ib),
             ));
             lines.push((
@@ -1349,7 +1349,7 @@ impl<'a> PageWriter<'a> {
         // 산재보험급여 (유족급여) — 일실수입 한도 선공제 (2021다241618 전합).
         if let Some(ib) = &view.industrial_benefit {
             lines.push((
-                "산재급여 공제 (유족급여)".into(),
+                "산재보험급여 공제 (유족급여)".into(),
                 industrial_benefit_value_text(ib),
             ));
             lines.push((

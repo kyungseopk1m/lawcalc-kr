@@ -236,15 +236,15 @@ export function PostalCodeView({ active = true }: { active?: boolean }) {
                         {court.municipalCourt ? ` · 시·군법원 ${court.municipalCourt}` : ""}
                       </span>
                       <span className="text-muted-foreground">
-                        오늘({today}) 시행 판 {court.lawName} {court.byeolpyo.join("·")} 의 "
+                        오늘({today}) 시행 판 {court.lawName} {court.byeolpyo.join("·")}의 "
                         {unitLabel(court)}" 칸입니다. 시행 예정 변경과 단서는 도구 탭 "관할법원
-                        찾기" 에서 확인하세요.
+                        찾기"에서 확인하세요.
                       </span>
                     </>
                   ) : (
                     <span>
                       이 지역은 관할법원 데이터의 시·군·구 칸과 바로 맞지 않습니다. 도구 탭
-                      "관할법원 찾기" 에서 직접 고르세요.
+                      "관할법원 찾기"에서 직접 고르세요.
                     </span>
                   )}
                 </div>

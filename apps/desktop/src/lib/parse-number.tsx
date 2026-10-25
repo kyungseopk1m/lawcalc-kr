@@ -47,7 +47,7 @@ export function parseRatioText(text: string): ParsedNumber {
     return {
       error: percent
         ? "0%~100% 사이여야 합니다."
-        : "0~1 사이 소수로 입력하세요. 퍼센트라면 30% 처럼 % 를 붙이세요.",
+        : "0~1 사이 소수로 입력하세요. 퍼센트라면 30%처럼 %를 붙이세요.",
     };
   }
   return { value };

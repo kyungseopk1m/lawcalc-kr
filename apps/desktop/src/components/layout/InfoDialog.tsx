@@ -170,8 +170,8 @@ export function InfoDialog({ open, onClose, onCheckUpdate }: InfoDialogProps) {
                   {CONTACT_EMAIL}
                 </a>
                 <span className="block text-xs">
-                  계산이 이상하다고 느끼신 화면과 입력값을 함께 적어주시면 확인이 빠릅니다. GitHub
-                  를 쓰신다면{" "}
+                  계산이 이상하다고 느끼신 화면과 입력값을 함께 적어주시면 확인이 빠릅니다. GitHub를
+                  쓰신다면{" "}
                   <a
                     href={ISSUES_URL}
                     onClick={handleExternal(ISSUES_URL)}

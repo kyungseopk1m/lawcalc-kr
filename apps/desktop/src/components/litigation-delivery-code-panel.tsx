@@ -134,14 +134,14 @@ export function DeliveryCodePanel({
             </div>
             {row.codes.some((c) => c === "타채" || c === "타기") ? (
               <p className="text-xs text-amber-900 dark:text-amber-200">
-                제3채무자도 송달받는 당사자이므로 당사자 수에 넣으세요. 송달을 요하지 않는 경우에는
-                납부 대상에서 빠집니다.
+                제3채무자도 송달받는 당사자이므로 당사자 수에 넣으세요. 송달할 필요가 없으면 납부
+                대상에서 빠집니다.
               </p>
             ) : null}
             {fee === null ? (
               <p className="text-xs text-muted-foreground">
                 이 행은 회수가 당사자 수만으로 정해지지 않아 여기서 금액을 내지 않습니다.
-                {row.caseType ? " 사건구분을 적용한 뒤 본 계산기에서 계산하세요." : ""}
+                {row.caseType ? " 사건구분을 적용한 뒤 이 계산기에서 계산하세요." : ""}
               </p>
             ) : "error" in fee ? (
               <p className="text-xs text-destructive">{fee.error}</p>
@@ -172,7 +172,7 @@ export function DeliveryCodePanel({
               </Button>
             ) : (
               <p className="text-xs text-muted-foreground">
-                이 행에 맞는 사건구분이 본 계산기에 없어 적용할 수 없습니다.
+                이 행에 맞는 사건구분이 이 계산기에 없어 적용할 수 없습니다.
               </p>
             )}
           </>

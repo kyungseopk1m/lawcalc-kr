@@ -472,7 +472,7 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
             <CardTitle className="text-sm">기간 입력</CardTitle>
             <p className="text-xs text-muted-foreground">
               민법 제157조 (초일 불산입) / 제159조 (말일의 종료) / 제160조 (역법적 계산) / 제161조
-              (공휴일 등과 기간의 만료) 적용.
+              (공휴일 등과 기간의 만료)를 적용합니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -495,8 +495,8 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                 onChange={(e) => update({ from: e.target.value })}
               />
               <span className="text-xs font-normal text-muted-foreground">
-                계약일·송달일 등 기간의 기초가 되는 날입니다. 이 날 자체를 세는지 여부는 아래
-                옵션에서 정합니다.
+                계약일·송달일 등 기간의 기초가 되는 날입니다. 이날을 기간에 넣을지는 아래 옵션에서
+                정합니다.
               </span>
             </label>
 
@@ -758,8 +758,8 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
               </p>
               <p className="text-xs">
                 근거: 민법 제155조 (본장의 규정은 법령·재판상 처분 또는 법률행위에 다른 정함이 없는
-                경우에 적용) / 제157조 / 제159조 / 제160조 / 제161조. 본 탭은 민법의 일반 기간
-                계산입니다. 소송법상 불변기간(항소·상고기간 등)의 기산 특칙과 기간 말일 특례는 다음
+                경우에 적용) / 제157조 / 제159조 / 제160조 / 제161조. 이 탭은 민법의 일반 기간을
+                계산합니다. 소송법상 불변기간(항소·상고기간 등)의 기산 특칙과 기간 말일 특례는 다음
                 버전 범위입니다.
               </p>
               <p className="text-xs">공휴일 데이터 버전: {HOLIDAYS_VERSION_TAG}</p>

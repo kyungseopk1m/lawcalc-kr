@@ -427,7 +427,7 @@ export function computeCostAssessment(
     }
   }
   if (burden.plaintiff + burden.defendant === 0) {
-    fail("부담 비율의 합이 0 입니다");
+    fail("부담 비율의 합이 0입니다");
   }
 
   const warnings: string[] = [];

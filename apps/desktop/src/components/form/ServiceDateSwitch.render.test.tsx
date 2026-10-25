@@ -54,7 +54,7 @@ describe("ServiceDateSwitch (소촉법 제3조 제1항)", () => {
     );
     fireEvent.change(screen.getByLabelText(/소장 송달일/), { target: { value: "2003-05-01" } });
     fireEvent.click(screen.getByRole("button", { name: "구간 채우기" }));
-    expect(screen.getByText(/2003-06-01부터 있습니다/)).toBeTruthy();
+    expect(screen.getByText(/2003-06-01부터 적용됩니다/)).toBeTruthy();
 
     rerender(
       <ServiceDateSwitch

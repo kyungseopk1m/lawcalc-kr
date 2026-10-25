@@ -31,7 +31,7 @@ describe("손해배상 숫자 칸 오류 표시", () => {
     const view = renderInjury();
     fireEvent.change(view.getByPlaceholderText("예: 0.30"), { target: { value: "30" } });
 
-    expect(view.getByText(/퍼센트라면 30% 처럼/)).toBeTruthy();
+    expect(view.getByText(/퍼센트라면 30%처럼/)).toBeTruthy();
     fireEvent.click(view.getByRole("button", { name: "계산" }));
     expect(view.getByText(/^과실비율: /)).toBeTruthy();
     expect(view.queryByText("계산 결과")).toBeNull();

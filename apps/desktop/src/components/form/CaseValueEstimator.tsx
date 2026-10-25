@@ -81,9 +81,9 @@ export function CaseValueEstimator({ onApply }: { onApply: (caseValue: number) =
       </summary>
       <div className="grid gap-3 pt-3">
         <p className="text-xs text-muted-foreground">
-          기준 가액에 소의 종류별 계수를 곱해 소가를 냅니다. 무엇의 가액을 넣어야 하는지는 소의
-          종류마다 달라 입력란 라벨로 알려드립니다. 토지는 개별공시지가 × 면적, 건물은 시가표준액이
-          가액입니다.
+          기준 가액에 소의 종류별 계수를 곱해 소가를 냅니다. 어떤 가액을 넣어야 하는지는 소의
+          종류마다 달라서 입력란 이름으로 알려 드립니다. 토지는 개별공시지가 × 면적, 건물은
+          시가표준액이 가액입니다.
         </p>
         <label className="grid gap-2 text-sm font-medium">
           소의 종류
@@ -144,7 +144,7 @@ export function CaseValueEstimator({ onApply }: { onApply: (caseValue: number) =
             />
           </div>
           <span className="text-xs font-normal text-muted-foreground">
-            공유지분을 목적물로 하는 경우에만 바꾸세요. 기본값 1/1.
+            공유지분을 목적물로 하는 경우에만 바꾸세요. 기본값은 1/1입니다.
           </span>
         </div>
         {failed ? (

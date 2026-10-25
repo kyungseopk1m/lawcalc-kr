@@ -20,7 +20,7 @@ export function StampExtrasPanel({ stampDuty }: { stampDuty: StampDutyInput }) {
       if (refund) {
         return {
           title: "인지 환급액 (인지법 제14조 제1항)",
-          note: "제14조 제1항 각 호가 정하는 사유가 있을 때 청구할 수 있는 금액입니다. 인지액의 2분의 1 이고, 그 2분의 1 이 10만원 미만이면 인지액에서 10만원을 뺀 금액입니다.",
+          note: "제14조 제1항 각 호가 정하는 사유가 있을 때 청구할 수 있는 금액입니다. 인지액의 2분의 1이고, 그 2분의 1이 10만원 미만이면 인지액에서 10만원을 뺀 금액입니다.",
           label: "환급 청구 가능액",
           ...refund,
         };

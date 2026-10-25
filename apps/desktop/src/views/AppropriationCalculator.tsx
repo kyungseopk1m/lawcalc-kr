@@ -684,7 +684,8 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">채권 (변제 대상)</CardTitle>
             <p className="text-xs text-muted-foreground">
-              민법 제476조 (지정충당) / 제477조 (법정충당) / 제479조 (비용·이자·원본 순) 적용.
+              민법 제476조 (지정충당) / 제477조 (법정충당) / 제479조 (비용·이자·원본 순)를
+              적용합니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">

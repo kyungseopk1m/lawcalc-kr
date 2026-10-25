@@ -21,7 +21,7 @@ function serviceSwitchErrorMessage(err: unknown, preset: LegalRatePresetOption):
     return "송달일 또는 계산 기간 날짜 형식이 올바르지 않습니다.";
   }
   if (message.includes('legalRatePreset "promotion"')) {
-    return "소송촉진법 이율은 2003-06-01부터 있습니다. 송달일 다음 날이 그 전이면 구간을 채울 수 없습니다.";
+    return "소송촉진법 이율은 2003-06-01부터 적용됩니다. 송달일 다음 날이 그 전이면 구간을 채울 수 없습니다.";
   }
   if (message.includes("customRate")) {
     return "직접 입력한 이율을 확인해 주세요.";
@@ -82,8 +82,8 @@ export function ServiceDateSwitch({
       <p className="text-xs leading-5 text-muted-foreground">
         송달일까지는 위 프리셋 이율, 다음 날부터는 소송촉진 등에 관한 특례법 이율로 이율 구간을
         채웁니다(같은 법 제3조 제1항). 채무자의 항쟁이 타당한 범위(제3조 제2항)가 있으면 송달일 대신
-        그 끝날(예: 판결 선고일)을 넣으세요. 장래의 이행을 청구하는 소(민사소송법 제251조)는 같은 항
-        단서에 따라 소송촉진법 이율을 적용하지 않으니 이 기능을 쓰지 마세요.
+        그 범위가 끝나는 날(예: 판결 선고일)을 넣으세요. 장래의 이행을 청구하는 소(민사소송법
+        제251조)는 같은 항 단서에 따라 소송촉진법 이율을 적용하지 않으니 이 기능을 쓰지 마세요.
       </p>
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </div>

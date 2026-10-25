@@ -973,8 +973,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                   }
                 />
                 <span className="text-xs font-normal text-muted-foreground">
-                  우편에 의하여 재산조회를 실시하는 기관 수만큼 송달 횟수에 가산합니다. 해당 없으면
-                  0.
+                  우편으로 재산조회를 하는 기관 수만큼 송달 횟수에 가산합니다. 해당 없으면 0.
                 </span>
               </label>
             ) : null}

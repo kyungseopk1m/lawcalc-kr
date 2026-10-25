@@ -144,7 +144,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.lawyerFee.multiplier).toBe(0);
     expect(result.lawyerFee.appliedDiscounts).toEqual([]);
     expect(result.lawyerFee.koreaLegalAidWarnings).toEqual([]);
-    expect(result.lawyerFee.formulaText).toContain("변호사보수 산입 외 사건구분");
+    expect(result.lawyerFee.formulaText).toContain("변호사보수를 산입하지 않는 사건구분");
     expect(result.lawyerFee.dataVersion).toBe("lawyer-fee/v1.3.0");
     expect(result.lawyerFee.computedAt).toBe(computedAt);
 
@@ -230,7 +230,7 @@ describe("computeLitigationCost / 인지대 산입 외 사건구분", () => {
     };
     const r = computeLitigationCost(input, { computedAt });
     expect(r.stampDuty.amount).toBe(0);
-    expect(r.stampDuty.formulaText).toContain("인지액 산출 외 사건구분");
+    expect(r.stampDuty.formulaText).toContain("인지액을 산출하지 않는 사건구분");
     expect(r.lawyerFee.amount).toBe(0);
     // 10회 + 채권자 5명 × 8회 = 50회
     expect(r.deliveryFee.amount).toBe(50 * UNIT);

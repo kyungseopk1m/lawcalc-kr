@@ -591,10 +591,10 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
   const temporary: TemporaryDisabilityInput[] = state.temporary
     .map((item, i) => {
       const ratio = readRatio(`한시장해 ${i + 1}번째 비율`, item.ratioText) ?? 0;
-      const yearsLabel = `한시장해 ${i + 1}번째 년수`;
+      const yearsLabel = `한시장해 ${i + 1}번째 연수`;
       const years = readNumber(yearsLabel, parseNumberText(item.yearsText, YEARS_FORMAT)) ?? 0;
       // 비율만 넣고 년수를 비우면 행이 소리 없이 빠져 장해가 사라진다.
-      if (ratio > 0 && years === 0) throw new Error(`${yearsLabel}: 0보다 큰 년수를 입력하세요.`);
+      if (ratio > 0 && years === 0) throw new Error(`${yearsLabel}: 0보다 큰 연수를 입력하세요.`);
       const node: TemporaryDisabilityInput = { ratio, years };
       const department = item.department.trim();
       if (department.length > 0) node.department = department;
@@ -1046,7 +1046,7 @@ const HEIR_SHARE_FLOOR_SUFFIX = " (상속분 원 미만 버림 포함)";
 /** 고른 수급권자가 지금 상속인 목록에 없으면 칸 오류 문구, 아니면 undefined. */
 function recipientHeirError(heirName: string, heirNames: readonly string[]): string | undefined {
   return heirName.length > 0 && heirName !== NON_HEIR_RECIPIENT && !heirNames.includes(heirName)
-    ? `"${heirName}"은(는) 지금 상속인 목록에 없습니다. 상속인을 다시 고르세요.`
+    ? `"${heirName}"${josa(heirName, "은는")} 지금 상속인 목록에 없습니다. 상속인을 다시 고르세요.`
     : undefined;
 }
 
@@ -2025,7 +2025,8 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">노동능력상실률</CardTitle>
             <p className="text-xs text-muted-foreground">
-              영구장해 중복은 자동 합산 (1 − Π(1 − rᵢ)), 한시장해는 입력한 기간 동안만 상실률 적용.
+              영구장해가 여럿이면 1 − Π(1 − rᵢ)로 자동 합산하고, 한시장해는 입력한 기간에만 상실률을
+              적용합니다.
             </p>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
@@ -2111,7 +2112,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                   />
                   <Input
                     inputMode="decimal"
-                    placeholder="년수"
+                    placeholder="연수"
                     value={item.yearsText}
                     onChange={(e) => updateTemporary(item.uid, { yearsText: e.target.value })}
                   />
@@ -2810,7 +2811,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
             </CardTitle>
             <p className="text-xs text-muted-foreground">
               민법 제393조·제396조·제763조·제1000조·제1003조·제1009조 / 대법원 2018다248909
-              (가동연한 65세). 사망은 노동능력 100% 상실 전제로 일실수입을 산정한 뒤 생계비를
+              (가동연한 65세). 사망은 노동능력을 100% 잃은 것으로 보고 일실수입을 산정한 뒤 생계비를
               공제합니다.
             </p>
           </CardHeader>
@@ -3504,8 +3505,8 @@ function DeathResultCards({
           </table>
           {result.hoffman240Cap.cappedAtIndex !== null ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              호프만 240 한도 적용. {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
-              240을 초과해 한도를 적용했습니다.
+              {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가 240을 넘어 호프만 240
+              한도를 적용했습니다.
             </p>
           ) : null}
         </CardContent>
@@ -4291,8 +4292,8 @@ function ResultCards({
           </table>
           {result.hoffman240Cap.cappedAtIndex !== null ? (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-              호프만 240 한도 적용. {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가
-              240을 초과해 한도를 적용했습니다.
+              {result.hoffman240Cap.cappedAtIndex + 1}번째 구간부터 누적치가 240을 넘어 호프만 240
+              한도를 적용했습니다.
             </p>
           ) : null}
           {livingCost ? (

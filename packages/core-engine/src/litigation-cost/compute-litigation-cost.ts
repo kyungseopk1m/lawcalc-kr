@@ -75,7 +75,7 @@ function buildExcludedStampDutyResult(
   return {
     amount: 0,
     formulaText:
-      "인지액 산출 외 사건구분입니다. 「민사소송 등 인지법」 제2조의 누진 산식 대상이 아니며, " +
+      "인지액을 산출하지 않는 사건구분입니다. 「민사소송 등 인지법」 제2조의 누진 산식 대상이 아니며, " +
       "해당 사건의 인지액은 별도 예규가 정하는 정액입니다.",
     dataVersion: stampDutyVersionTag(dataset),
     computedAt,
@@ -97,7 +97,7 @@ function buildExcludedLawyerFeeResult(
     appliedDiscounts: [],
     koreaLegalAidWarnings: [],
     formulaText:
-      "변호사보수 산입 외 사건구분입니다. 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항은 본안 사건에만 적용합니다.",
+      "변호사보수를 산입하지 않는 사건구분입니다. 「변호사보수의 소송비용 산입에 관한 규칙」 제3조 제1항은 본안 사건에만 적용됩니다.",
     dataVersion: lawyerFeeDatasetVersionTag(dataset),
     computedAt,
   };

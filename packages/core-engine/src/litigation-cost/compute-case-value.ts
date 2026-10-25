@@ -84,7 +84,7 @@ export function computeRealEstateCaseValue(
   assertPositiveInt(shareDenominator, "공유지분 분모");
   if (shareNumerator > shareDenominator) {
     throw new RangeError(
-      `소가 산정: 공유지분이 1 을 넘습니다 (${shareNumerator}/${shareDenominator})`,
+      `소가 산정: 공유지분이 1을 넘습니다 (${shareNumerator}/${shareDenominator})`,
     );
   }
 

@@ -228,7 +228,7 @@ export function CourtJurisdictionView({ active = true }: { active?: boolean }) {
               ) : null}
               {result.statuteName ? (
                 <p className="text-xs text-muted-foreground">
-                  별표는 이 지역을 "{result.statuteName}" 로 적고 있습니다 (행정구역 변경 전 표기).
+                  별표의 이 지역 표기는 "{result.statuteName}"입니다 (행정구역 변경 전 표기).
                 </p>
               ) : null}
               {result.correction ? (

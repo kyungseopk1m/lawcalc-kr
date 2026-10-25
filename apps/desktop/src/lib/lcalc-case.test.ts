@@ -118,7 +118,7 @@ describe("case envelope validation", () => {
 
   it("rejects a nested calculation whose kind mismatches its key", () => {
     const file = buildCaseLcalcFile({}, { interest: buildInheritanceFile() }, "0.9.0");
-    expect(() => validateLcalcEnvelope(file)).toThrow('kind 가 "interest" 와 일치해야 합니다');
+    expect(() => validateLcalcEnvelope(file)).toThrow('kind가 "interest"와 일치해야 합니다');
   });
 
   it("rejects unknown calculation keys, including nested case files", () => {

@@ -57,14 +57,14 @@ fn csv_for_kind(kind: &str, result: Value) -> Result<(&'static str, &'static str
             )?)?,
         ),
         "compensation" => (
-            "LawCalc Korea 자×부상 손해배상 계산서",
+            "LawCalc Korea 부상 손해배상 계산서",
             "compensation-calculation.hwpx",
             render_compensation_csv_bytes(&serde_json::from_value::<CompensationResultView>(
                 result,
             )?)?,
         ),
         "compensation-death" => (
-            "LawCalc Korea 자×사망 손해배상 계산서",
+            "LawCalc Korea 사망 손해배상 계산서",
             "compensation-death-calculation.hwpx",
             render_compensation_death_csv_bytes(&serde_json::from_value::<
                 CompensationDeathResultView,
@@ -79,7 +79,7 @@ fn csv_for_kind(kind: &str, result: Value) -> Result<(&'static str, &'static str
         ),
         other => {
             return Err(Error::InvalidSchema(format!(
-                "HWPX 로 내보낼 수 없는 계산 종류입니다: {other}"
+                "HWPX로 내보낼 수 없는 계산 종류입니다: {other}"
             )))
         }
     })
@@ -394,7 +394,7 @@ mod tests {
         }];
         let entries = hwpx_for("compensation", serde_json::to_value(view).unwrap());
         let section = &entries[6].1;
-        assert!(section.contains("<hp:t>LawCalc Korea 자×부상 손해배상 계산서</hp:t>"));
+        assert!(section.contains("<hp:t>LawCalc Korea 부상 손해배상 계산서</hp:t>"));
         assert!(section.contains("<hp:t>별지 일실수입 계산표</hp:t>"));
         // 탭 칸은 표 셀로, CSV 수식 방어 `'` 는 벗기고, XML 특수 문자는 이스케이프한다.
         assert!(section.contains("<hp:t>=1원 &lt;A&amp;B&gt;</hp:t>"));
