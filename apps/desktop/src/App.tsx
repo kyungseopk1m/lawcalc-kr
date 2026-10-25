@@ -94,6 +94,8 @@ import { DetentionCalculator } from "./views/DetentionCalculator";
 import { ExpressionCalculator } from "./views/ExpressionCalculator";
 import { ReferenceTablesView } from "./views/ReferenceTablesView";
 import { ServiceEffectCalculator } from "./views/ServiceEffectCalculator";
+import { CivilFilingGuide, CriminalFilingGuide } from "./views/FilingGuideView";
+import { CourtJurisdictionView } from "./views/CourtJurisdictionView";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
@@ -140,7 +142,14 @@ const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: "tools", label: "도구" },
 ];
 
-type ToolId = "serviceEffect" | "detention" | "expression" | "referenceTables";
+type ToolId =
+  | "serviceEffect"
+  | "detention"
+  | "expression"
+  | "referenceTables"
+  | "civilFilings"
+  | "criminalFilings"
+  | "jurisdiction";
 
 /**
  * 사건 파일에 싣지 않는 보조 도구. 상단 탭이 이미 여덟 개라 하나씩 늘리면 탭 줄이 두 줄로
@@ -155,6 +164,9 @@ const TOOLS: ReadonlyArray<{
   { id: "detention", label: "미결구금일수", View: DetentionCalculator },
   { id: "expression", label: "계산기", View: ExpressionCalculator },
   { id: "referenceTables", label: "여명표·노임표", View: ReferenceTablesView },
+  { id: "civilFilings", label: "민사서류 안내", View: CivilFilingGuide },
+  { id: "criminalFilings", label: "형사서류 안내", View: CriminalFilingGuide },
+  { id: "jurisdiction", label: "관할법원 찾기", View: CourtJurisdictionView },
 ];
 
 const TAB_BY_CALCULATION: Record<LcalcCaseCalculationKey, TabId> = {
@@ -278,14 +290,21 @@ function formatOptionLabels(options: CalcOptions) {
 
 function formatResultForClipboard(result: InterestResult) {
   const labels = formatOptionLabels(result.options);
+  let cumulative = 0;
   const rows = result.segments
-    .map(
-      (segment) =>
-        `${segment.from}~${segment.to}\t${segment.days}일\t${(segment.rate * 100).toLocaleString(
-          "ko-KR",
-          { maximumFractionDigits: 3 },
-        )}%\t${segment.formula}\t${formatWon(segment.interest)}`,
-    )
+    .map((segment) => {
+      cumulative += segment.interest;
+      const rate = (segment.rate * 100).toLocaleString("ko-KR", { maximumFractionDigits: 3 });
+      return [
+        `${segment.from}~${segment.to}`,
+        `${segment.days}일`,
+        `${rate}%`,
+        formatWon(result.principal),
+        segment.formula,
+        formatWon(segment.interest),
+        formatWon(cumulative),
+      ].join("\t");
+    })
     .join("\n");
 
   return [
@@ -297,7 +316,7 @@ function formatResultForClipboard(result: InterestResult) {
     `데이터 버전: ${result.dataVersion}`,
     `계산 시각: ${result.computedAt}`,
     "",
-    "시작\t종료\t일수\t이율\t공식\t이자",
+    "기간\t일수\t이율\t원금\t공식\t이자\t이자 누계",
     rows,
     "",
     STANDARD_DISCLAIMER,

@@ -179,6 +179,9 @@ pub struct CompensationResultView {
     /// 지연손해금 블록 (화면에서 계산했을 때만, 손해배상액과 별도).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub delay_damages: Option<CompensationDelayDamagesView>,
+    /// 조정안·판결 이유 형식 문단과 별지 계산표 (화면에서 만들었을 때만). 문구는 frontend 가 만든다.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub document_texts: Vec<CompensationDocumentTextView>,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,
@@ -205,6 +208,14 @@ impl CompensationClaimantView {
             self.name.clone().unwrap_or_else(|| "가족 원고".to_string())
         }
     }
+}
+
+/// 출력 문단 1개. frontend `DocumentTextBlock` 과 같다. 표 행은 탭으로 칸을 나눈다.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationDocumentTextView {
+    pub title: String,
+    pub lines: Vec<String>,
 }
 
 /// 지연손해금 블록. frontend `DelayDamagesExport` 를 그대로 받는다 (문구는 frontend 가 만든다).
@@ -408,6 +419,9 @@ pub struct CompensationDeathResultView {
     /// 지연손해금 블록 (화면에서 계산했을 때만).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub delay_damages: Option<CompensationDelayDamagesView>,
+    /// 조정안·판결 이유 형식 문단과 별지 계산표 (화면에서 만들었을 때만). 문구는 frontend 가 만든다.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub document_texts: Vec<CompensationDocumentTextView>,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,

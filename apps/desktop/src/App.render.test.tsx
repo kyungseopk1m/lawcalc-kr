@@ -102,20 +102,23 @@ describe("도구 하위 탭", () => {
   it("좌우 화살표·Home·End 로 옮기고, 탭 순서에는 선택된 탭 하나만 있다", () => {
     const tools = openTools();
     const tabs = tools.getAllByRole("tab");
-    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1, -1, -1]);
+    const last = tabs.length - 1;
+    const order = (selected: number) => tabs.map((_, i) => (i === selected ? 0 : -1));
+    expect(tabs).toHaveLength(7);
+    expect(tabs.map((t) => t.tabIndex)).toEqual(order(0));
 
     fireEvent.keyDown(tabs[0]!, { key: "ArrowRight" });
     expect(tabs[1]!.getAttribute("aria-selected")).toBe("true");
     expect(document.activeElement).toBe(tabs[1]);
-    expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0, -1, -1]);
+    expect(tabs.map((t) => t.tabIndex)).toEqual(order(1));
 
     fireEvent.keyDown(tabs[1]!, { key: "End" });
-    expect(document.activeElement).toBe(tabs[3]);
-    fireEvent.keyDown(tabs[3]!, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(tabs[last]);
+    fireEvent.keyDown(tabs[last]!, { key: "ArrowRight" });
     expect(document.activeElement).toBe(tabs[0]);
     fireEvent.keyDown(tabs[0]!, { key: "ArrowLeft" });
-    expect(document.activeElement).toBe(tabs[3]);
-    fireEvent.keyDown(tabs[3]!, { key: "Home" });
+    expect(document.activeElement).toBe(tabs[last]);
+    fireEvent.keyDown(tabs[last]!, { key: "Home" });
     expect(tabs[0]!.getAttribute("aria-selected")).toBe("true");
   });
 

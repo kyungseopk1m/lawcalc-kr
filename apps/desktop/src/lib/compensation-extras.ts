@@ -6,9 +6,15 @@
  * `.lcalc` 에 저장하지 않는다.
  */
 
+import { addDays, addYears, formatCourtDate } from "@lawcalc-kr/core-engine";
 import {
   buildDelayDamagesOrderText,
   computeDelayDamages,
+  computeMediationInterest,
+  faultRatioOfResponsibilityPercent,
+  MEDIATION_DEFAULT_SPREAD_PERCENT,
+  mediationResponsibilityPercents,
+  type CompensationSegment,
   type CompensationAutoDeathInput,
   type CompensationAutoDeathResult,
   type CompensationInput,
@@ -553,4 +559,355 @@ export function delayDamagesClipboardLines(delay: DelayDamagesExport | undefined
       (r) => `주문: ${r.label === "최종 합계" ? "" : `${r.label}에게 `}${r.orderText}`,
     ),
   ];
+}
+
+/* ------------------------------------------------- 조정안·판결문 형식 문단 */
+
+export type DocumentFormat = "mediation" | "judgment";
+
+export const DOCUMENT_FORMAT_LABELS: Record<DocumentFormat, string> = {
+  mediation: "조정안 형식",
+  judgment: "판결 이유 형식",
+};
+
+/**
+ * 조정안·판결 이유 형식 문단 설정. 결과에서 바로 만드는 보조 출력이라 지연손해금처럼 `.lcalc` 에
+ * 저장하지 않는다.
+ */
+export interface DocumentFormState {
+  enabled: boolean;
+  format: DocumentFormat;
+  /** 조정일. 사고일부터 이 날까지 연 5% 이자를 더한 금액을 함께 적는다. */
+  mediationDate: string;
+  /** 책임비율 가감 폭 (%p). */
+  spreadPercentText: string;
+}
+
+export function defaultDocumentFormState(today: string): DocumentFormState {
+  return {
+    enabled: false,
+    format: "mediation",
+    mediationDate: today,
+    spreadPercentText: String(MEDIATION_DEFAULT_SPREAD_PERCENT),
+  };
+}
+
+export interface MediationScenarioRow {
+  /** 피고 책임비율 (%). 첫 행이 입력 과실비율 기준. */
+  responsibilityPercent: number;
+  finalWon: number;
+  interestWon: number;
+  totalWon: number;
+}
+
+/** 출력 문단 1개. Rust `CompensationDocumentTextView` 와 같다. 표 행은 탭으로 칸을 나눈다. */
+export interface DocumentTextBlock {
+  title: string;
+  lines: string[];
+}
+
+export interface DocumentExport {
+  scenarios: MediationScenarioRow[];
+  blocks: DocumentTextBlock[];
+}
+
+type AnyResult = CompensationResult | CompensationAutoDeathResult;
+type DocumentInput = Pick<CompensationInput | CompensationAutoDeathInput, "faultRatio"> & {
+  base: { birthDate: string; accidentDate: string; retirementAge?: number; sex: "male" | "female" };
+};
+
+function percentText(ratio: number): string {
+  return `${(ratio * 100).toLocaleString("ko-KR", { maximumFractionDigits: 4 })}%`;
+}
+
+function hoffmanText(value: number): string {
+  return value.toLocaleString("ko-KR", { minimumFractionDigits: 4, maximumFractionDigits: 8 });
+}
+
+function ageAt(birthDate: string, date: string): number {
+  let age = Number(date.slice(0, 4)) - Number(birthDate.slice(0, 4));
+  if (date.slice(5) < birthDate.slice(5)) age -= 1;
+  return age;
+}
+
+function keepText(livingCostRatio: number): string {
+  return Math.abs(livingCostRatio - 1 / 3) < 1e-12 ? "2/3" : percentText(1 - livingCostRatio);
+}
+
+function segmentPeriod(segment: CompensationSegment): string {
+  return segment.startDate !== undefined && segment.endDate !== undefined
+    ? `${formatCourtDate(segment.startDate)} ~ ${formatCourtDate(segment.endDate)}`
+    : `사고 후 ${segment.startMonth}~${segment.endMonth}개월`;
+}
+
+/** 구간에 곱한 생계비 공제 후 비율 (없으면 undefined). 사망은 전 구간, 부상은 기대여명 이후 구간. */
+function segmentKeep(result: AnyResult, segment: CompensationSegment): string | undefined {
+  if ("mode" in result && result.mode === "death") {
+    return keepText(result.livingCostDeductionRatio);
+  }
+  return segment.livingCostDeducted === true ? "2/3" : undefined;
+}
+
+function segmentFormulaLines(result: AnyResult): string[] {
+  return result.segments.map((segment, i) => {
+    const keep = segmentKeep(result, segment);
+    return (
+      `(${i + 1}) ${segmentPeriod(segment)} ${segment.endMonth - segment.startMonth}개월: ` +
+      `월 ${formatWon(segment.monthlyWageWon)} × ${percentText(segment.lossRate)}` +
+      `${keep !== undefined ? ` × ${keep}` : ""} × ${hoffmanText(segment.appliedHoffman)}` +
+      ` = ${formatWon(segment.amountFloorWon)}`
+    );
+  });
+}
+
+/** 별지형 일실수입 계산표 (탭으로 칸을 나눈 행). 클립보드·PDF·CSV 공용. */
+export function lostIncomeTableLines(result: AnyResult): string[] {
+  const keepColumn = result.segments.some((s) => segmentKeep(result, s) !== undefined);
+  const head = ["순번", "기간", "개월", "월 소득", "상실률", "호프만", "금액"];
+  if (keepColumn) head.splice(5, 0, "생계비 공제 후");
+  const rows = result.segments.map((segment, i) => {
+    const row = [
+      String(i + 1),
+      segmentPeriod(segment),
+      String(segment.endMonth - segment.startMonth),
+      formatWon(segment.monthlyWageWon),
+      percentText(segment.lossRate),
+      hoffmanText(segment.appliedHoffman),
+      formatWon(segment.amountFloorWon),
+    ];
+    if (keepColumn) row.splice(5, 0, segmentKeep(result, segment) ?? "");
+    return row.join("\t");
+  });
+  const total = [
+    "합계",
+    ...head.slice(1, -1).map(() => ""),
+    formatWon(result.lostIncomeSubtotalWon),
+  ];
+  return [head.join("\t"), ...rows, total.join("\t")];
+}
+
+/** 원고별 최종액 (라벨, 금액). 없으면 빈 배열. */
+function claimantAmounts(result: AnyResult): [string, number][] {
+  if ("claimants" in result && result.claimants !== undefined) {
+    return result.claimants.map((c) => [injuryClaimantLabel(c), c.amountWon]);
+  }
+  if ("mode" in result && result.mode === "death") {
+    return [...(result.inheritanceShares ?? []), ...(result.otherClaimants ?? [])].map((s) => [
+      s.name,
+      s.amountWon,
+    ]);
+  }
+  return [];
+}
+
+function basicFactLine(input: DocumentInput, result: AnyResult): string {
+  const { birthDate, accidentDate, sex } = input.base;
+  const retirementAge = input.base.retirementAge ?? 65;
+  const retirementEnd = addDays(addYears(birthDate, retirementAge), -1);
+  const death = "mode" in result && result.mode === "death";
+  return (
+    `피해자는 ${formatCourtDate(birthDate)}생 ${sex === "male" ? "남자" : "여자"}이고, ` +
+    `${formatCourtDate(accidentDate)} 사고${death ? "로 사망하였다" : "를 당하였다"}. ` +
+    `사고 당시 만 ${ageAt(birthDate, accidentDate)}세이며, 가동연한은 만 ${retirementAge}세가 되기 전날인 ` +
+    `${formatCourtDate(retirementEnd)}까지로 보았다.`
+  );
+}
+
+/** 일실수입 밖의 재산상 손해 항목 (라벨, 금액). */
+function otherPecuniaryItems(result: AnyResult): [string, number][] {
+  const items: [string, number][] = [];
+  if (result.lostRetirementSubtotalWon !== undefined) {
+    items.push(["일실퇴직금", result.lostRetirementSubtotalWon]);
+  }
+  if (result.otherDamages !== undefined) {
+    items.push(
+      ["개호비", result.otherDamages.attendantCareWon],
+      ["치료비", result.otherDamages.treatmentWon],
+      ["보조구", result.otherDamages.applianceWon],
+    );
+  }
+  if ("mode" in result && result.mode === "death") items.push(["장례비", result.funeralExpenseWon]);
+  return items.filter(([, won]) => won > 0);
+}
+
+function deductionLine(result: AnyResult): string | undefined {
+  const d = result.deductions;
+  const total =
+    d.ratioSubtotalWon +
+    (d.paidTreatmentSubtotalWon ?? 0) +
+    (d.legacyRatioSubtotalWon ?? 0) +
+    d.absoluteSubtotalWon;
+  if (total === 0) return undefined;
+  return `공제 합계 ${formatWon(total)} (비율공제·지급치료비·전액공제 소계 합), 공제 후 ${formatWon(d.afterWon)}`;
+}
+
+function industrialLine(result: AnyResult): string | undefined {
+  const b = result.industrialBenefit;
+  if (b === undefined) return undefined;
+  return `산재보험급여 ${formatWon(b.deductedWon)}을 과실상계 전에 일실수입에서 공제: ${formatWon(b.lostIncomeAfterWon)}`;
+}
+
+function responsibilityLine(result: AnyResult): string {
+  const { ratio, beforeWon, afterWon } = result.faultOffset;
+  return `피해자 과실 ${percentText(ratio)}, 피고 책임 ${percentText(1 - ratio)}: ${formatWon(beforeWon)} × ${percentText(1 - ratio)} = ${formatWon(afterWon)}`;
+}
+
+function buildMediationBlock(
+  input: DocumentInput,
+  result: AnyResult,
+  mediationDate: string,
+  scenarios: MediationScenarioRow[],
+): DocumentTextBlock {
+  const lines: string[] = ["1. 기초 사항", `  ${basicFactLine(input, result)}`];
+  if (result.lifeExpectancy !== undefined) {
+    lines.push(`  기대여명: ${lifeExpectancyText(result.lifeExpectancy)}`);
+  }
+  lines.push(
+    "2. 재산상 손해",
+    `  가. 일실수입 ${formatWon(result.lostIncomeSubtotalWon)}`,
+    ...segmentFormulaLines(result).map((l) => `     ${l}`),
+  );
+  const industrial = industrialLine(result);
+  if (industrial !== undefined) lines.push(`     ${industrial}`);
+  otherPecuniaryItems(result).forEach(([label, won], i) => {
+    lines.push(`  ${"나다라마바사"[i] ?? "-"}. ${label} ${formatWon(won)}`);
+  });
+  lines.push("3. 책임의 제한", `  ${responsibilityLine(result)}`);
+  const deduction = deductionLine(result);
+  let n = 4;
+  if (deduction !== undefined) lines.push(`${n++}. 공제`, `  ${deduction}`);
+  lines.push(`${n++}. 위자료 ${formatWon(result.solatiumWon)}`);
+  lines.push(
+    `${n}. 조정 금액 (괄호 안은 ${formatCourtDate(input.base.accidentDate)}부터 조정일 ${formatCourtDate(mediationDate)}까지 연 5% 이자를 더한 금액)`,
+    ...scenarios.map(
+      (s, i) =>
+        `  책임 ${s.responsibilityPercent}%${i === 0 ? " (입력 기준)" : ""}: ${formatWon(s.finalWon)} (${formatWon(s.totalWon)})`,
+    ),
+  );
+  const claimants = claimantAmounts(result);
+  if (claimants.length > 0) {
+    lines.push(
+      `  책임 ${scenarios[0]?.responsibilityPercent ?? ""}% 원고별: ` +
+        claimants.map(([label, won]) => `${label} ${formatWon(won)}`).join(", "),
+    );
+  }
+  return { title: `조정안 형식 (조정일 ${formatCourtDate(mediationDate)})`, lines };
+}
+
+function buildJudgmentBlocks(
+  input: DocumentInput,
+  result: AnyResult,
+  delay: DelayDamagesExport | undefined,
+): DocumentTextBlock[] {
+  const lines: string[] = ["가. 기초 사실", `  ${basicFactLine(input, result)}`];
+  if (result.lifeExpectancy !== undefined) {
+    lines.push(`  기대여명: ${lifeExpectancyText(result.lifeExpectancy)}`);
+  }
+  if ("combinedLossRate" in result) {
+    lines.push(
+      `  노동능력상실률은 ${percentText(result.combinedLossRate)}이다 (구간별 상실률은 별지 계산표).`,
+    );
+  } else {
+    const ratio = result.livingCostDeductionRatio;
+    lines.push(
+      `  생계비 공제 비율: 수입의 ${Math.abs(ratio - 1 / 3) < 1e-12 ? "1/3" : percentText(ratio)}.`,
+    );
+  }
+  lines.push(
+    "나. 일실수입",
+    `  사고 당시 현가(월 단위 호프만식)로 계산한 일실수입은 별지 일실수입 계산표와 같이 ${formatWon(result.lostIncomeSubtotalWon)}이다.`,
+  );
+  const industrial = industrialLine(result);
+  if (industrial !== undefined) lines.push(`  ${industrial}`);
+  const others = otherPecuniaryItems(result);
+  if (others.length > 0) {
+    lines.push(
+      "다. 그 밖의 재산상 손해",
+      ...others.map(([label, won]) => `  ${label} ${formatWon(won)}`),
+    );
+  }
+  const { ratio, beforeWon, afterWon } = result.faultOffset;
+  lines.push(
+    "라. 책임의 제한",
+    ratio === 0
+      ? `  피해자의 과실을 인정하지 않으므로 책임을 제한하지 않는다. 피고 부담액은 재산상 손해 ${formatWon(afterWon)} 전액이다.`
+      : `  피해자의 과실을 ${percentText(ratio)}로 보아 피고의 책임을 ${percentText(1 - ratio)}로 제한한다. ` +
+          `재산상 손해 ${formatWon(beforeWon)} 중 피고 부담액은 ${formatWon(afterWon)}이다.`,
+  );
+  const deduction = deductionLine(result);
+  if (deduction !== undefined) lines.push("마. 공제", `  ${deduction}`);
+  lines.push("바. 위자료", `  ${formatWon(result.solatiumWon)}`, "사. 결론");
+  const claimants = claimantAmounts(result);
+  lines.push(
+    claimants.length > 0
+      ? `  피고가 지급할 손해배상금은 ${claimants.map(([label, won]) => `${label} ${formatWon(won)}`).join(", ")} (합계 ${formatWon(result.finalWon)})이다.`
+      : `  피고가 지급할 손해배상금은 ${formatWon(result.finalWon)}이다.`,
+  );
+  if (delay !== undefined) {
+    lines.push(
+      ...delay.rows.map(
+        (r) => `  지연손해금: ${r.label === "최종 합계" ? "" : `${r.label}에게 `}${r.orderText}`,
+      ),
+    );
+  }
+  return [
+    { title: "판결 이유 형식 (손해배상의 범위)", lines },
+    { title: "별지 일실수입 계산표", lines: lostIncomeTableLines(result) },
+  ];
+}
+
+/**
+ * 조정안·판결 이유 형식 문단. 조정안은 과실비율만 바꿔 `recompute` 로 엔진을 다시 돌려 시나리오 금액을
+ * 내고, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적는다.
+ * 입력이 모자라면 `error` 만 돌려준다.
+ */
+export function computeDocumentExport(
+  state: DocumentFormState,
+  input: DocumentInput,
+  result: AnyResult,
+  recompute: (faultRatio: number) => AnyResult,
+  delay?: DelayDamagesExport,
+): { value?: DocumentExport; error?: string } {
+  if (!state.enabled) return {};
+  if (state.format === "judgment") {
+    return { value: { scenarios: [], blocks: buildJudgmentBlocks(input, result, delay) } };
+  }
+  if (!ISO_DATE.test(state.mediationDate)) return { error: "조정일을 입력하세요." };
+  if (state.mediationDate < input.base.accidentDate) {
+    return { error: "조정일은 사고일 이후여야 합니다." };
+  }
+  const spread = parseNumberText(state.spreadPercentText, { unit: "%", min: 0, max: 100 });
+  if (spread.error !== undefined) return { error: `가감 폭: ${spread.error}` };
+  try {
+    const scenarios = mediationResponsibilityPercents(
+      result.faultOffset.ratio,
+      spread.value ?? MEDIATION_DEFAULT_SPREAD_PERCENT,
+    ).map((pct, i) => {
+      const finalWon =
+        i === 0 ? result.finalWon : recompute(faultRatioOfResponsibilityPercent(pct)).finalWon;
+      const interest = computeMediationInterest(
+        finalWon,
+        input.base.accidentDate,
+        state.mediationDate,
+      );
+      return { responsibilityPercent: pct, finalWon, ...interest };
+    });
+    return {
+      value: {
+        scenarios,
+        blocks: [
+          buildMediationBlock(input, result, state.mediationDate, scenarios),
+          { title: "별지 일실수입 계산표", lines: lostIncomeTableLines(result) },
+        ],
+      },
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** 클립보드 문단 줄. */
+export function documentClipboardLines(doc: DocumentExport | undefined): string[] {
+  if (doc === undefined) return [];
+  return doc.blocks.flatMap((b) => ["", b.title, ...b.lines]);
 }

@@ -38,6 +38,10 @@ import {
   type LifeExpectancyFormState,
   type LostRetirementFormState,
   type ShorteningMethod,
+  DOCUMENT_FORMAT_LABELS,
+  type DocumentExport,
+  type DocumentFormat,
+  type DocumentFormState,
 } from "../lib/compensation-extras";
 import { formatWon, formatWonInput, parseWonText } from "../lib/format-won";
 import { FieldError, parseNumberText } from "../lib/parse-number";
@@ -936,6 +940,108 @@ export function DelayDamagesCard({
               {r.label === "최종 합계" ? "" : `${r.label}에게 `}
               {r.orderText}
             </p>
+          ))}
+        </div>
+      ) : null}
+    </SectionCard>
+  );
+}
+
+/** 조정안·판결 이유 형식 문단 카드. 부상·사망 공용. */
+export function DocumentTextCard({
+  value,
+  onChange,
+  computed,
+  stale = false,
+}: {
+  value: DocumentFormState;
+  onChange: (value: DocumentFormState) => void;
+  computed: { value?: DocumentExport; error?: string };
+  stale?: boolean;
+}) {
+  const patch = (next: Partial<DocumentFormState>) => onChange({ ...value, ...next });
+  return (
+    <SectionCard
+      title="조정안·판결 이유 형식 문단 (선택)"
+      hint="계산 결과를 조정안 또는 판결 이유 형식의 문단과 별지 일실수입 계산표로 정리합니다. 조정안은 피고 책임비율을 가감 폭만큼 올리고 내린 금액과, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적습니다. 조정일은 이자 끝날로만 쓰고 일실수입 현가는 사고일 기준 그대로입니다. 복사·PDF·CSV에 함께 실리며 파일에 저장하지 않습니다."
+      enabled={value.enabled}
+      toggleLabel="문단 만들기"
+      onToggle={(enabled) => patch({ enabled })}
+      testId="compensation-document-card"
+    >
+      <div className="flex flex-wrap gap-4 text-sm" role="radiogroup" aria-label="문단 형식">
+        {(Object.keys(DOCUMENT_FORMAT_LABELS) as DocumentFormat[]).map((format) => (
+          <label key={format} className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="compensation-document-format"
+              checked={value.format === format}
+              onChange={() => patch({ format })}
+            />
+            {DOCUMENT_FORMAT_LABELS[format]}
+          </label>
+        ))}
+      </div>
+      {value.format === "mediation" ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-2 text-sm font-medium">
+            조정일
+            <Input
+              type="date"
+              value={value.mediationDate}
+              onChange={(e) => patch({ mediationDate: e.target.value })}
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            책임비율 가감 폭 (%p)
+            <Input
+              inputMode="decimal"
+              value={value.spreadPercentText}
+              onChange={(e) => patch({ spreadPercentText: e.target.value })}
+            />
+          </label>
+        </div>
+      ) : null}
+      {stale ? (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+          입력이 바뀌었습니다. 다시 계산하면 새 결과로 문단을 만듭니다.
+        </p>
+      ) : null}
+      {!stale && computed.error ? <FieldError message={computed.error} /> : null}
+      {!stale && computed.value ? (
+        <div className="grid gap-2" data-testid="compensation-document-result">
+          {computed.value.scenarios.length > 0 ? (
+            <table className="w-full text-sm" data-testid="compensation-mediation-scenarios">
+              <thead>
+                <tr className={TABLE_HEAD}>
+                  <th className="py-2 font-medium">피고 책임</th>
+                  <th className="py-2 text-right font-medium">손해배상금</th>
+                  <th className="py-2 text-right font-medium">조정일까지 이자</th>
+                  <th className="py-2 text-right font-medium">이자 포함</th>
+                </tr>
+              </thead>
+              <tbody>
+                {computed.value.scenarios.map((r) => (
+                  <tr
+                    key={r.responsibilityPercent}
+                    className="border-b border-border last:border-b-0"
+                  >
+                    <td className="py-2">{r.responsibilityPercent}%</td>
+                    <td className="py-2 text-right">{formatWon(r.finalWon)}</td>
+                    <td className="py-2 text-right">{formatWon(r.interestWon)}</td>
+                    <td className="py-2 text-right">{formatWon(r.totalWon)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
+          {computed.value.blocks.map((b) => (
+            <div key={b.title} className="grid gap-1">
+              <p className="text-xs font-medium">{b.title}</p>
+              <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-muted p-2 text-xs">
+                {b.lines.join("\n")}
+              </pre>
+            </div>
           ))}
         </div>
       ) : null}

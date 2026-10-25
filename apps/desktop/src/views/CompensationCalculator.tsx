@@ -65,6 +65,7 @@ import {
   DeathClaimantsCard,
   DeathClaimantsTable,
   DelayDamagesCard,
+  DocumentTextCard,
   DisabilityRateHelper,
   InjuryClaimantsCard,
   InjuryClaimantsTable,
@@ -108,6 +109,11 @@ import {
   type DeathClaimantsFormState,
   type DelayDamagesExport,
   type DelayDamagesFormState,
+  computeDocumentExport,
+  defaultDocumentFormState,
+  documentClipboardLines,
+  type DocumentExport,
+  type DocumentFormState,
   type InjuryClaimantsFormState,
   type LifeExpectancyFormState,
   type LostRetirementFormState,
@@ -124,6 +130,7 @@ import {
   propertyOnlyExcessWon,
   type LaborRateTiming,
   solatiumSettlement,
+  truncationTextOf,
   withCompensationExportWarnings,
 } from "../lib/compensation-warnings";
 import { formatWon, formatWonInput, parseWonAmount, parseWonText } from "../lib/format-won";
@@ -224,6 +231,8 @@ export interface CompensationFormState extends DeductionsFormState, LaborRateTim
    * 이전 파일은 꺼짐으로 연다.
    */
   courtTruncation: boolean;
+  /** 단계마다 원 미만 절사 (`base.truncateEachStep`). 기본 꺼짐(마지막에 한 번). */
+  truncateEachStep: boolean;
   /** 산재(산×부상) 장해급여 (원). accidentType === "industrial" 일 때만 적용. */
   disabilityBenefitWonText: string;
   /** 기타손해 (개호비·치료비·보조구). 미입력 시 결과 회귀 0. */
@@ -456,12 +465,13 @@ function readAmountItems(
  * 화면 입력이 곧 결과의 입력이다.
  */
 function timingOf(
-  state: LaborRateTimingFormState & { courtTruncation?: boolean },
+  state: LaborRateTimingFormState & { courtTruncation?: boolean; truncateEachStep?: boolean },
 ): LaborRateTiming {
   return {
     calculationDate: state.calculationDate,
     laborRateEffectiveRule: state.laborRateEffectiveRule,
     ...(state.courtTruncation ? { courtTruncation: true } : {}),
+    ...(state.truncateEachStep ? { truncateEachStep: true } : {}),
   };
 }
 
@@ -547,6 +557,7 @@ export function defaultCompensationFormState(): CompensationFormState {
     hospitalizationFullLoss: true,
     // 새 계산은 법원 방식 절사가 기본이다. 키가 없는 이전 파일은 꺼짐으로 연다.
     courtTruncation: true,
+    truncateEachStep: false,
     ...defaultLaborRateTiming(),
     ...defaultDeductionsFormState(),
     disabilityBenefitWonText: "",
@@ -618,6 +629,7 @@ export function buildCompensationInput(state: CompensationFormState): Compensati
   };
   // 끈 상태는 키를 두지 않는다. 키 없음 = 종전 계산이라 이 옵션이 없던 파일과 같다.
   if (state.courtTruncation) input.base.courtTruncation = true;
+  if (state.truncateEachStep) input.base.truncateEachStep = true;
 
   const solatium = parseWonAmount(state.solatiumWonText, 0);
   if (solatium > 0) input.solatiumWon = solatium;
@@ -677,6 +689,7 @@ export function applyLoadedCompensationInput(input: CompensationInput): Compensa
     // 끈 상태로 연다 (화면이 안내를 띄운다).
     hospitalizationFullLoss: input.lossRate.hospitalizationFullLoss === true,
     courtTruncation: input.base.courtTruncation === true,
+    truncateEachStep: input.base.truncateEachStep === true,
     ...applyLaborRateTiming(input.base),
     ...applyDeductionsInput(input.deductions),
     disabilityBenefitWonText:
@@ -824,6 +837,7 @@ function stateForDirtySnapshot(state: CompensationFormState) {
     priorImpairmentRatioText: state.priorImpairmentRatioText,
     hospitalizationFullLoss: state.hospitalizationFullLoss,
     courtTruncation: state.courtTruncation,
+    ...(state.truncateEachStep ? { truncateEachStep: true } : {}),
     occupation: state.occupation,
     directWageWonText: state.directWageWonText,
     workingDaysPerMonthText: state.workingDaysPerMonthText,
@@ -890,6 +904,7 @@ export function formatCompensationForClipboard(
   hospitalMonths = 0,
   timing?: LaborRateTiming,
   delay?: DelayDamagesExport,
+  doc?: DocumentExport,
 ): string {
   // 기대여명 이후 생계비 공제 구간이 있으면 비고 열을 더한다 (없으면 종전 표 그대로).
   const livingCost = hasLivingCostDeductedSegment(result.segments);
@@ -909,7 +924,9 @@ export function formatCompensationForClipboard(
       ? "LawCalc Korea 산재 사고 부상 손해배상 계산 결과"
       : "LawCalc Korea 자동차 사고 부상 손해배상 계산 결과",
     ...(timing ? [`노임 기준: ${laborRateTimingText(timing)}`] : []),
-    ...(timing?.courtTruncation ? [`절사: ${COURT_TRUNCATION_TEXT}`] : []),
+    ...(timing && truncationTextOf(result, timing)
+      ? [`절사: ${truncationTextOf(result, timing)}`]
+      : []),
     ...(result.lifeExpectancy ? [`기대여명: ${lifeExpectancyText(result.lifeExpectancy)}`] : []),
     `중복장해율: ${formatRatioPercent(result.combinedLossRate)}`,
     ...(hospitalMonths > 0 ? [hospitalizationLine(hospitalMonths)] : []),
@@ -959,6 +976,7 @@ export function formatCompensationForClipboard(
     );
   }
   lines.push(...delayDamagesClipboardLines(delay));
+  lines.push(...documentClipboardLines(doc));
   lines.push(...clipboardWarningLines(result));
   lines.push("", STANDARD_DISCLAIMER);
   return lines.join("\n");
@@ -1081,6 +1099,8 @@ export interface CompensationDeathFormState extends DeductionsFormState, LaborRa
   otherDamages: OtherDamagesFormState;
   /** 법원 계산 프로그램 방식 절사 (호프만 4자리). 새 계산은 켜짐, 키 없는 이전 파일은 꺼짐. */
   courtTruncation: boolean;
+  /** 단계마다 원 미만 절사 (`base.truncateEachStep`). 기본 꺼짐(마지막에 한 번). */
+  truncateEachStep: boolean;
   /** 기대여명 (표시용, 금액 불변). */
   lifeExpectancy: LifeExpectancyFormState;
   /** 일실퇴직금 (상실률 100). */
@@ -1120,6 +1140,7 @@ export function defaultCompensationDeathFormState(): CompensationDeathFormState 
     survivorRecipients: [],
     otherDamages: defaultOtherDamagesFormState(),
     courtTruncation: true,
+    truncateEachStep: false,
     lifeExpectancy: defaultLifeExpectancyFormState(),
     lostRetirement: defaultLostRetirementFormState(),
     claimants: defaultDeathClaimantsFormState(),
@@ -1160,6 +1181,7 @@ export function buildCompensationDeathInput(
   };
   // 끈 상태는 키를 두지 않는다 (키 없음 = 종전 계산).
   if (state.courtTruncation) input.base.courtTruncation = true;
+  if (state.truncateEachStep) input.base.truncateEachStep = true;
 
   const livingCost = readRatio("생계비 공제 비율", state.livingCostDeductionRatioText);
   if (livingCost !== undefined) input.livingCostDeductionRatio = livingCost;
@@ -1281,6 +1303,7 @@ export function applyLoadedCompensationDeathInput(
     otherDamages: applyOtherDamagesInput(input.otherDamages),
     // 키가 없으면 절사 옵션이 없던 이전 파일이라 꺼짐으로 연다 (저장 당시 금액).
     courtTruncation: input.base.courtTruncation === true,
+    truncateEachStep: input.base.truncateEachStep === true,
     lifeExpectancy: applyLifeExpectancyInput(input.lifeExpectancy),
     lostRetirement: applyLostRetirementInput(input.lostRetirement),
     claimants: applyDeathClaimantsInput(
@@ -1312,6 +1335,7 @@ export function formatCompensationDeathForClipboard(
   result: CompensationAutoDeathResult,
   timing?: LaborRateTiming,
   delay?: DelayDamagesExport,
+  doc?: DocumentExport,
 ): string {
   const segmentRows = result.segments
     .map(
@@ -1325,7 +1349,9 @@ export function formatCompensationDeathForClipboard(
       ? "LawCalc Korea 산재 사고 사망 손해배상 계산 결과"
       : "LawCalc Korea 자동차 사고 사망 손해배상 계산 결과",
     ...(timing ? [`노임 기준: ${laborRateTimingText(timing)}`] : []),
-    ...(timing?.courtTruncation ? [`절사: ${courtTruncationTextOf(result)}`] : []),
+    ...(timing && truncationTextOf(result, timing)
+      ? [`절사: ${truncationTextOf(result, timing)}`]
+      : []),
     ...(result.lifeExpectancy ? [`기대여명: ${lifeExpectancyText(result.lifeExpectancy)}`] : []),
     `생계비 공제 비율: ${formatRatioPercent(result.livingCostDeductionRatio)}`,
     `일실수입 소계 (생계비 공제 후): ${formatWon(result.lostIncomeSubtotalWon)}`,
@@ -1401,6 +1427,7 @@ export function formatCompensationDeathForClipboard(
   }
 
   lines.push(...delayDamagesClipboardLines(delay));
+  lines.push(...documentClipboardLines(doc));
   lines.push(...clipboardWarningLines(result));
   lines.push("", STANDARD_DISCLAIMER);
   return lines.join("\n");
@@ -1459,6 +1486,7 @@ function deathStateForDirtySnapshot(state: CompensationDeathFormState) {
     ...deductionsForDirtySnapshot(state),
     otherDamages: otherDamagesForDirtySnapshot(state.otherDamages),
     courtTruncation: state.courtTruncation,
+    ...(state.truncateEachStep ? { truncateEachStep: true } : {}),
     lifeExpectancy: state.lifeExpectancy,
     lostRetirement: state.lostRetirement,
     claimants: deathClaimantsForDirtySnapshot(state.claimants, heirNamesOf(state)),
@@ -1488,7 +1516,8 @@ type CompensationMode = "injury" | "death";
  * 위자료가 있는 구 파일은 위자료가 소계에서 빠져도 최종액이 같다) 세부 구성 안내를 낸다.
  */
 function compensationResultDetailKey(result: CompensationResult | CompensationAutoDeathResult) {
-  return `${result.pecuniaryDamagesSubtotalWon}/${result.faultOffset.afterWon}`;
+  // 일실수입 소계도 넣는다. 산재 급여가 일실수입을 다 공제하면 소계가 바뀌어도 위 두 값은 같다.
+  return `${result.lostIncomeSubtotalWon}/${result.pecuniaryDamagesSubtotalWon}/${result.faultOffset.afterWon}`;
 }
 
 function isDeathCompensationLcalcFile(file: LcalcFile): boolean {
@@ -1614,6 +1643,8 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
   const [delay, setDelay] = useState<DelayDamagesFormState>(() =>
     defaultDelayDamagesFormState(todayIso()),
   );
+  // 조정안·판결 이유 형식 문단도 결과에서 바로 만드는 보조 출력이라 지문·저장에 넣지 않는다.
+  const [doc, setDoc] = useState<DocumentFormState>(() => defaultDocumentFormState(todayIso()));
   const [note, setNote] = useState("");
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -1658,6 +1689,23 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
       result ? computeDelayDamagesExport(delay, state.accidentDate, delayPrincipalsOf(result)) : {},
     [delay, result, state.accidentDate],
   );
+  // 결과가 최신일 때 화면 입력이 곧 결과의 입력이다. 시나리오는 과실비율만 바꿔 다시 계산한다.
+  const docComputed = useMemo(() => {
+    if (!result || resultStale || !doc.enabled) return {};
+    try {
+      const input = buildCompensationInput(state);
+      return computeDocumentExport(
+        doc,
+        input,
+        result,
+        (faultRatio) => computeCompensation({ ...input, faultRatio }),
+        delayComputed.value,
+      );
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : String(e) };
+    }
+    // state 는 resultStale 이 지켜 준다 (결과 이후 바뀌면 계산하지 않는다).
+  }, [doc, result, resultStale, delayComputed.value]);
 
   const handleCalculate = () => {
     try {
@@ -1676,6 +1724,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
   const handleReset = () => {
     setState(defaultCompensationFormState());
     setDelay(defaultDelayDamagesFormState(todayIso()));
+    setDoc(defaultDocumentFormState(todayIso()));
     setLegacyHospitalNotice(false);
     setLegacyNotice(null);
     setNote("");
@@ -1710,6 +1759,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
           hospitalizationMonthsOf(result),
           timingOf(state),
           delayComputed.value,
+          docComputed.value,
         ),
       );
       return "손해배상 계산 결과를 클립보드에 복사했습니다.";
@@ -1719,7 +1769,12 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
     runAction("pdf", async () => {
       if (!result || resultStale) throw new Error("계산 후 PDF를 저장해 주세요.");
       const path = await ipc.exportCompensationPdf(
-        withCompensationExportWarnings(result, timingOf(state), delayComputed.value),
+        withCompensationExportWarnings(
+          result,
+          timingOf(state),
+          delayComputed.value,
+          docComputed.value?.blocks,
+        ),
       );
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
@@ -1728,7 +1783,12 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
     runAction("csv", async () => {
       if (!result || resultStale) throw new Error("계산 후 CSV를 저장해 주세요.");
       const path = await ipc.exportCompensationCsv(
-        withCompensationExportWarnings(result, timingOf(state), delayComputed.value),
+        withCompensationExportWarnings(
+          result,
+          timingOf(state),
+          delayComputed.value,
+          docComputed.value?.blocks,
+        ),
       );
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
@@ -2079,6 +2139,21 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
               새 계산은 켜진 상태가 기본이고, 이 옵션이 없던 이전 버전 파일은 저장 당시대로 끈
               상태로 엽니다.
             </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={state.truncateEachStep}
+                onChange={(e) => update({ truncateEachStep: e.target.checked })}
+              />
+              원 미만은 계수를 곱할 때마다 버림
+            </label>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              끄면(기본) 일실수입 구간 금액을 마지막에 한 번 버립니다. 켜면 월 소득에
+              노동능력상실률, 생계비 공제 후 비율, 호프만 계수를 하나씩 곱할 때마다 원 미만을 버려
+              구간 금액이 끈 쪽과 같거나 적습니다. 앞에서 버린 원 미만에 뒤 계수가 곱해지므로 차이는
+              호프만 계수 크기에 따라 구간마다 수백 원에 이를 수 있습니다. 어느 쪽을 써야 한다는
+              판결 근거는 찾지 못했습니다.
+            </p>
           </CardContent>
         </Card>
 
@@ -2309,6 +2384,15 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
           />
         ) : null}
 
+        {result ? (
+          <DocumentTextCard
+            value={doc}
+            onChange={setDoc}
+            computed={docComputed}
+            stale={resultStale}
+          />
+        ) : null}
+
         <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">내보내기</CardTitle>
@@ -2393,6 +2477,8 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
   const [delay, setDelay] = useState<DelayDamagesFormState>(() =>
     defaultDelayDamagesFormState(todayIso()),
   );
+  // 조정안·판결 이유 형식 문단도 결과에서 바로 만드는 보조 출력이라 지문·저장에 넣지 않는다.
+  const [doc, setDoc] = useState<DocumentFormState>(() => defaultDocumentFormState(todayIso()));
   const [note, setNote] = useState("");
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -2443,6 +2529,22 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
       result ? computeDelayDamagesExport(delay, state.accidentDate, delayPrincipalsOf(result)) : {},
     [delay, result, state.accidentDate],
   );
+  const docComputed = useMemo(() => {
+    if (!result || resultStale || !doc.enabled) return {};
+    try {
+      const input = buildCompensationDeathInput(state);
+      return computeDocumentExport(
+        doc,
+        input,
+        result,
+        (faultRatio) => computeCompensationDeath({ ...input, faultRatio }),
+        delayComputed.value,
+      );
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : String(e) };
+    }
+    // state 는 resultStale 이 지켜 준다 (결과 이후 바뀌면 계산하지 않는다).
+  }, [doc, result, resultStale, delayComputed.value]);
 
   const handleCalculate = () => {
     try {
@@ -2461,6 +2563,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
   const handleReset = () => {
     setState(defaultCompensationDeathFormState());
     setDelay(defaultDelayDamagesFormState(todayIso()));
+    setDoc(defaultDocumentFormState(todayIso()));
     setLegacyNotice(null);
     setNote("");
     setResult(null);
@@ -2489,7 +2592,12 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
     runAction("copy", async () => {
       if (!result || resultStale) throw new Error("계산 후 복사해 주세요.");
       await ipc.copyToClipboard(
-        formatCompensationDeathForClipboard(result, timingOf(state), delayComputed.value),
+        formatCompensationDeathForClipboard(
+          result,
+          timingOf(state),
+          delayComputed.value,
+          docComputed.value,
+        ),
       );
       return "사망 손해배상 계산 결과를 클립보드에 복사했습니다.";
     });
@@ -2498,7 +2606,12 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
     runAction("pdf", async () => {
       if (!result || resultStale) throw new Error("계산 후 PDF를 저장해 주세요.");
       const path = await ipc.exportCompensationDeathPdf(
-        withCompensationExportWarnings(result, timingOf(state), delayComputed.value),
+        withCompensationExportWarnings(
+          result,
+          timingOf(state),
+          delayComputed.value,
+          docComputed.value?.blocks,
+        ),
       );
       return path ? `PDF 파일을 저장했습니다: ${path}` : null;
     });
@@ -2507,7 +2620,12 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
     runAction("csv", async () => {
       if (!result || resultStale) throw new Error("계산 후 CSV를 저장해 주세요.");
       const path = await ipc.exportCompensationDeathCsv(
-        withCompensationExportWarnings(result, timingOf(state), delayComputed.value),
+        withCompensationExportWarnings(
+          result,
+          timingOf(state),
+          delayComputed.value,
+          docComputed.value?.blocks,
+        ),
       );
       return path ? `CSV 파일을 저장했습니다: ${path}` : null;
     });
@@ -2751,6 +2869,21 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
               구간 금액은 원 미만을 버립니다 (생계비 1/3은 정확히 2/3을 곱합니다). 끄면 절사하지
               않습니다. 개호비 등 기타손해에는 적용하지 않습니다. 새 계산은 켜진 상태가 기본이고, 이
               옵션이 없던 이전 버전 파일은 저장 당시대로 끈 상태로 엽니다.
+            </p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={state.truncateEachStep}
+                onChange={(e) => update({ truncateEachStep: e.target.checked })}
+              />
+              원 미만은 계수를 곱할 때마다 버림
+            </label>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              끄면(기본) 일실수입 구간 금액을 마지막에 한 번 버립니다. 켜면 월 소득에
+              노동능력상실률, 생계비 공제 후 비율, 호프만 계수를 하나씩 곱할 때마다 원 미만을 버려
+              구간 금액이 끈 쪽과 같거나 적습니다. 앞에서 버린 원 미만에 뒤 계수가 곱해지므로 차이는
+              호프만 계수 크기에 따라 구간마다 수백 원에 이를 수 있습니다. 어느 쪽을 써야 한다는
+              판결 근거는 찾지 못했습니다.
             </p>
             <LaborRateTimingFields value={state} onChange={update} notice={legacyNotice} />
           </CardContent>
@@ -3052,6 +3185,15 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
             onChange={setDelay}
             accidentDate={state.accidentDate}
             computed={delayComputed}
+            stale={resultStale}
+          />
+        ) : null}
+
+        {result ? (
+          <DocumentTextCard
+            value={doc}
+            onChange={setDoc}
+            computed={docComputed}
             stale={resultStale}
           />
         ) : null}

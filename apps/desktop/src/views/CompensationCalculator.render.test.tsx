@@ -409,3 +409,24 @@ describe("사건 파일 열기 (손해배상)", () => {
     expect(screen.getByTestId("compensation-injury-panel").className).toBe("contents");
   });
 });
+
+describe("조정안·판결 이유 형식 카드", () => {
+  it("계산 뒤 켜면 조정 시나리오 3행과 문단이 보이고, 판결 이유 형식으로 바꾸면 시나리오가 없다", () => {
+    const view = renderInjury();
+    fireEvent.change(view.getByPlaceholderText("예: 0.30"), { target: { value: "20%" } });
+    fireEvent.click(view.getByRole("button", { name: "계산" }));
+    const card = within(view.getByTestId("compensation-document-card"));
+    fireEvent.click(card.getByLabelText("문단 만들기"));
+    const rows = within(card.getByTestId("compensation-mediation-scenarios")).getAllByRole("row");
+    expect(rows.map((r) => (r as HTMLTableRowElement).cells[0]?.textContent)).toEqual([
+      "피고 책임",
+      "80%",
+      "75%",
+      "85%",
+    ]);
+    expect(card.getByText(/^조정안 형식 \(조정일/)).toBeTruthy();
+    fireEvent.click(card.getByLabelText("판결 이유 형식"));
+    expect(card.queryByTestId("compensation-mediation-scenarios")).toBeNull();
+    expect(card.getByText("별지 일실수입 계산표")).toBeTruthy();
+  });
+});

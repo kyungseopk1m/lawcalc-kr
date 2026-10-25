@@ -12,9 +12,9 @@ use super::result_view::{
     heir_excess_dropped_row, heir_rounding_row, industrial_benefit_value_text, options_summary,
     segments_have_dates, segments_have_living_cost, shares_have_claimant_breakdown,
     shares_have_survivor_benefit, CompensationDeathResultView, CompensationDelayDamagesView,
-    CompensationOtherDamagesView, CompensationResultView, CompensationSegmentView,
-    InheritanceResultView, LitigationCostResultView, ResultView, LIVING_COST_AFTER_LIFE_NOTE,
-    LIVING_COST_SEGMENT_MARK,
+    CompensationDocumentTextView, CompensationOtherDamagesView, CompensationResultView,
+    CompensationSegmentView, InheritanceResultView, LitigationCostResultView, ResultView,
+    LIVING_COST_AFTER_LIFE_NOTE, LIVING_COST_SEGMENT_MARK,
 };
 
 /// CSV formula injection defense.
@@ -204,22 +204,37 @@ pub fn render_csv_bytes(view: &ResultView) -> Result<Vec<u8>, Error> {
         .flexible(true)
         .from_writer(vec![]);
 
-    wtr.write_record(["시작일", "종료일", "일수", "이율", "공식", "이자(원)"])?;
+    wtr.write_record([
+        "시작일",
+        "종료일",
+        "일수",
+        "이율",
+        "원금(원)",
+        "공식",
+        "이자(원)",
+        "이자 누계(원)",
+    ])?;
 
+    // 구 VK 이자 화면처럼 행마다 원금과 이자 누계를 싣는다. 합계가 행 금액의 합이라 마지막 누계 = 합계.
+    let principal_cell = escape_csv_cell(&format_currency(view.principal)).into_owned();
+    let mut cumulative = 0.0;
     for seg in &view.segments {
-        let row: [String; 6] = [
+        cumulative += seg.interest;
+        let row: [String; 8] = [
             escape_csv_cell(seg.from.as_str()).into_owned(),
             escape_csv_cell(seg.to.as_str()).into_owned(),
             escape_csv_cell(&seg.days.to_string()).into_owned(),
             escape_csv_cell(&format_rate_percent(seg.rate)).into_owned(),
+            principal_cell.clone(),
             escape_csv_cell(seg.formula.as_str()).into_owned(),
             escape_csv_cell(&format_currency(seg.interest)).into_owned(),
+            escape_csv_cell(&format_currency(cumulative)).into_owned(),
         ];
         wtr.write_record(&row)?;
     }
 
     let total_cell = escape_csv_cell(&format_currency(view.total_interest)).into_owned();
-    wtr.write_record(["합계", "", "", "", "", total_cell.as_str()])?;
+    wtr.write_record(["합계", "", "", "", "", "", total_cell.as_str(), ""])?;
 
     // summary footer rows (key,value pairs, padded so reader still aligns)
     let summary_rows: [(&str, String); 5] = [
@@ -589,6 +604,7 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         }
     }
     write_delay_damages_rows(&mut wtr, view.delay_damages.as_ref())?;
+    write_document_text_rows(&mut wtr, &view.document_texts)?;
 
     let versions = format!(
         "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
@@ -760,6 +776,26 @@ fn write_death_claimant_rows(
             .map(|cell| escape_csv_cell(cell).into_owned())
             .collect();
         wtr.write_record(&escaped)?;
+    }
+    Ok(())
+}
+
+/// 조정안·판결 이유 형식 문단 행 (화면에서 만들었을 때만). 제목 한 행, 이어서 줄마다 한 행
+/// (첫 칸은 비우고, 탭으로 나뉜 표 행은 칸으로 나눈다).
+fn write_document_text_rows(
+    wtr: &mut csv::Writer<Vec<u8>>,
+    blocks: &[CompensationDocumentTextView],
+) -> Result<(), Error> {
+    for block in blocks {
+        wtr.write_record([escape_csv_cell(&block.title).into_owned()])?;
+        for line in &block.lines {
+            let mut row = vec![String::new()];
+            row.extend(
+                line.split('\t')
+                    .map(|c| escape_csv_cell(c.trim_start()).into_owned()),
+            );
+            wtr.write_record(&row)?;
+        }
     }
     Ok(())
 }
@@ -1004,6 +1040,7 @@ pub fn render_compensation_death_csv_bytes(
     }
 
     write_delay_damages_rows(&mut wtr, view.delay_damages.as_ref())?;
+    write_document_text_rows(&mut wtr, &view.document_texts)?;
 
     let versions = format!(
         "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
@@ -1144,8 +1181,29 @@ mod tests {
         let bytes = render_csv_bytes(&sample()).unwrap();
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
         assert!(body.contains("2024-01-01,2024-12-31,366,5%"));
-        // Total row: "합계" + 4 empty + quoted total (contains commas).
-        assert!(body.contains("합계,,,,,\"1,095,068\""));
+        // Total row: "합계" + 5 empty + quoted total (contains commas) + empty 누계.
+        assert!(body.contains("합계,,,,,,\"1,095,068\","));
+    }
+
+    /// VK 이율 변경 실측(기간식): 행마다 원금 50,000,000, 누계 2,885,245 → 7,619,491.
+    #[test]
+    fn segment_rows_carry_principal_and_cumulative_interest() {
+        let mut view = sample();
+        view.principal = 50_000_000.0;
+        view.segments[0].interest = 2_885_245.0;
+        view.segments[1].interest = 4_734_246.0;
+        view.total_interest = 7_619_491.0;
+        let bytes = render_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body
+            .lines()
+            .next()
+            .unwrap()
+            .ends_with("이자(원),이자 누계(원)"));
+        assert!(body.contains(",\"50,000,000\","));
+        assert!(body.contains("\"2,885,245\",\"2,885,245\""));
+        assert!(body.contains("\"4,734,246\",\"7,619,491\""));
+        assert!(body.contains("합계,,,,,,\"7,619,491\","));
     }
 
     #[test]
@@ -1185,7 +1243,7 @@ mod tests {
         let bytes = render_csv_bytes(&view).unwrap();
         let body = std::str::from_utf8(&bytes[3..]).unwrap();
         assert!(body.contains("시작일"));
-        assert!(body.contains("합계,,,,,0"));
+        assert!(body.contains("합계,,,,,,0,"));
         assert!(body.contains("이자 합계(원),0"));
         assert!(body.contains("면책 고지"));
     }
@@ -1294,6 +1352,7 @@ mod tests {
             life_expectancy_text: String::new(),
             claimants: None,
             delay_damages: None,
+            document_texts: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1573,6 +1632,7 @@ mod tests {
             other_claimants: None,
             deduction_remain_won: 0.0,
             delay_damages: None,
+            document_texts: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1809,6 +1869,24 @@ mod tests {
         assert!(body.contains("'=배우자"), "claimant name is escaped");
         assert!(body.contains("지연손해금 기준,기산일 2022-03-01"));
         assert!(body.contains("주문,\"피해자 본인에게 1,000,000원 및"));
+    }
+
+    #[test]
+    fn compensation_csv_writes_document_texts_with_tab_cells() {
+        let mut view = compensation_sample();
+        let plain =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(!plain.contains("별지 일실수입 계산표"));
+        view.document_texts = vec![super::super::result_view::CompensationDocumentTextView {
+            title: "별지 일실수입 계산표".into(),
+            lines: vec![
+                "순번\t기간\t금액".into(),
+                "1\t사고 후 0~360개월\t=1원".into(),
+            ],
+        }];
+        let body =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(body.contains("별지 일실수입 계산표\n,순번,기간,금액\n,1,사고 후 0~360개월,'=1원"));
     }
 
     #[test]

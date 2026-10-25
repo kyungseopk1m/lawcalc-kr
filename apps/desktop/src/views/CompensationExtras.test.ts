@@ -4,12 +4,15 @@ import { STANDARD_DISCLAIMER } from "@lawcalc-kr/core-engine";
 import {
   computeCompensation,
   computeCompensationDeath,
+  computeMediationInterest,
   type CompensationAutoDeathInput,
   type CompensationInput,
 } from "@lawcalc-kr/compensation";
 
 import {
+  computeDocumentExport,
   computeDelayDamagesExport,
+  defaultDocumentFormState,
   deathClaimantsForDirtySnapshot,
   defaultDeathClaimantsFormState,
   defaultDelayDamagesFormState,
@@ -482,5 +485,154 @@ describe("사망 고유 위자료: 상속인 이름이 바뀐 경우", () => {
       ["배우자"],
     );
     expect(snapshot.others).toEqual([{ name: "모", solatiumText: "1000" }]);
+  });
+});
+
+describe("P4-4·P4-7 조정안·판결 이유 형식 문단과 단계마다 절사", () => {
+  /** 외부 대조 B-3: B-1 + 위자료 5,000,000 + 전액공제 3,000,000, 원고별 원 단위. */
+  const b3: CompensationInput = {
+    base: {
+      birthDate: "1980-01-01",
+      accidentDate: "2010-01-01",
+      treatmentEndDate: "2010-01-01",
+      sex: "male",
+      retirementAge: 60,
+      courtTruncation: true,
+    },
+    lossRate: { permanent: [{ ratio: 0.3 }], hospitalizationFullLoss: false },
+    lostIncome: { directWageWon: 68_965, workingDaysPerMonth: 22 },
+    solatiumWon: 5_000_000,
+    faultRatio: 0.2,
+    deductions: { absolute: [{ amount: 3_000_000 }] },
+    claimants: { finalRounding: "won" },
+  };
+  const mediation = { ...defaultDocumentFormState("2026-10-22"), enabled: true };
+
+  it("조정 시나리오: 책임 80·75·85% 금액이 외부 대조값과 같고 조정일까지 이자를 더한다", () => {
+    const result = computeCompensation(b3);
+    const doc = computeDocumentExport(mediation, b3, result, (faultRatio) =>
+      computeCompensation({ ...b3, faultRatio }),
+    );
+    expect(doc.error).toBeUndefined();
+    const rows = doc.value!.scenarios;
+    expect(rows.map((r) => [r.responsibilityPercent, r.finalWon])).toEqual([
+      [80, 81_967_731],
+      [75, 76_969_748],
+      [85, 86_965_714],
+    ]);
+    for (const r of rows) {
+      expect(r.totalWon).toBe(
+        computeMediationInterest(r.finalWon, "2010-01-01", "2026-10-22").totalWon,
+      );
+    }
+    const [text, table] = doc.value!.blocks;
+    expect(text!.title).toBe("조정안 형식 (조정일 2026. 10. 22.)");
+    expect(text!.lines).toContain("  책임 75%: 76,969,748원 (141,655,967원)");
+    expect(text!.lines.join("\n")).toContain(
+      "(1) 사고 후 0~360개월 360개월: 월 1,517,230원 × 30% × 219.6100 = 99,959,664원",
+    );
+    expect(table!.lines[0]).toBe("순번\t기간\t개월\t월 소득\t상실률\t호프만\t금액");
+    expect(table!.lines.at(-1)).toBe("합계\t\t\t\t\t\t99,959,664원");
+  });
+
+  it("조정일 누락·사고일 전·가감 폭 오류는 문단 없이 오류만", () => {
+    const result = computeCompensation(b3);
+    const run = (patch: object) =>
+      computeDocumentExport({ ...mediation, ...patch }, b3, result, () => result);
+    expect(run({ mediationDate: "" }).error).toBe("조정일을 입력하세요.");
+    expect(run({ mediationDate: "2009-12-31" }).error).toBe("조정일은 사고일 이후여야 합니다.");
+    expect(run({ spreadPercentText: "abc" }).error).toMatch(/^가감 폭:/);
+    expect(
+      computeDocumentExport({ ...mediation, enabled: false }, b3, result, () => result),
+    ).toEqual({});
+  });
+
+  it("판결 이유 형식: 결론·지연손해금 문구·별지 계산표, 내보내기와 클립보드에 실린다", () => {
+    const result = computeCompensation(b3);
+    const delay = computeDelayDamagesExport(
+      { ...defaultDelayDamagesFormState("2026-10-22"), enabled: true, judgmentDate: "2026-09-30" },
+      "2010-01-01",
+      delayPrincipalsOf(result),
+    ).value;
+    const doc = computeDocumentExport(
+      { ...mediation, format: "judgment" },
+      b3,
+      result,
+      () => result,
+      delay,
+    ).value!;
+    expect(doc.scenarios).toEqual([]);
+    const lines = doc.blocks[0]!.lines.join("\n");
+    expect(lines).toContain("피해자는 1980. 1. 1.생 남자이고, 2010. 1. 1. 사고를 당하였다.");
+    expect(lines).toContain("가동연한은 만 60세가 되기 전날인 2039. 12. 31.까지로 보았다.");
+    expect(lines).toContain("피고의 책임을 80%로 제한한다");
+    expect(lines).toContain("피해자 본인 81,967,731원 (합계 81,967,731원)");
+    expect(lines).toContain("지연손해금: 피해자 본인에게 81,967,731원 및 이에 대하여");
+    expect(doc.blocks[1]!.title).toBe("별지 일실수입 계산표");
+
+    const exported = withCompensationExportWarnings(result, undefined, undefined, doc.blocks);
+    expect(exported.documentTexts).toEqual(doc.blocks);
+    expect(withCompensationExportWarnings(result)).not.toHaveProperty("documentTexts");
+    expect(formatCompensationForClipboard(result, 0, undefined, undefined, doc)).toContain(
+      "판결 이유 형식 (손해배상의 범위)",
+    );
+  });
+
+  it("판결 이유 형식: 과실 0% 면 책임 제한 문장을 쓰지 않는다", () => {
+    const input = { ...b3, faultRatio: 0 };
+    const result = computeCompensation(input);
+    const doc = computeDocumentExport(
+      { ...mediation, format: "judgment" },
+      input,
+      result,
+      () => result,
+    ).value!;
+    const lines = doc.blocks[0]!.lines.join("\n");
+    expect(lines).not.toContain("제한한다");
+    expect(lines).toContain("피해자의 과실을 인정하지 않으므로 책임을 제한하지 않는다.");
+  });
+
+  it("사망 판결 이유 형식: 생계비 비율과 생계비 공제 열", () => {
+    const input: CompensationAutoDeathInput = {
+      mode: "death",
+      base: { birthDate: "1980-01-01", accidentDate: "2010-01-01", sex: "male", retirementAge: 65 },
+      lostIncome: { directWageWon: 68_965, workingDaysPerMonth: 22 },
+      livingCostDeductionRatio: 1 / 3,
+      funeralExpenseWon: 5_000_000,
+      faultRatio: 0.1,
+    };
+    const result = computeCompensationDeath(input);
+    const doc = computeDocumentExport({ ...mediation, format: "judgment" }, input, result, () =>
+      computeCompensationDeath(input),
+    ).value!;
+    const lines = doc.blocks[0]!.lines.join("\n");
+    expect(lines).toContain("2010. 1. 1. 사고로 사망하였다.");
+    expect(lines).toContain("생계비 공제 비율: 수입의 1/3.");
+    expect(lines).toContain("장례비 5,000,000원");
+    expect(doc.blocks[1]!.lines[0]).toContain("생계비 공제 후");
+    expect(doc.blocks[1]!.lines[1]).toContain("\t2/3\t");
+  });
+
+  it("단계마다 절사는 켰을 때만 저장하고 열면 그대로 (부상·사망)", () => {
+    const injury = { ...defaultCompensationFormState(), truncateEachStep: true };
+    const input = buildCompensationInput(injury);
+    expect(input.base.truncateEachStep).toBe(true);
+    expect(buildCompensationInput(defaultCompensationFormState()).base).not.toHaveProperty(
+      "truncateEachStep",
+    );
+    const file = buildCompensationLcalcFile(input, computeCompensation(input), "");
+    const loaded = reopen(JSON.parse(JSON.stringify(file)));
+    if (loaded.mode === "death") throw new Error("expected injury");
+    expect(applyLoadedCompensationInput(loaded).truncateEachStep).toBe(true);
+
+    const death = buildCompensationDeathInput({
+      ...defaultCompensationDeathFormState(),
+      truncateEachStep: true,
+    });
+    expect(death.base.truncateEachStep).toBe(true);
+    const deathFile = buildCompensationDeathLcalcFile(death, computeCompensationDeath(death), "");
+    const deathLoaded = reopen(JSON.parse(JSON.stringify(deathFile)));
+    if (deathLoaded.mode !== "death") throw new Error("expected death");
+    expect(applyLoadedCompensationDeathInput(deathLoaded).truncateEachStep).toBe(true);
   });
 });

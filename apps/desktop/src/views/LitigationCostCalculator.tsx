@@ -48,6 +48,7 @@ type ProvisionalApplicationKind =
   | "objectionOrCancellation";
 
 import { CaseValueEstimator } from "../components/form/CaseValueEstimator";
+import { CostAssessmentPanel } from "../components/litigation-cost-assessment";
 import { DeliveryCodePanel } from "../components/litigation-delivery-code-panel";
 import { StampExtrasPanel } from "../components/litigation-stamp-extras-panel";
 import { ClaimAmendmentPanel } from "../components/form/ClaimAmendmentPanel";
@@ -1451,6 +1452,9 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
             {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
           </CardContent>
         </Card>
+      </div>
+      <div className="lg:col-span-2">
+        <CostAssessmentPanel />
       </div>
     </main>
   );

@@ -15,7 +15,11 @@ import type {
   LaborRateEffectiveRule,
 } from "@lawcalc-kr/compensation";
 
-import { lifeExpectancyText, type DelayDamagesExport } from "./compensation-extras";
+import {
+  lifeExpectancyText,
+  type DelayDamagesExport,
+  type DocumentTextBlock,
+} from "./compensation-extras";
 import { formatWon } from "./format-won";
 
 /** 경고 문구를 실어 보내기 위해 export payload 에만 덧붙이는 필드. `.lcalc` 에는 저장하지 않는다. */
@@ -39,6 +43,8 @@ export interface WithExportWarnings {
   lifeExpectancyText: string;
   /** 지연손해금 블록. 화면에서 켜고 계산된 때만 싣는다 (손해배상액과 별도). */
   delayDamages?: DelayDamagesExport;
+  /** 조정안·판결 이유 형식 문단과 별지 계산표. 화면에서 켜고 만든 때만 싣는다. */
+  documentTexts?: DocumentTextBlock[];
 }
 
 /** 결과를 낸 노임 시점 입력. 결과 객체에 없으므로 화면 입력에서 받는다. */
@@ -47,6 +53,22 @@ export interface LaborRateTiming {
   laborRateEffectiveRule?: LaborRateEffectiveRule;
   /** 부상·사망 `base.courtTruncation`. 결과에 없어 화면이 넘긴다. */
   courtTruncation?: boolean;
+  /** 부상·사망 `base.truncateEachStep`. 결과에 없어 화면이 넘긴다. */
+  truncateEachStep?: boolean;
+}
+
+/** 단계마다 원 미만 절사 문구. */
+export const TRUNCATE_EACH_STEP_TEXT = "일실수입 구간 금액은 계수를 곱할 때마다 원 미만 버림";
+
+/** "절사" 행 값 (법원 방식 절사·단계마다 절사). 둘 다 꺼져 있으면 "". 화면·클립보드·PDF·CSV 공용. */
+export function truncationTextOf(
+  result: CompensationResult | CompensationAutoDeathResult,
+  timing: LaborRateTiming,
+): string {
+  return [
+    ...(timing.courtTruncation ? [courtTruncationTextOf(result)] : []),
+    ...(timing.truncateEachStep ? [TRUNCATE_EACH_STEP_TEXT] : []),
+  ].join(" · ");
 }
 
 /** "절사" 행 값. 화면·클립보드·PDF·CSV 공용. */
@@ -242,6 +264,7 @@ export function withCompensationExportWarnings<T extends AnyCompensationResult>(
   result: T,
   timing?: LaborRateTiming,
   delayDamages?: DelayDamagesExport,
+  documentTexts?: DocumentTextBlock[],
 ): T & WithExportWarnings {
   const settlement = solatiumSettlement(result);
   return {
@@ -253,9 +276,10 @@ export function withCompensationExportWarnings<T extends AnyCompensationResult>(
     deductionExcessLabel: deductionExcessLabel(settlement),
     propertyOnlyExcessWon: propertyOnlyExcessWon(result),
     laborRateTimingText: timing ? laborRateTimingText(timing) : "",
-    courtTruncationText: timing?.courtTruncation ? courtTruncationTextOf(result) : "",
+    courtTruncationText: timing ? truncationTextOf(result, timing) : "",
     lifeExpectancyText:
       result.lifeExpectancy !== undefined ? lifeExpectancyText(result.lifeExpectancy) : "",
     ...(delayDamages !== undefined && delayDamages.rows.length > 0 ? { delayDamages } : {}),
+    ...(documentTexts !== undefined && documentTexts.length > 0 ? { documentTexts } : {}),
   };
 }

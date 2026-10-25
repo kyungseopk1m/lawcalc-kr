@@ -29,8 +29,9 @@ use super::result_view::{
     heir_excess_dropped_row, heir_rounding_row, industrial_benefit_value_text, options_summary,
     segments_have_dates, segments_have_living_cost, shares_have_claimant_breakdown,
     shares_have_survivor_benefit, CompensationDeathResultView, CompensationDeductionsView,
-    CompensationDelayDamagesView, CompensationOtherDamagesView, CompensationResultView,
-    InheritanceResultView, LitigationCostResultView, ResultView, LIVING_COST_AFTER_LIFE_NOTE,
+    CompensationDelayDamagesView, CompensationDocumentTextView, CompensationOtherDamagesView,
+    CompensationResultView, InheritanceResultView, LitigationCostResultView, ResultView,
+    LIVING_COST_AFTER_LIFE_NOTE,
 };
 
 const PRETENDARD_REGULAR: &[u8] = include_bytes!("../../assets/fonts/Pretendard-Regular.ttf");
@@ -218,13 +219,15 @@ const MARGIN_MM: f32 = 18.0;
 const FOOTER_RESERVE_MM: f32 = 22.0;
 
 /// Column widths in mm. Sum must equal inner width (PAGE_W_MM - 2*MARGIN).
-const COL_WIDTHS: [f32; 6] = [
-    24.0, // 시작일
-    24.0, // 종료일
-    12.0, // 일수
-    14.0, // 이율
-    78.0, // 공식
-    22.0, // 이자
+const COL_WIDTHS: [f32; 8] = [
+    20.0, // 시작일
+    20.0, // 종료일
+    11.0, // 일수
+    12.0, // 이율
+    23.0, // 원금
+    41.0, // 공식
+    23.0, // 이자
+    24.0, // 이자 누계
 ];
 
 /// Build the PDF byte stream for a single calculation result.
@@ -349,6 +352,7 @@ pub fn render_compensation_pdf_bytes(view: &CompensationResultView) -> Result<Ve
     writer.draw_compensation_segments_table(view);
     writer.draw_compensation_claimants_table(view);
     writer.draw_delay_damages(view.delay_damages.as_ref());
+    writer.draw_document_texts(&view.document_texts);
     writer.draw_compensation_footer(view);
 
     let bytes = doc
@@ -384,6 +388,7 @@ pub fn render_compensation_death_pdf_bytes(
     writer.draw_compensation_death_segments_table(view);
     writer.draw_compensation_death_inheritance_table(view);
     writer.draw_delay_damages(view.delay_damages.as_ref());
+    writer.draw_document_texts(&view.document_texts);
     writer.draw_compensation_death_footer(view);
 
     let bytes = doc
@@ -567,7 +572,16 @@ impl<'a> PageWriter<'a> {
         // Header band.
         self.hline(self.left(), right, self.y);
         self.advance(5.0);
-        let headers = ["시작일", "종료일", "일수", "이율", "공식", "이자(원)"];
+        let headers = [
+            "시작일",
+            "종료일",
+            "일수",
+            "이율",
+            "원금(원)",
+            "공식",
+            "이자(원)",
+            "이자 누계(원)",
+        ];
         let mut x = self.left();
         for (h, w) in headers.iter().zip(COL_WIDTHS.iter()) {
             self.text(h, 9.0, x + 1.0, self.y - 3.5);
@@ -576,22 +590,26 @@ impl<'a> PageWriter<'a> {
         self.advance(5.0);
         self.hline(self.left(), right, self.y);
 
-        // Body rows.
+        // Body rows. 구 VK 이자 화면처럼 행마다 원금과 이자 누계를 싣는다 (마지막 누계 = 합계).
+        let mut cumulative = 0.0;
         for seg in &view.segments {
+            cumulative += seg.interest;
             self.advance(5.4);
             // Wrap the formula column if needed, push extra row height.
-            let formula_lines = wrap_text(&seg.formula, 36);
+            let formula_lines = wrap_text(&seg.formula, 19);
             let extra = (formula_lines.len() as f32 - 1.0).max(0.0) * 4.2;
             if extra > 0.0 {
                 self.advance(extra);
             }
-            let cells: [String; 6] = [
+            let cells: [String; 8] = [
                 seg.from.clone(),
                 seg.to.clone(),
                 seg.days.to_string(),
                 format_rate_percent(seg.rate),
+                format_currency(view.principal),
                 String::new(), // drawn separately to allow multi-line
                 format_currency(seg.interest),
+                format_currency(cumulative),
             ];
             let mut x = self.left();
             for (cell, w) in cells.iter().zip(COL_WIDTHS.iter()) {
@@ -601,7 +619,7 @@ impl<'a> PageWriter<'a> {
                 x += w;
             }
             // formula column
-            let formula_x = self.left() + COL_WIDTHS[..4].iter().sum::<f32>() + 1.0;
+            let formula_x = self.left() + COL_WIDTHS[..5].iter().sum::<f32>() + 1.0;
             for (i, line) in formula_lines.iter().enumerate() {
                 self.text(line, 8.0, formula_x, self.y - 1.0 - 4.2 * i as f32);
             }
@@ -611,7 +629,7 @@ impl<'a> PageWriter<'a> {
         self.advance(5.4);
         self.hline(self.left(), right, self.y + 4.0);
         self.text("합계", 9.0, self.left() + 1.0, self.y - 1.0);
-        let total_x = self.left() + COL_WIDTHS[..5].iter().sum::<f32>() + 1.0;
+        let total_x = self.left() + COL_WIDTHS[..6].iter().sum::<f32>() + 1.0;
         self.text(
             &format_currency(view.total_interest),
             9.0,
@@ -1003,6 +1021,14 @@ impl<'a> PageWriter<'a> {
                 .map(|r| format!("주문: {}", r.order_line())),
         );
         self.draw_wrapped_block("판결 주문형 문구", &texts);
+    }
+
+    /// 조정안·판결 이유 형식 문단 (화면에서 만들었을 때만). 탭 칸은 " | " 로 잇는다.
+    fn draw_document_texts(&mut self, blocks: &[CompensationDocumentTextView]) {
+        for block in blocks {
+            let lines: Vec<String> = block.lines.iter().map(|l| l.replace('\t', " | ")).collect();
+            self.draw_wrapped_block(&block.title, &lines);
+        }
     }
 
     /// "노임 기준" 줄 (계산 기준일·규약). 값이 없는 구 payload 는 줄을 내지 않는다.
@@ -1792,6 +1818,7 @@ mod tests {
             life_expectancy_text: String::new(),
             claimants: None,
             delay_damages: None,
+            document_texts: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1907,6 +1934,7 @@ mod tests {
             other_claimants: None,
             deduction_remain_won: 0.0,
             delay_damages: None,
+            document_texts: Vec::new(),
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1964,6 +1992,10 @@ mod tests {
         });
         assert!(labels(&PageWriter::compensation_summary_lines(&view))
             .contains(&"일실퇴직금".to_string()));
+        view.document_texts = vec![CompensationDocumentTextView {
+            title: "조정안 형식".into(),
+            lines: vec!["1. 기초 사항".into(), "1\t2010. 1. 1. ~\t1원".into()],
+        }];
         let bytes = render_compensation_pdf_bytes(&view).expect("render pdf");
         assert!(bytes.starts_with(b"%PDF"));
 
