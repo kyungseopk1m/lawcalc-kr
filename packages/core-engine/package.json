@@ -51,6 +51,6 @@
     "test:golden": "vitest run --config vitest.golden.config.ts"
   },
   "devDependencies": {
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.12"
   }
 }
