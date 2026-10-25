@@ -10,9 +10,11 @@ use crate::error::Error;
 use super::result_view::{
     compensation_deduction_rows, disclaimer_text, format_currency, format_rate_percent,
     heir_excess_dropped_row, heir_rounding_row, industrial_benefit_value_text, options_summary,
-    segments_have_dates, shares_have_survivor_benefit, CompensationDeathResultView,
+    segments_have_dates, segments_have_living_cost, shares_have_claimant_breakdown,
+    shares_have_survivor_benefit, CompensationDeathResultView, CompensationDelayDamagesView,
     CompensationOtherDamagesView, CompensationResultView, CompensationSegmentView,
-    InheritanceResultView, LitigationCostResultView, ResultView,
+    InheritanceResultView, LitigationCostResultView, ResultView, LIVING_COST_AFTER_LIFE_NOTE,
+    LIVING_COST_SEGMENT_MARK,
 };
 
 /// CSV formula injection defense.
@@ -253,10 +255,15 @@ pub fn render_inheritance_csv_bytes(view: &InheritanceResultView) -> Result<Vec<
         .flexible(true)
         .from_writer(vec![]);
 
-    wtr.write_record(["상속인", "지분(약분)", "약분 전", "백분율(참고)"])?;
+    let has_amount = view.estate_won.is_some();
+    let mut header = vec!["상속인", "지분(약분)", "약분 전", "백분율(참고)"];
+    if has_amount {
+        header.push("금액(원)");
+    }
+    wtr.write_record(&header)?;
 
     for share in &view.shares {
-        let row: [String; 4] = [
+        let mut row: Vec<String> = vec![
             escape_csv_cell(share.name.as_str()).into_owned(),
             escape_csv_cell(&format!("{}/{}", share.numerator, share.denominator)).into_owned(),
             escape_csv_cell(&format!(
@@ -270,7 +277,30 @@ pub fn render_inheritance_csv_bytes(view: &InheritanceResultView) -> Result<Vec<
             ))
             .into_owned(),
         ];
+        if has_amount {
+            row.push(format_currency(share.amount_won.unwrap_or(0.0)));
+        }
         wtr.write_record(&row)?;
+    }
+
+    if let Some(estate) = view.estate_won {
+        let remainder = view.remainder_won.unwrap_or(0.0);
+        let total = view
+            .shares
+            .iter()
+            .map(|s| s.amount_won.unwrap_or(0.0))
+            .sum::<f64>()
+            + remainder;
+        wtr.write_record(["상속재산(원)", format_currency(estate).as_str()])?;
+        wtr.write_record([
+            "끝수(원) 원 미만 내림·배정하지 않음",
+            format_currency(remainder).as_str(),
+        ])?;
+        wtr.write_record(["합계(원) = 금액 합 + 끝수", format_currency(total).as_str()])?;
+    }
+    for line in &view.trace {
+        let cell = escape_csv_cell(line.as_str()).into_owned();
+        wtr.write_record(["전개식", cell.as_str()])?;
     }
 
     let decedent_cell = escape_csv_cell(view.decedent.name.as_deref().unwrap_or("-")).into_owned();
@@ -387,19 +417,38 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         .from_writer(vec![]);
 
     let dated = segments_have_dates(&view.segments);
-    write_segment_header(&mut wtr, dated, &["상실률"])?;
+    // 기대여명 이후 생계비 공제 구간이 있으면 끝에 비고 열을 둔다 (없으면 종전 표 그대로).
+    let living_cost = segments_have_living_cost(&view.segments);
+    if living_cost {
+        let mut header = vec!["기간(개월)"];
+        if dated {
+            header.extend(["초일", "말일"]);
+        }
+        header.extend(["상실률", "단가(원/일)", "호프만(적용)", "금액(원)", "비고"]);
+        wtr.write_record(&header)?;
+    } else {
+        write_segment_header(&mut wtr, dated, &["상실률"])?;
+    }
     for (i, segment) in view.segments.iter().enumerate() {
         let cap_marker = if view.hoffman240_cap.capped_at_index == Some(i as i64) {
             " (한도)"
         } else {
             ""
         };
-        write_segment_row(
+        let note = if !living_cost {
+            None
+        } else if segment.living_cost_deducted == Some(true) {
+            Some(LIVING_COST_SEGMENT_MARK)
+        } else {
+            Some("")
+        };
+        write_segment_row_with_note(
             &mut wtr,
             segment,
             dated,
             &[format!("{:.2}%", segment.loss_rate * 100.0)],
             cap_marker,
+            note,
         )?;
     }
     write_segment_subtotal(
@@ -409,6 +458,9 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
         1,
         view.lost_income_subtotal_won,
     )?;
+    if living_cost {
+        wtr.write_record([LIVING_COST_AFTER_LIFE_NOTE])?;
+    }
 
     // 산재(장해급여) — 일실수입 한도 선공제 (2021다241618 전합). 자동차 결과는 skip (회귀 0).
     if let Some(ib) = &view.industrial_benefit {
@@ -449,9 +501,21 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
             view.court_truncation_text.clone(),
         ),
         (
+            if view.life_expectancy_text.is_empty() {
+                ""
+            } else {
+                "기대여명"
+            },
+            view.life_expectancy_text.clone(),
+        ),
+        (
             "중복 노동능력상실률",
             format!("{:.2}%", view.combined_loss_rate * 100.0),
         ),
+        match view.lost_retirement_subtotal_won {
+            Some(won) => ("일실퇴직금(원)", format_currency(won)),
+            None => ("", String::new()),
+        },
         ("위자료(원)", format_currency(view.solatium_won)),
         (
             "과실상계 대상 소계(원)",
@@ -513,6 +577,19 @@ pub fn render_compensation_csv_bytes(view: &CompensationResultView) -> Result<Ve
 
     write_other_damages_rows(&mut wtr, view.other_damages.as_ref())?;
 
+    if let Some(claimants) = view.claimants.as_ref() {
+        wtr.write_record(["원고", "위자료(원)", "최종액(원)"])?;
+        for c in claimants {
+            let row: [String; 3] = [
+                escape_csv_cell(&c.label()).into_owned(),
+                escape_csv_cell(&format_currency(c.solatium_won)).into_owned(),
+                escape_csv_cell(&format_currency(c.amount_won)).into_owned(),
+            ];
+            wtr.write_record(&row)?;
+        }
+    }
+    write_delay_damages_rows(&mut wtr, view.delay_damages.as_ref())?;
+
     let versions = format!(
         "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
         view.data_versions.labor_rates,
@@ -562,6 +639,18 @@ fn write_segment_row(
     middle: &[String],
     cap_marker: &str,
 ) -> Result<(), Error> {
+    write_segment_row_with_note(wtr, segment, dated, middle, cap_marker, None)
+}
+
+/// `note` 가 있으면 끝에 비고 열을 더한다 (생계비 공제 구간 표시).
+fn write_segment_row_with_note(
+    wtr: &mut csv::Writer<Vec<u8>>,
+    segment: &CompensationSegmentView,
+    dated: bool,
+    middle: &[String],
+    cap_marker: &str,
+    note: Option<&str>,
+) -> Result<(), Error> {
     let mut row = vec![format!("{} ~ {}", segment.start_month, segment.end_month)];
     if dated {
         row.push(segment.start_date.clone().unwrap_or_default());
@@ -573,6 +662,9 @@ fn write_segment_row(
         format!("{:.6}{}", segment.applied_hoffman, cap_marker),
         format_currency(segment.amount_floor_won),
     ]);
+    if let Some(note) = note {
+        row.push(note.to_string());
+    }
     let escaped: Vec<String> = row
         .iter()
         .map(|cell| escape_csv_cell(cell).into_owned())
@@ -594,6 +686,111 @@ fn write_segment_subtotal(
     row.extend(std::iter::repeat_n(String::new(), blanks));
     row.push(escape_csv_cell(&format_currency(won)).into_owned());
     wtr.write_record(&row)?;
+    Ok(())
+}
+
+/// 원고별 귀속(사망) 표. 유족급여·장의비 공제 열은 값이 있는 결과에만 둔다.
+fn write_death_claimant_rows(
+    wtr: &mut csv::Writer<Vec<u8>>,
+    shares: &[super::result_view::CompensationInheritanceShareView],
+    others: &[super::result_view::CompensationDeathOtherClaimantView],
+) -> Result<(), Error> {
+    let survivor = shares_have_survivor_benefit(shares);
+    let benefit = shares
+        .iter()
+        .any(|s| s.funeral_benefit_deducted_won.is_some());
+    let mut header = vec!["원고", "지분(약분)"];
+    if survivor {
+        header.push("유족급여 공제(원)");
+    }
+    header.extend([
+        "상속 재산상 손해(원)",
+        "상속 위자료(원)",
+        "고유 위자료(원)",
+        "장례비(원)",
+    ]);
+    if benefit {
+        header.push("장의비 공제(원)");
+    }
+    header.push("최종액(원)");
+    wtr.write_record(&header)?;
+    for s in shares {
+        let mut row = vec![s.name.clone(), format!("{}/{}", s.numerator, s.denominator)];
+        if survivor {
+            row.push(format_currency(
+                s.survivor_benefit_deducted_won.unwrap_or(0.0),
+            ));
+        }
+        row.extend([
+            format_currency(s.inherited_pecuniary_won.unwrap_or(0.0)),
+            format_currency(s.inherited_solatium_won.unwrap_or(0.0)),
+            format_currency(s.own_solatium_won.unwrap_or(0.0)),
+            format_currency(s.funeral_won.unwrap_or(0.0)),
+        ]);
+        if benefit {
+            row.push(format_currency(
+                -s.funeral_benefit_deducted_won.unwrap_or(0.0),
+            ));
+        }
+        row.push(format_currency(s.amount_won));
+        let escaped: Vec<String> = row
+            .iter()
+            .map(|cell| escape_csv_cell(cell).into_owned())
+            .collect();
+        wtr.write_record(&escaped)?;
+    }
+    // 상속인이 아닌 유족: 고유 위자료만 있다 (나머지 칸은 비운다. "-" 는 수식 방어로 따옴표가 붙는다).
+    for o in others {
+        let mut row = vec![format!("{} (상속인 아님)", o.name), String::new()];
+        if survivor {
+            row.push(String::new());
+        }
+        row.extend([
+            String::new(),
+            String::new(),
+            format_currency(o.solatium_won),
+            String::new(),
+        ]);
+        if benefit {
+            row.push(String::new());
+        }
+        row.push(format_currency(o.amount_won));
+        let escaped: Vec<String> = row
+            .iter()
+            .map(|cell| escape_csv_cell(cell).into_owned())
+            .collect();
+        wtr.write_record(&escaped)?;
+    }
+    Ok(())
+}
+
+/// 지연손해금 행 (화면에서 계산했을 때만). 표 + 기준 + 주문 문구.
+fn write_delay_damages_rows(
+    wtr: &mut csv::Writer<Vec<u8>>,
+    delay: Option<&CompensationDelayDamagesView>,
+) -> Result<(), Error> {
+    let Some(delay) = delay else {
+        return Ok(());
+    };
+    if delay.rows.is_empty() {
+        return Ok(());
+    }
+    let basis = escape_csv_cell(&delay.basis_text).into_owned();
+    wtr.write_record(["지연손해금 기준", basis.as_str()])?;
+    wtr.write_record(["원고", "원금(원)", "지연손해금(원)", "원리금(원)"])?;
+    for r in &delay.rows {
+        let row: [String; 4] = [
+            escape_csv_cell(&r.label).into_owned(),
+            escape_csv_cell(&format_currency(r.principal_won)).into_owned(),
+            escape_csv_cell(&format_currency(r.interest_won)).into_owned(),
+            escape_csv_cell(&format_currency(r.total_won)).into_owned(),
+        ];
+        wtr.write_record(&row)?;
+    }
+    for r in &delay.rows {
+        let line = escape_csv_cell(&r.order_line()).into_owned();
+        wtr.write_record(["주문", line.as_str()])?;
+    }
     Ok(())
 }
 
@@ -673,9 +870,29 @@ pub fn render_compensation_death_csv_bytes(
             view.labor_rate_timing_text.clone(),
         ),
         (
+            if view.court_truncation_text.is_empty() {
+                ""
+            } else {
+                "절사"
+            },
+            view.court_truncation_text.clone(),
+        ),
+        (
+            if view.life_expectancy_text.is_empty() {
+                ""
+            } else {
+                "기대여명"
+            },
+            view.life_expectancy_text.clone(),
+        ),
+        (
             "생계비 공제 비율",
             format!("{:.2}%", view.living_cost_deduction_ratio * 100.0),
         ),
+        match view.lost_retirement_subtotal_won {
+            Some(won) => ("일실퇴직금(원)", format_currency(won)),
+            None => ("", String::new()),
+        },
         ("위자료(원)", format_currency(view.solatium_won)),
         ("장례비(원)", format_currency(view.funeral_expense_won)),
         (
@@ -701,7 +918,10 @@ pub fn render_compensation_death_csv_bytes(
             None => ("", String::new()),
         },
         if view.deduction_excess_won > 0.0 {
-            ("공제 후 재산상 손해(원)", "0".to_string())
+            (
+                "공제 후 재산상 손해(원)",
+                format_currency(view.deduction_remain_won),
+            )
         } else {
             ("", String::new())
         },
@@ -726,6 +946,10 @@ pub fn render_compensation_death_csv_bytes(
             Some((label, won)) => (label.as_str(), format_currency(*won)),
             None => ("", String::new()),
         },
+        match view.estate_won {
+            Some(won) => ("상속대상 금액(원)", format_currency(won)),
+            None => ("", String::new()),
+        },
         ("최종 합계(원)", format_currency(view.final_won)),
     ]);
     for (key, value) in &summary_rows {
@@ -738,7 +962,17 @@ pub fn render_compensation_death_csv_bytes(
 
     write_other_damages_rows(&mut wtr, view.other_damages.as_ref())?;
 
-    if let Some(shares) = view.inheritance_shares.as_ref() {
+    if let Some(shares) = view
+        .inheritance_shares
+        .as_ref()
+        .filter(|shares| shares_have_claimant_breakdown(shares))
+    {
+        write_death_claimant_rows(
+            &mut wtr,
+            shares,
+            view.other_claimants.as_deref().unwrap_or(&[]),
+        )?;
+    } else if let Some(shares) = view.inheritance_shares.as_ref() {
         if !shares.is_empty() {
             // 수급권자별 유족급여 결과는 빈 셋째 열에 상속인별 공제액을 넣는다.
             let survivor = shares_have_survivor_benefit(shares);
@@ -768,6 +1002,8 @@ pub fn render_compensation_death_csv_bytes(
             }
         }
     }
+
+    write_delay_damages_rows(&mut wtr, view.delay_damages.as_ref())?;
 
     let versions = format!(
         "laborRates {} / lifeExpectancy {} / hoffman {} / leibniz {}",
@@ -847,6 +1083,7 @@ mod tests {
                     denominator: 7,
                     raw_numerator: 3,
                     raw_denominator: 7,
+                    amount_won: None,
                 },
                 crate::commands::result_view::InheritanceShareView {
                     name: "자녀1".into(),
@@ -854,12 +1091,42 @@ mod tests {
                     denominator: 7,
                     raw_numerator: 2,
                     raw_denominator: 7,
+                    amount_won: None,
                 },
             ],
             disclaimer: DISCLAIMER_KO.into(),
             data_version: "inheritance/v1.0.0".into(),
             computed_at: "2026-05-09T12:00:00+09:00".into(),
+            estate_won: None,
+            remainder_won: None,
+            trace: vec![],
         }
+    }
+
+    #[test]
+    fn inheritance_csv_includes_amounts_total_and_trace() {
+        let mut view = inheritance_sample();
+        view.estate_won = Some(100.0);
+        view.remainder_won = Some(1.0);
+        view.shares[0].amount_won = Some(42.0);
+        view.shares[1].amount_won = Some(57.0);
+        view.trace = vec!["=순위 결정".into()];
+        let bytes = render_inheritance_csv_bytes(&view).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(body.contains("금액(원)"));
+        assert!(body.contains("배우자,3/7,3/7,42.86%,42"));
+        assert!(body.contains("상속재산(원),100"));
+        assert!(body.contains("합계(원) = 금액 합 + 끝수,100"));
+        // 전개식 줄도 수식 주입 방어를 탄다.
+        assert!(body.contains("전개식,'=순위 결정"));
+    }
+
+    #[test]
+    fn inheritance_csv_without_estate_keeps_old_columns() {
+        let bytes = render_inheritance_csv_bytes(&inheritance_sample()).unwrap();
+        let body = std::str::from_utf8(&bytes[3..]).unwrap();
+        assert!(!body.contains("금액(원)"));
+        assert!(!body.contains("전개식"));
     }
 
     #[test]
@@ -988,6 +1255,7 @@ mod tests {
                 daily_wage_won: 172_068.0,
                 applied_hoffman: 219.610067,
                 amount_floor_won: 249_399_909.0,
+                living_cost_deducted: None,
             }],
             lost_income_subtotal_won: 249_399_909.0,
             solatium_won: 0.0,
@@ -1022,6 +1290,10 @@ mod tests {
             property_only_excess_won: 0.0,
             labor_rate_timing_text: String::new(),
             court_truncation_text: String::new(),
+            lost_retirement_subtotal_won: None,
+            life_expectancy_text: String::new(),
+            claimants: None,
+            delay_damages: None,
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1233,6 +1505,7 @@ mod tests {
                 daily_wage_won: 172_068.0,
                 applied_hoffman: 219.610067,
                 amount_floor_won: 554_222_020.0,
+                living_cost_deducted: None,
             }],
             lost_income_subtotal_won: 554_222_020.0,
             solatium_won: 80_000_000.0,
@@ -1264,6 +1537,11 @@ mod tests {
                     denominator: 7,
                     amount_won: 273_952_286.0,
                     survivor_benefit_deducted_won: None,
+                    inherited_pecuniary_won: None,
+                    inherited_solatium_won: None,
+                    own_solatium_won: None,
+                    funeral_won: None,
+                    funeral_benefit_deducted_won: None,
                 },
                 CompensationInheritanceShareView {
                     name: "자녀1".into(),
@@ -1271,6 +1549,11 @@ mod tests {
                     denominator: 7,
                     amount_won: 182_634_857.0,
                     survivor_benefit_deducted_won: None,
+                    inherited_pecuniary_won: None,
+                    inherited_solatium_won: None,
+                    own_solatium_won: None,
+                    funeral_won: None,
+                    funeral_benefit_deducted_won: None,
                 },
             ]),
             hoffman240_cap: CompensationHoffman240CapView {
@@ -1283,6 +1566,13 @@ mod tests {
             deduction_excess_label: String::new(),
             property_only_excess_won: 0.0,
             labor_rate_timing_text: String::new(),
+            court_truncation_text: String::new(),
+            lost_retirement_subtotal_won: None,
+            life_expectancy_text: String::new(),
+            estate_won: None,
+            other_claimants: None,
+            deduction_remain_won: 0.0,
+            delay_damages: None,
             data_versions: CompensationDataVersionsView {
                 labor_rates: "labor-rates/v1.0.0".into(),
                 life_expectancy: "life-expectancy/v1.0.0".into(),
@@ -1452,6 +1742,167 @@ mod tests {
             String::from_utf8(render_compensation_death_csv_bytes(&death).unwrap()[3..].to_vec())
                 .unwrap();
         assert!(body.contains("노임 기준,"));
+    }
+
+    fn delay_sample(labels: &[&str]) -> CompensationDelayDamagesView {
+        CompensationDelayDamagesView {
+            basis_text: "기산일 2022-03-01 · 판결 선고일 2026-09-30 · 계산 기준일 2026-10-22"
+                .into(),
+            rows: labels
+                .iter()
+                .map(
+                    |label| super::super::result_view::CompensationDelayDamagesRowView {
+                        label: (*label).into(),
+                        principal_won: 1_000_000.0,
+                        interest_won: 50_000.0,
+                        total_won: 1_050_000.0,
+                        order_text: "1,000,000원 및 이에 대하여 2022. 3. 1.부터 ...".into(),
+                    },
+                )
+                .collect(),
+        }
+    }
+
+    /// 새 키(기대여명·일실퇴직금·생계비 공제 구간·원고별·지연손해금)가 있을 때만 행이 붙는다.
+    #[test]
+    fn compensation_csv_writes_extra_rows_only_when_present() {
+        let mut view = compensation_sample();
+        let plain =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        for absent in [
+            "기대여명",
+            "일실퇴직금",
+            "비고",
+            "원고,",
+            "지연손해금",
+            "주문,",
+        ] {
+            assert!(!plain.contains(absent), "{absent}");
+        }
+        view.life_expectancy_text = "기준일 2022-03-01 만 31세 · 최종 여명종료일 2032-02-28".into();
+        view.lost_retirement_subtotal_won = Some(12_345_678.0);
+        view.segments[0].living_cost_deducted = Some(true);
+        view.claimants = Some(vec![
+            super::super::result_view::CompensationClaimantView {
+                role: "victim".into(),
+                name: None,
+                solatium_won: 30_000_000.0,
+                amount_won: 200_000_000.0,
+            },
+            super::super::result_view::CompensationClaimantView {
+                role: "family".into(),
+                name: Some("=배우자".into()),
+                solatium_won: 5_000_000.0,
+                amount_won: 5_000_000.0,
+            },
+        ]);
+        view.delay_damages = Some(delay_sample(&["피해자 본인"]));
+        let body =
+            String::from_utf8(render_compensation_csv_bytes(&view).unwrap()[3..].to_vec()).unwrap();
+        assert!(body.contains("기대여명,기준일 2022-03-01 만 31세 · 최종 여명종료일 2032-02-28"));
+        assert!(body.contains("일실퇴직금(원),\"12,345,678\""));
+        assert!(body.contains("금액(원),비고"));
+        assert!(body.contains("생계비 1/3 공제*"));
+        assert!(body.contains("2020나2039267"));
+        assert!(body.contains("원고,위자료(원),최종액(원)"));
+        assert!(body.contains("피해자 본인,"));
+        assert!(body.contains("'=배우자"), "claimant name is escaped");
+        assert!(body.contains("지연손해금 기준,기산일 2022-03-01"));
+        assert!(body.contains("주문,\"피해자 본인에게 1,000,000원 및"));
+    }
+
+    #[test]
+    fn compensation_death_csv_writes_claimant_breakdown_and_estate() {
+        let mut view = compensation_death_sample();
+        let plain =
+            String::from_utf8(render_compensation_death_csv_bytes(&view).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(plain.contains("상속인,지분(약분),,배정 금액(원)"));
+        assert!(!plain.contains("상속대상 금액"));
+        view.court_truncation_text = "법원 계산 프로그램 방식 (누적 호프만 소수 4자리 버림)".into();
+        view.estate_won = Some(300_000_000.0);
+        view.lost_retirement_subtotal_won = Some(1_000.0);
+        if let Some(shares) = view.inheritance_shares.as_mut() {
+            for share in shares.iter_mut() {
+                share.inherited_pecuniary_won = Some(100.0);
+                share.inherited_solatium_won = Some(200.0);
+                share.own_solatium_won = Some(300.0);
+                share.funeral_won = Some(0.0);
+            }
+            shares[0].funeral_benefit_deducted_won = Some(50.0);
+        }
+        view.delay_damages = Some(delay_sample(&["배우자", "자녀"]));
+        let body =
+            String::from_utf8(render_compensation_death_csv_bytes(&view).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(body.contains("절사,법원 계산 프로그램 방식 (누적 호프만 소수 4자리 버림)"));
+        assert!(body.contains("일실퇴직금(원),\"1,000\""));
+        assert!(body.contains("상속대상 금액(원),\"300,000,000\""));
+        assert!(body.contains(
+            "원고,지분(약분),상속 재산상 손해(원),상속 위자료(원),고유 위자료(원),장례비(원),장의비 공제(원),최종액(원)"
+        ));
+        assert!(body.contains("'-50"));
+        assert!(!body.contains("배정 금액(원)"));
+        assert!(body.contains("주문,\"자녀에게 "));
+    }
+
+    #[test]
+    fn compensation_death_csv_writes_other_claimant_rows() {
+        let mut view = compensation_death_sample();
+        if let Some(shares) = view.inheritance_shares.as_mut() {
+            for share in shares.iter_mut() {
+                share.inherited_pecuniary_won = Some(100.0);
+                share.inherited_solatium_won = Some(0.0);
+                share.own_solatium_won = Some(0.0);
+                share.funeral_won = Some(0.0);
+            }
+        }
+        view.other_claimants = Some(vec![
+            super::super::result_view::CompensationDeathOtherClaimantView {
+                name: "망인의 모".into(),
+                solatium_won: 2_100_050.0,
+                amount_won: 2_100_000.0,
+            },
+        ]);
+        let body =
+            String::from_utf8(render_compensation_death_csv_bytes(&view).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(body.contains("망인의 모 (상속인 아님),,,,\"2,100,050\",,\"2,100,000\""));
+    }
+
+    #[test]
+    fn compensation_death_csv_shows_remaining_funeral_after_excess() {
+        let mut view = compensation_death_sample();
+        view.solatium_added_won = 100_000_000.0;
+        view.deduction_excess_won = 1.0;
+        view.deduction_excess_label = "공제 초과분 (위자료에서 차감)".into();
+        view.deduction_remain_won = 5_000_000.0;
+        let body =
+            String::from_utf8(render_compensation_death_csv_bytes(&view).unwrap()[3..].to_vec())
+                .unwrap();
+        assert!(body.contains("공제 후 재산상 손해(원),\"5,000,000\""));
+    }
+
+    #[test]
+    fn compensation_payload_without_new_keys_deserializes_to_defaults() {
+        let mut value = serde_json::to_value(compensation_sample()).unwrap();
+        let object = value.as_object_mut().unwrap();
+        for key in [
+            "lostRetirementSubtotalWon",
+            "lifeExpectancyText",
+            "claimants",
+            "delayDamages",
+        ] {
+            object.remove(key);
+        }
+        let view: CompensationResultView = serde_json::from_value(value).unwrap();
+        assert!(view.life_expectancy_text.is_empty());
+        assert!(view.lost_retirement_subtotal_won.is_none());
+        assert!(view.claimants.is_none() && view.delay_damages.is_none());
+        assert_eq!(
+            render_compensation_csv_bytes(&view).unwrap(),
+            render_compensation_csv_bytes(&compensation_sample()).unwrap()
+        );
     }
 
     /// 상속인별 계산은 버린 초과분(위자료 가산 앞)과 절사 차이(뒤) 행을 써서 행 합이 최종액과 맞는다.

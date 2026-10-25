@@ -428,6 +428,40 @@ describe("전체 소가 보존 (fullCaseValue)", () => {
     expect(loaded.input.stampDuty.caseValue).toBe(30_000_000);
   });
 
+  it("인지대 산식 밖 사건구분(재산명시)으로 저장한 파일도 다시 연다", () => {
+    const stampDuty = {
+      ...buildStampDutyInput(uiState),
+      caseType: "executionAssetDisclosure" as const,
+    };
+    const input = {
+      stampDuty,
+      deliveryFee: { caseType: "executionAssetDisclosure" as const, partyCount: 2 },
+      lawyerFee: {
+        caseValue: 30_000_000,
+        caseType: "executionAssetDisclosure" as const,
+        discounts: [],
+      },
+    };
+    const result = computeLitigationCost(input, { computedAt: "2026-08-18T00:00:00.000Z" });
+    const file = {
+      schemaVersion: "3" as const,
+      kind: "litigation-cost" as const,
+      envelopeFeatures: ["litigation-cost@2"],
+      dataVersions: result.dataVersions,
+      payload: {
+        appVersion: "0.12.0",
+        createdAt: "2026-08-18T00:00:00.000Z",
+        input,
+        result: { ...result, disclaimer: STANDARD_DISCLAIMER },
+        disclaimer: STANDARD_DISCLAIMER,
+      },
+    };
+    validateLcalcEnvelope(file);
+    expect(parseLoadedLitigationCostLcalcInput(file).input.stampDuty.caseType).toBe(
+      "executionAssetDisclosure",
+    );
+  });
+
   it("구앱이 fast-reject 하도록 `litigation-cost@2` 는 화이트리스트에 있다", () => {
     expect(() =>
       validateLcalcEnvelope({

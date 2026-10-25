@@ -13,14 +13,12 @@ import { useMemo, useRef, useState } from "react";
 import {
   STANDARD_DISCLAIMER,
   computeDeadline,
-  createHolidayDeps,
   deadlinesVersionTag,
   holidaysVersionTag,
   listDeadlines,
   loadDeadlines,
   loadHolidays,
   type DeadlineImmutable,
-  type DeadlineInput,
   type DeadlineItem,
   type HolidayExtensionStatus,
 } from "@lawcalc-kr/core-engine";
@@ -37,6 +35,8 @@ import { useResultFingerprint } from "../hooks/use-result-fingerprint";
 import { useCaseSlot } from "../lib/case-file";
 import {
   ipc,
+  type DeadlineTabInput,
+  type ExtraHolidayInput,
   type LcalcDeadlinePayload,
   type LcalcDeadlineResult,
   type LcalcFile,
@@ -45,6 +45,12 @@ import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dir
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedDeadlineLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 import { todayIso } from "../lib/today";
+import {
+  ExtraHolidaysEditor,
+  cleanExtraHolidays,
+  extraHolidaysSummary,
+  holidayDepsWith,
+} from "./PeriodCalculator";
 
 const APP_VERSION = __APP_VERSION__;
 
@@ -57,7 +63,6 @@ const DEADLINE_BY_ID = new Map(DEADLINE_ITEMS.map((item) => [item.id, item]));
 const HOLIDAY_DATASET = loadHolidays();
 const HOLIDAYS_VERSION_TAG = holidaysVersionTag(HOLIDAY_DATASET);
 const HOLIDAY_COVERAGE = HOLIDAY_DATASET.coverage;
-const holidayDeps = createHolidayDeps(HOLIDAY_DATASET);
 
 /**
  * 계열별 묶음. 35건은 한 줄짜리 목록으로 고르기에 너무 길다. 데이터셋 순서가 이미
@@ -86,6 +91,10 @@ export interface DeadlineFormState {
   /** 항목의 `startEventKo` 가 정한 날. 계열마다 송달일·고지일·선고일로 다르다. */
   startEventDate: string;
   useAlternate: boolean;
+  /** 2008-03-22 당시 법원에 계속 중인 사건 (민법 부칙 제3조 제1항). 켰을 때만 `.lcalc` 에 실린다. */
+  pendingOn20080322: boolean;
+  /** 사용자 지정 공휴일 입력 행. 날짜가 있는 행만 `.lcalc` 에 실린다. */
+  extraHolidays: ExtraHolidayInput[];
 }
 
 export function emptyDeadlineForm(): DeadlineFormState {
@@ -93,6 +102,8 @@ export function emptyDeadlineForm(): DeadlineFormState {
     id: DEADLINE_ITEMS[0]?.id ?? "",
     startEventDate: todayIso(),
     useAlternate: false,
+    pendingOn20080322: false,
+    extraHolidays: [],
   };
 }
 
@@ -103,29 +114,42 @@ export function emptyDeadlineForm(): DeadlineFormState {
  * 고르면 엔진이 RangeError 를 던지는데, 그건 사용자의 입력 오류가 아니라 화면이 남긴
  * 찌꺼기다.
  */
-export function buildDeadlineTabInput(form: DeadlineFormState): DeadlineInput {
+export function buildDeadlineTabInput(form: DeadlineFormState): DeadlineTabInput {
   const item = DEADLINE_BY_ID.get(form.id);
+  const extraHolidays = cleanExtraHolidays(form.extraHolidays);
   return {
     id: form.id,
     startEventDate: form.startEventDate,
     ...(form.useAlternate && item?.alternate !== undefined ? { useAlternate: true } : {}),
+    // 계속 사건 토글도 같은 이유로 민사 계열 항목에서만 싣는다.
+    ...(form.pendingOn20080322 &&
+    item !== undefined &&
+    DEADLINE_DATASET.sourceLaws[item.lawKey]?.family === "civil"
+      ? { pendingOn20080322: true }
+      : {}),
+    // 편집기를 숨기는(말일 조정이 없는) 항목에서는 남은 행을 싣지 않는다. 결과에 쓰이지 않는다.
+    ...(extraHolidays.length > 0 && item?.holidayRollover ? { extraHolidays } : {}),
   };
 }
 
-export function applyLoadedDeadlineInput(input: DeadlineInput): DeadlineFormState {
+export function applyLoadedDeadlineInput(input: DeadlineTabInput): DeadlineFormState {
   return {
     id: input.id,
     startEventDate: input.startEventDate,
     useAlternate: input.useAlternate ?? false,
+    pendingOn20080322: input.pendingOn20080322 === true,
+    extraHolidays: input.extraHolidays ?? [],
   };
 }
 
 export function computeDeadlineOutcome(
-  input: DeadlineInput,
+  input: DeadlineTabInput,
   computedAt = new Date().toISOString(),
 ): LcalcDeadlineResult {
+  // 사용자 지정 공휴일은 엔진 입력이 아니라 공휴일 deps 로 들어간다.
+  const { extraHolidays, ...engineInput } = input;
   return {
-    ...computeDeadline(input, holidayDeps, DEADLINE_DATASET),
+    ...computeDeadline(engineInput, holidayDepsWith(extraHolidays), DEADLINE_DATASET),
     holidaysVersion: HOLIDAYS_VERSION_TAG,
     computedAt,
     disclaimer: STANDARD_DISCLAIMER,
@@ -178,7 +202,10 @@ export function hasJustCauseCaveat(result: LcalcDeadlineResult): boolean {
   return `${result.sourceQuote}${result.noteKo ?? ""}`.includes("정당한 사유");
 }
 
-export function formatDeadlineForClipboard(result: LcalcDeadlineResult): string {
+export function formatDeadlineForClipboard(
+  result: LcalcDeadlineResult,
+  extraHolidays?: readonly ExtraHolidayInput[],
+): string {
   const lines = [
     "LawCalc Korea 불변기한 계산 결과",
     `기한: ${result.groupKo} ${result.labelKo}`,
@@ -190,6 +217,7 @@ export function formatDeadlineForClipboard(result: LcalcDeadlineResult): string 
     `말일 조정 전 만료일: ${result.period.rawExpiry}`,
     `말일 조정: ${ROLLOVER_LABEL[result.holidayRollover.status]}`,
     `말일 조정 근거: ${result.holidayRollover.reasonKo}`,
+    ...[extraHolidaysSummary(extraHolidays, result.period)].filter((line) => line !== null),
     `불변기간: ${result.immutableLabelKo} (근거: ${result.immutableSourceArticle})`,
     IMMUTABLE_NOTICE[result.immutable],
   ];
@@ -218,7 +246,7 @@ export function formatDeadlineForClipboard(result: LcalcDeadlineResult): string 
 }
 
 export function buildDeadlineLcalcFile(
-  input: DeadlineInput,
+  input: DeadlineTabInput,
   result: LcalcDeadlineResult,
   note: string,
 ): LcalcFile {
@@ -233,7 +261,15 @@ export function buildDeadlineLcalcFile(
   return {
     schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     kind: "deadline",
-    envelopeFeatures: ["deadline@1"],
+    // 새 키를 모르는 이전 앱이 키를 무시하고 다른 기한을 보이지 않도록, 키가 있을 때만
+    // 올린다. pendingOn20080322 는 deadline@2, 사용자 지정 공휴일은 deadline@3. 없으면 @1.
+    envelopeFeatures: [
+      input.extraHolidays !== undefined
+        ? "deadline@3"
+        : input.pendingOn20080322
+          ? "deadline@2"
+          : "deadline@1",
+    ],
     // 계산이 두 데이터셋에 의존한다. 기한 자체는 deadlines, 말일 조정은 holidays.
     dataVersions: { deadlines: DEADLINES_VERSION_TAG, holidays: HOLIDAYS_VERSION_TAG },
     payload,
@@ -261,6 +297,9 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
 
   const input = useMemo(() => buildDeadlineTabInput(form), [form]);
   const selected = DEADLINE_BY_ID.get(form.id);
+  // 계속 사건 토글은 민법 부칙 근거라 민사 계열 항목에만 보인다.
+  const selectedIsCivil =
+    selected !== undefined && DEADLINE_DATASET.sourceLaws[selected.lawKey]?.family === "civil";
   const stale = useMemo<StaleBadgeResult>(
     () => computeStaleBadge(DEADLINE_DATASET.updatedAt, todayIso()),
     [],
@@ -284,6 +323,12 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
   } = useResultFingerprint<string>(resultFingerprint);
   const resultReady = result !== null && !resultStale;
 
+  // 결과 아래 "사용자 지정 공휴일" 요약은 계산(또는 파일 열기) 당시 입력으로 낸다. 계산 뒤
+  // 표를 고치면 결과는 낡음 표시만 붙고 그대로 남는데, 요약만 새 입력을 따라가면 서로 어긋난다.
+  const [resultExtraHolidays, setResultExtraHolidays] = useState<
+    readonly ExtraHolidayInput[] | undefined
+  >(undefined);
+
   const update = (patch: Partial<DeadlineFormState>) => {
     setForm((prev) => ({ ...prev, ...patch }));
   };
@@ -291,6 +336,7 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
   const handleCalculate = () => {
     try {
       setResult(computeDeadlineOutcome(input));
+      setResultExtraHolidays(input.extraHolidays);
       setError(null);
       setToast(null);
     } catch (e) {
@@ -327,7 +373,7 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
   const handleCopy = () =>
     runAction("copy", async () => {
       if (!result || resultStale) throw new Error("계산 후 복사해 주세요.");
-      await ipc.copyToClipboard(formatDeadlineForClipboard(result));
+      await ipc.copyToClipboard(formatDeadlineForClipboard(result, resultExtraHolidays));
       return "불변기한 계산 결과를 클립보드에 복사했습니다.";
     });
 
@@ -349,6 +395,7 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
     const loadedNote = loaded.note ?? "";
     setForm(applied);
     setNote(loadedNote);
+    setResultExtraHolidays(loaded.input.extraHolidays);
     const differs = setLoadedResult(
       loaded.result,
       () => computeDeadlineOutcome(loaded.input),
@@ -458,6 +505,30 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                 {selected.alternate.conditionKo} (이 경우 {selected.alternate.length}
                 {UNIT_LABEL[selected.alternate.unit]})
               </label>
+            ) : null}
+
+            {selectedIsCivil ? (
+              <>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.pendingOn20080322}
+                    onChange={(e) => update({ pendingOn20080322: e.target.checked })}
+                  />
+                  2008-03-22 당시 법원에 계속 중인 사건
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  민법 부칙(법률 제8720호) 제3조 제1항에 따라 이 사건에는 토요일 포함 개정 제161조를
+                  적용하지 않아, 말일이 토요일이어도 연장하지 않습니다.
+                </p>
+              </>
+            ) : null}
+
+            {selected?.holidayRollover ? (
+              <ExtraHolidaysEditor
+                rows={form.extraHolidays}
+                onChange={(extraHolidays) => update({ extraHolidays })}
+              />
             ) : null}
 
             <label className="grid gap-2 text-sm font-medium">
@@ -576,6 +647,15 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                     <span>{result.holidayRollover.reasonKo}</span>
                   </div>
+                ) : null}
+
+                {extraHolidaysSummary(resultExtraHolidays, result.period) ? (
+                  <p
+                    className="text-xs text-muted-foreground"
+                    data-testid="deadline-extra-holidays"
+                  >
+                    {extraHolidaysSummary(resultExtraHolidays, result.period)}
+                  </p>
                 ) : null}
 
                 <div className="grid gap-1">

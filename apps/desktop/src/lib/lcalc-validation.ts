@@ -13,7 +13,6 @@ import {
   type AppropriationResult,
   type CalcOptions,
   type CaseType,
-  type DeadlineInput,
   type HeirNode,
   type InheritanceInput,
   type InheritanceResult,
@@ -42,6 +41,8 @@ import type {
   LcalcCompensationResult,
   LcalcDeadlinePayload,
   LcalcDeadlineResult,
+  DeadlineTabInput,
+  ExtraHolidayInput,
   LcalcFile,
   LcalcInheritancePayload,
   LcalcInterestPayload,
@@ -71,6 +72,7 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "interest@1",
   "inheritance@1",
   "inheritance@2",
+  "inheritance@3",
   "litigation-cost@1",
   "litigation-cost@2",
   "appropriation@1",
@@ -80,8 +82,13 @@ const SUPPORTED_LCALC_CAPABILITIES = new Set<string>([
   "compensation@3",
   "compensation@4",
   "compensation@5",
+  "compensation@6",
   "period@1",
+  "period@2",
+  "period@3",
   "deadline@1",
+  "deadline@2",
+  "deadline@3",
   "case@1",
 ]);
 
@@ -136,7 +143,7 @@ interface ParsedPeriodLcalcInput {
 }
 
 interface ParsedDeadlineLcalcInput {
-  input: DeadlineInput;
+  input: DeadlineTabInput;
   result?: LcalcDeadlineResult;
   note?: string;
 }
@@ -229,6 +236,13 @@ function requirePositiveNumber(value: unknown, field: string) {
   return value;
 }
 
+function requireNonNegativeSafeInteger(value: unknown, field: string) {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    throw new Error(`.lcalc 파일의 ${field} 필드는 0 이상 정수(원)여야 합니다.`);
+  }
+  return value as number;
+}
+
 function requireNonNegativeNumber(value: unknown, field: string) {
   if (!isFiniteNumber(value) || value < 0) {
     throw new Error(`.lcalc 파일의 ${field} 필드는 0 이상 숫자여야 합니다.`);
@@ -246,6 +260,13 @@ function optionalBoolean(record: Record<string, unknown>, key: string, field: st
     throw new Error(`.lcalc 파일의 ${field} 필드는 true 또는 false 여야 합니다.`);
   }
   return value;
+}
+
+function requireStringArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value) || value.some((line) => typeof line !== "string")) {
+    throw new Error(`.lcalc 파일의 ${field} 필드는 문자열 배열이어야 합니다.`);
+  }
+  return value as string[];
 }
 
 function unsupportedCapabilityMessage(capabilityId: string) {
@@ -415,8 +436,30 @@ function parseInheritanceResult(value: unknown): InheritanceResult {
           record.rawDenominator,
           `payload.result.shares[${index}].rawDenominator`,
         ),
+        ...(record.amountWon === undefined
+          ? {}
+          : {
+              amountWon: requireNonNegativeNumber(
+                record.amountWon,
+                `payload.result.shares[${index}].amountWon`,
+              ),
+            }),
       };
     }),
+    ...(result.estateWon === undefined
+      ? {}
+      : { estateWon: requireNonNegativeSafeInteger(result.estateWon, "payload.result.estateWon") }),
+    ...(result.remainderWon === undefined
+      ? {}
+      : {
+          remainderWon: requireNonNegativeNumber(
+            result.remainderWon,
+            "payload.result.remainderWon",
+          ),
+        }),
+    ...(result.trace === undefined
+      ? {}
+      : { trace: requireStringArray(result.trace, "payload.result.trace") }),
     disclaimer: requireString(result.disclaimer, "payload.result.disclaimer"),
     dataVersion: requireString(result.dataVersion, "payload.result.dataVersion"),
     computedAt: requireString(result.computedAt, "payload.result.computedAt"),
@@ -477,6 +520,9 @@ function parseInheritancePayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcI
     ...(linealAscendants === undefined ? {} : { linealAscendants }),
     ...(siblings === undefined ? {} : { siblings }),
     ...(collateralFourth === undefined ? {} : { collateralFourth }),
+    ...(input.estateWon === undefined
+      ? {}
+      : { estateWon: requireNonNegativeSafeInteger(input.estateWon, "payload.input.estateWon") }),
   };
 
   const note = requireBoundedNote(payload.note, "payload.note");
@@ -582,7 +628,9 @@ function parseLitigationCostInput(value: unknown): LitigationCostInput {
           ),
         }),
   };
-  validateStampDutyInput(stampDuty);
+  // 인지대 산식 밖 사건구분(가사조정·재산명시 등)은 엔진이 인지대를 건너뛴다. 저장한 파일을 다시 열 수
+  // 있도록 검증도 같은 조건에서만 한다 (변호사보수와 같은 규칙).
+  if (appliedDomains(stampDuty.caseType).includes("stampDuty")) validateStampDutyInput(stampDuty);
 
   const deliveryFee: LitigationCostInput["deliveryFee"] = {
     caseType: requireString(
@@ -934,7 +982,28 @@ function parsePeriodInput(value: unknown): PeriodTabInput {
   // 일수 산식에는 별도 validator 가 없다. computeDateSpan 자체가 같은 RangeError 계약을
   // 가진 검증이라 계산 결과를 버리고 검증으로만 쓴다.
   computeDateSpan(typed.span);
+  parseExtraHolidays(typed.extraHolidays, "payload.input.extraHolidays");
   return typed;
+}
+
+/** 사용자 지정 공휴일 목록. 모양만 본다. 날짜의 실재·커버리지는 계산 때 엔진이 한국어 RangeError 로 막는다. */
+function parseExtraHolidays(value: unknown, field: string): ExtraHolidayInput[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > 100) {
+    throw new Error(`.lcalc 파일의 ${field} 필드는 100건 이하의 배열이어야 합니다.`);
+  }
+  return value.map((item, index) => {
+    const record = requireRecord(item, `${field}[${index}]`);
+    const date = requireString(record.date, `${field}[${index}].date`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      throw new Error(`.lcalc 파일의 ${field}[${index}].date 필드는 YYYY-MM-DD 형식이어야 합니다.`);
+    }
+    const nameKo = requireString(record.nameKo, `${field}[${index}].nameKo`);
+    if (nameKo.length > MAX_CASE_TEXT_LENGTH) {
+      throw new Error(`.lcalc 파일의 ${field}[${index}].nameKo 필드가 너무 깁니다.`);
+    }
+    return { date, nameKo };
+  });
 }
 
 function parsePeriodResult(value: unknown): LcalcPeriodResult {
@@ -996,13 +1065,14 @@ function parsePeriodPayload(file: LcalcFile | UnknownLcalcEnvelope): LcalcPeriod
   };
 }
 
-function parseDeadlineInput(value: unknown): DeadlineInput {
+function parseDeadlineInput(value: unknown): DeadlineTabInput {
   const input = requireRecord(value, "payload.input");
   // period 와 같은 이유로 필드별 재조립을 하지 않는다 (통합 스펙 2-2절). `validateDeadlineInput`
   // 은 기한 id 존재·기산일 형식·alternate 유무까지 한국어 RangeError 로 보고, 공휴일 deps 를
   // 요구하지 않으므로 파서 자리에서 그대로 쓸 수 있다.
-  const typed = input as unknown as DeadlineInput;
+  const typed = input as unknown as DeadlineTabInput;
   validateDeadlineInput(typed);
+  parseExtraHolidays(typed.extraHolidays, "payload.input.extraHolidays");
   return typed;
 }
 

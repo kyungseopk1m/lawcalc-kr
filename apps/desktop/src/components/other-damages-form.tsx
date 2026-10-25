@@ -370,9 +370,11 @@ function RatioCell({ value, onChange }: RatioCellProps) {
 export interface OtherDamagesFormCardProps {
   value: OtherDamagesFormState;
   onChange: (value: OtherDamagesFormState) => void;
+  /** 기대여명 여명종료일. 있으면 향후개호 종료일 칸에 "여명종료일로 채우기" 버튼을 둔다 (칸만 채운다). */
+  lifeEndDate?: string | undefined;
 }
 
-export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardProps) {
+export function OtherDamagesFormCard({ value, onChange, lifeEndDate }: OtherDamagesFormCardProps) {
   const updateAttendantPast = (uid: string, patch: Partial<AttendantPastRow>) =>
     onChange({
       ...value,
@@ -562,6 +564,17 @@ export function OtherDamagesFormCard({ value, onChange }: OtherDamagesFormCardPr
                     value={row.endDate}
                     onChange={(e) => updateAttendantFuture(row.uid, { endDate: e.target.value })}
                   />
+                  {lifeEndDate && row.endDate !== lifeEndDate ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      className="justify-self-start px-0"
+                      onClick={() => updateAttendantFuture(row.uid, { endDate: lifeEndDate })}
+                    >
+                      여명종료일({lifeEndDate})로 채우기
+                    </Button>
+                  ) : null}
                 </label>
                 <Input
                   inputMode="decimal"

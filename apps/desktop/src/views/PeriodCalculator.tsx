@@ -4,6 +4,8 @@ import {
   Clipboard,
   FileJson,
   Loader2,
+  Plus,
+  Trash2,
   X,
   XCircle,
   type LucideIcon,
@@ -15,9 +17,12 @@ import {
   computeDateSpan,
   computePeriod,
   createHolidayDeps,
+  findHoliday,
   holidaysVersionTag,
   loadHolidays,
   type HolidayExtensionStatus,
+  type PeriodDeps,
+  type PeriodResult,
   type PeriodUnit,
 } from "@lawcalc-kr/core-engine";
 import { computeStaleBadge, type StaleBadgeResult } from "@lawcalc-kr/datasets-compensation";
@@ -34,6 +39,7 @@ import { useCaseSlot } from "../lib/case-file";
 import { parseWonText } from "../lib/format-won";
 import {
   ipc,
+  type ExtraHolidayInput,
   type LcalcFile,
   type LcalcPeriodPayload,
   type LcalcPeriodResult,
@@ -53,6 +59,62 @@ const HOLIDAYS_VERSION_TAG = holidaysVersionTag(HOLIDAY_DATASET);
 const HOLIDAY_COVERAGE = HOLIDAY_DATASET.coverage;
 const holidayDeps = createHolidayDeps(HOLIDAY_DATASET);
 
+/**
+ * 사용자 지정 공휴일을 반영한 deps. 없으면 번들 데이터 그대로다. 불변기한 탭도 같은 함수를 쓴다.
+ * 커버리지 밖 날짜는 엔진이 한국어 RangeError 로 거절하고, 화면은 그 메시지를 오류로 띄운다.
+ */
+export function holidayDepsWith(
+  extraHolidays: readonly ExtraHolidayInput[] | undefined,
+): PeriodDeps {
+  if (extraHolidays === undefined || extraHolidays.length === 0) return holidayDeps;
+  return createHolidayDeps(
+    HOLIDAY_DATASET,
+    extraHolidays.map((h) => ({ date: h.date, nameKo: h.nameKo, kind: "temporary" as const })),
+  );
+}
+
+/** 입력 행 중 날짜가 있는 것만 남긴다. 이름이 비면 "임시공휴일" 로 채운다. */
+export function cleanExtraHolidays(rows: readonly ExtraHolidayInput[]): ExtraHolidayInput[] {
+  return rows
+    .filter((h) => h.date !== "")
+    .map((h) => ({ date: h.date, nameKo: h.nameKo.trim() || "임시공휴일" }));
+}
+
+/**
+ * 이번 말일 연장에 실제로 걸린 사용자 지정 공휴일. 연장은 조정 전 만료일부터 하루씩 밀어
+ * 최종 만료일 전날까지 지나가므로 그 구간에 든 지정일이 적용된 날이다. 번들 데이터에 이미
+ * 있는 날은 지정하지 않아도 같은 결과라 뺀다.
+ */
+export function appliedExtraHolidays(
+  extraHolidays: readonly ExtraHolidayInput[] | undefined,
+  period: Pick<PeriodResult, "holidayExtension" | "rawExpiry" | "expiryDate">,
+): ExtraHolidayInput[] {
+  if (period.holidayExtension !== "applied") return [];
+  return (extraHolidays ?? []).filter(
+    (h) =>
+      h.date >= period.rawExpiry &&
+      h.date < period.expiryDate &&
+      findHoliday(h.date, HOLIDAY_DATASET) === null,
+  );
+}
+
+/** 결과·클립보드에 쓰는 한 줄. 지정한 공휴일이 없으면 null. */
+export function extraHolidaysSummary(
+  extraHolidays: readonly ExtraHolidayInput[] | undefined,
+  period: Pick<PeriodResult, "holidayExtension" | "rawExpiry" | "expiryDate">,
+): string | null {
+  if (extraHolidays === undefined || extraHolidays.length === 0) return null;
+  const applied = appliedExtraHolidays(extraHolidays, period);
+  const list = (items: readonly ExtraHolidayInput[]) =>
+    items.map((h) => `${h.date} ${h.nameKo}`).join(", ");
+  return (
+    `사용자 지정 공휴일 ${extraHolidays.length}건 (${list(extraHolidays)}). ` +
+    (applied.length > 0
+      ? `이번 말일 연장에 적용: ${list(applied)}`
+      : "이번 만료일에는 영향이 없습니다.")
+  );
+}
+
 type ActionName = "copy" | "save" | "load";
 
 interface ToastState {
@@ -68,8 +130,12 @@ export interface PeriodFormState {
   countText: string;
   includeFirstDay: boolean;
   holidayExtension: boolean;
+  /** 2008-03-22 당시 법원에 계속 중인 사건 (민법 부칙 제3조 제1항). 켰을 때만 `.lcalc` 에 실린다. */
+  pendingOn20080322: boolean;
   /** 일수 산식의 종료일. */
   to: string;
+  /** 사용자 지정 공휴일 입력 행. 날짜가 있는 행만, 말일 연장을 켰을 때만 `.lcalc` 에 실린다. */
+  extraHolidays: ExtraHolidayInput[];
 }
 
 const UNIT_OPTIONS: ReadonlyArray<{ value: PeriodUnit; label: string }> = [
@@ -88,11 +154,17 @@ export function emptyPeriodForm(): PeriodFormState {
     countText: "14",
     includeFirstDay: false,
     holidayExtension: true,
+    pendingOn20080322: false,
     to: today,
+    extraHolidays: [],
   };
 }
 
 export function buildPeriodTabInput(form: PeriodFormState): PeriodTabInput {
+  // 공휴일 관련 키는 만료일 산식에만 쓰인다. 일수 산식에 실으면 쓰지도 않는 키 때문에
+  // envelopeFeatures 가 period@2·@3 으로 올라 이전 앱이 파일을 못 연다.
+  const expiry = form.mode === "expiry" && form.holidayExtension;
+  const extraHolidays = expiry ? cleanExtraHolidays(form.extraHolidays) : [];
   return {
     mode: form.mode,
     period: {
@@ -102,12 +174,15 @@ export function buildPeriodTabInput(form: PeriodFormState): PeriodTabInput {
       count: Number(parseWonText(form.countText) || "0"),
       includeFirstDay: form.includeFirstDay,
       holidayExtension: form.holidayExtension,
+      // 말일 연장을 끄면 계속 사건 토글은 의미가 없어 싣지 않는다.
+      ...(form.pendingOn20080322 && expiry ? { pendingOn20080322: true } : {}),
     },
     span: {
       from: form.from,
       to: form.to,
       includeFirstDay: form.includeFirstDay,
     },
+    ...(extraHolidays.length > 0 ? { extraHolidays } : {}),
   };
 }
 
@@ -119,7 +194,9 @@ export function applyLoadedPeriodInput(input: PeriodTabInput): PeriodFormState {
     countText: String(input.period.count),
     includeFirstDay: input.period.includeFirstDay ?? false,
     holidayExtension: input.period.holidayExtension ?? false,
+    pendingOn20080322: input.period.pendingOn20080322 === true,
     to: input.span.to,
+    extraHolidays: input.extraHolidays ?? [],
   };
 }
 
@@ -140,7 +217,11 @@ export function computePeriodOutcome(
   if (input.mode === "span") {
     return { mode: "span", ...computeDateSpan(input.span), ...meta };
   }
-  return { mode: "expiry", ...computePeriod(input.period, holidayDeps), ...meta };
+  return {
+    mode: "expiry",
+    ...computePeriod(input.period, holidayDepsWith(input.extraHolidays)),
+    ...meta,
+  };
 }
 
 const EXTENSION_LABEL: Record<HolidayExtensionStatus, string> = {
@@ -151,7 +232,10 @@ const EXTENSION_LABEL: Record<HolidayExtensionStatus, string> = {
   outOfCoverage: "판정하지 못했습니다 (공휴일 데이터 커버리지 밖 또는 2008-03-22 이전 토요일)",
 };
 
-export function formatPeriodForClipboard(result: LcalcPeriodResult): string {
+export function formatPeriodForClipboard(
+  result: LcalcPeriodResult,
+  extraHolidays?: readonly ExtraHolidayInput[],
+): string {
   const lines = ["LawCalc Korea 기간 계산 결과"];
   if (result.mode === "expiry") {
     lines.push(
@@ -161,6 +245,8 @@ export function formatPeriodForClipboard(result: LcalcPeriodResult): string {
       `제161조 (토요일·공휴일): ${EXTENSION_LABEL[result.holidayExtension]}`,
     );
     if (result.adjustmentReasonKo) lines.push(`조정 사유: ${result.adjustmentReasonKo}`);
+    const extra = extraHolidaysSummary(extraHolidays, result);
+    if (extra) lines.push(extra);
     lines.push(`공휴일 데이터 버전: ${result.dataVersion}`);
   } else {
     lines.push(
@@ -197,7 +283,15 @@ export function buildPeriodLcalcFile(
   return {
     schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
     kind: "period",
-    envelopeFeatures: ["period@1"],
+    // 새 키를 모르는 이전 앱이 키를 무시하고 다른 만료일을 보이지 않도록, 키가 있을 때만
+    // 올린다. pendingOn20080322 는 period@2, 사용자 지정 공휴일은 period@3. 없으면 period@1.
+    envelopeFeatures: [
+      input.extraHolidays !== undefined
+        ? "period@3"
+        : input.period.pendingOn20080322
+          ? "period@2"
+          : "period@1",
+    ],
     dataVersions: { holidays: HOLIDAYS_VERSION_TAG },
     payload,
   };
@@ -245,6 +339,11 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
     stale: errorStale,
   } = useResultFingerprint<string>(resultFingerprint);
   const resultReady = result !== null && !resultStale;
+  // 결과 아래 "사용자 지정 공휴일" 요약은 계산(또는 파일 열기) 당시 입력으로 낸다. 계산 뒤
+  // 표를 고치면 결과는 낡음 표시만 붙고 그대로 남는데, 요약만 새 입력을 따라가면 서로 어긋난다.
+  const [resultExtraHolidays, setResultExtraHolidays] = useState<
+    readonly ExtraHolidayInput[] | undefined
+  >(undefined);
 
   const update = (patch: Partial<PeriodFormState>) => {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -253,6 +352,7 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
   const handleCalculate = () => {
     try {
       setResult(computePeriodOutcome(input));
+      setResultExtraHolidays(input.extraHolidays);
       setError(null);
       setToast(null);
     } catch (e) {
@@ -289,7 +389,7 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
   const handleCopy = () =>
     runAction("copy", async () => {
       if (!result || resultStale) throw new Error("계산 후 복사해 주세요.");
-      await ipc.copyToClipboard(formatPeriodForClipboard(result));
+      await ipc.copyToClipboard(formatPeriodForClipboard(result, resultExtraHolidays));
       return "기간 계산 결과를 클립보드에 복사했습니다.";
     });
 
@@ -311,10 +411,16 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
     const loadedNote = loaded.note ?? "";
     setForm(applied);
     setNote(loadedNote);
+    setResultExtraHolidays(loaded.input.extraHolidays);
     const differs = setLoadedResult(
       loaded.result,
       () => computePeriodOutcome(loaded.input),
       (r) => (r.mode === "expiry" ? r.expiryDate : `${r.days}일`),
+      // 일수 산식의 역법 환산(참고 표시)도 바뀌면 알린다 (민법 제160조 제3항 반영으로 월말 기산이 달라졌다).
+      (r) =>
+        r.mode === "span"
+          ? `${r.calendar.years}년 ${r.calendar.months}개월 ${r.calendar.days}일`
+          : "",
     );
     setError(null);
     markPeriodClean(buildPeriodDirtySnapshot(applied, loadedNote));
@@ -450,6 +556,28 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                     />
                     말일이 토요일·공휴일이면 익일로 만료 (제161조)
                   </label>
+                  {form.holidayExtension ? (
+                    <>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={form.pendingOn20080322}
+                          onChange={(e) => update({ pendingOn20080322: e.target.checked })}
+                        />
+                        2008-03-22 당시 법원에 계속 중인 사건
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        민법 부칙(법률 제8720호) 제3조 제1항에 따라 이 사건에는 토요일 포함 개정
+                        제161조를 적용하지 않아, 말일이 토요일이어도 연장하지 않습니다.
+                      </p>
+                    </>
+                  ) : null}
+                  {form.holidayExtension ? (
+                    <ExtraHolidaysEditor
+                      rows={form.extraHolidays}
+                      onChange={(extraHolidays) => update({ extraHolidays })}
+                    />
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     공휴일 데이터 커버리지: {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}.
                     만료일이 이 범위 밖이면 만료일 자체는 계산하되 토요일·공휴일 연장 여부는
@@ -536,6 +664,14 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                         <span>{result.adjustmentReasonKo}</span>
                       </div>
+                    ) : null}
+                    {extraHolidaysSummary(resultExtraHolidays, result) ? (
+                      <p
+                        className="text-xs text-muted-foreground"
+                        data-testid="period-extra-holidays"
+                      >
+                        {extraHolidaysSummary(resultExtraHolidays, result)}
+                      </p>
                     ) : null}
                   </>
                 ) : (
@@ -632,6 +768,73 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
         ) : null}
       </div>
     </main>
+  );
+}
+
+/**
+ * 사용자 지정 공휴일 입력. 번들 데이터 뒤에 지정된 임시공휴일·선거일을 말일 연장 판정에 더한다.
+ * 불변기한 탭도 같은 컴포넌트를 쓴다.
+ */
+/** `.lcalc` 파서(lcalc-validation.ts)가 받는 사용자 지정 공휴일 상한과 같아야 한다. */
+export const MAX_EXTRA_HOLIDAYS = 100;
+
+export function ExtraHolidaysEditor({
+  rows,
+  onChange,
+}: {
+  rows: ExtraHolidayInput[];
+  onChange: (rows: ExtraHolidayInput[]) => void;
+}) {
+  const patch = (index: number, next: Partial<ExtraHolidayInput>) =>
+    onChange(rows.map((row, i) => (i === index ? { ...row, ...next } : row)));
+  return (
+    <div className="grid gap-2 rounded-md border border-border p-3">
+      <span className="text-sm font-medium">임시공휴일·선거일 추가</span>
+      <p className="text-xs text-muted-foreground">
+        공휴일 데이터({HOLIDAYS_VERSION_TAG})에 아직 없는 날을 말일 연장 판정에 더합니다. 커버리지(
+        {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}) 안의 날짜만 넣을 수 있고, 저장하면 파일에
+        함께 남습니다.
+      </p>
+      {rows.map((row, index) => (
+        <div key={index} className="grid grid-cols-[150px_1fr_auto] gap-2">
+          <Input
+            type="date"
+            aria-label={`추가 공휴일 ${index + 1} 날짜`}
+            value={row.date}
+            onChange={(e) => patch(index, { date: e.target.value })}
+          />
+          <Input
+            aria-label={`추가 공휴일 ${index + 1} 이름`}
+            placeholder="예: 임시공휴일"
+            value={row.nameKo}
+            onChange={(e) => patch(index, { nameKo: e.target.value })}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            aria-label={`추가 공휴일 ${index + 1} 삭제`}
+            onClick={() => onChange(rows.filter((_, i) => i !== index))}
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        className="justify-self-start"
+        disabled={rows.length >= MAX_EXTRA_HOLIDAYS}
+        onClick={() => onChange([...rows, { date: "", nameKo: "임시공휴일" }])}
+      >
+        <Plus className="h-4 w-4" aria-hidden="true" />
+        공휴일 추가
+      </Button>
+      {rows.length >= MAX_EXTRA_HOLIDAYS ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          추가 공휴일은 {MAX_EXTRA_HOLIDAYS}건까지 넣을 수 있습니다.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

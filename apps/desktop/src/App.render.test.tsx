@@ -73,7 +73,7 @@ describe("상단 탭 접근성", () => {
     renderApp();
     expect(screen.getByRole("tablist")).toBeTruthy();
     const tabs = screen.getAllByRole("tab");
-    expect(tabs).toHaveLength(7);
+    expect(tabs).toHaveLength(8);
 
     const interest = screen.getByRole("tab", { name: "이자 계산" });
     expect(interest.getAttribute("aria-selected")).toBe("true");
@@ -89,5 +89,42 @@ describe("상단 탭 접근성", () => {
     expect(screen.getByRole("tab", { name: "이자 계산" }).getAttribute("aria-selected")).toBe(
       "false",
     );
+  });
+});
+
+describe("도구 하위 탭", () => {
+  const openTools = () => {
+    renderApp();
+    fireEvent.click(screen.getByRole("tab", { name: "도구" }));
+    return within(screen.getByRole("tablist", { name: "도구" }));
+  };
+
+  it("좌우 화살표·Home·End 로 옮기고, 탭 순서에는 선택된 탭 하나만 있다", () => {
+    const tools = openTools();
+    const tabs = tools.getAllByRole("tab");
+    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1, -1, -1]);
+
+    fireEvent.keyDown(tabs[0]!, { key: "ArrowRight" });
+    expect(tabs[1]!.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tabs[1]);
+    expect(tabs.map((t) => t.tabIndex)).toEqual([-1, 0, -1, -1]);
+
+    fireEvent.keyDown(tabs[1]!, { key: "End" });
+    expect(document.activeElement).toBe(tabs[3]);
+    fireEvent.keyDown(tabs[3]!, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(tabs[0]);
+    fireEvent.keyDown(tabs[0]!, { key: "ArrowLeft" });
+    expect(document.activeElement).toBe(tabs[3]);
+    fireEvent.keyDown(tabs[3]!, { key: "Home" });
+    expect(tabs[0]!.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("여명표·노임표는 다른 하위 탭에 다녀와도 검색어가 남는다", () => {
+    const tools = openTools();
+    fireEvent.click(tools.getByRole("tab", { name: "여명표·노임표" }));
+    fireEvent.change(screen.getByLabelText(/나이 검색/), { target: { value: "30" } });
+    fireEvent.click(tools.getByRole("tab", { name: "계산기" }));
+    fireEvent.click(tools.getByRole("tab", { name: "여명표·노임표" }));
+    expect(screen.getByLabelText<HTMLInputElement>(/나이 검색/).value).toBe("30");
   });
 });

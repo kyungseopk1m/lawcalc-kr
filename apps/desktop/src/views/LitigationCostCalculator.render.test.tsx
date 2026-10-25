@@ -207,3 +207,104 @@ describe("숫자 칸 (공용 파서)", () => {
     expect(screen.queryByText("계산 결과")).toBeNull();
   });
 });
+
+describe("송달료 사건부호표 패널 (재일 87-4 별표 1)", () => {
+  const search = (q: string) =>
+    fireEvent.change(screen.getByLabelText("사건명·부호 검색"), { target: { value: q } });
+  const parties = (plaintiff: string, defendant: string) => {
+    fireEvent.change(screen.getByLabelText("원고(신청인) 수"), { target: { value: plaintiff } });
+    fireEvent.change(screen.getByLabelText("피고(상대방) 수"), { target: { value: defendant } });
+  };
+  const filingDateInput = (): HTMLInputElement => screen.getByLabelText("접수일");
+
+  it("가합 원고 3·피고 1 은 60회, 사건구분·당사자수를 본 계산기에 채운다", () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(filingDateInput(), { target: { value: "2026-07-01" } });
+    search("가합");
+    parties("3", "1");
+
+    // 비교 프로그램 실측 181,200 = 60회 × 3,020 (2010 기본 단가). 여기서는 접수일 단가 5,640.
+    expect(screen.getByText(/\(3 \+ 1\)명 × 15회 × 5,640원 = 338,400원/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "사건구분·당사자수 적용" }));
+    expect(caseTypeSelect().value).toBe("civilFirstInstanceCollegial");
+    expect(screen.getByLabelText<HTMLInputElement>("당사자수").value).toBe("4");
+  });
+
+  it("3회 행 원고 13·피고 12 는 75회 (실측 226,500 = 75 × 3,020)", () => {
+    render(<LitigationCostCalculator />);
+    search("그");
+    fireEvent.change(screen.getByLabelText("적용대상사건"), {
+      target: {
+        value: (
+          Array.from(screen.getByLabelText<HTMLSelectElement>("적용대상사건").options).find((o) =>
+            o.text.includes("민사특별항고사건(그)"),
+          ) as HTMLOptionElement
+        ).value,
+      },
+    });
+    parties("13", "12");
+    expect(screen.getByText(/\(75회\)/)).toBeTruthy();
+    // 본 계산기에 같은 사건구분이 없는 행은 적용 버튼이 없다.
+    expect(screen.queryByRole("button", { name: /^사건구분/ })).toBeNull();
+    expect(screen.getByText(/맞는 사건구분이 본 계산기에 없어/)).toBeTruthy();
+  });
+
+  it("타채 행은 제3채무자를 당사자 수에 넣으라고 안내한다", () => {
+    render(<LitigationCostCalculator />);
+    search("타채");
+    expect(screen.getByText(/제3채무자도 송달받는 당사자/)).toBeTruthy();
+  });
+
+  it("원고·피고 수는 빈칸·소수·전각 숫자를 0 이나 영어 오류로 넘기지 않는다", () => {
+    render(<LitigationCostCalculator />);
+    search("가합");
+    const apply = () => screen.getByRole("button", { name: "사건구분·당사자수 적용" });
+
+    parties("", "1");
+    expect(screen.getByText("원고(신청인) 수: 인원을 입력하세요.")).toBeTruthy();
+    expect(apply()).toHaveProperty("disabled", true);
+
+    parties("1.5", "1");
+    expect(screen.getByText("원고(신청인) 수: 정수로 입력하세요.")).toBeTruthy();
+    expect(apply()).toHaveProperty("disabled", true);
+
+    parties("1", "２");
+    expect(screen.getByText(/^피고\(상대방\) 수: 숫자로 입력하세요/)).toBeTruthy();
+    expect(screen.queryByText(/plaintiffCount|defendantCount/)).toBeNull();
+
+    parties("2명", "0");
+    expect(screen.getByText(/\(2 \+ 0\)명 × 15회/)).toBeTruthy();
+    expect(apply()).toHaveProperty("disabled", false);
+  });
+});
+
+describe("인지 환급액·소장 보정 패널 (실측 소가 1억)", () => {
+  const setup = () => {
+    render(<LitigationCostCalculator />);
+    fireEvent.change(caseValueInput(), { target: { value: "100000000" } });
+  };
+
+  it("1심·2심·3심 환급액 227,500 · 341,250 · 455,000", () => {
+    setup();
+    expect(screen.getByText(/인지액 455,000 × 1\/2 = 227,500원/)).toBeTruthy();
+    fireEvent.change(levelSelect(), { target: { value: "appeal" } });
+    expect(screen.getByText(/인지액 682,500 × 1\/2 = 341,250원/)).toBeTruthy();
+    fireEvent.change(levelSelect(), { target: { value: "supreme" } });
+    expect(screen.getByText(/인지액 910,000 × 1\/2 = 455,000원/)).toBeTruthy();
+  });
+
+  it("지급명령 본안 보정 409,500 (455,000 − 45,500)", () => {
+    setup();
+    fireEvent.change(caseTypeSelect(), { target: { value: "paymentOrder" } });
+    expect(screen.getByText(/소장 인지액 455,000 − 신청서 인지액 45,500 = 409,500원/)).toBeTruthy();
+    expect(screen.queryByText(/환급 청구 가능액/)).toBeNull();
+  });
+
+  it("2013-11-01 전 조정신청 본안 보정 364,000 (455,000 − 91,000)", () => {
+    setup();
+    fireEvent.change(caseTypeSelect(), { target: { value: "civilMediation" } });
+    fireEvent.change(screen.getByLabelText("접수일"), { target: { value: "2013-10-01" } });
+    expect(screen.getByText(/소장 인지액 455,000 − 신청서 인지액 91,000 = 364,000원/)).toBeTruthy();
+  });
+});

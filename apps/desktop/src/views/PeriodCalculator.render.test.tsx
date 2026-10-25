@@ -108,6 +108,41 @@ describe("기간 계산 결과 노출", () => {
   });
 });
 
+describe("사용자 지정 공휴일", () => {
+  const addHoliday = (date: string, name: string) => {
+    fireEvent.click(screen.getByRole("button", { name: "공휴일 추가" }));
+    const n = screen.getAllByLabelText(/^추가 공휴일 \d+ 날짜$/).length;
+    setDate(new RegExp(`^추가 공휴일 ${n} 날짜$`), date);
+    fireEvent.change(screen.getByLabelText(`추가 공휴일 ${n} 이름`), { target: { value: name } });
+  };
+
+  it("결과 아래 요약은 계산 당시 입력을 따른다 (계산 뒤 표를 고쳐도 바뀌지 않는다)", () => {
+    render(<PeriodCalculator />);
+    setDate(/기산의 기초가 되는 날/, "2026-09-04");
+    fireEvent.change(screen.getByLabelText("기간 수량"), { target: { value: "1" } });
+    addHoliday("2026-09-07", "계산당시휴일");
+    calculate();
+    expect(screen.getByTestId("period-expiry-date").textContent).toBe("2026-09-08");
+    expect(screen.getByTestId("period-extra-holidays").textContent).toContain("계산당시휴일");
+
+    fireEvent.change(screen.getByLabelText("추가 공휴일 1 이름"), {
+      target: { value: "나중이름" },
+    });
+    expect(screen.getByTestId("period-extra-holidays").textContent).toContain("계산당시휴일");
+    fireEvent.click(screen.getByRole("button", { name: "추가 공휴일 1 삭제" }));
+    expect(screen.getByTestId("period-extra-holidays").textContent).toContain("계산당시휴일");
+  });
+
+  it(".lcalc 파서 상한과 같은 100건에서 추가를 막고 안내한다", () => {
+    render(<PeriodCalculator />);
+    const add = screen.getByRole("button", { name: "공휴일 추가" });
+    for (let i = 0; i < 100; i += 1) fireEvent.click(add);
+    expect(screen.getAllByLabelText(/^추가 공휴일 \d+ 날짜$/)).toHaveLength(100);
+    expect(add).toHaveProperty("disabled", true);
+    expect(screen.getByText("추가 공휴일은 100건까지 넣을 수 있습니다.")).toBeTruthy();
+  });
+});
+
 describe(".lcalc 왕복", () => {
   it("저장한 파일을 다시 열면 입력이 그대로 복원된다", async () => {
     render(<PeriodCalculator />);

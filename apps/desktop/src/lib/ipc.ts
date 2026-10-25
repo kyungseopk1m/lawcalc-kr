@@ -143,7 +143,21 @@ export interface PeriodTabInput {
   mode: PeriodMode;
   period: PeriodInput;
   span: DateSpanInput;
+  /** 사용자가 지정한 공휴일. 비어 있으면 키 자체를 싣지 않는다 (`period@3`). */
+  extraHolidays?: ExtraHolidayInput[];
 }
+
+/**
+ * 번들 공휴일 데이터에 아직 없는 임시공휴일·선거일. 말일 연장 판정에 더한다.
+ * `.lcalc` 입력에 그대로 저장해 같은 파일이 같은 만료일을 다시 낸다.
+ */
+export interface ExtraHolidayInput {
+  date: string;
+  nameKo: string;
+}
+
+/** 불변기한 탭의 `.lcalc` 입력. 엔진 입력에 사용자 지정 공휴일만 얹는다 (`deadline@3`). */
+export type DeadlineTabInput = DeadlineInput & { extraHolidays?: ExtraHolidayInput[] };
 
 interface LcalcPeriodResultMeta {
   /** 공휴일 dataset 식별자 (`holidays/vX.Y.Z`). 제161조 판정의 근거 데이터. */
@@ -180,7 +194,7 @@ export type LcalcDeadlineResult = DeadlineResult & LcalcDeadlineResultMeta;
 export interface LcalcDeadlinePayload {
   appVersion: string;
   createdAt: string;
-  input: DeadlineInput;
+  input: DeadlineTabInput;
   result?: LcalcDeadlineResult;
   note?: string;
   disclaimer: string;

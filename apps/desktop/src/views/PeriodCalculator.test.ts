@@ -24,7 +24,9 @@ function form(overrides: Partial<PeriodFormState> = {}): PeriodFormState {
     countText: "1",
     includeFirstDay: false,
     holidayExtension: true,
+    pendingOn20080322: false,
     to: "2026-12-31",
+    extraHolidays: [],
     ...overrides,
   };
 }
@@ -67,6 +69,35 @@ describe("buildPeriodTabInput", () => {
     const input = buildPeriodTabInput(form({ includeFirstDay: true }));
     expect(input.period.includeFirstDay).toBe(true);
     expect(input.span.includeFirstDay).toBe(true);
+  });
+});
+
+describe("2008-03-22 당시 계속 중인 사건 (민법 부칙 제3조 제1항)", () => {
+  it("켰을 때만 입력에 싣고, 왕복하면 복원된다", () => {
+    expect("pendingOn20080322" in buildPeriodTabInput(form()).period).toBe(false);
+    const on = form({ pendingOn20080322: true, from: "2026-09-05", countText: "14" });
+    const input = buildPeriodTabInput(on);
+    expect(input.period.pendingOn20080322).toBe(true);
+    expect(applyLoadedPeriodInput(input)).toEqual(on);
+    // 송달 2026-09-05 → 14일 만료 09-19(토). 토요일을 연장하지 않는다.
+    const result = computePeriodOutcome(input, FIXED_NOW);
+    expect(result.mode === "expiry" && result.expiryDate).toBe("2026-09-19");
+  });
+});
+
+describe("일수 산식은 공휴일 키를 싣지 않는다", () => {
+  it("계속 사건·사용자 지정 공휴일이 있어도 span 이면 period@1", () => {
+    const state = form({
+      mode: "span",
+      pendingOn20080322: true,
+      extraHolidays: [{ date: "2026-09-07", nameKo: "임시공휴일" }],
+    });
+    const input = buildPeriodTabInput(state);
+    expect("pendingOn20080322" in input.period).toBe(false);
+    expect("extraHolidays" in input).toBe(false);
+    expect(periodLcalcFile(state).envelopeFeatures).toEqual(["period@1"]);
+    // 같은 입력의 만료일 산식은 그대로 싣는다.
+    expect(periodLcalcFile({ ...state, mode: "expiry" }).envelopeFeatures).toEqual(["period@3"]);
   });
 });
 
@@ -176,6 +207,17 @@ describe(".lcalc 저장 → 열기 왕복", () => {
     expect(loaded.result?.mode).toBe("span");
   });
 
+  it("계속 사건 키가 있으면 period@2 로 저장하고 왕복에서 살아남는다", () => {
+    const original = form({ pendingOn20080322: true, from: "2026-09-05", countText: "14" });
+    const file = periodLcalcFile(original);
+    expect(file.envelopeFeatures).toEqual(["period@2"]);
+
+    const serialized = JSON.parse(JSON.stringify(file)) as PeriodLcalcFile;
+    validateLcalcEnvelope(serialized);
+    const loaded = parseLoadedPeriodLcalcInput(serialized);
+    expect(applyLoadedPeriodInput(loaded.input)).toEqual(original);
+  });
+
   it("입력이 잘못된 파일은 조용히 넘기지 않고 한국어 오류로 거절한다", () => {
     const broken = JSON.parse(JSON.stringify(periodLcalcFile(form()))) as PeriodLcalcFile;
     broken.payload.input.period.count = 0;
@@ -195,5 +237,58 @@ describe("emptyPeriodForm", () => {
     expect(initial.mode).toBe("expiry");
     expect(initial.holidayExtension).toBe(true);
     expect(initial.includeFirstDay).toBe(false);
+  });
+});
+
+describe("사용자 지정 공휴일 (임시공휴일·선거일)", () => {
+  const extra = [{ date: "2026-09-18", nameKo: "임시공휴일(가정)" }];
+  const base = { countText: "14" };
+
+  it("지정한 날이 말일이면 다음 근무일로 밀고, 적용한 날을 결과와 클립보드에 적는다", () => {
+    const plain = computePeriodOutcome(buildPeriodTabInput(form(base)), FIXED_NOW);
+    expect(plain.mode === "expiry" && plain.expiryDate).toBe("2026-09-18");
+
+    const input = buildPeriodTabInput(form({ ...base, extraHolidays: extra }));
+    expect(input.extraHolidays).toEqual(extra);
+    const result = computePeriodOutcome(input, FIXED_NOW);
+    expect(result.mode === "expiry" && result.expiryDate).toBe("2026-09-21");
+    const text = formatPeriodForClipboard(result, input.extraHolidays);
+    expect(text).toContain("이번 말일 연장에 적용: 2026-09-18 임시공휴일(가정)");
+  });
+
+  it("날짜 없는 행은 버리고, 비면 키를 싣지 않으며 말일 연장을 끄면 싣지 않는다", () => {
+    const blank = form({ extraHolidays: [{ date: "", nameKo: "임시공휴일" }] });
+    expect("extraHolidays" in buildPeriodTabInput(blank)).toBe(false);
+    const off = form({ holidayExtension: false, extraHolidays: extra });
+    expect("extraHolidays" in buildPeriodTabInput(off)).toBe(false);
+    expect(periodLcalcFile(form()).envelopeFeatures).toEqual(["period@1"]);
+  });
+
+  it("커버리지 밖 날짜는 한국어 오류로 거절한다", () => {
+    const input = buildPeriodTabInput(
+      form({ extraHolidays: [{ date: "2099-01-02", nameKo: "x" }] }),
+    );
+    expect(() => computePeriodOutcome(input, FIXED_NOW)).toThrow(/커버리지/);
+  });
+
+  it("지정 공휴일이 있으면 period@3 으로 저장하고 왕복에서 같은 만료일을 낸다", () => {
+    const original = form({ ...base, pendingOn20080322: true, extraHolidays: extra });
+    const file = periodLcalcFile(original);
+    expect(file.envelopeFeatures).toEqual(["period@3"]);
+
+    const serialized = JSON.parse(JSON.stringify(file)) as PeriodLcalcFile;
+    validateLcalcEnvelope(serialized);
+    const loaded = parseLoadedPeriodLcalcInput(serialized);
+    expect(applyLoadedPeriodInput(loaded.input)).toEqual(original);
+    // 계속 사건이라 토요일(09-19)은 근무일이다. 지정 공휴일 09-18 만 넘는다.
+    expect(loaded.result?.mode === "expiry" && loaded.result.expiryDate).toBe("2026-09-19");
+  });
+
+  it("모양이 잘못된 지정 공휴일은 열지 않는다", () => {
+    const broken = JSON.parse(
+      JSON.stringify(periodLcalcFile(form({ extraHolidays: extra }))),
+    ) as PeriodLcalcFile;
+    (broken.payload.input.extraHolidays as unknown[]) = [{ date: "2026/09/18", nameKo: "x" }];
+    expect(() => parseLoadedPeriodLcalcInput(broken)).toThrow(/YYYY-MM-DD/);
   });
 });

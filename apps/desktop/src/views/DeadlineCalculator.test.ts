@@ -22,6 +22,8 @@ function form(overrides: Partial<DeadlineFormState> = {}): DeadlineFormState {
     id: "civilAppeal",
     startEventDate: "2026-09-04",
     useAlternate: false,
+    pendingOn20080322: false,
+    extraHolidays: [],
     ...overrides,
   };
 }
@@ -59,6 +61,21 @@ describe("buildDeadlineTabInput", () => {
     expect(computeDeadlineOutcome(input, FIXED_NOW).appliedAlternateKo).toBe(
       "국외에서 행정심판을 청구하는 경우",
     );
+  });
+});
+
+describe("2008-03-22 당시 계속 중인 사건 (민법 부칙 제3조 제1항)", () => {
+  it("켰을 때만 입력에 싣고, 토요일 말일을 연장하지 않는다 (VK 대조)", () => {
+    const on = form({ startEventDate: "2026-09-26", pendingOn20080322: true });
+    const input = buildDeadlineTabInput(on);
+    expect(input).toEqual({
+      id: "civilAppeal",
+      startEventDate: "2026-09-26",
+      pendingOn20080322: true,
+    });
+    expect(applyLoadedDeadlineInput(input)).toEqual(on);
+    expect(computeDeadlineOutcome(input, FIXED_NOW).expiryDate).toBe("2026-10-10");
+    expect(outcome(form({ startEventDate: "2026-09-26" })).expiryDate).toBe("2026-10-12");
   });
 });
 
@@ -210,6 +227,18 @@ describe(".lcalc 저장 → 열기 왕복", () => {
     expect(loaded.result?.appliedAlternateKo).toBe("국외에서 행정심판을 청구하는 경우");
   });
 
+  it("계속 사건 키가 있으면 deadline@2 로 저장하고 왕복에서 살아남는다", () => {
+    const original = form({ startEventDate: "2026-09-26", pendingOn20080322: true });
+    const file = deadlineLcalcFile(original);
+    expect(file.envelopeFeatures).toEqual(["deadline@2"]);
+
+    const serialized = JSON.parse(JSON.stringify(file)) as DeadlineLcalcFile;
+    validateLcalcEnvelope(serialized);
+    const loaded = parseLoadedDeadlineLcalcInput(serialized);
+    expect(applyLoadedDeadlineInput(loaded.input)).toEqual(original);
+    expect(loaded.result?.expiryDate).toBe("2026-10-10");
+  });
+
   it("없는 기한 id 는 조용히 넘기지 않고 한국어 오류로 거절한다", () => {
     const broken = JSON.parse(JSON.stringify(deadlineLcalcFile(form()))) as DeadlineLcalcFile;
     broken.payload.input.id = "patentAppeal";
@@ -247,5 +276,33 @@ describe("emptyDeadlineForm", () => {
     const initial = emptyDeadlineForm();
     expect(initial.id).toBe("civilAppeal");
     expect(initial.useAlternate).toBe(false);
+  });
+});
+
+describe("사용자 지정 공휴일 (임시공휴일·선거일)", () => {
+  const extra = [{ date: "2026-09-18", nameKo: "임시공휴일(가정)" }];
+
+  it("지정한 날이 말일이면 다음 근무일로 밀고, 엔진 입력에는 섞지 않는다", () => {
+    // 송달 2026-09-04, 2주 → 만료 09-18 (금).
+    expect(outcome(form()).expiryDate).toBe("2026-09-18");
+    const input = buildDeadlineTabInput(form({ extraHolidays: extra }));
+    const result = computeDeadlineOutcome(input, FIXED_NOW);
+    expect(result.expiryDate).toBe("2026-09-21");
+    expect(formatDeadlineForClipboard(result, input.extraHolidays)).toContain(
+      "이번 말일 연장에 적용: 2026-09-18 임시공휴일(가정)",
+    );
+    expect(deadlineLcalcFile(form()).envelopeFeatures).toEqual(["deadline@1"]);
+  });
+
+  it("지정 공휴일이 있으면 deadline@3 으로 저장하고 왕복에서 같은 만료일을 낸다", () => {
+    const original = form({ extraHolidays: extra });
+    const file = deadlineLcalcFile(original);
+    expect(file.envelopeFeatures).toEqual(["deadline@3"]);
+
+    const serialized = JSON.parse(JSON.stringify(file)) as DeadlineLcalcFile;
+    validateLcalcEnvelope(serialized);
+    const loaded = parseLoadedDeadlineLcalcInput(serialized);
+    expect(applyLoadedDeadlineInput(loaded.input)).toEqual(original);
+    expect(loaded.result?.expiryDate).toBe("2026-09-21");
   });
 });

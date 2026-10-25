@@ -97,6 +97,30 @@ describe("불변기한 계산 결과 노출", () => {
   });
 });
 
+describe("사용자 지정 공휴일 요약", () => {
+  it("계산 당시 입력을 따르고, 계산 뒤 표를 고쳐도 바뀌지 않는다", () => {
+    render(<DeadlineCalculator />);
+    pick("civilAppeal", "2026-09-05");
+    fireEvent.click(screen.getByRole("button", { name: "공휴일 추가" }));
+    fireEvent.change(screen.getByLabelText("추가 공휴일 1 날짜"), {
+      target: { value: "2026-09-21" },
+    });
+    fireEvent.change(screen.getByLabelText("추가 공휴일 1 이름"), {
+      target: { value: "계산당시휴일" },
+    });
+    calculate();
+    expect(screen.getByTestId("deadline-expiry-date").textContent).toBe("2026-09-22");
+    const summary = () => screen.getByTestId("deadline-extra-holidays").textContent;
+    expect(summary()).toContain("계산당시휴일");
+
+    fireEvent.change(screen.getByLabelText("추가 공휴일 1 이름"), {
+      target: { value: "나중이름" },
+    });
+    expect(summary()).toContain("계산당시휴일");
+    expect(summary()).not.toContain("나중이름");
+  });
+});
+
 describe("계열별 근거 분리", () => {
   it("형사 항목의 근거는 형사소송법이고 민법 조문이 뜨지 않는다", () => {
     render(<DeadlineCalculator />);

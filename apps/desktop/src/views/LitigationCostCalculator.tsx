@@ -48,6 +48,8 @@ type ProvisionalApplicationKind =
   | "objectionOrCancellation";
 
 import { CaseValueEstimator } from "../components/form/CaseValueEstimator";
+import { DeliveryCodePanel } from "../components/litigation-delivery-code-panel";
+import { StampExtrasPanel } from "../components/litigation-stamp-extras-panel";
 import { ClaimAmendmentPanel } from "../components/form/ClaimAmendmentPanel";
 import { ProportionalPillInput } from "../components/form/ProportionalPillInput";
 import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotice";
@@ -979,8 +981,17 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
                 </span>
               </label>
             ) : null}
+            <DeliveryCodePanel
+              filingDate={filingDate}
+              onApply={(next) => {
+                setCaseType(next.caseType);
+                setLegacyPaymentOrder(false);
+                if (next.partyCount !== undefined) setPartyCountText(String(next.partyCount));
+              }}
+            />
             {stampDutyApplies ? (
               <>
+                <StampExtrasPanel stampDuty={input.stampDuty} />
                 <CaseValueEstimator
                   onApply={(value) => {
                     setCaseValueText(String(value));

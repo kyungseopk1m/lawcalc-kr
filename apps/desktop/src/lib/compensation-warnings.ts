@@ -15,6 +15,7 @@ import type {
   LaborRateEffectiveRule,
 } from "@lawcalc-kr/compensation";
 
+import { lifeExpectancyText, type DelayDamagesExport } from "./compensation-extras";
 import { formatWon } from "./format-won";
 
 /** 경고 문구를 실어 보내기 위해 export payload 에만 덧붙이는 필드. `.lcalc` 에는 저장하지 않는다. */
@@ -24,27 +25,43 @@ export interface WithExportWarnings {
   solatiumAddedWon: number;
   /** 공제가 재산상 손해를 넘은 금액 중 위자료에서 뺀 금액. 0 이면 "공제 초과분" 행 없음. */
   deductionExcessWon: number;
+  /** "공제 후 재산상 손해" 행 값 (공제 초과분 행이 있을 때만 쓴다). 사망은 남는 장례비 손해, 그 밖은 0. */
+  deductionRemainWon: number;
   /** "공제 초과분" 행 라벨 (0원 하한 설명 포함). Rust 는 문구를 만들지 않고 그대로 쓴다. */
   deductionExcessLabel: string;
   /** 비율공제·지급치료비가 재산상 손해를 넘어 빼지 않은 금액 (`propertyOnlyExcessWon`). */
   propertyOnlyExcessWon: number;
   /** "노임 기준" 행 값 (`laborRateTimingText`). 결과에는 입력이 없어 화면이 넘긴다. 없으면 "". */
   laborRateTimingText: string;
-  /** "절사" 행 값 (`COURT_TRUNCATION_TEXT`). 자×부상에서 법원 방식 절사를 켰을 때만, 아니면 "". */
+  /** "절사" 행 값 (부상 `COURT_TRUNCATION_TEXT`, 사망 `COURT_TRUNCATION_DEATH_TEXT`). 켰을 때만, 아니면 "". */
   courtTruncationText: string;
+  /** "기대여명" 행 값 (`lifeExpectancyText`). 결과에 기대여명이 없으면 "". */
+  lifeExpectancyText: string;
+  /** 지연손해금 블록. 화면에서 켜고 계산된 때만 싣는다 (손해배상액과 별도). */
+  delayDamages?: DelayDamagesExport;
 }
 
 /** 결과를 낸 노임 시점 입력. 결과 객체에 없으므로 화면 입력에서 받는다. */
 export interface LaborRateTiming {
   calculationDate?: string;
   laborRateEffectiveRule?: LaborRateEffectiveRule;
-  /** 자×부상 `base.courtTruncation`. 결과에 없어 화면이 넘긴다. */
+  /** 부상·사망 `base.courtTruncation`. 결과에 없어 화면이 넘긴다. */
   courtTruncation?: boolean;
 }
 
 /** "절사" 행 값. 화면·클립보드·PDF·CSV 공용. */
 export const COURT_TRUNCATION_TEXT =
   "법원 계산 프로그램 방식 (노동능력상실률 % 소수 2자리, 누적 호프만 소수 4자리 버림)";
+
+/** 사망 "절사" 행 값. 사망은 노동능력상실률이 없어 호프만 절사만 해당한다. */
+export const COURT_TRUNCATION_DEATH_TEXT = "법원 계산 프로그램 방식 (누적 호프만 소수 4자리 버림)";
+
+/** 결과 종류에 맞는 "절사" 행 값. */
+export function courtTruncationTextOf(result: CompensationResult | CompensationAutoDeathResult) {
+  return "mode" in result && result.mode === "death"
+    ? COURT_TRUNCATION_DEATH_TEXT
+    : COURT_TRUNCATION_TEXT;
+}
 
 /** "노임 기준" 행 값. 화면·클립보드·PDF·CSV 공용. */
 export function laborRateTimingText(timing: LaborRateTiming): string {
@@ -69,7 +86,11 @@ export function solatiumAddedAfterDeductionsWon(result: AnyCompensationResult): 
   if (result.solatiumWon === 0) return 0;
   const lostIncome = result.industrialBenefit?.lostIncomeAfterWon ?? result.lostIncomeSubtotalWon;
   const funeral = "funeralExpenseWon" in result ? result.funeralExpenseWon : 0;
-  const pecuniaryWithoutSolatium = lostIncome + (result.otherDamages?.subtotalWon ?? 0) + funeral;
+  const pecuniaryWithoutSolatium =
+    lostIncome +
+    (result.otherDamages?.subtotalWon ?? 0) +
+    (result.lostRetirementSubtotalWon ?? 0) +
+    funeral;
   const gap = result.pecuniaryDamagesSubtotalWon - pecuniaryWithoutSolatium;
   return Math.abs(gap) < Math.abs(gap - result.solatiumWon) ? result.solatiumWon : 0;
 }
@@ -98,6 +119,8 @@ export function propertyOnlyExcessWon(result: AnyCompensationResult): number {
 export interface SolatiumSettlement {
   addedWon: number;
   deductionExcessWon: number;
+  /** "공제 후 재산상 손해" 행 값. 공제가 깎지 않는 사망 장례비 손해가 여기 남는다 (그 밖은 0). */
+  remainWon: number;
   uncoveredExcessWon: number;
   /** 상속인별 계산: 전액공제 초과분 중 위자료로도 빼지 못해 버린 합 (되돌림 행). 총액 계산은 0. */
   heirExcessDroppedWon: number;
@@ -129,6 +152,7 @@ export function solatiumSettlement(result: AnyCompensationResult): SolatiumSettl
     return {
       addedWon,
       deductionExcessWon: 0,
+      remainWon: 0,
       uncoveredExcessWon: 0,
       heirExcessDroppedWon: d.absoluteExcessDroppedWon ?? 0,
       heirRoundingWon: d.roundingWon,
@@ -138,18 +162,24 @@ export function solatiumSettlement(result: AnyCompensationResult): SolatiumSettl
     return {
       addedWon,
       deductionExcessWon: 0,
+      remainWon: 0,
       uncoveredExcessWon: 0,
       heirExcessDroppedWon: 0,
       heirRoundingWon: 0,
     };
   }
   // 엔진의 공제 후 금액. 비율공제·지급치료비는 이미 재산상 손해 한도로 줄어 있어, 음수면
-  // 전액공제(선급금 등)가 재산상 손해를 넘은 것이다.
-  const excess = Math.max(0, -result.deductions.afterWon);
+  // 전액공제(선급금 등)가 재산상 손해를 넘은 것이다. 사망 총액 계산은 장례비 손해를 공제로 깎지
+  // 않아 afterWon 이 양수여도 위자료가 줄 수 있으므로, 엔진이 실은 감액·버린 초과분을 쓴다.
+  const excess =
+    d.solatiumReducedWon !== undefined
+      ? d.solatiumReducedWon + (d.absoluteExcessDroppedWon ?? 0)
+      : Math.max(0, -d.afterWon);
   const deductionExcessWon = Math.min(excess, addedWon);
   return {
     addedWon,
     deductionExcessWon,
+    remainWon: d.afterWon + excess,
     uncoveredExcessWon: excess - deductionExcessWon,
     heirExcessDroppedWon: 0,
     heirRoundingWon: 0,
@@ -172,6 +202,9 @@ export function buildCompensationExportWarnings(result: AnyCompensationResult): 
   // 엔진의 대체 처리 경고(직종 조사 중단, 호프만표 범위 초과 `hoffmanCoverageClamped` 등).
   // 문구는 엔진이 만든 한국어를 그대로 쓴다.
   const warnings: string[] = (result.warnings ?? []).map((warning) => warning.message);
+  // 기대여명(생명표 대체)·일실퇴직금(음수 0 처리) 경고도 엔진 문구 그대로 싣는다.
+  for (const warning of result.lifeExpectancy?.warnings ?? []) warnings.push(warning.message);
+  for (const warning of result.lostRetirement?.warnings ?? []) warnings.push(warning.message);
 
   const cappedAt = result.hoffman240Cap.cappedAtIndex;
   if (cappedAt !== null && cappedAt !== undefined) {
@@ -208,6 +241,7 @@ export function buildCompensationExportWarnings(result: AnyCompensationResult): 
 export function withCompensationExportWarnings<T extends AnyCompensationResult>(
   result: T,
   timing?: LaborRateTiming,
+  delayDamages?: DelayDamagesExport,
 ): T & WithExportWarnings {
   const settlement = solatiumSettlement(result);
   return {
@@ -215,9 +249,13 @@ export function withCompensationExportWarnings<T extends AnyCompensationResult>(
     exportWarnings: buildCompensationExportWarnings(result),
     solatiumAddedWon: settlement.addedWon,
     deductionExcessWon: settlement.deductionExcessWon,
+    deductionRemainWon: settlement.remainWon,
     deductionExcessLabel: deductionExcessLabel(settlement),
     propertyOnlyExcessWon: propertyOnlyExcessWon(result),
     laborRateTimingText: timing ? laborRateTimingText(timing) : "",
-    courtTruncationText: timing?.courtTruncation ? COURT_TRUNCATION_TEXT : "",
+    courtTruncationText: timing?.courtTruncation ? courtTruncationTextOf(result) : "",
+    lifeExpectancyText:
+      result.lifeExpectancy !== undefined ? lifeExpectancyText(result.lifeExpectancy) : "",
+    ...(delayDamages !== undefined && delayDamages.rows.length > 0 ? { delayDamages } : {}),
   };
 }

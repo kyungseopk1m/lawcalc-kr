@@ -37,6 +37,7 @@ import { Input } from "../components/ui/input";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { useResultFingerprint } from "../hooks/use-result-fingerprint";
 import { useCaseSlot } from "../lib/case-file";
+import { formatWon, formatWonInput, parseWonText } from "../lib/format-won";
 import { ipc, type LcalcFile, type LcalcInheritancePayload } from "../lib/ipc";
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
@@ -75,6 +76,7 @@ function buildInheritanceDirtySnapshot({
   linealAscendants,
   siblings,
   collateralFourth,
+  estateText,
   note,
 }: {
   decedent: DecedentInput;
@@ -83,6 +85,7 @@ function buildInheritanceDirtySnapshot({
   linealAscendants: HeirInput[];
   siblings: HeirInput[];
   collateralFourth: HeirInput[];
+  estateText: string;
   note: string;
 }) {
   return createLcalcDirtySnapshot({
@@ -92,6 +95,7 @@ function buildInheritanceDirtySnapshot({
     linealAscendants: heirsForDirtySnapshot(linealAscendants),
     siblings: heirsForDirtySnapshot(siblings),
     collateralFourth: heirsForDirtySnapshot(collateralFourth),
+    estateText,
     note,
   });
 }
@@ -110,6 +114,7 @@ function buildLoadedInheritanceDirtySnapshot(input: InheritanceInput, note: stri
     linealAscendants: heirsFromNodesForDirtySnapshot(input.linealAscendants, 1),
     siblings: heirsFromNodesForDirtySnapshot(input.siblings),
     collateralFourth: heirsFromNodesForDirtySnapshot(input.collateralFourth, 3),
+    estateText: input.estateWon === undefined ? "" : String(input.estateWon),
     note,
   });
 }
@@ -128,14 +133,57 @@ function formatComputedAt(value: string): string {
   }).format(date);
 }
 
-function formatInheritanceForClipboard(result: InheritanceResult): string {
+/** 상속재산 입력 문자열 → 엔진 입력 키. 비어 있으면 키를 싣지 않아 종전 결과 모양 그대로다. */
+export function withEstate(input: InheritanceInput, estateText: string): InheritanceInput {
+  const digits = parseWonText(estateText);
+  return digits === "" ? input : { ...input, estateWon: Number(digits) };
+}
+
+/**
+ * 화면 계산. 전개식은 금액이 없어도 보이도록 `includeTrace` 를 붙인다. 이 키는 결과 모양만
+ * 바꾸므로 저장 입력에는 싣지 않는다 (구파일·구앱과 같은 입력).
+ */
+export function computeInheritance(input: InheritanceInput): InheritanceResult {
+  return calculateInheritance({ ...input, includeTrace: true });
+}
+
+/**
+ * 저장 capability. 상속재산 금액이 있으면 `inheritance@3` (구앱이 키를 버리면 금액 없는 결과를
+ * 그대로 보여 준다), 포기·대습 원인이 있으면 `@2`, 둘 다 없으면 `@1`.
+ */
+/**
+ * 파일 열기 때 저장 결과와 재계산 결과를 견주는 핵심 값. 지분이 같아도 상속재산 금액이나
+ * 상속인별 금액·끝수가 다르면 "저장 당시 결과와 다릅니다" 안내가 떠야 하므로 금액도 넣는다.
+ */
+export function summarizeInheritanceResult(r: InheritanceResult): string {
+  const won = (n: number | undefined) => (n === undefined ? "" : ` ${n.toLocaleString("ko-KR")}원`);
+  const shares = r.shares
+    .map((s) => `${s.name} ${s.numerator}/${s.denominator}${won(s.amountWon)}`)
+    .join(", ");
+  return r.estateWon === undefined
+    ? shares
+    : `${shares} · 상속재산${won(r.estateWon)} · 끝수${won(r.remainderWon)}`;
+}
+
+export function inheritanceCapability(input: InheritanceInput): string {
+  if (input.estateWon !== undefined) return "inheritance@3";
+  return hasInheritanceV2Fields(input) ? "inheritance@2" : "inheritance@1";
+}
+
+/** 상속인별 금액 합 + 끝수. 엔진 계약상 상속재산과 같아야 하며 화면은 이 합을 보여 준다. */
+export function inheritanceAmountTotal(result: InheritanceResult): number {
+  return result.shares.reduce((sum, s) => sum + (s.amountWon ?? 0), result.remainderWon ?? 0);
+}
+
+export function formatInheritanceForClipboard(result: InheritanceResult): string {
+  const hasAmount = result.estateWon !== undefined;
   const rows = result.shares
     .map(
       (share) =>
         `${share.name}\t${share.numerator}/${share.denominator}\t${share.rawNumerator}/${share.rawDenominator}\t${formatPercent(
           share.numerator,
           share.denominator,
-        )}`,
+        )}` + (hasAmount ? `\t${formatWon(share.amountWon ?? 0)}원` : ""),
     )
     .join("\n");
 
@@ -143,14 +191,51 @@ function formatInheritanceForClipboard(result: InheritanceResult): string {
     "LawCalc Korea 상속분 간이 계산 결과",
     `피상속인: ${result.decedent.name ?? "-"}`,
     `사망일: ${result.decedent.deceasedAt}`,
+    ...(hasAmount
+      ? [
+          `상속재산: ${formatWon(result.estateWon ?? 0)}원`,
+          `원 미만 내림 끝수 (배정하지 않음): ${formatWon(result.remainderWon ?? 0)}원`,
+          `합계 (금액 합 + 끝수): ${formatWon(inheritanceAmountTotal(result))}원`,
+        ]
+      : []),
     `데이터 버전: ${result.dataVersion}`,
     `계산 시각: ${result.computedAt}`,
     "",
-    "상속인\t지분(약분)\t약분 전\t백분율(참고)",
+    `상속인\t지분(약분)\t약분 전\t백분율(참고)${hasAmount ? "\t금액" : ""}`,
     rows,
+    ...(result.trace && result.trace.length > 0 ? ["", "전개식", ...result.trace] : []),
     "",
     STANDARD_DISCLAIMER,
   ].join("\n");
+}
+
+export function buildInheritanceLcalcFile(
+  input: InheritanceInput,
+  calculated: InheritanceResult,
+  note: string,
+): LcalcFile {
+  const payload: LcalcInheritancePayload = {
+    appVersion: APP_VERSION,
+    dataVersion: calculated.dataVersion,
+    createdAt: new Date().toISOString(),
+    input,
+    result: { ...calculated, disclaimer: STANDARD_DISCLAIMER },
+    disclaimer: STANDARD_DISCLAIMER,
+  };
+
+  if (note.trim()) {
+    payload.note = note.trim();
+  }
+
+  return {
+    schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
+    kind: "inheritance",
+    // 새 의미 필드가 실제로 담긴 파일만 올린다. 구앱이 포기·대습 원인을 버리면 포기자가 지분을
+    // 받거나 대습 배우자 슬롯이 되살아나고(@2), 상속재산 금액을 버리면 금액 없는 결과가 된다(@3).
+    envelopeFeatures: [inheritanceCapability(input)],
+    dataVersions: { inheritance: calculated.dataVersion },
+    payload,
+  };
 }
 
 export function InheritanceCalculator({ active = true }: { active?: boolean }) {
@@ -163,6 +248,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
   const [linealAscendants, setLinealAscendants] = useState<HeirInput[]>([]);
   const [siblings, setSiblings] = useState<HeirInput[]>([]);
   const [collateralFourth, setCollateralFourth] = useState<HeirInput[]>([]);
+  const [estateText, setEstateText] = useState("");
   const [note, setNote] = useState("");
   const [loadingAction, setLoadingAction] = useState<ActionName | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -175,9 +261,19 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
         linealAscendants,
         siblings,
         collateralFourth,
+        estateText,
         note,
       }),
-    [collateralFourth, decedent, linealAscendants, linealDescendants, note, siblings, spouse],
+    [
+      collateralFourth,
+      decedent,
+      estateText,
+      linealAscendants,
+      linealDescendants,
+      note,
+      siblings,
+      spouse,
+    ],
   );
   const markInheritanceClean = useLcalcDirtyTracker("inheritance", dirtySnapshot);
   const pristineSnapshotRef = useRef(dirtySnapshot);
@@ -188,6 +284,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     linealAscendants,
     siblings,
     collateralFourth,
+    estateText,
     note: "",
   });
   const {
@@ -205,14 +302,17 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
   const resultReady = result !== null && !resultStale;
 
   const buildInput = (): InheritanceInput =>
-    buildInheritanceInput({
-      decedent,
-      spouse,
-      linealDescendants,
-      linealAscendants,
-      siblings,
-      collateralFourth,
-    });
+    withEstate(
+      buildInheritanceInput({
+        decedent,
+        spouse,
+        linealDescendants,
+        linealAscendants,
+        siblings,
+        collateralFourth,
+      }),
+      estateText,
+    );
 
   const applyInput = (input: InheritanceInput) => {
     const groups = applyInheritanceInput(input);
@@ -222,31 +322,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     setLinealAscendants(groups.linealAscendants);
     setSiblings(groups.siblings);
     setCollateralFourth(groups.collateralFourth);
-  };
-
-  const buildLcalcFile = (input: InheritanceInput, calculated: InheritanceResult): LcalcFile => {
-    const payload: LcalcInheritancePayload = {
-      appVersion: APP_VERSION,
-      dataVersion: calculated.dataVersion,
-      createdAt: new Date().toISOString(),
-      input,
-      result: { ...calculated, disclaimer: STANDARD_DISCLAIMER },
-      disclaimer: STANDARD_DISCLAIMER,
-    };
-
-    if (note.trim()) {
-      payload.note = note.trim();
-    }
-
-    return {
-      schemaVersion: CURRENT_LCALC_SCHEMA_VERSION,
-      kind: "inheritance",
-      // 새 의미 필드(포기·대습 원인)가 실제로 담긴 파일만 @2 로 올린다. 구앱이 이 필드를
-      // 버리면 포기자가 지분을 받거나 대습 배우자 슬롯이 되살아나 금액이 조용히 달라진다.
-      envelopeFeatures: [hasInheritanceV2Fields(input) ? "inheritance@2" : "inheritance@1"],
-      dataVersions: { inheritance: calculated.dataVersion },
-      payload,
-    };
+    setEstateText(input.estateWon === undefined ? "" : String(input.estateWon));
   };
 
   const runAction = async (action: ActionName, task: () => Promise<string | null | void>) => {
@@ -275,7 +351,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     const input = buildInput();
 
     try {
-      const r = calculateInheritance(input);
+      const r = computeInheritance(input);
       setResult(r);
       setError(null);
       setToast(null);
@@ -292,6 +368,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     setLinealAscendants([]);
     setSiblings([]);
     setCollateralFourth([]);
+    setEstateText("");
     setNote("");
     setResult(null);
     setError(null);
@@ -330,7 +407,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
       if (!result || resultStale) {
         throw new Error("계산 후 .lcalc 파일을 저장해 주세요.");
       }
-      const path = await ipc.saveLcalc(buildLcalcFile(buildInput(), result));
+      const path = await ipc.saveLcalc(buildInheritanceLcalcFile(buildInput(), result, note));
       if (path) {
         markInheritanceClean();
       }
@@ -355,8 +432,8 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     setNote(loadedNote);
     const differs = setLoadedResult(
       loaded.result && { ...loaded.result, disclaimer: STANDARD_DISCLAIMER },
-      () => calculateInheritance(loaded.input),
-      (r) => r.shares.map((s) => `${s.name} ${s.numerator}/${s.denominator}`).join(", "),
+      () => computeInheritance(loaded.input),
+      summarizeInheritanceResult,
     );
     setError(null);
     markInheritanceClean(buildLoadedInheritanceDirtySnapshot(loaded.input, loadedNote));
@@ -370,7 +447,10 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
       }
       try {
         const input = buildInput();
-        return { status: "ok", file: buildLcalcFile(input, calculateInheritance(input)) };
+        return {
+          status: "ok",
+          file: buildInheritanceLcalcFile(input, computeInheritance(input), note),
+        };
       } catch {
         return { status: "invalid" };
       }
@@ -495,6 +575,27 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
           ]}
         />
 
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">상속재산 (선택)</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              입력하면 상속인별 금액(원 미만 내림)과 배정하지 않은 끝수를 함께 보여 줍니다.
+              기여분·특별수익은 반영하지 않은 법정상속분 기준입니다.
+            </p>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <label className="grid gap-2 text-sm font-medium">
+              상속재산 금액 (원)
+              <Input
+                inputMode="numeric"
+                placeholder="예: 100,000,000"
+                value={formatWonInput(estateText)}
+                onChange={(e) => setEstateText(parseWonText(e.target.value))}
+              />
+            </label>
+          </CardContent>
+        </Card>
+
         <div className="flex gap-2">
           <Button onClick={handleCalculate} type="button">
             계산
@@ -539,6 +640,9 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                       <th className="py-2 font-medium">지분 (약분)</th>
                       <th className="py-2 font-medium">약분 전</th>
                       <th className="py-2 font-medium text-right">백분율 (참고)</th>
+                      {result.estateWon !== undefined ? (
+                        <th className="py-2 font-medium text-right">금액</th>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -554,12 +658,58 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
                         <td className="py-2 text-right text-xs text-muted-foreground">
                           {formatPercent(s.numerator, s.denominator)}
                         </td>
+                        {result.estateWon !== undefined ? (
+                          <td className="py-2 text-right font-mono">
+                            {formatWon(s.amountWon ?? 0)}원
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
+                  {result.estateWon !== undefined ? (
+                    <tfoot className="text-xs text-muted-foreground">
+                      <tr>
+                        <td className="pt-2" colSpan={4}>
+                          원 미만 내림 끝수 (배정하지 않음)
+                        </td>
+                        <td className="pt-2 text-right font-mono">
+                          {formatWon(result.remainderWon ?? 0)}원
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="font-medium text-foreground" colSpan={4}>
+                          합계 (금액 합 + 끝수 = 상속재산)
+                        </td>
+                        <td
+                          className="text-right font-mono font-medium text-foreground"
+                          data-testid="inheritance-estate-total"
+                        >
+                          {formatWon(inheritanceAmountTotal(result))}원
+                        </td>
+                      </tr>
+                    </tfoot>
+                  ) : null}
                 </table>
               </CardContent>
             </Card>
+
+            {result.trace && result.trace.length > 0 ? (
+              <Card>
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">전개식</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <ol
+                    className="grid list-decimal gap-1 pl-5 text-xs"
+                    data-testid="inheritance-trace"
+                  >
+                    {result.trace.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ol>
+                </CardContent>
+              </Card>
+            ) : null}
 
             <Card>
               <CardContent className="grid gap-2 p-4 text-xs text-muted-foreground sm:grid-cols-2">

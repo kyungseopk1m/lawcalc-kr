@@ -17,7 +17,7 @@ import {
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask } from "@tauri-apps/plugin-dialog";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   STANDARD_DISCLAIMER,
@@ -90,6 +90,10 @@ import { DeadlineCalculator } from "./views/DeadlineCalculator";
 import { InheritanceCalculator } from "./views/InheritanceCalculator";
 import { LitigationCostCalculator } from "./views/LitigationCostCalculator";
 import { PeriodCalculator } from "./views/PeriodCalculator";
+import { DetentionCalculator } from "./views/DetentionCalculator";
+import { ExpressionCalculator } from "./views/ExpressionCalculator";
+import { ReferenceTablesView } from "./views/ReferenceTablesView";
+import { ServiceEffectCalculator } from "./views/ServiceEffectCalculator";
 
 const defaultOptions: CalcOptions = {
   mode: "period",
@@ -118,7 +122,8 @@ type TabId =
   | "appropriation"
   | "compensation"
   | "period"
-  | "deadline";
+  | "deadline"
+  | "tools";
 
 /**
  * 상단 탭. 종전에는 `<Button>` 다섯 개라 스크린리더가 탭으로 인식하지 못했고, 활성 탭이
@@ -132,6 +137,24 @@ const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: "compensation", label: "손해배상" },
   { id: "period", label: "기간 계산" },
   { id: "deadline", label: "불변기한" },
+  { id: "tools", label: "도구" },
+];
+
+type ToolId = "serviceEffect" | "detention" | "expression" | "referenceTables";
+
+/**
+ * 사건 파일에 싣지 않는 보조 도구. 상단 탭이 이미 여덟 개라 하나씩 늘리면 탭 줄이 두 줄로
+ * 접히므로 "도구" 탭 하나 아래에 둔다.
+ */
+const TOOLS: ReadonlyArray<{
+  id: ToolId;
+  label: string;
+  View: (props: { active: boolean }) => ReactNode;
+}> = [
+  { id: "serviceEffect", label: "송달 효력·상소기간", View: ServiceEffectCalculator },
+  { id: "detention", label: "미결구금일수", View: DetentionCalculator },
+  { id: "expression", label: "계산기", View: ExpressionCalculator },
+  { id: "referenceTables", label: "여명표·노임표", View: ReferenceTablesView },
 ];
 
 const TAB_BY_CALCULATION: Record<LcalcCaseCalculationKey, TabId> = {
@@ -465,6 +488,7 @@ export function App() {
     [claimEnding, result],
   );
   const [activeTab, setActiveTab] = useState<TabId>("interest");
+  const [activeTool, setActiveTool] = useState<ToolId>("serviceEffect");
   const [caseTitle, setCaseTitle] = useState("");
   const [caseToast, setCaseToast] = useState<ToastState | null>(null);
   const interestPristineSnapshotRef = useRef(dirtySnapshot);
@@ -868,6 +892,72 @@ export function App() {
         aria-labelledby="tab-deadline"
       >
         <DeadlineCalculator active={activeTab === "deadline"} />
+      </div>
+      <div
+        className={activeTab === "tools" ? "contents" : "hidden"}
+        role="tabpanel"
+        id="tabpanel-tools"
+        aria-labelledby="tab-tools"
+      >
+        {/* 도구 탭이 열렸을 때만 하위 tablist 를 그린다. 숨긴 tablist 가 남으면 보조기기가 tablist 를
+            두 개로 읽는다. 패널은 입력 상태를 지키려고 계속 마운트해 둔다. */}
+        {activeTab === "tools" ? (
+          <div
+            className="mx-auto flex w-full max-w-6xl flex-wrap gap-1 px-4 pt-3 sm:px-6"
+            role="tablist"
+            aria-label="도구"
+            // WAI-ARIA 탭 패턴: 탭 순서에는 선택된 탭 하나만 두고(roving tabindex), 좌우 화살표와
+            // Home/End 로 옮기면서 바로 선택한다.
+            onKeyDown={(e) => {
+              const i = TOOLS.findIndex((t) => t.id === activeTool);
+              const next = (
+                { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TOOLS.length - 1 } as Record<
+                  string,
+                  number
+                >
+              )[e.key];
+              if (next === undefined) return;
+              e.preventDefault();
+              const tool = TOOLS[(next + TOOLS.length) % TOOLS.length]!;
+              setActiveTool(tool.id);
+              document.getElementById(`tool-${tool.id}`)?.focus();
+            }}
+          >
+            {TOOLS.map((tool) => (
+              <Button
+                key={tool.id}
+                id={`tool-${tool.id}`}
+                role="tab"
+                aria-selected={activeTool === tool.id}
+                aria-controls={`toolpanel-${tool.id}`}
+                tabIndex={activeTool === tool.id ? 0 : -1}
+                variant={activeTool === tool.id ? "secondary" : "ghost"}
+                size="sm"
+                className={
+                  activeTool === tool.id ? "font-semibold underline underline-offset-4" : ""
+                }
+                onClick={() => setActiveTool(tool.id)}
+                type="button"
+              >
+                {tool.label}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+        {TOOLS.map((tool) => {
+          const on = activeTab === "tools" && activeTool === tool.id;
+          return (
+            <div
+              key={tool.id}
+              className={activeTool === tool.id ? "contents" : "hidden"}
+              role="tabpanel"
+              id={`toolpanel-${tool.id}`}
+              aria-labelledby={`tool-${tool.id}`}
+            >
+              <tool.View active={on} />
+            </div>
+          );
+        })}
       </div>
       {/* 이자 탭의 패널은 이 `main` 자체다. `role="tabpanel"` 을 씌우면 main 랜드마크가
           사라지므로 id 와 라벨만 연결한다 (탭의 `aria-controls` 는 그대로 가리킨다). */}

@@ -50,6 +50,15 @@ pub struct InheritanceResultView {
     pub disclaimer: String,
     pub data_version: String,
     pub computed_at: String,
+    /// 상속재산 금액. 입력했을 때만 있다 (구 결과에는 없음).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub estate_won: Option<f64>,
+    /// 원 미만 내림으로 남아 누구에게도 배정하지 않은 끝수.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remainder_won: Option<f64>,
+    /// 전개식 (판단 경로). 구 결과에는 없어 빈 목록이다.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trace: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -68,6 +77,9 @@ pub struct InheritanceShareView {
     pub denominator: i64,
     pub raw_numerator: i64,
     pub raw_denominator: i64,
+    /// 상속재산 × 지분 (원 미만 내림). `estate_won` 이 있을 때만.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub amount_won: Option<f64>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -155,9 +167,73 @@ pub struct CompensationResultView {
     /// `COURT_TRUNCATION_TEXT` 를 넘긴다. 비어 있으면 행을 내지 않는다.
     #[serde(default)]
     pub court_truncation_text: String,
+    /// 일실퇴직금 (원). `lostRetirement` 입력 결과에만 있다 (회귀 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lost_retirement_subtotal_won: Option<f64>,
+    /// "기대여명" 행 값. frontend `lifeExpectancyText` 가 만들어 넘긴다. 비어 있으면 행 없음.
+    #[serde(default)]
+    pub life_expectancy_text: String,
+    /// 원고별 최종액 (`claimants` 입력 결과에만).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claimants: Option<Vec<CompensationClaimantView>>,
+    /// 지연손해금 블록 (화면에서 계산했을 때만, 손해배상액과 별도).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_damages: Option<CompensationDelayDamagesView>,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,
+}
+
+/// 부상 원고 1명 (`CompensationInjuryClaimant`).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationClaimantView {
+    /// `"victim"` (피해자 본인) | `"family"` (가족 원고).
+    pub role: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub solatium_won: f64,
+    pub amount_won: f64,
+}
+
+impl CompensationClaimantView {
+    /// 표의 원고 이름. 피해자 본인 행은 이름이 없다.
+    pub fn label(&self) -> String {
+        if self.role == "victim" {
+            "피해자 본인".to_string()
+        } else {
+            self.name.clone().unwrap_or_else(|| "가족 원고".to_string())
+        }
+    }
+}
+
+/// 지연손해금 블록. frontend `DelayDamagesExport` 를 그대로 받는다 (문구는 frontend 가 만든다).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationDelayDamagesView {
+    pub basis_text: String,
+    pub rows: Vec<CompensationDelayDamagesRowView>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationDelayDamagesRowView {
+    pub label: String,
+    pub principal_won: f64,
+    pub interest_won: f64,
+    pub total_won: f64,
+    pub order_text: String,
+}
+
+impl CompensationDelayDamagesRowView {
+    /// 주문 문구. 원고별 행은 "OOO에게 " 를 앞에 붙인다 (frontend 클립보드와 같다).
+    pub fn order_line(&self) -> String {
+        if self.label == "최종 합계" {
+            self.order_text.clone()
+        } else {
+            format!("{}에게 {}", self.label, self.order_text)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -174,6 +250,9 @@ pub struct CompensationSegmentView {
     pub daily_wage_won: f64,
     pub applied_hoffman: f64,
     pub amount_floor_won: f64,
+    /// 기대여명 이후라 생계비 1/3 을 공제한 구간 (부상 `lifeExpectancy` 결과에만 `true`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub living_cost_deducted: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -307,6 +386,28 @@ pub struct CompensationDeathResultView {
     /// 만들어 넘긴다. 비어 있으면 행을 내지 않는다.
     #[serde(default)]
     pub labor_rate_timing_text: String,
+    /// "절사" 행 값 (법원 계산 프로그램 방식 절사를 켠 자×사망). 비어 있으면 행 없음.
+    #[serde(default)]
+    pub court_truncation_text: String,
+    /// 일실퇴직금 (원). `lostRetirement` 입력 결과에만 있다 (회귀 0).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lost_retirement_subtotal_won: Option<f64>,
+    /// "기대여명" 행 값 (표시용). 비어 있으면 행 없음.
+    #[serde(default)]
+    pub life_expectancy_text: String,
+    /// 상속대상 금액 (`claimants` 입력 결과에만).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub estate_won: Option<f64>,
+    /// 상속인이 아닌 유족 원고 행 (`claimants.otherClaimants` 입력 결과에만).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub other_claimants: Option<Vec<CompensationDeathOtherClaimantView>>,
+    /// "공제 후 재산상 손해" 행 값 (frontend `solatiumSettlement.remainWon`). 공제가 깎지 않는
+    /// 장례비 손해가 남는다. 구 payload 에는 없어 0 (종전 "0원" 행과 같다).
+    #[serde(default)]
+    pub deduction_remain_won: f64,
+    /// 지연손해금 블록 (화면에서 계산했을 때만).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_damages: Option<CompensationDelayDamagesView>,
     pub data_versions: CompensationDataVersionsView,
     pub disclaimer: String,
     pub computed_at: String,
@@ -322,6 +423,44 @@ pub struct CompensationInheritanceShareView {
     /// 이 상속인 몫에서 공제한 유족급여 (수급권자별 입력 결과에만, 2008다13104 전합).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub survivor_benefit_deducted_won: Option<f64>,
+    /// 원고별 귀속(`claimants`) 결과에만: 상속 재산상 손해·상속 위자료·고유 위자료·장례비·장의비 공제.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inherited_pecuniary_won: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inherited_solatium_won: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own_solatium_won: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub funeral_won: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub funeral_benefit_deducted_won: Option<f64>,
+}
+
+/// 상속인이 아닌 유족 원고 1명 (고유 위자료만, 약관 기준이면 과실 반영 후).
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompensationDeathOtherClaimantView {
+    pub name: String,
+    pub solatium_won: f64,
+    pub amount_won: f64,
+}
+
+/// 기대여명 이후 생계비 공제 구간 각주 (frontend `LIVING_COST_AFTER_LIFE_NOTE` 와 같다).
+pub const LIVING_COST_AFTER_LIFE_NOTE: &str = "* 기대여명 이후 구간은 일실수입의 1/3을 생계비로 공제했습니다 (서울고법 2022. 2. 18. 선고 2020나2039267).";
+
+/// 구간표 비고 열 값 (생계비 공제 구간 표시).
+pub const LIVING_COST_SEGMENT_MARK: &str = "생계비 1/3 공제*";
+
+/// 기대여명 이후 생계비 공제 구간이 하나라도 있는지. 없으면 표는 종전 모양 그대로다.
+pub fn segments_have_living_cost(segments: &[CompensationSegmentView]) -> bool {
+    segments
+        .iter()
+        .any(|s| s.living_cost_deducted == Some(true))
+}
+
+/// 원고별 귀속(사망) 결과인지. 상속인 행에 원고별 항목이 있으면 그렇다.
+pub fn shares_have_claimant_breakdown(shares: &[CompensationInheritanceShareView]) -> bool {
+    shares.iter().any(|s| s.inherited_pecuniary_won.is_some())
 }
 
 /// 비율공제·지급치료비 재산상 손해 초과분 행 라벨 (frontend `PROPERTY_ONLY_EXCESS_LABEL` 과 같다).
@@ -373,6 +512,9 @@ pub const HEIR_ROUNDING_LABEL: &str = "상속분 나눗셈·상속인별 100원 
 pub fn heir_excess_dropped_row(
     deductions: &CompensationDeductionsView,
 ) -> Option<(&'static str, f64)> {
+    // 사망 총액 계산도 전액공제 초과 시 이 키를 싣지만 그 금액은 "공제 초과분" 라벨에 들어가므로,
+    // 상속인별 계산(절사 차이 키가 있는 결과)만 이 행을 낸다.
+    deductions.rounding_won?;
     deductions
         .absolute_excess_dropped_won
         .filter(|won| *won > 0.0)
