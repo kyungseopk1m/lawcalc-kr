@@ -36,8 +36,9 @@ export interface StampDutySpecialProcedures {
   /**
    * 조정신청(머). 근거는 인지법이 아니라 「민사조정규칙」제3조 제1항이다 —
    * "조정신청의 수수료는 「민사소송 등 인지법」 제2조에 따라 산출한 금액의 10분의 1로 한다."
+   * `effectiveFrom` (2013-11-01) 이전 신청은 `previous` (5분의 1) 슬라이스를 쓴다.
    */
-  mediation: StampDutySpecialProcedureEntry;
+  mediation: StampDutyMediationEntry;
   /**
    * 항고·재항고(라/마). 제2조 소장 누진표와 무관한 별도 체계다.
    *
@@ -52,6 +53,18 @@ export interface StampDutySpecialProcedures {
    * 기본 5천만원, 회사관계·특허·무체재산권 등 열거 소송은 1억원.
    */
   deemedCaseValues: StampDutyDeemedCaseValues;
+}
+
+/**
+ * 조정신청 수수료의 시기별 슬라이스. 대법원규칙 제2488호(2013-11-01 시행)가 5분의 1 을
+ * 10분의 1 로 바꾸고 제2항(1천원 하한·100원 미만 절사)을 신설했다.
+ */
+export interface StampDutyMediationEntry extends StampDutySpecialProcedureEntry {
+  /** 현행 배수의 시행일. 이 날 이후 신청(부칙 제2조 제1항)에 현행 배수를 쓴다. */
+  effectiveFrom: IsoDate;
+  sourceRuleNumber: string;
+  /** 시행일 전 신청의 배수. 규칙 제2항의 하한·절사가 없던 시기다. */
+  previous: StampDutySpecialProcedureEntry & { note: string };
 }
 
 export interface StampDutyDeemedCaseValues {
@@ -127,6 +140,7 @@ export interface StampDutyClaimAmendment {
 export interface StampDutyHistoryNote {
   bracketTableStableSince: string;
   paymentOrderChangedAt: string;
+  mediationChangedAt: string;
   electronicFilingIntroducedAt: string;
   refundIntroducedAt: string;
 }
@@ -284,6 +298,10 @@ function validate(dataset: StampDutyDataset): void {
   assertMultiplierInOpenUnit(
     specialProcedures.mediation.multiplier,
     "specialProcedures.mediation.multiplier",
+  );
+  assertMultiplierInOpenUnit(
+    specialProcedures.mediation.previous.multiplier,
+    "specialProcedures.mediation.previous.multiplier",
   );
   const ia = specialProcedures.interlocutoryAppeal;
   if (!ia) {

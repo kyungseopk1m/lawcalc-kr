@@ -906,3 +906,132 @@ describe("사망·결격과 상속포기의 배타", () => {
     }
   });
 });
+
+describe("상속 금액 배분 · 전개식", () => {
+  const base = { decedent: { deceasedAt: "2026-01-10" } };
+
+  it("키가 없으면 이전 결과 모양 그대로", () => {
+    const r = calculateInheritance({
+      ...base,
+      spouse: { alive: true },
+      linealDescendants: [{ deceasedBeforeOpening: false }],
+    });
+    expect(Object.keys(r).sort()).toEqual([
+      "computedAt",
+      "dataVersion",
+      "decedent",
+      "disclaimer",
+      "shares",
+    ]);
+    expect(Object.keys(r.shares[0]!).sort()).toEqual([
+      "denominator",
+      "name",
+      "numerator",
+      "rawDenominator",
+      "rawNumerator",
+    ]);
+  });
+
+  it("배우자 + 자녀 2: 3/7 · 2/7 · 2/7, 원 미만 내림, 끝수는 배정하지 않고 보고", () => {
+    const r = calculateInheritance({
+      ...base,
+      spouse: { name: "배우자", alive: true },
+      linealDescendants: [
+        { name: "장남", deceasedBeforeOpening: false },
+        { name: "장녀", deceasedBeforeOpening: false },
+      ],
+      estateWon: 100_000_000,
+    });
+    // 100,000,000 × 3/7 = 42,857,142.85… / × 2/7 = 28,571,428.57…
+    expect(r.shares.map((s) => s.amountWon)).toEqual([42_857_142, 28_571_428, 28_571_428]);
+    expect(r.estateWon).toBe(100_000_000);
+    expect(r.remainderWon).toBe(2);
+    expect(r.trace).toEqual([
+      "피상속인 사망일 2026-01-10: 상속개시 (민법 제997조)",
+      "순위 결정: 1순위 직계비속 상속 (민법 제1000조 제1항 제1호)",
+      "배우자 공동상속·5할 가산: 배우자 1.5 : 직계비속 각 1 (민법 제1003조 제1항, 제1009조 제2항)",
+      "배우자: 3/7 → 100,000,000 × 3/7 = 42,857,142원 (원 미만 내림)",
+      "장남: 2/7 → 100,000,000 × 2/7 = 28,571,428원 (원 미만 내림)",
+      "장녀: 2/7 → 100,000,000 × 2/7 = 28,571,428원 (원 미만 내림)",
+      "내림으로 남은 끝수 2원 (배정하지 않음)",
+    ]);
+  });
+
+  it("대습·포기·최근친이 전개식에 실제 경로대로 남는다", () => {
+    const r = calculateInheritance({
+      ...base,
+      spouse: { alive: true },
+      linealDescendants: [
+        { name: "자A", deceasedBeforeOpening: false, renounced: true },
+        {
+          name: "자B",
+          deceasedBeforeOpening: true,
+          representatives: [
+            { name: "B의 배우자", deceasedBeforeOpening: false, isSpouseOfRepresented: true },
+            { name: "손C", deceasedBeforeOpening: false },
+          ],
+        },
+        { name: "자D", deceasedBeforeOpening: false },
+      ],
+      includeTrace: true,
+    });
+    expect(r.estateWon).toBeUndefined();
+    expect(r.shares[0]!.amountWon).toBeUndefined();
+    expect(r.trace).toContain(
+      "상속포기 자A: 포기는 상속개시 때로 소급하고 대습 원인이 아님 (민법 제1042조, 제1001조)",
+    );
+    expect(
+      r.trace!.some(
+        (t) => t.startsWith("대습: 자B 의 상속분을 B의 배우자, 손C") && t.includes("5할 가산"),
+      ),
+    ).toBe(true);
+  });
+
+  it("직계비속 전원 포기 + 배우자 → 배우자 단독, 형제자매 균분", () => {
+    const sole = calculateInheritance({
+      ...base,
+      spouse: { alive: true },
+      linealDescendants: [{ name: "자", deceasedBeforeOpening: false, renounced: true }],
+      estateWon: 10,
+    });
+    expect(sole.shares).toMatchObject([{ name: "배우자", amountWon: 10 }]);
+    expect(sole.trace).toContain("순위 결정: 배우자 단독상속 (직계비속 전원 포기, 민법 제1043조)");
+
+    const sib = calculateInheritance({
+      ...base,
+      siblings: [
+        { name: "형", deceasedBeforeOpening: false },
+        { name: "동생", deceasedBeforeOpening: false },
+        { name: "누나", deceasedBeforeOpening: false },
+      ],
+      estateWon: 10,
+    });
+    expect(sib.shares.map((s) => s.amountWon)).toEqual([3, 3, 3]);
+    expect(sib.remainderWon).toBe(1);
+    expect(sib.trace![1]).toBe(
+      "순위 결정: 3순위 형제자매 균분 상속 (민법 제1000조 제1항 제3호, 제1009조 제1항)",
+    );
+  });
+
+  it("최근친 우선으로 빠진 사람을 적는다", () => {
+    const r = calculateInheritance({
+      ...base,
+      linealAscendants: [
+        { name: "부", deceasedBeforeOpening: false, degree: 1 },
+        { name: "조부", deceasedBeforeOpening: false, degree: 2 },
+      ],
+      includeTrace: true,
+    });
+    expect(r.trace).toContain("최근친 우선: 조부 제외 (민법 제1000조 제2항)");
+  });
+
+  it("estateWon 검증", () => {
+    expect(() =>
+      calculateInheritance({
+        ...base,
+        spouse: { alive: true },
+        estateWon: 1.5,
+      }),
+    ).toThrow(/estateWon/);
+  });
+});

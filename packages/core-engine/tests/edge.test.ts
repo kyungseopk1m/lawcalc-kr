@@ -195,9 +195,10 @@ describe("edge: explicit segments + period mode 조합", () => {
     //   floor 150_246
     expect(result.segments[1]!.interest).toBe(150_246);
 
-    // raw 합 224_904.1095… → totalInterest floor 224_904
-    expect(result.totalInterest).toBe(224_904);
-    expect(result.grandTotal).toBe(1_224_904);
+    // totalInterest 는 구간별로 끊은 금액의 합 74_657 + 150_246 = 224_903 (법원 매뉴얼·VK 방식).
+    // raw 합 224_904.1095… 를 한 번에 끊던 이전 방식은 224_904 였다.
+    expect(result.totalInterest).toBe(224_903);
+    expect(result.grandTotal).toBe(1_224_903);
 
     // 구간 일수 합 = 전체 기간 일수 (초일 불산입 1회만 반영)
     expect(result.segments[0]!.days + result.segments[1]!.days).toBe(
@@ -289,9 +290,10 @@ describe("edge: 소수 이율(12.345%) floating-point 누적 (TIER-A #7 회귀)"
   });
 });
 
-describe("edge: floor accumulation (segment 합 vs totalInterest 1원 차이 가능성)", () => {
-  it("총 4구간 명시 segments — segment.interest 합 ≤ totalInterest (≤ 1원 차)", () => {
-    // 각 구간 raw 가 소수를 가질 때 segment-level floor 합산이 raw-합 floor 보다 작아질 수 있음
+describe("edge: floor accumulation (totalInterest = 구간별로 끊은 금액의 합)", () => {
+  it("총 4구간 명시 segments: totalInterest 는 segment.interest 합과 정확히 같다", () => {
+    // 법원 이자 계산 매뉴얼 예시(합계 295,989 = 66,301 + 83,333 + 39,068 + 107,287)와 VK 는
+    // 행별로 끊은 금액을 더한다. raw 합계를 한 번에 끊던 이전 방식은 4구간에서 최대 3원 컸다.
     const opts: CalcOptions = { mode: "totalDays", leapYear: "fixed365", includeFirstDay: false };
     const result = calculateInterest({
       principal: 1_234_567,
@@ -306,8 +308,58 @@ describe("edge: floor accumulation (segment 합 vs totalInterest 1원 차이 가
       options: opts,
     });
     const sumOfFloors = result.segments.reduce((acc, s) => acc + s.interest, 0);
-    const diff = result.totalInterest - sumOfFloors;
-    expect(diff).toBeGreaterThanOrEqual(0);
-    expect(diff).toBeLessThanOrEqual(3); // 4 segment 면 raw 누적 시 최대 3원 차이 가능
+    expect(result.totalInterest).toBe(sumOfFloors);
+  });
+
+  // VK 대조: 원금 5천만원, 2023-06-15~2024-05-31 6%, 2024-06-01~2025-03-15 12%, 초일 산입.
+  it("VK 대조 period + actual: 2,885,245 + 4,734,246 = 7,619,491", () => {
+    const result = calculateInterest({
+      principal: 50_000_000,
+      startDate: "2023-06-15",
+      endDate: "2025-03-15",
+      segments: [
+        { from: "2023-06-15", to: "2024-05-31", rate: 0.06 },
+        { from: "2024-06-01", to: "2025-03-15", rate: 0.12 },
+      ],
+      options: { mode: "period", leapYear: "actual", includeFirstDay: true },
+    });
+    expect(result.segments.map((s) => s.interest)).toEqual([2_885_245, 4_734_246]);
+    expect(result.totalInterest).toBe(7_619_491);
+  });
+
+  it("VK 대조 totalDays + fixed365: 2,893,150 + 4,734,246 = 7,627,396", () => {
+    const result = calculateInterest({
+      principal: 50_000_000,
+      startDate: "2023-06-15",
+      endDate: "2025-03-15",
+      segments: [
+        { from: "2023-06-15", to: "2024-05-31", rate: 0.06 },
+        { from: "2024-06-01", to: "2025-03-15", rate: 0.12 },
+      ],
+      options: { mode: "totalDays", leapYear: "fixed365", includeFirstDay: true },
+    });
+    expect(result.segments.map((s) => s.interest)).toEqual([2_893_150, 4_734_246]);
+    expect(result.totalInterest).toBe(7_627_396);
+  });
+});
+
+describe("calculateInterest - 정확히 나누어떨어지는 이자의 끝수", () => {
+  // 584,347,845 × 12% × 275일 / 365 = 52,831,449 (나머지 0). 실수 곱은 52,831,448.99999999 라
+  // 절사하면 1원 모자랐다. 유리수로 끝수 처리한다.
+  it("실수 오차로 1원 모자라지 않는다", () => {
+    const result = calculateInterest({
+      principal: 584_347_845,
+      startDate: "2019-08-20",
+      endDate: "2020-05-21",
+      segments: [{ from: "2019-08-20", to: "2020-05-21", rate: 0.12 }],
+      options: {
+        mode: "totalDays",
+        leapYear: "fixed365",
+        includeFirstDay: false,
+        rounding: "floor",
+      },
+    });
+    expect(result.segments[0]!.days).toBe(275);
+    expect(result.totalInterest).toBe(52_831_449);
   });
 });

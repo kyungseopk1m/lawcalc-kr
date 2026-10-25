@@ -23,6 +23,8 @@ export type {
   NoOralHearingReason,
   StampDutyBracket,
   StampDutyInput,
+  StampDutyLawsuitTopUp,
+  StampDutyRefund,
   StampDutyResult,
   StampDutyRoundingPolicy,
 } from "./types";
@@ -81,6 +83,9 @@ export {
 } from "./compute-stamp-duty";
 
 export type {
+  DeliveryCodeRowFeeInput,
+  DeliveryCodeRowFeeResult,
+  DeliveryCodeTableEntry,
   DeliveryCountMatrixEntry,
   DeliveryDataset,
   DeliveryHistoryNote,
@@ -92,10 +97,13 @@ export type {
 } from "./delivery-dataset";
 
 export {
+  computeDeliveryFeeForCodeRow,
   deliveryDatasetVersionTag,
   getDeliveryCount,
   getDeliveryUnitPriceAt,
+  listDeliveryCodeTable,
   loadDeliveryDataset,
+  searchDeliveryCodeTable,
 } from "./delivery-dataset";
 
 export type { ComputeDeliveryFeeDeps } from "./compute-delivery-fee";

@@ -59,6 +59,27 @@ export interface DeliveryCountMatrixEntry {
   noteKo?: string;
 }
 
+/**
+ * 재일 87-4 별표 1 의 한 행 (적용대상사건 · 당사자 1인당 납부기준 · 수송달자). 표시·검색용이다.
+ *
+ * `countPerParty` 는 원문 회수가 단서·가산·범위 없이 "N회" 하나로 정해지는 행에만 있다.
+ * `caseType` 은 `countMatrix` 의 같은 사건구분과 1:1 로 대응할 때만 붙는다.
+ */
+export interface DeliveryCodeTableEntry {
+  /** 별표 1 의 대분류 (민사·행정·선거·특수·특허·가사·가족관계등록·재심·준재심 등). */
+  category: string;
+  /** 별표 1 의 적용대상사건 원문. */
+  labelKo: string;
+  /** 사건부호. 별표 1 에 부호가 없는 행(재심·기일지정신청·인신보호)은 빈 배열. */
+  codes: string[];
+  /** 당사자 1인당 납부기준 원문. */
+  countText: string;
+  countPerParty?: number;
+  /** 수송달자 원문. */
+  recipientsKo: string;
+  caseType?: CaseType;
+}
+
 export interface DeliveryUnverifiedEntry {
   caseType: CaseType;
   labelKo: string;
@@ -90,6 +111,8 @@ export interface DeliveryDataset {
   matrixDelegation: DeliveryMatrixDelegation;
   unitPriceHistory: DeliveryUnitPriceHistoryEntry[];
   countMatrix: DeliveryCountMatrixEntry[];
+  /** 별표 1 전체 행. v1.4.0 에서 추가. 없으면 사건부호표 조회가 빈 목록을 낸다. */
+  codeTable?: DeliveryCodeTableEntry[];
   unverifiedMatrix: DeliveryUnverifiedEntry[];
   historyNote: DeliveryHistoryNote;
 }
@@ -226,6 +249,28 @@ function validate(dataset: DeliveryDataset): void {
     validateFormula(entry.formula, `countMatrix[${i}].formula`);
   }
 
+  if (dataset.codeTable !== undefined) {
+    if (!Array.isArray(dataset.codeTable)) {
+      throw new Error("DeliveryDataset: codeTable must be an array");
+    }
+    for (const [i, entry] of dataset.codeTable.entries()) {
+      if (!entry.category || !entry.labelKo || !entry.countText || !entry.recipientsKo) {
+        throw new Error(`codeTable[${i}]: category/labelKo/countText/recipientsKo are required`);
+      }
+      if (!Array.isArray(entry.codes)) {
+        throw new Error(`codeTable[${i}].codes: must be an array`);
+      }
+      if (entry.countPerParty !== undefined) {
+        assertPositiveInt(entry.countPerParty, `codeTable[${i}].countPerParty`);
+      }
+      if (entry.caseType !== undefined && !seenCaseTypes.has(entry.caseType)) {
+        throw new RangeError(
+          `codeTable[${i}].caseType: "${entry.caseType}" 가 countMatrix 에 없습니다`,
+        );
+      }
+    }
+  }
+
   if (!Array.isArray(dataset.unverifiedMatrix)) {
     throw new Error("DeliveryDataset: unverifiedMatrix must be an array");
   }
@@ -328,4 +373,71 @@ export function getDeliveryUnitPriceAt(
     `getDeliveryUnitPriceAt: filingDate "${filingDate}" 가 dataset 의 모든 슬라이스보다 이른 시점입니다 ` +
       `(가장 이른 슬라이스: ${dataset.unitPriceHistory[dataset.unitPriceHistory.length - 1]!.effectiveFrom})`,
   );
+}
+
+/** 별표 1 사건부호표 전체. dataset 에 `codeTable` 이 없으면 빈 배열. */
+export function listDeliveryCodeTable(dataset?: DeliveryDataset): DeliveryCodeTableEntry[] {
+  return loadDeliveryDataset(dataset).codeTable ?? [];
+}
+
+/**
+ * 사건부호표 검색. 공백을 지운 질의어를 `labelKo` 또는 `codes` 의 부분 문자열로 찾는다.
+ * 빈 질의어는 전체 목록을 낸다.
+ */
+export function searchDeliveryCodeTable(
+  query: string,
+  dataset?: DeliveryDataset,
+): DeliveryCodeTableEntry[] {
+  const q = query.replace(/\s+/g, "");
+  const rows = listDeliveryCodeTable(dataset);
+  if (q === "") return rows;
+  return rows.filter(
+    (row) => row.labelKo.replace(/\s+/g, "").includes(q) || row.codes.some((c) => c.includes(q)),
+  );
+}
+
+export interface DeliveryCodeRowFeeInput {
+  plaintiffCount: number;
+  defendantCount: number;
+}
+
+export interface DeliveryCodeRowFeeResult {
+  amount: number;
+  deliveryCount: number;
+  perDeliveryUnitPriceWon: number;
+  formulaText: string;
+}
+
+/**
+ * 사건부호표 한 행의 송달료 = (원고 수 + 피고 수) × 당사자 1인당 회수 × 1회 단가.
+ * `countPerParty` 가 없는 행(단서·가산·범위가 붙은 행)은 RangeError 를 던진다. 그 행은
+ * `computeDeliveryFee` 의 사건구분 산식이나 사용자 입력 회수로 계산한다.
+ *
+ * 단가는 호출자가 넘긴다. 접수일 기준 단가는 `getDeliveryUnitPriceAt(dataset, filingDate).unitPriceWon`.
+ */
+export function computeDeliveryFeeForCodeRow(
+  row: DeliveryCodeTableEntry,
+  parties: DeliveryCodeRowFeeInput,
+  unitPriceWon: number,
+): DeliveryCodeRowFeeResult {
+  if (row.countPerParty === undefined) {
+    throw new RangeError(
+      `computeDeliveryFeeForCodeRow: "${row.labelKo}" 은 당사자 1인당 회수가 하나로 정해지지 않습니다 (${row.countText})`,
+    );
+  }
+  assertNonNegativeInt(parties.plaintiffCount, "plaintiffCount");
+  assertNonNegativeInt(parties.defendantCount, "defendantCount");
+  assertPositiveInt(unitPriceWon, "unitPriceWon");
+  const partyCount = parties.plaintiffCount + parties.defendantCount;
+  const deliveryCount = partyCount * row.countPerParty;
+  const amount = deliveryCount * unitPriceWon;
+  const won = (n: number): string => n.toLocaleString("en-US");
+  return {
+    amount,
+    deliveryCount,
+    perDeliveryUnitPriceWon: unitPriceWon,
+    formulaText:
+      `${row.labelKo}: (${parties.plaintiffCount} + ${parties.defendantCount})명 × ${row.countPerParty}회` +
+      ` × ${won(unitPriceWon)}원 = ${won(amount)}원 (재일 87-4 별표 1)`,
+  };
 }

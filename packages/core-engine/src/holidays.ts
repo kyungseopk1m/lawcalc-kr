@@ -104,6 +104,35 @@ export function loadHolidays(dataset?: HolidayDataset): HolidayDataset {
   return loaded;
 }
 
+/**
+ * 사용자가 따로 지정한 공휴일을 dataset 에 합친다. 번들 스냅샷 뒤에 지정된 임시공휴일·선거일처럼
+ * 아직 dataset 에 없는 날을 말일 연장 판정에 넣는 자리다. 원본 dataset 은 바꾸지 않는다.
+ *
+ * 이미 dataset 에 있는 날짜는 dataset 레코드를 그대로 둔다 (판정 결과가 같다). 커버리지 밖 날짜는
+ * 판정할 수 없는 구간을 넓히지 않도록 RangeError 다.
+ */
+export function withExtraHolidays(
+  ds: HolidayDataset,
+  extra: readonly HolidayRecord[],
+): HolidayDataset {
+  if (extra.length === 0) return ds;
+  const byDate = new Map(ds.holidays.map((h) => [h.date, h]));
+  for (const h of extra) {
+    parseIsoDateUtc(h.date);
+    if (!isCovered(h.date, ds)) {
+      throw new RangeError(
+        `추가 공휴일 "${h.date}" 는 공휴일 데이터 커버리지(${ds.coverage.from}~${ds.coverage.to}) 밖이라 반영할 수 없습니다`,
+      );
+    }
+    if (typeof h.nameKo !== "string" || h.nameKo.trim() === "") {
+      throw new RangeError(`추가 공휴일 "${h.date}" 의 이름이 비어 있습니다`);
+    }
+    if (!byDate.has(h.date)) byDate.set(h.date, h);
+  }
+  const holidays = [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+  return loadHolidays({ ...ds, holidays });
+}
+
 /** dataset 식별자 (`holidays/vX.Y.Z`). */
 export function holidaysVersionTag(dataset: HolidayDataset): string {
   return `holidays/v${dataset.version}`;
@@ -145,13 +174,32 @@ function requireCovered(date: IsoDate, ds: HolidayDataset, fnName: string): void
  */
 export const SATURDAY_RULE_FROM: IsoDate = "2008-03-22";
 
+/** 근무일 판정 옵션. */
+export interface BusinessDayOptions {
+  /**
+   * 2008-03-22 당시 법원에 계속 중인 사건. 민법 법률 제8720호 부칙 제3조 제1항이 그 사건에
+   * 개정법(토요일 포함 제161조)을 적용하지 않으므로 토요일을 휴일로 보지 않는다.
+   * 일요일·공휴일은 그대로 휴일이다. 기본값 false.
+   */
+  pendingOn20080322?: boolean;
+}
+
 /**
  * 토·일도 공휴일도 아닌 날. 커버리지 밖이면 RangeError.
  * `SATURDAY_RULE_FROM` 이전의 토요일도 판정하지 못해 RangeError 다.
+ * `pendingOn20080322` 이면 토요일을 근무일로 보며, 그때는 날짜와 무관하게 판정한다.
  */
-export function isBusinessDay(date: IsoDate, ds: HolidayDataset): boolean {
+export function isBusinessDay(
+  date: IsoDate,
+  ds: HolidayDataset,
+  options?: BusinessDayOptions,
+): boolean {
   requireCovered(date, ds, "isBusinessDay");
-  if (date < SATURDAY_RULE_FROM && new Date(parseIsoDateUtc(date)).getUTCDay() === 6) {
+  const day = new Date(parseIsoDateUtc(date)).getUTCDay();
+  if (options?.pendingOn20080322 === true) {
+    return day !== 0 && findHoliday(date, ds) === null;
+  }
+  if (date < SATURDAY_RULE_FROM && day === 6) {
     throw new RangeError(
       `isBusinessDay: "${date}" 는 토요일 말일 연장 판정 시작일(${SATURDAY_RULE_FROM}) 이전의 토요일입니다`,
     );
@@ -183,9 +231,13 @@ function reasonFor(date: IsoDate, ds: HolidayDataset): string {
  *
  * 커버리지 밖 날짜이거나 미는 도중 커버리지를 벗어나면 RangeError 를 던진다.
  */
-export function rollToNextBusinessDay(date: IsoDate, ds: HolidayDataset): RollResult {
+export function rollToNextBusinessDay(
+  date: IsoDate,
+  ds: HolidayDataset,
+  options?: BusinessDayOptions,
+): RollResult {
   requireCovered(date, ds, "rollToNextBusinessDay");
-  if (isBusinessDay(date, ds)) {
+  if (isBusinessDay(date, ds, options)) {
     return { date, rolled: false, skipped: [] };
   }
   const reasonKo = reasonFor(date, ds);
@@ -196,7 +248,7 @@ export function rollToNextBusinessDay(date: IsoDate, ds: HolidayDataset): RollRe
     if (holiday) skipped.push(holiday);
     cursor = addDays(cursor, 1);
     requireCovered(cursor, ds, "rollToNextBusinessDay");
-    if (isBusinessDay(cursor, ds)) {
+    if (isBusinessDay(cursor, ds, options)) {
       return { date: cursor, rolled: true, reasonKo, skipped };
     }
   }

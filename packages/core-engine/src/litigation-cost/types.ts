@@ -109,6 +109,35 @@ export interface StampDutyInput {
    * 감액 미적용. 미지정 시 현행 사건으로 간주해 감액을 적용한다 (송달료 슬라이스와 동일 정책).
    */
   filingDate?: IsoDate;
+  /**
+   * true 면 결과에 `refund` (인지법 제14조 제1항 환급 청구 가능액)를 싣는다. 소장·항소장·상고장
+   * 인지(지급명령·화해·조정·보전처분·항고가 아닌 경우)에서만 받는다. 미지정이면 이전 결과 그대로.
+   */
+  includeRefund?: boolean;
+  /**
+   * true 면 결과에 `lawsuitTopUp` (소송 이행 시 보정할 인지액)을 싣는다. 지급명령·화해·조정신청
+   * 에서만 받는다. 미지정이면 이전 결과 그대로.
+   */
+  includeLawsuitTopUp?: boolean;
+}
+
+/** 인지법 제14조 제1항 환급 청구 가능액. */
+export interface StampDutyRefund {
+  amount: number;
+  formulaText: string;
+  article: string;
+}
+
+/** 지급명령·화해·조정에서 소가 제기된 것으로 보는 경우 소장에 보정할 인지액. */
+export interface StampDutyLawsuitTopUp {
+  /** 같은 소가·같은 제출 방식의 1심 소장 인지액. */
+  lawsuitStampDutyWon: number;
+  /** 신청서에 붙인 인지액 (= 이 결과의 `amount`). */
+  paidStampDutyWon: number;
+  /** 보정할 인지액. 음수가 되지 않는다. */
+  amount: number;
+  formulaText: string;
+  article: string;
 }
 
 /**
@@ -151,6 +180,10 @@ export interface StampDutyResult {
   formulaText: string;
   dataVersion: string;
   computedAt: string;
+  /** `input.includeRefund` 일 때만. */
+  refund?: StampDutyRefund;
+  /** `input.includeLawsuitTopUp` 일 때만. */
+  lawsuitTopUp?: StampDutyLawsuitTopUp;
 }
 
 // ===== Delivery Fee (제2조) =====

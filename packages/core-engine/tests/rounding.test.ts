@@ -176,7 +176,7 @@ describe("rounding v2: 정확히 정수 raw 는 세 mode 동등", () => {
 });
 
 describe("rounding v2: segment-level 적용 (다구간 명시 segments)", () => {
-  // 4구간 명시 segments: 각 구간 raw 는 소수 포함, totalInterest 는 raw 합계
+  // 4구간 명시 segments: 각 구간 raw 는 소수 포함, totalInterest 는 구간별로 끊은 금액의 합
   function buildInput(rounding: CalcOptions["rounding"]): InterestInput {
     return {
       principal: 1_234_567,

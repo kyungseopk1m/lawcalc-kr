@@ -12,7 +12,7 @@
   "expected": {
     "amount": 230000,
     "formulaText": "1심 (×1): (소가 50,000,000 × 0.0045 + 5,000) × 1 = 230,000원 → 230,000원 (제2조 제2항 100원 절사)",
-    "dataVersion": "stamp-duty/v1.2.0"
+    "dataVersion": "stamp-duty/v1.3.0"
   },
   "metadata": {
     "oracle": "statute-derivation",

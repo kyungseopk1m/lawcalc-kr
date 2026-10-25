@@ -389,11 +389,64 @@ describe("computeDateSpan", () => {
     expect(back.calendar).toEqual({ years: 0, months: 6, days: 0 });
   });
 
+  // 민법 제160조 제3항: 최종 월에 해당일이 없으면 그 월의 말일로 만료한다. 양편넣기.
+  it.each([
+    ["2024-01-01", "2025-12-31", 731, { years: 2, months: 0, days: 0 }],
+    ["2024-01-31", "2024-02-29", 30, { years: 0, months: 1, days: 0 }],
+    ["2023-03-31", "2024-02-29", 336, { years: 0, months: 11, days: 0 }],
+    ["2024-02-29", "2025-02-28", 366, { years: 1, months: 0, days: 0 }],
+    ["2023-02-28", "2024-02-28", 366, { years: 1, months: 0, days: 1 }],
+  ])("%s ~ %s 양편넣기는 %i일, 제160조 제3항 말일 만료로 환산한다", (from, to, days, calendar) => {
+    const result = computeDateSpan({ from, to, includeFirstDay: true });
+    expect(result.days).toBe(days);
+    expect(result.calendar).toEqual(calendar);
+  });
+
+  it("초일 불산입도 같은 월 규칙을 쓴다 (2024-01-30 다음날 기산 1개월 = 2월 29일 만료)", () => {
+    const result = computeDateSpan({ from: "2024-01-30", to: "2024-02-29" });
+    expect(result.startDate).toBe("2024-01-31");
+    expect(result.days).toBe(30);
+    expect(result.calendar).toEqual({ years: 0, months: 1, days: 0 });
+  });
+
+  it("computePeriod 의 말일 만료(제3항)를 되짚어도 같은 기간이 나온다", () => {
+    const forward = computePeriod({
+      from: "2023-03-31",
+      unit: "month",
+      count: 11,
+      includeFirstDay: true,
+    });
+    expect(forward.rawExpiry).toBe("2024-02-29");
+    const back = computeDateSpan({
+      from: "2023-03-31",
+      to: forward.rawExpiry,
+      includeFirstDay: true,
+    });
+    expect(back.calendar).toEqual({ years: 0, months: 11, days: 0 });
+  });
+
   it("to 가 from 보다 이르면 거부한다", () => {
     expect(() => computeDateSpan({ from: "2024-05-09", to: "2024-05-08" })).toThrow(RangeError);
   });
 
   it("제155조 고지를 남긴다", () => {
     expect(computeDateSpan({ from: "2024-01-01", to: "2024-01-31" }).noteKo).toContain("제155조");
+  });
+});
+
+describe("computeDateSpan · VK 개월수 열과의 대조 (양 끝 산입)", () => {
+  // [from, to, VK 표기, 이 엔진 (민법 제160조) 의 완전 월 수 + 나머지 일수]
+  const cases: [string, string, string, number, number][] = [
+    ["2024-01-01", "2025-12-31", "24 + 0", 24, 0],
+    // VK 는 1 + 1. 1.31 기산 1개월은 최종 월에 해당일이 없어 2.29 (제160조 제3항) 로 만료하므로 1개월 0일.
+    ["2024-01-31", "2024-02-29", "1 + 1", 1, 0],
+    // VK 는 11 + 1. 같은 이유로 11개월 0일.
+    ["2023-03-31", "2024-02-29", "11 + 1", 11, 0],
+    ["2024-02-29", "2025-02-28", "12 + 0", 12, 0],
+    ["2023-02-28", "2024-02-28", "12 + 1", 12, 1],
+  ];
+  it.each(cases)("%s ~ %s (VK %s)", (from, to, _vk, months, days) => {
+    const { calendar } = computeDateSpan({ from, to, includeFirstDay: true });
+    expect([calendar.years * 12 + calendar.months, calendar.days]).toEqual([months, days]);
   });
 });

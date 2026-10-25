@@ -5,8 +5,8 @@
 import type { DeliveryDataset } from "./delivery-dataset";
 
 export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
-  "version": "1.3.0",
-  "updatedAt": "2026-08-27",
+  "version": "1.4.0",
+  "updatedAt": "2026-10-22",
   "sourceLaw": {
     "name": "송달료규칙",
     "lsId": "223133",
@@ -588,9 +588,970 @@ export const DEFAULT_DELIVERY_DATASET: DeliveryDataset = {
       ]
     }
   ],
+  "codeTable": [
+    {
+      "category": "민사",
+      "labelKo": "민사제1심합의사건(가합)",
+      "codes": [
+        "가합"
+      ],
+      "countText": "15회",
+      "countPerParty": 15,
+      "recipientsKo": "원고, 피고등",
+      "caseType": "civilFirstInstanceCollegial"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사제1심단독사건(가단)",
+      "codes": [
+        "가단"
+      ],
+      "countText": "15회",
+      "countPerParty": 15,
+      "recipientsKo": "원고, 피고등",
+      "caseType": "civilFirstInstanceSingle"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사소액사건(가소)",
+      "codes": [
+        "가소"
+      ],
+      "countText": "10회",
+      "countPerParty": 10,
+      "recipientsKo": "원고, 피고등",
+      "caseType": "civilSmallClaims"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사항소사건(나)",
+      "codes": [
+        "나"
+      ],
+      "countText": "12회",
+      "countPerParty": 12,
+      "recipientsKo": "항소인, 피항소인 등",
+      "caseType": "civilAppeal"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사상고사건(다)",
+      "codes": [
+        "다"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "상고인, 피상고인",
+      "caseType": "civilSupremeAppeal"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사항고사건(라)",
+      "codes": [
+        "라"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "항고인, 상대방",
+      "caseType": "civilInterlocutoryAppeal"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사재항고사건(마)",
+      "codes": [
+        "마"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "재항고인, 상대방",
+      "caseType": "civilInterlocutoryAppeal"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사특별항고사건(그)",
+      "codes": [
+        "그"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "특별항고인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사준항고사건(바)",
+      "codes": [
+        "바"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "항고인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "화해사건(자)",
+      "codes": [
+        "자"
+      ],
+      "countText": "4회",
+      "countPerParty": 4,
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "독촉사건(차)",
+      "codes": [
+        "차"
+      ],
+      "countText": "6회",
+      "countPerParty": 6,
+      "recipientsKo": "채권자, 채무자",
+      "caseType": "paymentOrder"
+    },
+    {
+      "category": "민사",
+      "labelKo": "전자독촉사건(차전)",
+      "codes": [
+        "차전"
+      ],
+      "countText": "6회",
+      "countPerParty": 6,
+      "recipientsKo": "채권자, 채무자"
+    },
+    {
+      "category": "민사",
+      "labelKo": "가압류, 가처분사건(카합, 카단)",
+      "codes": [
+        "카합",
+        "카단"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "임시의 지위를 정하는 가처분사건(카합, 카단)",
+      "codes": [
+        "카합",
+        "카단"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "가압류, 가처분결정에 대한 이의, 취소(집행취소는 제외) 사건(카합, 카단)",
+      "codes": [
+        "카합",
+        "카단"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "공시최고사건(카공)",
+      "codes": [
+        "카공"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "신청인(신문광고 의뢰포함)"
+    },
+    {
+      "category": "민사",
+      "labelKo": "담보취소사건(카담)",
+      "codes": [
+        "카담"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "담보제공, 담보물변경, 담보권리행사최고사건(카담)",
+      "codes": [
+        "카담"
+      ],
+      "countText": "2회(단, 담보권리행사최고사건은 3회)",
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "재산명시등사건(카명)",
+      "codes": [
+        "카명"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방",
+      "caseType": "executionAssetDisclosure"
+    },
+    {
+      "category": "민사",
+      "labelKo": "채무불이행자명부등재, 명부등재말소사건(카불)",
+      "codes": [
+        "카불"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "채권자, 채무자",
+      "caseType": "executionDebtorRegister"
+    },
+    {
+      "category": "민사",
+      "labelKo": "임차권등기명령등사건(카임)",
+      "codes": [
+        "카임"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "신청인, 피신청인"
+    },
+    {
+      "category": "민사",
+      "labelKo": "강제집행정지사건(카정)",
+      "codes": [
+        "카정"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 피신청인"
+    },
+    {
+      "category": "민사",
+      "labelKo": "판결(결정)경정사건(카경)",
+      "codes": [
+        "카경"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 피신청인"
+    },
+    {
+      "category": "민사",
+      "labelKo": "제소명령사건(카소)",
+      "codes": [
+        "카소"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 피신청인"
+    },
+    {
+      "category": "민사",
+      "labelKo": "재산조회(카조)",
+      "codes": [
+        "카조"
+      ],
+      "countText": "2회(단, 우편에 의하여 재산조회를 실시하는 조회대상 기관의 수를 가산한다)",
+      "recipientsKo": "신청인",
+      "caseType": "executionAssetInquiry"
+    },
+    {
+      "category": "민사",
+      "labelKo": "소송구조사건(카구)",
+      "codes": [
+        "카구"
+      ],
+      "countText": "신청인수×2회",
+      "recipientsKo": "신청인 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "기타 민사신청사건(카기) (위헌법률심판제청사건은 제외)",
+      "codes": [
+        "카기"
+      ],
+      "countText": "2회(단, 의사표시의 공시송달, 법관․직원기피신청, 법원사무관등의 처분에 대한 이의사건은 신청인수×1회)",
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "민사",
+      "labelKo": "소송비용액확정신청사건(카확)",
+      "codes": [
+        "카확"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "신청인, 피신청인"
+    },
+    {
+      "category": "민사",
+      "labelKo": "부동산등 경매사건(타경)",
+      "codes": [
+        "타경"
+      ],
+      "countText": "(신청서상의 이해관계인+3)×10회",
+      "recipientsKo": "채권자, 채무자, 이해관계인 등",
+      "caseType": "executionRealEstateAuction"
+    },
+    {
+      "category": "민사",
+      "labelKo": "채권등 집행사건(타채), 기타 집행사건(타기)",
+      "codes": [
+        "타채",
+        "타기"
+      ],
+      "countText": "2회(단, 송달을 요하지 아니한 경우에는 제외)",
+      "countPerParty": 2,
+      "recipientsKo": "채권자, 채무자, 제3채무자"
+    },
+    {
+      "category": "민사",
+      "labelKo": "부동산인도명령사건(타인)",
+      "codes": [
+        "타인"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "신청인, 피신청인"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사조정사건(머)",
+      "codes": [
+        "머"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 피신청인",
+      "caseType": "civilMediation"
+    },
+    {
+      "category": "민사",
+      "labelKo": "비송사건(비합, 비단)(과태료사건은 제외)",
+      "codes": [
+        "비합",
+        "비단"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 사건본인 등",
+      "caseType": "nonContentious"
+    },
+    {
+      "category": "민사",
+      "labelKo": "과태료결정에 대한 이의신청사건(과)",
+      "codes": [
+        "과"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "신청인, 검사",
+      "caseType": "fineObjection"
+    },
+    {
+      "category": "민사",
+      "labelKo": "회생합의사건(회합)",
+      "codes": [
+        "회합"
+      ],
+      "countText": "40회 + (채권자수x3회)",
+      "recipientsKo": "신청인 등",
+      "caseType": "rehabilitationCorporate"
+    },
+    {
+      "category": "민사",
+      "labelKo": "회생단독사건(회단)",
+      "codes": [
+        "회단"
+      ],
+      "countText": "40회 + (채권자수x3회)",
+      "recipientsKo": "신청인 등",
+      "caseType": "rehabilitationCorporate"
+    },
+    {
+      "category": "민사",
+      "labelKo": "간이회생합의사건(간회합)",
+      "codes": [
+        "간회합"
+      ],
+      "countText": "40회 + (채권자수x3회)",
+      "recipientsKo": "신청인 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "간이회생단독사건(간회단)",
+      "codes": [
+        "간회단"
+      ],
+      "countText": "40회 + (채권자수x3회)",
+      "recipientsKo": "신청인 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "회생채권·회생담보권 조사확정사건(회확)",
+      "codes": [
+        "회확"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등",
+      "caseType": "insolvencyClaimDetermination"
+    },
+    {
+      "category": "민사",
+      "labelKo": "회생 손해배상청구권 조사확정사건(회기)",
+      "codes": [
+        "회기"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "회생 부인의 청구사건(회기)",
+      "codes": [
+        "회기"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "파산합의사건(하합)",
+      "codes": [
+        "하합"
+      ],
+      "countText": "40회 + (채권자수x3회)",
+      "recipientsKo": "신청인, 채무자 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "파산단독사건(하단)",
+      "codes": [
+        "하단"
+      ],
+      "countText": "10회 + (채권자수x4회)",
+      "recipientsKo": "신청인, 채무자 등",
+      "caseType": "bankruptcyIndividual"
+    },
+    {
+      "category": "민사",
+      "labelKo": "파산채권 조사확정사건(하확)",
+      "codes": [
+        "하확"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "파산 손해배상청구권 조사확정사건(하기)",
+      "codes": [
+        "하기"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "파산 부인의 청구사건(하기)",
+      "codes": [
+        "하기"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "면책사건(하면)",
+      "codes": [
+        "하면"
+      ],
+      "countText": "10회 + (채권자수×3회)",
+      "recipientsKo": "신청인 등",
+      "caseType": "bankruptcyDischarge"
+    },
+    {
+      "category": "민사",
+      "labelKo": "파산 면책취소사건(하기)",
+      "codes": [
+        "하기"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 채무자 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "복권사건(하기)",
+      "codes": [
+        "하기"
+      ],
+      "countText": "10회 + (채권자수×3회)",
+      "recipientsKo": "신청인, 채무자 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "개인회생사건(개회)",
+      "codes": [
+        "개회"
+      ],
+      "countText": "10회 + (채권자수×8회)",
+      "recipientsKo": "신청인, 채권자 등",
+      "caseType": "rehabilitationIndividual"
+    },
+    {
+      "category": "민사",
+      "labelKo": "개인회생채권 조사확정사건(개확)",
+      "codes": [
+        "개확"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "개인회생 부인의 청구사건(개기)",
+      "codes": [
+        "개기"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "개인회생 면책취소사건(개기)",
+      "codes": [
+        "개기"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 채무자 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "국제도산사건(국승, 국지)",
+      "codes": [
+        "국승",
+        "국지"
+      ],
+      "countText": "4회",
+      "countPerParty": 4,
+      "recipientsKo": "신청인 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "선박,유류등책임제한사건(책)",
+      "codes": [
+        "책"
+      ],
+      "countText": "10회",
+      "countPerParty": 10,
+      "recipientsKo": "신청인 등"
+    },
+    {
+      "category": "민사",
+      "labelKo": "민사공조사건(러)",
+      "codes": [
+        "러"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "당사자, 증인 등"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정제1심사건(구단, 구합)",
+      "codes": [
+        "구단",
+        "구합"
+      ],
+      "countText": "10회",
+      "countPerParty": 10,
+      "recipientsKo": "원고, 피고 등",
+      "caseType": "administrativeFirstInstance"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정항소사건(누)",
+      "codes": [
+        "누"
+      ],
+      "countText": "10회",
+      "countPerParty": 10,
+      "recipientsKo": "항소인, 피항소인 등",
+      "caseType": "administrativeAppeal"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정상고사건(두)",
+      "codes": [
+        "두"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "상고인, 피상고인",
+      "caseType": "administrativeSupremeAppeal"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정항고사건(루)",
+      "codes": [
+        "루"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "항고인, 상대방"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정재항고사건(무)",
+      "codes": [
+        "무"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "재항고인, 상대방"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정특별항고사건(부)",
+      "codes": [
+        "부"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "특별항고인, 상대방"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정준항고사건(사)",
+      "codes": [
+        "사"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "항고인, 상대방"
+    },
+    {
+      "category": "행정",
+      "labelKo": "행정신청사건(아) (위헌법률심판제청사건은 제외)",
+      "codes": [
+        "아"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 상대방",
+      "caseType": "administrativeApplication"
+    },
+    {
+      "category": "선거",
+      "labelKo": "선거소송사건(수)",
+      "codes": [
+        "수"
+      ],
+      "countText": "10회",
+      "countPerParty": 10,
+      "recipientsKo": "원고, 피고 등"
+    },
+    {
+      "category": "선거",
+      "labelKo": "선거상고사건(우)",
+      "codes": [
+        "우"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "상고인, 피상고인"
+    },
+    {
+      "category": "선거",
+      "labelKo": "선거항고(재항고, 준항고, 특별항고)사건(수흐)",
+      "codes": [
+        "수흐"
+      ],
+      "countText": "3회(단, 재항고사건은 5회)",
+      "recipientsKo": "항고인, 상대방"
+    },
+    {
+      "category": "선거",
+      "labelKo": "선거신청사건(주)",
+      "codes": [
+        "주"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "특수",
+      "labelKo": "특수소송사건(추)",
+      "codes": [
+        "추"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "원고, 피고 등"
+    },
+    {
+      "category": "특수",
+      "labelKo": "특수신청사건(쿠)",
+      "codes": [
+        "쿠"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "신청인, 상대방"
+    },
+    {
+      "category": "특허",
+      "labelKo": "특허제1심사건(허)",
+      "codes": [
+        "허"
+      ],
+      "countText": "10회",
+      "countPerParty": 10,
+      "recipientsKo": "원고, 피고 등",
+      "caseType": "patentFirstInstance"
+    },
+    {
+      "category": "특허",
+      "labelKo": "특허상고사건(후)",
+      "codes": [
+        "후"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "상고인, 피상고인",
+      "caseType": "patentSupremeAppeal"
+    },
+    {
+      "category": "특허",
+      "labelKo": "특허재항고사건(흐)",
+      "codes": [
+        "흐"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "재항고인, 상대방",
+      "caseType": "patentInterlocutoryAppeal"
+    },
+    {
+      "category": "특허",
+      "labelKo": "특허특별(준)항고사건(히)",
+      "codes": [
+        "히"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "특별항고인, 상대방"
+    },
+    {
+      "category": "특허",
+      "labelKo": "특허신청사건(카허) (위헌법률심판제청사건은 제외)",
+      "codes": [
+        "카허"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 상대방",
+      "caseType": "patentApplication"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사제1심소송사건(드합, 드단)",
+      "codes": [
+        "드합",
+        "드단"
+      ],
+      "countText": "15회",
+      "countPerParty": 15,
+      "recipientsKo": "원고, 피고 등"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사항소사건(르)",
+      "codes": [
+        "르"
+      ],
+      "countText": "12회",
+      "countPerParty": 12,
+      "recipientsKo": "항소인, 피항소인 등",
+      "caseType": "familyAppeal"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사상고사건(므)",
+      "codes": [
+        "므"
+      ],
+      "countText": "8회",
+      "countPerParty": 8,
+      "recipientsKo": "상고인, 피상고인",
+      "caseType": "familySupremeAppeal"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사항고사건(브)",
+      "codes": [
+        "브"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "항고인, 상대방",
+      "caseType": "familyInterlocutoryAppeal"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사재항고사건(스)",
+      "codes": [
+        "스"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "특별항고인, 상대방",
+      "caseType": "familyInterlocutoryAppeal"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사특별항고사건(으)",
+      "codes": [
+        "으"
+      ],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "특별항고인, 상대방"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사신청사건(즈합, 즈단, 즈기) (위헌법률심판제청사건은 제외)",
+      "codes": [
+        "즈합",
+        "즈단",
+        "즈기"
+      ],
+      "countText": "3회〔단, 가압류․가처분에 대한 이의, 취소(집행취소는 제외)사건은 8회〕",
+      "recipientsKo": "신청인, 상대방",
+      "caseType": "familyApplication"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사조정사건(너)",
+      "codes": [
+        "너"
+      ],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "신청인, 피신청인",
+      "caseType": "familyMediation"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사비송사건(느합, 느단)",
+      "codes": [
+        "느합",
+        "느단"
+      ],
+      "countText": "라류 6회(단, 실종선고, 자의 종전의 성과 본의 계속사용허가, 자의 성과 본의 변경허가, 친양자 입양허가, 미성년자 입양허가 및 피성년후견인의 입양허가 청구사건, 친권자 지정 청구사건, 미성년후견에 관한 사건, 성년후견·한정후견·특정후견·임의후견에 관한 사건은 각 10회) / 마류 12회",
+      "recipientsKo": "청구인 등"
+    },
+    {
+      "category": "가사",
+      "labelKo": "가사공조사건(츠)",
+      "codes": [
+        "츠"
+      ],
+      "countText": "2회",
+      "countPerParty": 2,
+      "recipientsKo": "당사자, 증인 등"
+    },
+    {
+      "category": "가족관계등록",
+      "labelKo": "개명사건(호명)",
+      "codes": [
+        "호명"
+      ],
+      "countText": "6회",
+      "countPerParty": 6,
+      "recipientsKo": "신청인"
+    },
+    {
+      "category": "가족관계등록",
+      "labelKo": "가족관계등록(제적)비송사건(호기)",
+      "codes": [
+        "호기"
+      ],
+      "countText": "6회",
+      "countPerParty": 6,
+      "recipientsKo": "신청인"
+    },
+    {
+      "category": "가족관계등록",
+      "labelKo": "협의이혼의사확인 신청사건(호협)",
+      "codes": [
+        "호협"
+      ],
+      "countText": "2회(단, 부부 중 일방이 재외국민이거나 수감자인 경우에 한함)",
+      "recipientsKo": "신청인, 재외공관 또는 교도소(구치소)의 장"
+    },
+    {
+      "category": "재심·준재심",
+      "labelKo": "각종사건에 대한 재심, 준재심사건(재심 대상사건의 부호문자 앞에 “재”를 삽입)",
+      "codes": [],
+      "countText": "재심대상사건의 송달료납부기준에 의함",
+      "recipientsKo": "원고, 피고 등"
+    },
+    {
+      "category": "기일지정신청",
+      "labelKo": "각종 사건에 대한 기일지정신청사건(민사소송법 제268조 제3항, 민사소송규칙 제67조)",
+      "codes": [],
+      "countText": "기일지정신청대상사건의 송달료납부기준에 의함",
+      "recipientsKo": "원고, 피고 등"
+    },
+    {
+      "category": "인신보호사건",
+      "labelKo": "인신보호 제1심사건(납부당사자가 피수용자인 사건은 국고처리)",
+      "codes": [],
+      "countText": "5회",
+      "countPerParty": 5,
+      "recipientsKo": "구제청구자, 수용자"
+    },
+    {
+      "category": "인신보호사건",
+      "labelKo": "인신보호 항고사건(납부당사자가 피수용자인 사건은 국고처리)",
+      "codes": [],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "항고인, 상대방"
+    },
+    {
+      "category": "인신보호사건",
+      "labelKo": "인신보호 재항고사건(납부당사자가 피수용자인 사건은 국고처리)",
+      "codes": [],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "재항고인, 상대방"
+    },
+    {
+      "category": "인신보호사건",
+      "labelKo": "임시해제신청사건(납부당사자가 피수용자인 사건은 국고처리)",
+      "codes": [],
+      "countText": "3회",
+      "countPerParty": 3,
+      "recipientsKo": "신청인, 상대방"
+    }
+  ],
   "unverifiedMatrix": [],
   "historyNote": {
     "ruleChanges": [
+      {
+        "effectiveFrom": "2026-10-22",
+        "ruleNumber": "(데이터셋 변경)",
+        "summary": "codeTable 신설. 재일 87-4 별표 1(재판예규 제1950호) 94행 전부를 사건구분·부호·회수 원문·수송달자로 수록. 원문 회수가 '당사자 1인당 N회' 하나로 정해지는 행만 countPerParty 를 두고, 단서·가산·범위가 붙은 행은 countText 만 둔다. 재심·기일지정신청·인신보호 6행은 별표 1 에 부호가 없어 codes 가 비어 있다. caseType 은 countMatrix 의 같은 사건구분과 1:1 로 대응할 때만 붙인다."
+      },
       {
         "effectiveFrom": "2026-08-27",
         "ruleNumber": "(데이터셋 변경)",

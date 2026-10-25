@@ -1,6 +1,20 @@
 import { addDays, addYears, containsLeapDay, countDays, parseIsoDateUtc } from "../days";
 import type { CalcOptions, IsoDate, RateSegment } from "../types";
+import { decimalToFraction } from "../litigation-cost/helpers";
 import { formatPrincipal, formatRatePercent } from "./format";
+
+/** 정확한 유리수 이자 (`num` / `den`, den > 0). 끝수 처리는 이 값으로 한다. */
+export interface ExactInterest {
+  num: bigint;
+  den: bigint;
+}
+
+/** principal × rate × days / denom 의 정확한 값. 실수 곱은 정확히 나누어떨어지는 값을 1원 모자라게 낼 수 있다. */
+function exactShare(principal: number, rate: number, days: number, denom: number): ExactInterest {
+  const p = decimalToFraction(principal);
+  const r = decimalToFraction(rate);
+  return { num: p.num * r.num * BigInt(days), den: p.den * r.den * BigInt(denom) };
+}
 
 /**
  * 1 cycle (cursor 부터 1년) 의 만료일과 다음 cursor.
@@ -65,8 +79,8 @@ export function periodDaysSum(
  *   - leapYear="fixed365": denom = 365
  *   - leapYear="actual":   마지막 미만 구간 [start_of_partial, partial_end] 에 윤일 포함 시 366
  *
- * 본 함수는 raw 값(소수 포함)만 반환한다. 원 단위 끝수 처리는 caller `calculateInterest` 가
- * `options.rounding` 에 따라 segment.interest / totalInterest 양쪽에 적용한다 (v2).
+ * 본 함수는 정확한 유리수 이자(`interestExact`)만 반환한다. 원 단위 끝수 처리는 caller
+ * `calculateInterest` 가 `options.rounding` 에 따라 구간마다 하고, 합계는 구간 금액의 합이다.
  *
  * @internal segment-level 계산 — caller(`calculateInterest`)가 구간 단위로 호출한다.
  */
@@ -75,12 +89,12 @@ export function computeSegmentInterest(
   rate: number,
   segment: RateSegment,
   options: CalcOptions,
-): { days: number; interestRaw: number; formula: string } {
+): { days: number; interestExact: ExactInterest; formula: string } {
   const days = countDays(segment.from, segment.to, options);
   if (days <= 0) {
     return {
       days: 0,
-      interestRaw: 0,
+      interestExact: { num: 0n, den: 1n },
       formula: `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × 0일 = 0`,
     };
   }
@@ -88,9 +102,8 @@ export function computeSegmentInterest(
   if (options.mode === "totalDays") {
     const denom =
       options.leapYear === "fixed365" ? 365 : containsLeapDay(segment.from, segment.to) ? 366 : 365;
-    const interestRaw = (principal * rate * days) / denom;
     const formula = `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × ${days}일 / ${denom}`;
-    return { days, interestRaw, formula };
+    return { days, interestExact: exactShare(principal, rate, days, denom), formula };
   }
 
   // mode === "period"
@@ -98,7 +111,7 @@ export function computeSegmentInterest(
   if (parseIsoDateUtc(effectiveStart) > parseIsoDateUtc(segment.to)) {
     return {
       days: 0,
-      interestRaw: 0,
+      interestExact: { num: 0n, den: 1n },
       formula: `${formatPrincipal(principal)} × ${formatRatePercent(rate)} × 0일 = 0`,
     };
   }
@@ -129,9 +142,6 @@ export function computeSegmentInterest(
     denom = containsLeapDay(partialStart, oneYearLater) ? 366 : 365;
   }
 
-  const interestFull = fullYears * principal * rate;
-  const interestPartial = partialDays > 0 ? (principal * rate * partialDays) / denom : 0;
-  const interestRaw = interestFull + interestPartial;
   const parts: string[] = [];
   if (fullYears > 0)
     parts.push(`${fullYears}년 × ${formatPrincipal(principal)} × ${formatRatePercent(rate)}`);
@@ -141,5 +151,7 @@ export function computeSegmentInterest(
     );
   }
   const computedDays = periodDaysSum(effectiveStart, fullYears, partialDays);
-  return { days: computedDays, interestRaw, formula: parts.join(" + ") || "0" };
+  // fullYears × P × R + P × R × partialDays / denom = P × R × (fullYears × denom + partialDays) / denom
+  const interestExact = exactShare(principal, rate, fullYears * denom + partialDays, denom);
+  return { days: computedDays, interestExact, formula: parts.join(" + ") || "0" };
 }

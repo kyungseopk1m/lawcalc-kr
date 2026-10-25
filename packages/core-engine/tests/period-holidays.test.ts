@@ -97,6 +97,37 @@ describe("기간 엔진 + 공휴일 데이터셋 실배선", () => {
     expect(result.holidayExtension).toBe("outOfCoverage");
   });
 
+  // 민법 법률 제8720호 부칙 제3조 제1항: 2008-03-22 당시 법원에 계속 중인 사건에는 개정법
+  // (토요일 포함 제161조)을 적용하지 않는다. 토요일은 휴일이 아니고, 일요일·공휴일은 그대로 민다.
+  it("2008-03-22 당시 계속 중인 사건이면 2008년 전 토요일 말일도 판정한다", () => {
+    const sat = computePeriod(
+      {
+        from: "2006-02-18",
+        unit: "day",
+        count: 14,
+        holidayExtension: true,
+        pendingOn20080322: true,
+      },
+      deps,
+    );
+    expect(sat.expiryDate).toBe("2006-03-04");
+    expect(sat.holidayExtension).toBe("notApplied");
+    expect(sat.formulaText).toContain("부칙 제3조 제1항");
+    // 2006-05-05 어린이날(금) → 05-06(토)은 근무일이라 거기서 만료.
+    const fri = computePeriod(
+      {
+        from: "2006-05-01",
+        unit: "day",
+        count: 4,
+        holidayExtension: true,
+        pendingOn20080322: true,
+      },
+      deps,
+    );
+    expect(fri.expiryDate).toBe("2006-05-06");
+    expect(fri.holidayExtension).toBe("applied");
+  });
+
   it("2008-03-22 이후 토요일 말일은 연장한다 (시행일 당일 경계)", () => {
     // 2008-03-22 는 토요일이다. 03-23(일)을 건너 03-24(월)로 만료한다.
     const onDay = computePeriod(
@@ -119,5 +150,36 @@ describe("기간 엔진 + 공휴일 데이터셋 실배선", () => {
     const result = computePeriod({ from: "2026-02-16", unit: "week", count: 2 });
     expect(result.expiryDate).toBe("2026-03-02");
     expect(result.holidayExtension).toBe("off");
+  });
+});
+
+describe("사용자 지정 공휴일 (createHolidayDeps 두 번째 인자)", () => {
+  const extra = [{ date: "2026-09-10", nameKo: "임시공휴일(가정)", kind: "temporary" as const }];
+
+  it("데이터셋에 없는 날을 지정하면 그 날 말일을 다음 근무일로 민다", () => {
+    // 송달 2026-08-27, 14일 → 기산 08-28, 만료 09-10 (목).
+    const input = { from: "2026-08-27", unit: "day" as const, count: 14, holidayExtension: true };
+    expect(computePeriod(input, createHolidayDeps()).expiryDate).toBe("2026-09-10");
+    const result = computePeriod(input, createHolidayDeps(undefined, extra));
+    expect(result.expiryDate).toBe("2026-09-11");
+    expect(result.adjustmentReasonKo).toContain("임시공휴일(가정)");
+  });
+
+  it("토요일 말일 뒤 월요일이 지정 공휴일이면 화요일까지 민다", () => {
+    // 송달 2026-09-05, 14일 → 만료 09-19 (토). 09-21 (월) 지정.
+    const input = { from: "2026-09-05", unit: "day" as const, count: 14, holidayExtension: true };
+    const deps = createHolidayDeps(undefined, [{ ...extra[0]!, date: "2026-09-21" }]);
+    expect(computePeriod(input, createHolidayDeps()).expiryDate).toBe("2026-09-21");
+    expect(computePeriod(input, deps).expiryDate).toBe("2026-09-22");
+  });
+
+  it("데이터셋에 이미 있는 날은 그대로 두고, 커버리지 밖·빈 이름은 거절한다", () => {
+    expect(() =>
+      createHolidayDeps(undefined, [{ ...extra[0]!, date: "2026-10-03" }]),
+    ).not.toThrow();
+    expect(() => createHolidayDeps(undefined, [{ ...extra[0]!, date: "2099-01-02" }])).toThrow(
+      RangeError,
+    );
+    expect(() => createHolidayDeps(undefined, [{ ...extra[0]!, nameKo: " " }])).toThrow(RangeError);
   });
 });

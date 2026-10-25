@@ -363,3 +363,32 @@ describe("computeDeadline - 항목의 holidayRollover 플래그", () => {
     expect(result.holidayRollover.reasonKo).toContain("밀리지 않는 항목");
   });
 });
+
+// VK 대조 ("08.03.21 이전사건" 토글). 민사 항소 2주, 초일 불산입. 민법 법률 제8720호 부칙 제3조 제1항.
+describe("computeDeadline - 2008-03-22 당시 계속 중인 사건", () => {
+  it.each([
+    // 송달 09-05(토) → 기산 09-06, 만료 09-19(토). 토글 없으면 09-20(일) 건너 09-21(월).
+    ["2026-09-05", "2026-09-19", "2026-09-21"],
+    // 송달 09-26(토, 추석) → 기산 09-27, 만료 10-10(토). 토글 없으면 10-11(일) 건너 10-12(월).
+    ["2026-09-26", "2026-10-10", "2026-10-12"],
+  ])("송달 %s → 토글 %s / 토글 없음 %s", (startEventDate, pending, current) => {
+    const withToggle = computeDeadline(
+      { id: "civilAppeal", startEventDate, pendingOn20080322: true },
+      deps,
+    );
+    expect(withToggle.expiryDate).toBe(pending);
+    expect(withToggle.holidayRollover.status).toBe("notApplied");
+    expect(computeDeadline({ id: "civilAppeal", startEventDate }, deps).expiryDate).toBe(current);
+  });
+});
+
+describe("computeDeadline - 계속 사건 토글은 민사 계열만", () => {
+  it("형사 항목에 켜면 RangeError", () => {
+    expect(() =>
+      computeDeadline(
+        { id: "criminalAppeal", startEventDate: "2026-09-05", pendingOn20080322: true },
+        deps,
+      ),
+    ).toThrow(RangeError);
+  });
+});

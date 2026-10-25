@@ -11,6 +11,7 @@ import type {
   CaseType,
   StampDutyBracket,
   StampDutyInput,
+  StampDutyRefund,
   StampDutyResult,
   StampDutyRoundingPolicy,
 } from "./types";
@@ -112,6 +113,8 @@ function buildFormulaText(args: {
   article2FloorWon: number | null;
   /** 제7조 제4항 준용 하한이 화해·지급명령 금액에 실제로 걸렸을 때 그 금액. 안 걸렸으면 null. */
   specialFloorWon: number | null;
+  /** 2013-11-01 전 조정신청일 때 인지법 제2조(같은 조 제2항 포함)로 산출한 기준 금액. 아니면 null. */
+  preAmendmentMediationBaseWon: number | null;
   preRounding: number;
   finalAmount: number;
   deemedNote?: string | null;
@@ -135,7 +138,11 @@ function buildFormulaText(args: {
   }
 
   const arithmetic: string[] = [bracketFormulaSegment(args.bracket, args.input.caseValue)];
-  if (args.article2FloorWon !== null) {
+  if (args.preAmendmentMediationBaseWon !== null) {
+    arithmetic.push(
+      `= ${args.preAmendmentMediationBaseWon.toLocaleString("en-US")}원 (제2조 제2항 하한·100원 절사)`,
+    );
+  } else if (args.article2FloorWon !== null) {
     arithmetic.push(`= ${args.article2FloorWon.toLocaleString("en-US")}원 (제2조 제2항 하한)`);
   }
   arithmetic.push(`× ${args.appealsMultiplier}`);
@@ -152,7 +159,10 @@ function buildFormulaText(args: {
   const preRoundingDisplay = Number.isInteger(args.preRounding)
     ? args.preRounding.toLocaleString("en-US")
     : args.preRounding.toFixed(2);
-  const arithmeticText = `${arithmetic.join(" ")} = ${preRoundingDisplay}원 → ${args.finalAmount.toLocaleString("en-US")}원 (제2조 제2항 100원 절사)`;
+  const arithmeticText =
+    args.preAmendmentMediationBaseWon !== null
+      ? `${arithmetic.join(" ")} = ${args.finalAmount.toLocaleString("en-US")}원 (구 민사조정규칙에는 제3조 제2항 하한·절사가 없음)`
+      : `${arithmetic.join(" ")} = ${preRoundingDisplay}원 → ${args.finalAmount.toLocaleString("en-US")}원 (제2조 제2항 100원 절사)`;
   return `${segments.join(" + ")}: ${arithmeticText}`;
 }
 
@@ -209,12 +219,21 @@ function progressiveBaseLine(
   return { bracket, baseLine: Number(num) / Number(den) };
 }
 
+/** 민사조정규칙 제3조 제1항 단서(전자 제출 10분의 9)의 시행일. 대법원규칙 제2344호. */
+const MEDIATION_ELECTRONIC_DISCOUNT_FROM = "2011-07-28";
+
 /** 제16조 전자소송 감액. filingDate 가 시행일 이전이면 적용하지 않는다 (미지정이면 현행 사건으로 본다). */
 function resolveElectronicDiscount(
   dataset: StampDutyDataset,
   input: StampDutyInput,
 ): { multiplier: number | null; skippedNote: string | null } {
-  const effectiveFrom = dataset.electronicFilingDiscount.effectiveFrom;
+  // 조정신청은 인지법 제16조가 아니라 민사조정규칙 제3조 제1항 단서(대법원규칙 제2344호,
+  // 2011-07-28 공포·시행)가 전자 제출 10분의 9 를 정한다. 그 단서가 인지법 제16조 시행
+  // (2011-10-19)보다 먼저라 조정신청만 시작일이 다르다.
+  const isMediation = input.caseType === "civilMediation";
+  const effectiveFrom = isMediation
+    ? MEDIATION_ELECTRONIC_DISCOUNT_FROM
+    : dataset.electronicFilingDiscount.effectiveFrom;
   const applies =
     input.isElectronicFiling === true &&
     (input.filingDate === undefined || input.filingDate >= effectiveFrom);
@@ -222,7 +241,7 @@ function resolveElectronicDiscount(
     multiplier: applies ? dataset.electronicFilingDiscount.multiplier : null,
     skippedNote:
       input.isElectronicFiling === true && !applies
-        ? `전자소송 감액 미적용 (접수일 ${input.filingDate}, 제16조 시행 ${effectiveFrom} 전)`
+        ? `전자소송 감액 미적용 (접수일 ${input.filingDate}, ${isMediation ? "민사조정규칙 제3조 제1항 단서" : "제16조"} 시행 ${effectiveFrom} 전)`
         : null,
   };
 }
@@ -331,6 +350,100 @@ export function computeStampDuty(
   input: StampDutyInput,
   deps?: ComputeStampDutyDeps,
 ): StampDutyResult {
+  const result = computeStampDutyBase(input, deps);
+  if (input.includeRefund !== true && input.includeLawsuitTopUp !== true) {
+    return result;
+  }
+  const special = isSpecialApplication(input);
+  const notPleading =
+    special ||
+    isProvisionalCaseType(input.caseType) ||
+    input.caseType === "civilInterlocutoryAppeal";
+  const extras: Pick<StampDutyResult, "refund" | "lawsuitTopUp"> = {};
+  if (input.includeRefund === true) {
+    if (notPleading) {
+      throw new RangeError(
+        "인지대 입력 검증 실패: 환급액(인지법 제14조 제1항)은 소장·항소장·상고장 인지에서만 계산합니다",
+      );
+    }
+    extras.refund = computeRefund(result.amount);
+  }
+  if (input.includeLawsuitTopUp === true) {
+    if (!special) {
+      throw new RangeError(
+        "인지대 입력 검증 실패: 소장 보정액은 지급명령·화해·조정신청 인지에서만 계산합니다",
+      );
+    }
+    // 같은 소가·같은 제출 방식의 1심 소장 인지액. 단독·합의 구분은 인지액에 영향이 없다.
+    const lawsuit = computeStampDutyBase(
+      {
+        caseValue: input.caseValue,
+        caseType: "civilFirstInstanceSingle",
+        appealsLevel: "firstInstance",
+        ...(input.caseValueBasis !== undefined ? { caseValueBasis: input.caseValueBasis } : {}),
+        ...(input.isElectronicFiling !== undefined
+          ? { isElectronicFiling: input.isElectronicFiling }
+          : {}),
+        ...(input.filingDate !== undefined ? { filingDate: input.filingDate } : {}),
+      },
+      deps,
+    ).amount;
+    const article =
+      input.caseType === "civilMediation"
+        ? "민사조정법 제36조 제2항"
+        : input.isSettlement === true
+          ? "민사소송 등 인지법 제7조 제3항 (민사소송법 제388조)"
+          : "민사소송 등 인지법 제7조 제3항 (민사소송법 제472조)";
+    const amount = Math.max(0, lawsuit - result.amount);
+    extras.lawsuitTopUp = {
+      lawsuitStampDutyWon: lawsuit,
+      paidStampDutyWon: result.amount,
+      amount,
+      formulaText: `소장 인지액 ${won(lawsuit)} − 신청서 인지액 ${won(result.amount)} = ${won(amount)}원 (${article})`,
+      article,
+    };
+  }
+  return { ...result, ...extras };
+}
+
+function won(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+/** 지급명령·화해·조정신청. 소가 제기된 것으로 보면 소장 인지를 보정하는 신청서들이다. */
+function isSpecialApplication(input: StampDutyInput): boolean {
+  return (
+    input.isPaymentOrder === true ||
+    input.caseType === "paymentOrder" ||
+    input.caseType === "civilMediation" ||
+    input.isSettlement === true
+  );
+}
+
+/**
+ * 인지법 제14조 제1항: 인지액의 2분의 1. 그 2분의 1 이 10만원 미만이면 인지액에서 10만원을
+ * 빼고 남은 금액. 인지액이 10만원 이하면 남는 금액이 없어 0 이다. 이 산식은 2006-04-01 시행본
+ * 부터 현행(2025-03-01 시행본)까지 같다 (2012.1.17·2024.1.16 개정은 환급 사유 각 호만 바꿨다).
+ */
+function computeRefund(stampDutyWon: number): StampDutyRefund {
+  const article = "민사소송 등 인지법 제14조 제1항";
+  const half = stampDutyWon / 2;
+  if (half >= 100_000) {
+    return {
+      amount: half,
+      formulaText: `인지액 ${won(stampDutyWon)} × 1/2 = ${won(half)}원 (${article})`,
+      article,
+    };
+  }
+  const amount = Math.max(0, stampDutyWon - 100_000);
+  return {
+    amount,
+    formulaText: `인지액 ${won(stampDutyWon)} × 1/2 = ${won(half)}원이 10만원 미만이라 인지액 − 100,000 = ${won(amount)}원 (${article})`,
+    article,
+  };
+}
+
+function computeStampDutyBase(input: StampDutyInput, deps?: ComputeStampDutyDeps): StampDutyResult {
   validateStampDutyInput(input);
   const dataset = loadStampDutyDataset(deps?.dataset);
   const computedAt = deps?.computedAt ?? new Date().toISOString();
@@ -353,6 +466,7 @@ export function computeStampDuty(
 
   let specialMultiplier: number | null = null;
   let specialLabel: string | null = null;
+  let preAmendmentMediation = false;
   // 지급명령(독촉)은 caseType "paymentOrder" (차) 자체가 제7조 제2항 1/10 대상이다. 별도
   // isPaymentOrder flag 는 구파일 호환으로 유지하되 caseType 을 기준으로 삼는다. 사건구분만
   // 고르고 flag 를 놓쳐 소장 인지가 나오던 UI 결함(감사 F3)을 엔진 root 에서 차단한다.
@@ -365,8 +479,17 @@ export function computeStampDuty(
     // "조정신청의 수수료는 「민사소송 등 인지법」 제2조에 따라 산출한 금액의 10분의 1로 한다."
     // 지급명령과 같은 구조라 사건구분만으로 자동 적용한다. 이 분기가 없던 동안
     // 조정신청에 소장 누진식이 그대로 적용되어 10배로 산출됐다.
-    specialMultiplier = dataset.specialProcedures.mediation.multiplier;
-    specialLabel = "조정신청";
+    // 대법원규칙 제2488호(2013-11-01 시행) 전에는 "5분의 1" 이었고 제2항(1천원 하한·100원
+    // 미만 절사)이 없었다. 부칙 제2조 제1항이 시행 후 최초로 신청된 사건부터 개정규정을
+    // 적용하므로 신청일(filingDate)로 가른다. 미지정이면 현행 사건으로 본다.
+    const mediation = dataset.specialProcedures.mediation;
+    preAmendmentMediation =
+      input.filingDate !== undefined && input.filingDate < mediation.effectiveFrom;
+    const entry = preAmendmentMediation ? mediation.previous : mediation;
+    specialMultiplier = entry.multiplier;
+    specialLabel = preAmendmentMediation
+      ? `조정신청 ${entry.rateText} · ${entry.sourceArticle}, 신청일 ${input.filingDate}`
+      : `조정신청 ${entry.rateText} · ${entry.sourceArticle}`;
   } else if (input.isSettlement) {
     specialMultiplier = dataset.specialProcedures.settlement.multiplier;
     specialLabel = "화해";
@@ -384,13 +507,21 @@ export function computeStampDuty(
   const article2Floor = Math.max(baseLine, dataset.roundingPolicy.floorMinimumWon);
   const article2FloorWon = article2Floor > baseLine ? article2Floor : null;
 
-  let preRounding = article2Floor * appealsMultiplier;
+  // 2013-11-01 전 조정신청은 "인지법 제2조에 따라 산출한 금액" (같은 조 제2항의 하한·절사까지
+  // 마친 금액) 의 5분의 1 이다. 규칙 자체의 하한·절사가 없던 시기라 뒤에서 다시 끊지 않는다.
+  const preAmendmentMediationBaseWon = preAmendmentMediation
+    ? applyStampDutyRounding(baseLine, dataset.roundingPolicy)
+    : null;
+
+  let preRounding = (preAmendmentMediationBaseWon ?? article2Floor) * appealsMultiplier;
 
   // 제7조 제4항은 "제1항과 제2항에 따른 인지액에 관하여는 제2조제2항을 준용한다" 로, 화해·
   // 지급명령 배수를 곱한 **뒤**의 금액에 하한을 다시 건다고 명문화했다. 제3조에는 그런
   // 준용 문구가 없어 배수 앞에서 한 번 거는 것으로 끝난다.
   let specialFloorWon: number | null = null;
-  if (specialMultiplier !== null) {
+  if (specialMultiplier !== null && preAmendmentMediation) {
+    preRounding *= specialMultiplier;
+  } else if (specialMultiplier !== null) {
     const afterSpecial = preRounding * specialMultiplier;
     preRounding = Math.max(afterSpecial, dataset.roundingPolicy.floorMinimumWon);
     specialFloorWon = preRounding > afterSpecial ? preRounding : null;
@@ -402,10 +533,14 @@ export function computeStampDuty(
 
   // 100원 절사는 마지막 한 번만. 절사를 배수·감액 앞으로 옮기는 것은 별개 쟁점이다
   // (소가 3,350,000 항소에서 25,100 과 25,050 으로 갈리며, 근거가 확정되지 않았다).
-  const finalAmount = applyStampDutyRounding(preRounding, {
-    ...dataset.roundingPolicy,
-    floorMinimumWon: 0,
-  });
+  // 구 조정 슬라이스는 100원 단위 기준 금액 × 5분의 1 (× 10분의 9) 이라 참값이 정수다.
+  // float 오차(예: 455,000 × 0.2)만 걷어낸다.
+  const finalAmount = preAmendmentMediation
+    ? Math.round(preRounding)
+    : applyStampDutyRounding(preRounding, {
+        ...dataset.roundingPolicy,
+        floorMinimumWon: 0,
+      });
 
   const formulaText = buildFormulaText({
     input: effective,
@@ -418,6 +553,7 @@ export function computeStampDuty(
     electronicSkippedNote,
     article2FloorWon,
     specialFloorWon,
+    preAmendmentMediationBaseWon,
     preRounding,
     finalAmount,
     deemedNote,

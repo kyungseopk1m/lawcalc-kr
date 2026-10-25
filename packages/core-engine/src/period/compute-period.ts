@@ -133,11 +133,18 @@ export function computePeriod(
     }
   }
 
+  const pendingOn20080322 = input.pendingOn20080322 === true;
+  if (pendingOn20080322 && input.holidayExtension === true) {
+    steps.push(
+      "2008-03-22 당시 법원에 계속 중인 사건 (민법 부칙 제3조 제1항): 토요일은 연장 대상 아님",
+    );
+  }
   const extension = applyHolidayExtension(
     rawExpiry,
     input.holidayExtension === true,
     deps,
     labels.holidayRollover,
+    pendingOn20080322,
   );
   if (extension.status === "applied") {
     articles.push(labels.holidayRollover);
@@ -180,15 +187,29 @@ export function computeDateSpan(input: DateSpanInput): DateSpanResult {
       ? 0
       : countDays(startDate, input.to, { leapYear: "actual", includeFirstDay: true });
 
-  // 만료일 `to` 를 낸 기간을 되짚는다. `computePeriod` 가 최종 해당일의 전일을 만료일로
-  // 삼으므로, 역산은 `to` 의 익일을 경계로 두고 완전한 월 수를 센다.
-  const endExclusive = addDays(input.to, 1);
-  const wholeMonths = startDate > input.to ? 0 : diffWholeMonths(startDate, endExclusive);
-  const anchor = addMonthsCalendar(startDate, wholeMonths).date;
+  // 만료일 `to` 를 낸 기간을 되짚는다. 기산일부터 m개월 기간의 만료일 (제160조 제2항 전일,
+  // 최종 월에 해당일이 없으면 같은 조 제3항 그 월의 말일) 이 `to` 이하인 최대 m 을 완전한
+  // 월 수로 삼고, 그 만료일 익일부터 `to` 까지(양 끝 포함)를 나머지 일수로 센다.
+  // 예: 2024-01-31 기산 1개월은 2월 29일 만료라 2024-02-29 까지는 1개월 0일이다.
+  let wholeMonths = 0;
+  let periodEnd = addDays(startDate, -1);
+  if (startDate <= input.to) {
+    const s = dateParts(startDate);
+    const t = dateParts(input.to);
+    // m개월 만료일은 기산 해당일이 있는 달(또는 그 전일)이라 차이 + 1 개월이 상한이다.
+    for (let m = (t.y - s.y) * 12 + (t.m - s.m) + 1; m > 0; m -= 1) {
+      const end = monthPeriodEnd(startDate, m);
+      if (end <= input.to) {
+        wholeMonths = m;
+        periodEnd = end;
+        break;
+      }
+    }
+  }
   const remainingDays =
-    anchor > endExclusive
+    startDate > input.to
       ? 0
-      : countDays(anchor, endExclusive, { leapYear: "actual", includeFirstDay: false });
+      : countDays(periodEnd, input.to, { leapYear: "actual", includeFirstDay: false });
 
   const calendar = {
     years: Math.floor(wholeMonths / 12),
@@ -222,6 +243,7 @@ function applyHolidayExtension(
   enabled: boolean,
   deps: PeriodDeps | undefined,
   article: string,
+  pendingOn20080322: boolean,
 ): ExtensionOutcome {
   if (!enabled || deps === undefined) {
     return { date: rawExpiry, status: "off" };
@@ -236,7 +258,9 @@ function applyHolidayExtension(
   }
   let rolled: { date: IsoDate; rolled: boolean; reasonKo?: string };
   try {
-    rolled = deps.rollToNextBusinessDay(rawExpiry);
+    rolled = pendingOn20080322
+      ? deps.rollToNextBusinessDay(rawExpiry, { pendingOn20080322 })
+      : deps.rollToNextBusinessDay(rawExpiry);
   } catch (error) {
     // 말일 자체는 커버리지 안이지만 연속 휴일이 커버리지 끝을 넘어가는 경우,
     // 또는 말일·연장 경로에 2008-03-22 이전 토요일이 걸리는 경우.
@@ -304,14 +328,8 @@ function addMonthsCalendar(date: IsoDate, months: number): { date: IsoDate; clip
   return { date: iso, clipped };
 }
 
-/** `from` 부터 `toExclusive` 사이에 들어가는 완전한 역법 월 수. */
-function diffWholeMonths(from: IsoDate, toExclusive: IsoDate): number {
-  const a = dateParts(from);
-  const b = dateParts(toExclusive);
-  let n = (b.y - a.y) * 12 + (b.m - a.m);
-  if (n < 0) return 0;
-  while (n > 0 && addMonthsCalendar(from, n).date > toExclusive) {
-    n -= 1;
-  }
-  return n;
+/** 기산일부터 `months`개월 기간의 만료일. 제160조 제2항(해당일 전일), 같은 조 제3항(말일). */
+function monthPeriodEnd(startDate: IsoDate, months: number): IsoDate {
+  const target = addMonthsCalendar(startDate, months);
+  return target.clipped ? target.date : addDays(target.date, -1);
 }

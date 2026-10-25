@@ -46,7 +46,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.totalAmount).toBe(TOTAL_BASE);
     expect(result.disclaimer).toBe(STANDARD_DISCLAIMER);
     expect(result.dataVersions).toEqual({
-      "stamp-duty": "stamp-duty/v1.2.0",
+      "stamp-duty": "stamp-duty/v1.3.0",
       delivery: DELIVERY_TAG,
       "lawyer-fee": "lawyer-fee/v1.2.0",
     });
@@ -156,7 +156,7 @@ describe("litigation-cost / computeLitigationCost", () => {
     expect(result.stampDuty.amount).toBeGreaterThan(0);
     expect(result.totalAmount).toBe(result.stampDuty.amount + result.deliveryFee.amount);
     expect(result.dataVersions).toEqual({
-      "stamp-duty": "stamp-duty/v1.2.0",
+      "stamp-duty": "stamp-duty/v1.3.0",
       delivery: DELIVERY_TAG,
       "lawyer-fee": "lawyer-fee/v1.2.0",
     });

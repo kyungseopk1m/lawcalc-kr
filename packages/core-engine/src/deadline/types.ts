@@ -108,6 +108,12 @@ export interface DeadlineInput {
    * `alternate` 가 없는 항목에 켜면 RangeError.
    */
   useAlternate?: boolean;
+  /**
+   * 2008-03-22 당시 법원에 계속 중인 사건. 민법 법률 제8720호 부칙 제3조 제1항에 따라 토요일을
+   * 말일 연장 대상으로 보지 않는다. 기본값 false. `PeriodInput.pendingOn20080322` 로 넘어간다.
+   * 민사 계열 항목에만 쓸 수 있다. 형사 계열에 켜면 RangeError (법률 제8730호 부칙에 같은 경과조치가 없다).
+   */
+  pendingOn20080322?: boolean;
 }
 
 /**

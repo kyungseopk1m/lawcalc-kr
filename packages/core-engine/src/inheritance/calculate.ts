@@ -245,6 +245,12 @@ function validateInput(input: InheritanceInput): void {
       }
     }
   }
+  if (
+    input.estateWon !== undefined &&
+    (!Number.isSafeInteger(input.estateWon) || input.estateWon < 0)
+  ) {
+    throw new RangeError("상속재산 금액(estateWon)은 0 이상의 정수(원)여야 합니다.");
+  }
   // 촌수(degree)는 HeirNode 공통 필드 — 모든 순위·대습 노드에서 지정 시 1 이상의 정수여야 한다.
   for (const group of [
     input.linealDescendants,
@@ -356,9 +362,64 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
   const sibHeirs = slotted(sib).filter((h) => !h.renounced);
   const colOutcome = resolveGroup(col, false);
 
+  const wantTrace = input.estateWon !== undefined || input.includeTrace === true;
+  const trace: string[] = [];
+  if (wantTrace) {
+    trace.push(`피상속인 사망일 ${input.decedent.deceasedAt}: 상속개시 (민법 제997조)`);
+    if (narrowSpouseReps) {
+      const narrowed = [...(input.linealDescendants ?? []), ...(input.siblings ?? [])].filter(
+        (h) =>
+          (h.representationCause ?? "death") !== "death" &&
+          (h.representatives ?? []).some((r) => r.isSpouseOfRepresented),
+      );
+      for (const h of narrowed) {
+        trace.push(
+          `${h.name ?? "피대습자"}: 대습 원인이 사망이 아니라 그 배우자는 대습하지 않음 (민법 제1003조 제2항, 2026-03-17 개정)`,
+        );
+      }
+    }
+    const renounced = [...desc, ...asc, ...sib, ...col].filter((h) => h.renounced);
+    if (renounced.length > 0) {
+      trace.push(
+        `상속포기 ${renounced.map((h) => h.name ?? "상속인").join(", ")}: 포기는 상속개시 때로 소급하고 대습 원인이 아님 (민법 제1042조, 제1001조)`,
+      );
+    }
+  }
+  const traceGroup = (label: string, article: string, group: HeirNode[], heirs: HeirNode[]) => {
+    if (!wantTrace) return;
+    trace.push(`순위 결정: ${label} 상속 (${article})`);
+    const excluded = slotted(group).filter((h) => !h.renounced && !heirs.includes(h));
+    if (excluded.length > 0) {
+      trace.push(
+        `최근친 우선: ${excluded.map((h) => h.name ?? `${h.degree ?? "?"}촌`).join(", ")} 제외 (민법 제1000조 제2항)`,
+      );
+    }
+    for (const h of heirs) {
+      if (!h.deceasedBeforeOpening) continue;
+      const reps = livingReps(h);
+      const spouseRep = reps.some((r) => r.isSpouseOfRepresented);
+      trace.push(
+        `대습: ${h.name ?? "피대습자"} 의 상속분을 ${reps.map((r) => r.name ?? "대습자").join(", ")} 이(가) 승계 (민법 제1001조` +
+          (spouseRep ? ", 제1003조 제2항, 피대습자 배우자는 제1009조 제2항 준용 5할 가산)" : ")"),
+      );
+    }
+  };
+  const traceSpouseShare = (unitLabel: string) => {
+    if (wantTrace && spouseAlive) {
+      trace.push(
+        `배우자 공동상속·5할 가산: 배우자 1.5 : ${unitLabel} 1 (민법 제1003조 제1항, 제1009조 제2항)`,
+      );
+    }
+  };
+  const traceSpouseSole = (reason: string) => {
+    if (wantTrace) trace.push(`순위 결정: 배우자 단독상속 (${reason})`);
+  };
+
   let rawShares: RawShare[];
 
   if (descOutcome.kind === "inherit") {
+    traceGroup("1순위 직계비속", "민법 제1000조 제1항 제1호", desc, descOutcome.heirs);
+    traceSpouseShare("직계비속 각");
     rawShares = distributeWithSpouse(
       descOutcome.heirs,
       spouseAlive ? spouseName : null,
@@ -366,8 +427,11 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
       LINEAL_UNIT,
     );
   } else if (descOutcome.kind === "spouseSole") {
+    traceSpouseSole("직계비속 전원 포기, 민법 제1043조");
     rawShares = spouseSole;
   } else if (ascOutcome.kind === "inherit") {
+    traceGroup("2순위 직계존속", "민법 제1000조 제1항 제2호", asc, ascOutcome.heirs);
+    traceSpouseShare("직계존속 각");
     rawShares = distributeWithSpouse(
       ascOutcome.heirs,
       spouseAlive ? spouseName : null,
@@ -375,12 +439,21 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
       ASCENDANT_UNIT,
     );
   } else if (ascOutcome.kind === "spouseSole") {
+    traceSpouseSole("직계존속 전원 포기, 민법 제1043조");
     rawShares = spouseSole;
   } else if (spouseAlive) {
+    traceSpouseSole("직계비속·직계존속이 없음, 민법 제1003조 제1항");
     rawShares = spouseSole;
   } else if (sibHeirs.length > 0) {
+    traceGroup("3순위 형제자매 균분", "민법 제1000조 제1항 제3호, 제1009조 제1항", sib, sibHeirs);
     rawShares = distributeEqual(sibHeirs, "형제자매");
   } else if (colOutcome.kind === "inherit") {
+    traceGroup(
+      "4순위 4촌 이내 방계혈족 균분",
+      "민법 제1000조 제1항 제4호, 제1009조 제1항",
+      col,
+      colOutcome.heirs,
+    );
     rawShares = distributeEqual(colOutcome.heirs, "방계혈족");
   } else {
     throw new RangeError("상속인이 없습니다");
@@ -399,6 +472,33 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
     };
   });
 
+  let estate: Pick<InheritanceResult, "estateWon" | "remainderWon"> = {};
+  if (input.estateWon !== undefined) {
+    const total = BigInt(input.estateWon);
+    let assigned = 0n;
+    rawShares.forEach((rs, i) => {
+      const amount = (total * rs.raw.num) / rs.raw.den;
+      assigned += amount;
+      shares[i]!.amountWon = Number(amount);
+    });
+    estate = { estateWon: input.estateWon, remainderWon: Number(total - assigned) };
+  }
+  if (wantTrace) {
+    for (const sh of shares) {
+      trace.push(
+        `${sh.name}: ${sh.numerator}/${sh.denominator}` +
+          (sh.amountWon !== undefined
+            ? ` → ${input.estateWon!.toLocaleString("en-US")} × ${sh.numerator}/${sh.denominator} = ${sh.amountWon.toLocaleString("en-US")}원 (원 미만 내림)`
+            : ""),
+      );
+    }
+    if (estate.remainderWon !== undefined) {
+      trace.push(
+        `내림으로 남은 끝수 ${estate.remainderWon.toLocaleString("en-US")}원 (배정하지 않음)`,
+      );
+    }
+  }
+
   return {
     decedent: {
       ...(input.decedent.name === undefined ? {} : { name: input.decedent.name }),
@@ -406,6 +506,8 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
     },
     shares,
     disclaimer: STANDARD_DISCLAIMER,
+    ...estate,
+    ...(wantTrace ? { trace } : {}),
     dataVersion: INHERITANCE_DATA_VERSION,
     computedAt: new Date().toISOString(),
   };

@@ -66,6 +66,9 @@ export type {
   CaseType,
   CaseTypeMeta,
   ComputeDeliveryFeeDeps,
+  DeliveryCodeRowFeeInput,
+  DeliveryCodeRowFeeResult,
+  DeliveryCodeTableEntry,
   ComputeLitigationCostDeps,
   ClaimAmendmentInput,
   ClaimAmendmentResult,
@@ -119,6 +122,8 @@ export type {
   StampDutyElectronicFilingDiscount,
   StampDutyHistoryNote,
   StampDutyInput,
+  StampDutyLawsuitTopUp,
+  StampDutyRefund,
   StampDutyResult,
   StampDutyRoundingPolicy,
   StampDutySourceLaw,
@@ -136,6 +141,9 @@ export {
   caseNameKo,
   computeClaimAmendmentStampDuty,
   computeDeliveryFee,
+  computeDeliveryFeeForCodeRow,
+  listDeliveryCodeTable,
+  searchDeliveryCodeTable,
   computeLitigationCost,
   computeLawyerFee,
   computeStampDuty,
@@ -186,7 +194,13 @@ export {
   loadCaseValueDataset,
 } from "./litigation-cost";
 
-export type { HolidayDataset, HolidayKind, HolidayRecord, RollResult } from "./holidays";
+export type {
+  BusinessDayOptions,
+  HolidayDataset,
+  HolidayKind,
+  HolidayRecord,
+  RollResult,
+} from "./holidays";
 export {
   findHoliday,
   holidaysVersionTag,
@@ -206,8 +220,21 @@ export type {
   PeriodInput,
   PeriodResult,
   PeriodUnit,
+  PublicServiceBasis,
+  PublicServiceVariant,
+  ServiceEffectInput,
+  ServiceEffectKind,
+  ServiceEffectOptions,
+  ServiceEffectResult,
 } from "./period";
-export { computeDateSpan, computePeriod, createHolidayDeps, validatePeriodInput } from "./period";
+export {
+  buildServiceEffectCalendar,
+  computeDateSpan,
+  computePeriod,
+  computeServiceEffect,
+  createHolidayDeps,
+  validatePeriodInput,
+} from "./period";
 
 export type {
   DeadlineAlternate,
@@ -228,3 +255,14 @@ export {
   loadDeadlines,
   validateDeadlineInput,
 } from "./deadline";
+
+export type { DetentionBasis, DetentionInput, DetentionResult } from "./detention";
+export { buildDetentionTable, computeDetentionDays } from "./detention";
+
+export type {
+  CalculatorDigits,
+  CalculatorOptions,
+  CalculatorResult,
+  CalculatorRounding,
+} from "./calculator";
+export { evaluateExpression } from "./calculator";

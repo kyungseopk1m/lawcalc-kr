@@ -25,14 +25,14 @@ function input(overrides: Partial<StampDutyInput> = {}): StampDutyInput {
 describe("loadStampDutyDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadStampDutyDataset();
-    expect(ds.version).toBe("1.2.0");
+    expect(ds.version).toBe("1.3.0");
     expect(ds.brackets).toHaveLength(4);
     expect(ds.brackets.map((b) => b.baseAmount)).toEqual([0, 5000, 55000, 555000]);
     expect(ds.brackets.map((b) => b.rate)).toEqual([0.005, 0.0045, 0.004, 0.0035]);
   });
 
-  it("stampDutyVersionTag 는 stamp-duty/v1.2.0", () => {
-    expect(stampDutyVersionTag(loadStampDutyDataset())).toBe("stamp-duty/v1.2.0");
+  it("stampDutyVersionTag 는 stamp-duty/v1.3.0", () => {
+    expect(stampDutyVersionTag(loadStampDutyDataset())).toBe("stamp-duty/v1.3.0");
   });
 
   /**
@@ -90,6 +90,36 @@ describe("loadStampDutyDataset / 기본 dataset", () => {
     it("1,000원 하한이 걸린다", () => {
       // 소가가 작아 1/10 이 1,000원 미만이면 1,000원.
       expect(mediation(10_000).amount).toBe(1_000);
+    });
+
+    // 대법원규칙 제2488호(2013-11-01 시행) 전 신청은 "5분의 1" 이고 규칙 제3조 제2항(하한·절사)이 없다.
+    // VK 대조: 소가 1억, 2010년 신청 → 455,000 / 5 = 91,000. 현행은 455,000 / 10 = 45,500.
+    it("2013-11-01 전 신청은 5분의 1 (VK 소가 1억 2010년 신청 91,000)", () => {
+      const before = mediation(100_000_000, { filingDate: "2010-05-01" });
+      expect(before.amount).toBe(91_000);
+      expect(before.formulaText).toContain("5분의 1");
+      expect(before.formulaText).toContain("구 민사조정규칙 제3조 제1항");
+      expect(mediation(100_000_000).amount).toBe(45_500);
+      expect(mediation(100_000_000, { filingDate: "2013-11-01" }).amount).toBe(45_500);
+      expect(mediation(100_000_000, { filingDate: "2013-10-31" }).amount).toBe(91_000);
+      expect(mediation(100_000_000).formulaText).toContain("10분의 1");
+    });
+
+    // 2011년판 제3조 제1항 단서(제2344호, 2011-07-28 시행): 전자 제출은 본문 금액의 10분의 9.
+    // 인지법 제16조(2011-10-19)보다 먼저라 그 사이 신청도 감액된다. 455,000 × 1/5 × 9/10 = 81,900.
+    it("전자 조정신청은 2011-07-28 부터 10분의 9 (규칙 단서)", () => {
+      const e = (filingDate: string) =>
+        mediation(100_000_000, { filingDate, isElectronicFiling: true }).amount;
+      expect(e("2011-07-27")).toBe(91_000);
+      expect(e("2011-08-15")).toBe(81_900);
+      expect(e("2011-10-19")).toBe(81_900);
+    });
+
+    it("2013-11-01 전 신청에는 규칙의 1,000원 하한·100원 절사가 없다", () => {
+      // 소가 10,000: 인지법 제2조 50원 → 같은 조 제2항 하한 1,000원 → × 1/5 = 200원.
+      expect(mediation(10_000, { filingDate: "2012-01-01" }).amount).toBe(200);
+      // 소가 3,350,000: 16,750 → 제2조 제2항 절사 16,700 → × 1/5 = 3,340원 (100원 절사 안 함).
+      expect(mediation(3_350_000, { filingDate: "2012-01-01" }).amount).toBe(3_340);
     });
   });
 
@@ -408,7 +438,7 @@ describe("computeStampDuty / 누진 산식 + 심급 + 반올림", () => {
   it("소가 10,000,000 1심 = 50,000원 (2구간 경계, 연속)", () => {
     const r = computeStampDuty(input({ caseValue: 10_000_000 }), { computedAt: FROZEN_AT });
     expect(r.amount).toBe(50_000);
-    expect(r.dataVersion).toBe("stamp-duty/v1.2.0");
+    expect(r.dataVersion).toBe("stamp-duty/v1.3.0");
     expect(r.computedAt).toBe(FROZEN_AT);
   });
 
@@ -815,7 +845,7 @@ describe("computeStampDuty / dataset injection 결정성", () => {
   it("default 호출 (deps 미지정) → bundled dataset 사용", () => {
     const r = computeStampDuty(case50m, { computedAt: FROZEN_AT });
     expect(r.amount).toBe(230_000);
-    expect(r.dataVersion).toBe("stamp-duty/v1.2.0");
+    expect(r.dataVersion).toBe("stamp-duty/v1.3.0");
   });
 
   it("custom dataset 주입 → version 변경 + 산출 변화", () => {
@@ -1004,5 +1034,165 @@ describe("computeStampDuty / 보전처분 제9조 제2항 (감사 F1)", () => {
     expect(() =>
       computeStampDuty(input({ caseType: "provisionalMeasureSingle", isPaymentOrder: true })),
     ).toThrow(/보전처분 인지에는 지급명령·화해/);
+  });
+});
+
+describe("인지 환급액 (인지법 제14조 제1항) · 소장 보정액 (제7조 제3항, 민사조정법 제36조 제2항)", () => {
+  const AT = { computedAt: "2026-10-22T00:00:00.000Z" };
+
+  it("VK 실측(2010): 소가 1억 1심 455,000 → 227,500 / 2심 682,500 → 341,250 / 3심 910,000 → 455,000", () => {
+    const levels = ["firstInstance", "appeal", "supreme"] as const;
+    const got = levels.map((appealsLevel) => {
+      const r = computeStampDuty(
+        {
+          caseValue: 100_000_000,
+          caseType: "civilFirstInstanceCollegial",
+          appealsLevel,
+          filingDate: "2010-06-01",
+          includeRefund: true,
+        },
+        AT,
+      );
+      return [r.amount, r.refund!.amount];
+    });
+    expect(got).toEqual([
+      [455_000, 227_500],
+      [682_500, 341_250],
+      [910_000, 455_000],
+    ]);
+  });
+
+  it("2분의 1 이 10만원 미만이면 인지액 − 10만원, 10만원 이하면 0", () => {
+    const refundOf = (caseValue: number) =>
+      computeStampDuty(
+        {
+          caseValue,
+          caseType: "civilFirstInstanceSingle",
+          appealsLevel: "firstInstance",
+          includeRefund: true,
+        },
+        AT,
+      );
+    // 소가 3천만: 30,000,000 × 45/10,000 + 5,000 = 140,000 → 반액 70,000 < 10만 → 40,000
+    const r = refundOf(30_000_000);
+    expect(r.amount).toBe(140_000);
+    expect(r.refund).toEqual({
+      amount: 40_000,
+      article: "민사소송 등 인지법 제14조 제1항",
+      formulaText:
+        "인지액 140,000 × 1/2 = 70,000원이 10만원 미만이라 인지액 − 100,000 = 40,000원 (민사소송 등 인지법 제14조 제1항)",
+    });
+    // 소가 1천만: 50,000 → 0
+    expect(refundOf(10_000_000).refund!.amount).toBe(0);
+  });
+
+  it("경계: 인지액 199,900 은 99,900, 200,000 은 반액 100,000", () => {
+    const at = (caseValue: number) =>
+      computeStampDuty(
+        {
+          caseValue,
+          caseType: "civilFirstInstanceSingle",
+          appealsLevel: "firstInstance",
+          includeRefund: true,
+        },
+        AT,
+      );
+    // 43,333,000 × 45/10,000 + 5,000 = 199,998.5 → 199,900. 반액 99,950 < 10만 → 199,900 − 100,000
+    expect([at(43_333_000).amount, at(43_333_000).refund!.amount]).toEqual([199_900, 99_900]);
+    // 43,334,000 → 200,003 → 200,000. 반액 100,000
+    expect([at(43_334_000).amount, at(43_334_000).refund!.amount]).toEqual([200_000, 100_000]);
+  });
+
+  it("VK 실측(2010): 조정 455,000 − 91,000 = 364,000", () => {
+    const r = computeStampDuty(
+      {
+        caseValue: 100_000_000,
+        caseType: "civilMediation",
+        appealsLevel: "firstInstance",
+        filingDate: "2010-06-01",
+        includeLawsuitTopUp: true,
+      },
+      AT,
+    );
+    expect(r.amount).toBe(91_000);
+    expect(r.lawsuitTopUp).toMatchObject({
+      lawsuitStampDutyWon: 455_000,
+      paidStampDutyWon: 91_000,
+      amount: 364_000,
+      article: "민사조정법 제36조 제2항",
+    });
+  });
+
+  it("지급명령·화해는 인지법 제7조 제3항", () => {
+    const po = computeStampDuty(
+      {
+        caseValue: 100_000_000,
+        caseType: "paymentOrder",
+        appealsLevel: "firstInstance",
+        includeLawsuitTopUp: true,
+      },
+      AT,
+    );
+    expect(po.lawsuitTopUp).toMatchObject({
+      lawsuitStampDutyWon: 455_000,
+      paidStampDutyWon: 45_500,
+      amount: 409_500,
+    });
+    expect(po.lawsuitTopUp!.article).toContain("민사소송법 제472조");
+    const st = computeStampDuty(
+      {
+        caseValue: 100_000_000,
+        caseType: "civilFirstInstanceSingle",
+        appealsLevel: "firstInstance",
+        isSettlement: true,
+        isElectronicFiling: true,
+        includeLawsuitTopUp: true,
+      },
+      AT,
+    );
+    // 전자: 소장 409,500 − 화해 81,900 (= 91,000 × 0.9)
+    expect(st.lawsuitTopUp).toMatchObject({
+      lawsuitStampDutyWon: 409_500,
+      paidStampDutyWon: 81_900,
+      amount: 327_600,
+    });
+    expect(st.lawsuitTopUp!.article).toContain("민사소송법 제388조");
+  });
+
+  it("키가 없으면 이전 결과 모양 그대로", () => {
+    const r = computeStampDuty(
+      {
+        caseValue: 100_000_000,
+        caseType: "civilFirstInstanceSingle",
+        appealsLevel: "firstInstance",
+      },
+      AT,
+    );
+    expect(Object.keys(r).sort()).toEqual(["amount", "computedAt", "dataVersion", "formulaText"]);
+  });
+
+  it("대상이 아닌 인지에 요청하면 거부", () => {
+    expect(() =>
+      computeStampDuty(
+        {
+          caseValue: 1e8,
+          caseType: "paymentOrder",
+          appealsLevel: "firstInstance",
+          includeRefund: true,
+        },
+        AT,
+      ),
+    ).toThrow(/환급액/);
+    expect(() =>
+      computeStampDuty(
+        {
+          caseValue: 1e8,
+          caseType: "civilFirstInstanceSingle",
+          appealsLevel: "firstInstance",
+          includeLawsuitTopUp: true,
+        },
+        AT,
+      ),
+    ).toThrow(/보정액/);
   });
 });

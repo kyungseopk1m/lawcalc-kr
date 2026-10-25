@@ -1,3 +1,4 @@
+import type { BusinessDayOptions } from "../holidays";
 import type { IsoDate } from "../types";
 
 /** 기간의 단위. 민법 제160조는 주·월·년을 역법으로 계산하고 일은 그대로 센다. */
@@ -10,8 +11,11 @@ export type PeriodUnit = "day" | "week" | "month" | "year";
  * `isBusinessDay` / `rollToNextBusinessDay` 가 RangeError 를 던지는 계약도 그대로다.
  */
 export interface PeriodDeps {
-  isBusinessDay(date: IsoDate): boolean;
-  rollToNextBusinessDay(date: IsoDate): { date: IsoDate; rolled: boolean; reasonKo?: string };
+  isBusinessDay(date: IsoDate, options?: BusinessDayOptions): boolean;
+  rollToNextBusinessDay(
+    date: IsoDate,
+    options?: BusinessDayOptions,
+  ): { date: IsoDate; rolled: boolean; reasonKo?: string };
   isCovered(date: IsoDate): boolean;
 }
 
@@ -54,6 +58,11 @@ export interface PeriodInput {
    * 기본값 false. true 로 켤 때는 `PeriodDeps` 를 함께 넘겨야 한다.
    */
   holidayExtension?: boolean;
+  /**
+   * 2008-03-22 당시 법원에 계속 중인 사건. 민법 법률 제8720호 부칙 제3조 제1항에 따라 토요일을
+   * 말일 연장 대상으로 보지 않는다 (일요일·공휴일은 그대로 연장). 기본값 false.
+   */
+  pendingOn20080322?: boolean;
 }
 
 /**

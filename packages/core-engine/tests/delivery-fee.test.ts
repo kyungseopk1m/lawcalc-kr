@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   CASE_TYPE_META,
   computeDeliveryFee,
+  computeDeliveryFeeForCodeRow,
+  listDeliveryCodeTable,
+  searchDeliveryCodeTable,
   deliveryDatasetVersionTag,
   getDeliveryCount,
   getDeliveryUnitPriceAt,
@@ -35,7 +38,7 @@ function input(overrides: Partial<DeliveryFeeInput> = {}): DeliveryFeeInput {
 describe("loadDeliveryDataset / 기본 dataset", () => {
   it("inline default dataset 을 검증 후 로드한다", () => {
     const ds = loadDeliveryDataset();
-    expect(ds.version).toBe("1.3.0");
+    expect(ds.version).toBe("1.4.0");
     expect(ds.unitPriceHistory).toHaveLength(5);
     // 현행 단가 5,640원, 2026-07-01 시행. 법제처 생활법령정보 '인지액 및 송달료' +
     // 대한법률구조공단 자동계산기 고지("2026. 7. 1. 송달료 5,640원으로 인상")로 대조.
@@ -51,8 +54,8 @@ describe("loadDeliveryDataset / 기본 dataset", () => {
     expect(new Set(dates).size).toBe(dates.length);
   });
 
-  it("deliveryDatasetVersionTag 는 delivery/v1.3.0", () => {
-    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.3.0");
+  it("deliveryDatasetVersionTag 는 delivery/v1.4.0", () => {
+    expect(deliveryDatasetVersionTag(loadDeliveryDataset())).toBe("delivery/v1.4.0");
   });
 
   it("음수 unitPriceWon 거부", () => {
@@ -729,5 +732,117 @@ describe("computeDeliveryFee / 확장 사건구분 (전자소송 대조)", () =>
     for (const caseType of added) {
       expect(() => getDeliveryCount(ds, caseType), caseType).not.toThrow();
     }
+  });
+});
+
+describe("사건부호표 (재일 87-4 별표 1)", () => {
+  const table = listDeliveryCodeTable();
+
+  it("별표 1 의 94행 전부를 싣고, 부호 없는 행은 재심·기일지정·인신보호 6행뿐이다", () => {
+    expect(table).toHaveLength(94);
+    expect(table.filter((r) => r.codes.length === 0).map((r) => r.category)).toEqual([
+      "재심·준재심",
+      "기일지정신청",
+      "인신보호사건",
+      "인신보호사건",
+      "인신보호사건",
+      "인신보호사건",
+    ]);
+  });
+
+  it("괄호로 끊겼던 부호를 원문대로 복원했다", () => {
+    const byLabel = (prefix: string) => table.find((r) => r.labelKo.startsWith(prefix))!;
+    expect(byLabel("가압류, 가처분결정에 대한 이의").codes).toEqual(["카합", "카단"]);
+    expect(byLabel("판결(결정)경정사건").codes).toEqual(["카경"]);
+    expect(byLabel("채권등 집행사건").codes).toEqual(["타채", "타기"]);
+    expect(byLabel("선거항고").codes).toEqual(["수흐"]);
+    expect(byLabel("특허특별(준)항고").codes).toEqual(["히"]);
+    expect(byLabel("가족관계등록(제적)비송").codes).toEqual(["호기"]);
+  });
+
+  it("caseType 이 붙은 행은 countMatrix 의 같은 사건구분과 회수가 맞는다", () => {
+    const ds = loadDeliveryDataset();
+    for (const row of table) {
+      if (row.caseType === undefined || row.countPerParty === undefined) continue;
+      const formula = getDeliveryCount(ds, row.caseType).formula;
+      if (formula.kind === "simplePerParty") {
+        expect(formula.countPerParty, row.labelKo).toBe(row.countPerParty);
+      } else if (formula.kind === "range") {
+        expect(row.countPerParty, row.labelKo).toBeGreaterThanOrEqual(formula.countMin);
+        expect(row.countPerParty, row.labelKo).toBeLessThanOrEqual(formula.countMax);
+      }
+    }
+  });
+
+  it("검색은 부호와 사건명 부분 문자열(공백 무시)로 찾는다", () => {
+    expect(searchDeliveryCodeTable("가합").map((r) => r.labelKo)).toEqual([
+      "민사제1심합의사건(가합)",
+    ]);
+    expect(searchDeliveryCodeTable("카담")).toHaveLength(2);
+    expect(searchDeliveryCodeTable("민사 항소").map((r) => r.codes)).toEqual([["나"]]);
+    expect(searchDeliveryCodeTable("")).toHaveLength(94);
+    expect(searchDeliveryCodeTable("없는부호")).toEqual([]);
+  });
+
+  it("VK 실측: 원고 13 + 피고 12, 3회 행, 단가 3,020원 = 226,500원 (단가 주입)", () => {
+    // VK 실측은 회수 3회 행의 값이다. 같은 회수의 행(민사특별항고 그)으로 산식을 고정한다.
+    // 3,020원은 우리 단가 이력(2020년 이후)에 없는 과거 단가라 주입한다.
+    const row = table.find((r) => r.codes.includes("그"))!;
+    const result = computeDeliveryFeeForCodeRow(
+      row,
+      { plaintiffCount: 13, defendantCount: 12 },
+      3020,
+    );
+    expect(result.amount).toBe(226_500);
+    expect(result.deliveryCount).toBe(75);
+    expect(result.formulaText).toContain("(13 + 12)명 × 3회 × 3,020원 = 226,500원");
+  });
+
+  it("단가는 접수일 기준 이력에서 가져다 넘길 수 있다", () => {
+    const row = table.find((r) => r.codes.includes("가합"))!;
+    const unit = getDeliveryUnitPriceAt(loadDeliveryDataset(), "2025-06-01").unitPriceWon;
+    expect(
+      computeDeliveryFeeForCodeRow(row, { plaintiffCount: 1, defendantCount: 1 }, unit).amount,
+    ).toBe(2 * 15 * 5500);
+  });
+
+  it("회수가 하나로 정해지지 않는 행은 거부한다", () => {
+    const row = table.find((r) => r.codes.includes("카조"))!;
+    expect(row.countPerParty).toBeUndefined();
+    expect(() =>
+      computeDeliveryFeeForCodeRow(row, { plaintiffCount: 1, defendantCount: 1 }, 5640),
+    ).toThrow(RangeError);
+  });
+
+  it("codeTable 이 countMatrix 에 없는 caseType 을 가리키면 dataset 검증이 거부한다", () => {
+    const ds = loadDeliveryDataset();
+    const bad: DeliveryDataset = {
+      ...ds,
+      codeTable: [{ ...ds.codeTable![0]!, caseType: "nope" as never }],
+    };
+    expect(() => loadDeliveryDataset(bad)).toThrow(RangeError);
+  });
+
+  // caseType 은 1:1 일 때만 붙는다. 회수가 고정된 행이 범위 산식(루·무 3~5회)이나 회수가 다른
+  // 사건구분을 가리키면 "적용" 버튼이 본 계산기에 다른 금액을 채운다.
+  it("회수가 고정된 행의 caseType 은 같은 회수의 simplePerParty 사건구분만 가리킨다", () => {
+    const ds = loadDeliveryDataset();
+    for (const row of table) {
+      if (row.caseType === undefined || row.countPerParty === undefined) continue;
+      const formula = ds.countMatrix.find((e) => e.caseType === row.caseType)!.formula;
+      expect(formula, row.labelKo).toMatchObject({
+        kind: "simplePerParty",
+        countPerParty: row.countPerParty,
+      });
+    }
+    for (const code of ["루", "무"]) {
+      expect(table.find((r) => r.codes.includes(code))!.caseType, code).toBeUndefined();
+    }
+  });
+
+  it("codeTable 이 없는 구 dataset 은 빈 목록", () => {
+    const { codeTable: _omit, ...legacy } = loadDeliveryDataset();
+    void _omit;
+    expect(listDeliveryCodeTable(legacy)).toEqual([]);
   });
 });

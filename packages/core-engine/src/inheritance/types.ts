@@ -91,6 +91,13 @@ export interface InheritanceInput {
   siblings?: HeirNode[];
   /** 4순위 4촌 이내 방계혈족 (1000조 ①-4). 1·2·3순위·배우자 모두 부재 시에만. 대습 X. */
   collateralFourth?: HeirNode[];
+  /**
+   * 상속재산 금액(원, 0 이상의 안전 정수). 지정하면 상속인별 `amountWon` 과 `remainderWon`,
+   * `trace` 를 싣는다. 미지정이면 이전 결과 모양 그대로.
+   */
+  estateWon?: number;
+  /** true 면 금액 없이도 `trace` 를 싣는다. */
+  includeTrace?: boolean;
 }
 
 /**
@@ -106,6 +113,8 @@ export interface InheritanceShare {
   denominator: number;
   rawNumerator: number;
   rawDenominator: number;
+  /** `estateWon` 지정 시: floor(상속재산 × 지분). */
+  amountWon?: number;
 }
 
 /**
@@ -119,6 +128,15 @@ export interface InheritanceResult {
   shares: InheritanceShare[];
   /** B11 단일 source — `STANDARD_DISCLAIMER` 그대로. */
   disclaimer: string;
+  /** `estateWon` 지정 시 그대로. */
+  estateWon?: number;
+  /**
+   * `estateWon` 지정 시: 상속재산 − Σ amountWon. 원 단위 내림으로 남는 끝수다. 누구에게도
+   * 배정하지 않고 그대로 보고한다 (협의분할 등 실무 처리에 맡긴다).
+   */
+  remainderWon?: number;
+  /** `estateWon` 또는 `includeTrace` 지정 시: 실제 판단 경로를 한국어로 적은 전개식. */
+  trace?: string[];
   dataVersion: string;
   /** ISO 8601 datetime. */
   computedAt: string;

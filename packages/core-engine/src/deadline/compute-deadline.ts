@@ -73,6 +73,7 @@ export function computeDeadline(
       count: length,
       includeFirstDay: item.firstDayIncluded,
       holidayExtension: item.holidayRollover,
+      ...(input.pendingOn20080322 === true ? { pendingOn20080322: true } : {}),
     },
     deps,
     ds.periodRules.articles[law.family],
@@ -131,6 +132,16 @@ export function validateDeadlineInput(input: DeadlineInput, dataset?: DeadlineDa
   if (input.useAlternate === true && item.alternate === undefined) {
     throw new RangeError(
       `${PREFIX}: 기한 "${item.id}" (${item.labelKo}) 에는 조건별 대체 기간이 없습니다.`,
+    );
+  }
+  // 계속 사건 부적용은 민법 법률 제8720호 부칙 제3조 제1항이다. 형사소송법 제66조 제3항을
+  // 고친 법률 제8730호 부칙에는 같은 경과조치가 없어 형사 계열에는 적용하지 않는다.
+  if (
+    input.pendingOn20080322 === true &&
+    getSourceLaw(loadDeadlines(dataset), item.lawKey).family !== "civil"
+  ) {
+    throw new RangeError(
+      `${PREFIX}: 기한 "${item.id}" (${item.labelKo}) 는 형사 계열이라 2008-03-22 당시 계속 사건 처리를 적용하지 않습니다 (형사소송법 법률 제8730호 부칙에 계속 사건 경과조치가 없음).`,
     );
   }
 }
