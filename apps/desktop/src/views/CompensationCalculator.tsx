@@ -12,7 +12,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { STANDARD_DISCLAIMER, calculateInheritance, isValidIsoDate } from "@lawcalc-kr/core-engine";
 import {
@@ -80,6 +80,7 @@ import { ResultFreshnessNotice } from "../components/result/ResultFreshnessNotic
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Notice } from "../components/ui/notice";
+import { Tabs } from "../components/ui/tabs";
 import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
@@ -156,6 +157,7 @@ import {
   readNumber,
 } from "../lib/parse-number";
 import { todayIso } from "../lib/today";
+import { HelpText } from "../components/form/HelpText";
 
 const APP_VERSION = __APP_VERSION__;
 
@@ -1530,6 +1532,11 @@ function buildCompensationDeathDirtySnapshot(state: CompensationDeathFormState, 
 
 type CompensationMode = "injury" | "death";
 
+const COMPENSATION_MODES: ReadonlyArray<{ id: CompensationMode; label: string }> = [
+  { id: "injury", label: "부상" },
+  { id: "death", label: "사망" },
+];
+
 /**
  * 손해배상 탭. 자×부상(`compensation@1`) / 자×사망(`compensation@2`) 하위 탭으로 분기한다.
  * 전체 5탭 구조는 유지하며, 6번째 탭을 만들지 않는다 (plan 4절 결정 3).
@@ -1619,35 +1626,35 @@ export function CompensationCalculator({ active = true }: { active?: boolean }) 
 
   return (
     <div className="flex w-full flex-1 flex-col">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 pt-4 sm:px-6">
-        <Button
-          variant={mode === "injury" ? "default" : "ghost"}
-          size="sm"
-          type="button"
-          onClick={() => setMode("injury")}
-          aria-pressed={mode === "injury"}
-        >
-          자동차 사고 · 부상
-        </Button>
-        <Button
-          variant={mode === "death" ? "default" : "ghost"}
-          size="sm"
-          type="button"
-          onClick={() => setMode("death")}
-          aria-pressed={mode === "death"}
-        >
-          자동차 사고 · 사망
-        </Button>
-      </div>
+      {/* 도구 하위 탭과 같이, 이 탭이 열렸을 때만 하위 tablist 를 그린다. */}
+      {active ? (
+        <div className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6">
+          <Tabs
+            items={COMPENSATION_MODES}
+            value={mode}
+            onChange={setMode}
+            variant="segmented"
+            idPrefix="compensation-mode"
+            panelPrefix="compensation-modepanel"
+            label="손해배상 종류"
+          />
+        </div>
+      ) : null}
       <div
         className={mode === "injury" ? "contents" : "hidden"}
         data-testid="compensation-injury-panel"
+        role="tabpanel"
+        id="compensation-modepanel-injury"
+        aria-labelledby="compensation-mode-injury"
       >
         <InjuryCompensationView active={active && mode === "injury"} caseSlotRef={injurySlotRef} />
       </div>
       <div
         className={mode === "death" ? "contents" : "hidden"}
         data-testid="compensation-death-panel"
+        role="tabpanel"
+        id="compensation-modepanel-death"
+        aria-labelledby="compensation-mode-death"
       >
         <DeathCompensationView active={active && mode === "death"} caseSlotRef={deathSlotRef} />
       </div>
@@ -1848,7 +1855,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
     validateLcalcEnvelope(migratedFile);
     const loaded = parseLoadedCompensationLcalcInput(migratedFile);
     if (loaded.input.mode === "death") {
-      throw new Error('자동차 사고 사망 .lcalc 파일은 "자동차 사고 · 사망" 탭에서 열어 주세요.');
+      throw new Error('자동차 사고 사망 .lcalc 파일은 "사망" 탭에서 열어 주세요.');
     }
     const injuryInput = loaded.input;
     const appliedState = applyLoadedCompensationInput(injuryInput);
@@ -1950,7 +1957,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
   );
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -2169,12 +2176,12 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
               />
               법원 계산 프로그램 방식 절사 (상실률 % 2자리, 호프만 4자리)
             </label>
-            <p className="-mt-2 text-xs text-muted-foreground">
+            <HelpText className="-mt-2">
               일실수입 구간마다 노동능력상실률을 % 소수 2자리에서, 누적 호프만 계수를 소수 4자리에서
               버린 뒤 계산합니다. 끄면 절사하지 않습니다. 개호비 등 기타손해에는 적용하지 않습니다.
               새 계산은 켜진 상태가 기본이고, 이 옵션이 없던 이전 버전 파일은 저장 당시대로 끈
               상태로 엽니다.
-            </p>
+            </HelpText>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -2183,13 +2190,13 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
               />
               원 미만은 계수를 곱할 때마다 버림
             </label>
-            <p className="-mt-2 text-xs text-muted-foreground">
+            <HelpText className="-mt-2">
               끄면(기본) 일실수입 구간 금액을 마지막에 한 번 버립니다. 켜면 월 소득에
               노동능력상실률, 생계비 공제 후 비율, 호프만 계수를 하나씩 곱할 때마다 원 미만을 버려
               구간 금액이 끈 쪽과 같거나 적습니다. 앞에서 버린 원 미만에 뒤 계수가 곱해지므로 차이는
               호프만 계수 크기에 따라 구간마다 수백 원에 이를 수 있습니다. 어느 쪽을 써야 한다는
               판결 근거는 찾지 못했습니다.
-            </p>
+            </HelpText>
           </CardContent>
         </Card>
 
@@ -2244,22 +2251,26 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 </span>
               ) : null}
             </label>
-            <label className="grid gap-2 text-sm font-medium">
-              월 가동일수
-              <Input
-                inputMode="numeric"
-                value={state.workingDaysPerMonthText}
-                onChange={(e) => update({ workingDaysPerMonthText: e.target.value })}
-              />
-              <FieldError
-                message={parseNumberText(state.workingDaysPerMonthText, WORKING_DAYS_FORMAT).error}
-              />
-              <span className="text-xs font-normal text-muted-foreground">
+            <div className="grid content-start gap-2">
+              <label className="grid gap-2 text-sm font-medium">
+                월 가동일수
+                <Input
+                  inputMode="numeric"
+                  value={state.workingDaysPerMonthText}
+                  onChange={(e) => update({ workingDaysPerMonthText: e.target.value })}
+                />
+                <FieldError
+                  message={
+                    parseNumberText(state.workingDaysPerMonthText, WORKING_DAYS_FORMAT).error
+                  }
+                />
+              </label>
+              <HelpText cite="대법원 2020다271650">
                 대법원 2024. 4. 25. 선고 2020다271650: 2014년 사고 당시 도시 일용근로자는 특별한
                 사정이 없는 한 월 20일 초과 인정이 어렵다고 보았습니다. 이 앱은 사고 시기와 무관하게
                 20일을 기본값으로 둡니다 (직접 바꿀 수 있습니다).
-              </span>
-            </label>
+              </HelpText>
+            </div>
             <LaborRateTimingFields
               value={state}
               onChange={update}
@@ -2330,23 +2341,25 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 </Button>
               </div>
               {state.accidentType === "industrial" ? (
-                <label className="grid gap-2 text-sm font-medium">
-                  장해급여 (원, 과실상계 전에 일실수입에서 공제)
-                  <Input
-                    inputMode="numeric"
-                    placeholder="예: 50,000,000"
-                    value={formatWonInput(state.disabilityBenefitWonText)}
-                    onChange={(e) =>
-                      update({ disabilityBenefitWonText: parseWonText(e.target.value) })
-                    }
-                    data-testid="compensation-disability-benefit-input"
-                  />
-                  <span className="text-xs font-normal text-muted-foreground">
+                <div className="grid content-start gap-2">
+                  <label className="grid gap-2 text-sm font-medium">
+                    장해급여 (원, 과실상계 전에 일실수입에서 공제)
+                    <Input
+                      inputMode="numeric"
+                      placeholder="예: 50,000,000"
+                      value={formatWonInput(state.disabilityBenefitWonText)}
+                      onChange={(e) =>
+                        update({ disabilityBenefitWonText: parseWonText(e.target.value) })
+                      }
+                      data-testid="compensation-disability-benefit-input"
+                    />
+                  </label>
+                  <HelpText cite="대법원 2021다241618 전원합의체">
                     휴업급여를 받았다면 함께 더해 넣으세요. 입원기간 일실수입과 같은 성질의 손해라
                     일실수입 한도에서 먼저 공제한 뒤 과실상계합니다 (대법원 2022. 3. 24. 선고
                     2021다241618 전원합의체).
-                  </span>
-                </label>
+                  </HelpText>
+                </div>
               ) : null}
             </div>
 
@@ -2401,7 +2414,7 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
       <div className="result-column grid gap-4">
         {/* 긴 폼이라 계산·초기화를 결과 열 맨 위에 둔다. 넓은 화면에서는 결과 열이 화면에 붙고,
             결과가 길어 열 안에서 스크롤해도 이 줄은 위에 남는다. */}
-        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 lg:sticky lg:top-0">
+        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 md:sticky md:top-0">
           <Button onClick={handleCalculate} type="button">
             계산
           </Button>
@@ -2409,11 +2422,81 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
             초기화
           </Button>
         </div>
-        <StaleBadge
-          stale={stale}
-          effectiveFrom={LATEST_LABOR_RATES_SLICE}
-          version={LABOR_RATES_VERSION_TAG}
-        />
+        <Card className="print:hidden">
+          <CardContent className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CardTitle className="text-sm">내보내기</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="pdf"
+                  icon={FileDown}
+                  label="PDF"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportPdf}
+                />
+                <ActionButton
+                  action="hwpx"
+                  icon={FileDown}
+                  label="HWPX 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportHwpx}
+                />
+                <ActionButton
+                  action="csv"
+                  icon={FileSpreadsheet}
+                  label="CSV"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportCsv}
+                />
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleCopy}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  requiresResult={false}
+                  resultReady={resultReady}
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
+        {/* 데이터 기준은 한 곳에만 둔다. 결과가 있으면 결과의 데이터 버전 칸으로 옮긴다. */}
+        {result ? null : (
+          <StaleBadge
+            stale={stale}
+            effectiveFrom={LATEST_LABOR_RATES_SLICE}
+            version={LABOR_RATES_VERSION_TAG}
+          />
+        )}
 
         {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
@@ -2424,6 +2507,13 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
             result={result}
             hospitalMonths={hospitalizationMonthsOf(result)}
             courtTruncation={resultCourtTruncation}
+            dataNotice={
+              <StaleBadge
+                stale={stale}
+                effectiveFrom={LATEST_LABOR_RATES_SLICE}
+                version={LABOR_RATES_VERSION_TAG}
+              />
+            }
           />
         ) : null}
 
@@ -2446,71 +2536,6 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
           />
         ) : null}
 
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">내보내기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
-              <ActionButton
-                action="pdf"
-                icon={FileDown}
-                label="PDF"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportPdf}
-              />
-              <ActionButton
-                action="hwpx"
-                icon={FileDown}
-                label="HWPX 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportHwpx}
-              />
-              <ActionButton
-                action="csv"
-                icon={FileSpreadsheet}
-                label="CSV"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportCsv}
-              />
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
-              <ActionButton
-                action="save"
-                icon={FileJson}
-                label=".lcalc 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleSaveLcalc}
-              />
-              <ActionButton
-                action="load"
-                icon={FileJson}
-                label=".lcalc 열기"
-                loadingAction={loadingAction}
-                requiresResult={false}
-                resultReady={resultReady}
-                onClick={handleLoadLcalc}
-              />
-            </div>
-            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-          </CardContent>
-        </Card>
-
         {!result && !error ? (
           <Card>
             <CardContent className="grid gap-2 p-6 text-sm text-muted-foreground">
@@ -2519,9 +2544,8 @@ function InjuryCompensationView({ active = true, caseSlotRef }: CompensationView
                 <span className="font-medium text-foreground">계산</span> 버튼을 누르세요.
               </p>
               <p className="text-xs">
-                자동차 사고 사망은 상단 "자동차 사고 · 사망" 탭에서 계산합니다. 산재는 사건종류에서
-                선택하고, 기타손해(개호비 · 치료비 · 보조구)는 좌측 기타손해 입력에서 함께
-                계산합니다.
+                사망 사고는 위쪽 "사망" 탭에서 계산합니다. 산재는 사건종류에서 선택하고,
+                기타손해(개호비 · 치료비 · 보조구)는 좌측 기타손해 입력에서 함께 계산합니다.
               </p>
             </CardContent>
           </Card>
@@ -2723,7 +2747,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
     validateLcalcEnvelope(migratedFile);
     const loaded = parseLoadedCompensationLcalcInput(migratedFile);
     if (loaded.input.mode !== "death") {
-      throw new Error('자동차 사고 부상 .lcalc 파일은 "자동차 사고 · 부상" 탭에서 열어 주세요.');
+      throw new Error('자동차 사고 부상 .lcalc 파일은 "부상" 탭에서 열어 주세요.');
     }
     const appliedState = applyLoadedCompensationDeathInput(loaded.input);
     setLegacyNotice(legacyCompensationNotice(loaded.input));
@@ -2802,7 +2826,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
   );
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -2911,24 +2935,26 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
               ) : null}
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-medium">
-                월 가동일수
-                <Input
-                  inputMode="numeric"
-                  value={state.workingDaysPerMonthText}
-                  onChange={(e) => update({ workingDaysPerMonthText: e.target.value })}
-                />
-                <FieldError
-                  message={
-                    parseNumberText(state.workingDaysPerMonthText, WORKING_DAYS_FORMAT).error
-                  }
-                />
-                <span className="text-xs font-normal text-muted-foreground">
+              <div className="grid content-start gap-2">
+                <label className="grid gap-2 text-sm font-medium">
+                  월 가동일수
+                  <Input
+                    inputMode="numeric"
+                    value={state.workingDaysPerMonthText}
+                    onChange={(e) => update({ workingDaysPerMonthText: e.target.value })}
+                  />
+                  <FieldError
+                    message={
+                      parseNumberText(state.workingDaysPerMonthText, WORKING_DAYS_FORMAT).error
+                    }
+                  />
+                </label>
+                <HelpText cite="대법원 2020다271650">
                   대법원 2024. 4. 25. 선고 2020다271650: 2014년 사고 당시 도시 일용근로자는 특별한
                   사정이 없는 한 월 20일 초과 인정이 어렵다고 보았습니다. 이 앱은 사고 시기와
                   무관하게 20일을 기본값으로 둡니다 (직접 바꿀 수 있습니다).
-                </span>
-              </label>
+                </HelpText>
+              </div>
               <label className="grid gap-2 text-sm font-medium">
                 생계비 공제 비율 (0~1)
                 <Input
@@ -2948,12 +2974,12 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
               />
               법원 계산 프로그램 방식 절사 (호프만 4자리)
             </label>
-            <p className="-mt-2 text-xs text-muted-foreground">
+            <HelpText className="-mt-2">
               일실수입 구간마다 누적 호프만 계수를 소수 4자리에서 버린 뒤 계산하고, 생계비 공제 후
               구간 금액은 원 미만을 버립니다 (생계비 1/3은 정확히 2/3을 곱합니다). 끄면 절사하지
               않습니다. 개호비 등 기타손해에는 적용하지 않습니다. 새 계산은 켜진 상태가 기본이고, 이
               옵션이 없던 이전 버전 파일은 저장 당시대로 끈 상태로 엽니다.
-            </p>
+            </HelpText>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -2962,13 +2988,13 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
               />
               원 미만은 계수를 곱할 때마다 버림
             </label>
-            <p className="-mt-2 text-xs text-muted-foreground">
+            <HelpText className="-mt-2">
               끄면(기본) 일실수입 구간 금액을 마지막에 한 번 버립니다. 켜면 월 소득에
               노동능력상실률, 생계비 공제 후 비율, 호프만 계수를 하나씩 곱할 때마다 원 미만을 버려
               구간 금액이 끈 쪽과 같거나 적습니다. 앞에서 버린 원 미만에 뒤 계수가 곱해지므로 차이는
               호프만 계수 크기에 따라 구간마다 수백 원에 이를 수 있습니다. 어느 쪽을 써야 한다는
               판결 근거는 찾지 못했습니다.
-            </p>
+            </HelpText>
             <LaborRateTimingFields
               value={state}
               onChange={update}
@@ -3247,7 +3273,7 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
       <div className="result-column grid gap-4">
         {/* 긴 폼이라 계산·초기화를 결과 열 맨 위에 둔다. 넓은 화면에서는 결과 열이 화면에 붙고,
             결과가 길어 열 안에서 스크롤해도 이 줄은 위에 남는다. */}
-        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 lg:sticky lg:top-0">
+        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 md:sticky md:top-0">
           <Button onClick={handleCalculate} type="button">
             계산
           </Button>
@@ -3255,18 +3281,98 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
             초기화
           </Button>
         </div>
-        <StaleBadge
-          stale={stale}
-          effectiveFrom={LATEST_LABOR_RATES_SLICE}
-          version={LABOR_RATES_VERSION_TAG}
-        />
+        <Card className="print:hidden">
+          <CardContent className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CardTitle className="text-sm">내보내기</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="pdf"
+                  icon={FileDown}
+                  label="PDF"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportPdf}
+                />
+                <ActionButton
+                  action="hwpx"
+                  icon={FileDown}
+                  label="HWPX 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportHwpx}
+                />
+                <ActionButton
+                  action="csv"
+                  icon={FileSpreadsheet}
+                  label="CSV"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportCsv}
+                />
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleCopy}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  requiresResult={false}
+                  resultReady={resultReady}
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
+        {/* 데이터 기준은 한 곳에만 둔다. 결과가 있으면 결과의 데이터 버전 칸으로 옮긴다. */}
+        {result ? null : (
+          <StaleBadge
+            stale={stale}
+            effectiveFrom={LATEST_LABOR_RATES_SLICE}
+            version={LABOR_RATES_VERSION_TAG}
+          />
+        )}
 
         {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
 
         {result ? (
-          <DeathResultCards result={result} courtTruncation={resultCourtTruncation} />
+          <DeathResultCards
+            result={result}
+            courtTruncation={resultCourtTruncation}
+            dataNotice={
+              <StaleBadge
+                stale={stale}
+                effectiveFrom={LATEST_LABOR_RATES_SLICE}
+                version={LABOR_RATES_VERSION_TAG}
+              />
+            }
+          />
         ) : null}
 
         {result ? (
@@ -3287,71 +3393,6 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
             stale={resultStale}
           />
         ) : null}
-
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">내보내기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
-              <ActionButton
-                action="pdf"
-                icon={FileDown}
-                label="PDF"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportPdf}
-              />
-              <ActionButton
-                action="hwpx"
-                icon={FileDown}
-                label="HWPX 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportHwpx}
-              />
-              <ActionButton
-                action="csv"
-                icon={FileSpreadsheet}
-                label="CSV"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportCsv}
-              />
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
-              <ActionButton
-                action="save"
-                icon={FileJson}
-                label=".lcalc 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleSaveLcalc}
-              />
-              <ActionButton
-                action="load"
-                icon={FileJson}
-                label=".lcalc 열기"
-                loadingAction={loadingAction}
-                requiresResult={false}
-                resultReady={resultReady}
-                onClick={handleLoadLcalc}
-              />
-            </div>
-            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-          </CardContent>
-        </Card>
 
         {!result && !error ? (
           <Card>
@@ -3375,9 +3416,11 @@ function DeathCompensationView({ active = true, caseSlotRef }: CompensationViewP
 function DeathResultCards({
   result,
   courtTruncation,
+  dataNotice,
 }: {
   result: CompensationAutoDeathResult;
   courtTruncation: boolean;
+  dataNotice?: ReactNode;
 }) {
   const hasDates = result.segments.some((segment) => segment.startDate !== undefined);
   const survivorColumn = hasSurvivorBenefitColumn(result);
@@ -3459,10 +3502,11 @@ function DeathResultCards({
                 <span className="text-right">{formatWon(result.estateWon)}</span>
               </>
             ) : null}
-            <span className="border-t border-border pt-2 text-base font-semibold">최종 합계</span>
-            <span className="border-t border-border pt-2 text-right text-base font-semibold">
-              {formatWon(result.finalWon)}
-            </span>
+            {/* 구분선이 두 칸 사이 간격에서 끊기지 않게 한 줄로 묶는다. */}
+            <div className="col-span-2 mt-1 flex items-baseline justify-between gap-4 border-t border-border pt-3">
+              <span className="text-base font-semibold">최종 합계</span>
+              <span className="num text-xl font-semibold">{formatWon(result.finalWon)}</span>
+            </div>
             {claimantBreakdown ? (
               <span className="col-span-2 text-xs text-muted-foreground">
                 원고별 귀속 결과라 최종 합계는 아래 원고별 최종액의 합입니다.
@@ -3583,6 +3627,7 @@ function DeathResultCards({
             <dt className="font-medium text-foreground">계산 시각</dt>
             <dd>{formatComputedAt(result.computedAt)}</dd>
           </div>
+          {dataNotice ? <div className="sm:col-span-2">{dataNotice}</div> : null}
         </CardContent>
       </Card>
 
@@ -3708,10 +3753,10 @@ function DeductionsFields({
             onChange({ ratioDeductions: [...value.ratioDeductions, emptyRatioDeduction()] })
           }
         />
-        <p className="text-xs text-muted-foreground">
+        <HelpText>
           항목 금액 × {factor}을 재산상 손해에서 뺍니다 (법원 손해배상 계산 프로그램의 비율공제
           방식). 재산상 손해를 넘는 부분은 빼지 않고 위자료도 줄이지 않습니다.
-        </p>
+        </HelpText>
         <DeductionRowsInput
           items={value.ratioDeductions}
           onChange={(ratioDeductions) => onChange({ ratioDeductions })}
@@ -3729,12 +3774,12 @@ function DeductionsFields({
             })
           }
         />
-        <p className="text-xs text-muted-foreground">
+        <HelpText>
           보험사 등이 이미 지급한 치료비는 기타손해의 기왕치료비에 넣지 말고 여기 넣으세요.
           지급치료비 × {factor}만큼 공제되어, 이미 받은 치료비 중 본인이 부담할 몫이 빠집니다.
           기왕치료비에 이미 넣었다면 지급치료비 대신 전액공제에 넣으세요. 재산상 손해를 넘는 부분은
           빼지 않고 위자료도 줄이지 않습니다.
-        </p>
+        </HelpText>
         <DeductionRowsInput
           items={value.paidTreatmentDeductions}
           onChange={(paidTreatmentDeductions) => onChange({ paidTreatmentDeductions })}
@@ -3752,11 +3797,11 @@ function DeductionsFields({
             })
           }
         />
-        <p className="text-xs text-muted-foreground">
+        <HelpText>
           손해 전체에 대한 변제(선급금 등)는 금액 그대로 뺍니다. 재산상 손해를 넘으면 그 초과분은
           위자료에서 뺍니다. 기왕치료비에 넣은 치료비를 보험사가 이미 냈다면 그 금액도 여기
           넣습니다.
-        </p>
+        </HelpText>
         <DeductionRowsInput
           items={value.absoluteDeductions}
           onChange={(absoluteDeductions) => onChange({ absoluteDeductions })}
@@ -3824,13 +3869,13 @@ function SurvivorRecipientsFields({
           ])
         }
       />
-      <p className="text-xs text-muted-foreground">
+      <HelpText cite="대법원 2008다13104 전원합의체">
         상속인을 입력했다면 수급권자별로 나눠 넣으세요. 유족급여는 수급권자가 상속한 일실수입 몫을
         한도로 그 몫에서만 공제하고, 다른 상속인 몫에서는 빼지 않습니다 (대법원 2009. 5. 21. 선고
         2008다13104 전원합의체). 사실혼 배우자처럼 상속인이 아닌 수급권자는 &quot;상속인
         아님&quot;을 고르면 어느 몫에서도 공제하지 않습니다. 장례비·위자료·전액공제는 상속분대로
         나눕니다 (고유 위자료와 장례비를 지출한 상속인은 아래 원고별 귀속에서 지정합니다).
-      </p>
+      </HelpText>
       {duplicateHeirNames ? (
         <p
           role="alert"
@@ -3900,36 +3945,40 @@ function LaborRateTimingFields({
 }) {
   return (
     <div className="grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
-      <label className="grid gap-2 text-sm font-medium">
-        계산 기준일
-        <Input
-          type="date"
-          value={value.calculationDate}
-          onChange={(e) => onChange({ calculationDate: e.target.value })}
-        />
-        <span className="text-xs font-normal text-muted-foreground">
+      <div className="grid content-start gap-2">
+        <label className="grid gap-2 text-sm font-medium">
+          계산 기준일
+          <Input
+            type="date"
+            value={value.calculationDate}
+            onChange={(e) => onChange({ calculationDate: e.target.value })}
+          />
+        </label>
+        <HelpText cite="대법원 94다31334">
           변론종결 예정일. 사고일부터 그날까지 공표된 노임단가가 바뀐 날마다 기간을 나누고(판결
           계산표와 법원 손해배상 계산 프로그램 예시의 방식), 그 뒤 장래분은 그날의 단가를 씁니다
           (대법원 1995. 2. 28. 선고 94다31334: &quot;변론종결 당시의 일반노동임금&quot;). 일당을
           직접 넣으면 나누지 않습니다.
-        </span>
-      </label>
-      <label className="grid gap-2 text-sm font-medium">
-        노임 적용일 규약
-        <Select
-          value={value.laborRateEffectiveRule}
-          onChange={(e) =>
-            onChange({ laborRateEffectiveRule: e.target.value as LaborRateEffectiveRule })
-          }
-        >
-          <option value="survey">조사 시점 (5/1·9/1부터)</option>
-          <option value="published">공표 적용일 (1/1·9/1부터)</option>
-        </Select>
-        <span className="text-xs font-normal text-muted-foreground">
+        </HelpText>
+      </div>
+      <div className="grid content-start gap-2">
+        <label className="grid gap-2 text-sm font-medium">
+          노임 적용일 규약
+          <Select
+            value={value.laborRateEffectiveRule}
+            onChange={(e) =>
+              onChange({ laborRateEffectiveRule: e.target.value as LaborRateEffectiveRule })
+            }
+          >
+            <option value="survey">조사 시점 (5/1·9/1부터)</option>
+            <option value="published">공표 적용일 (1/1·9/1부터)</option>
+          </Select>
+        </label>
+        <HelpText cite="서울중앙지법 2019나48259">
           조사 시점 규약은 같은 단가를 공표 적용일보다 4개월 앞당겨 씁니다. 확인한 판결 이유의
           계산표(서울중앙지법 2019나48259 등)와 법원 손해배상 계산 프로그램 예시가 이 방식입니다.
-        </span>
-      </label>
+        </HelpText>
+      </div>
       {notice ? (
         <p
           role="status"
@@ -4150,8 +4199,10 @@ function ResultCards({
   result,
   hospitalMonths,
   courtTruncation,
+  dataNotice,
 }: {
   result: CompensationResult;
+  dataNotice?: ReactNode;
   hospitalMonths: number;
   courtTruncation: boolean;
 }) {
@@ -4218,10 +4269,11 @@ function ResultCards({
             {result.otherDamages !== undefined ? (
               <OtherDamagesResultRows otherDamages={result.otherDamages} />
             ) : null}
-            <span className="border-t border-border pt-2 text-base font-semibold">최종 합계</span>
-            <span className="border-t border-border pt-2 text-right text-base font-semibold">
-              {formatWon(result.finalWon)}
-            </span>
+            {/* 구분선이 두 칸 사이 간격에서 끊기지 않게 한 줄로 묶는다. */}
+            <div className="col-span-2 mt-1 flex items-baseline justify-between gap-4 border-t border-border pt-3">
+              <span className="text-base font-semibold">최종 합계</span>
+              <span className="num text-xl font-semibold">{formatWon(result.finalWon)}</span>
+            </div>
             {result.claimants !== undefined ? (
               <span className="col-span-2 text-xs text-muted-foreground">
                 원고별 귀속 결과라 최종 합계는 아래 원고별 최종액의 합입니다.
@@ -4312,6 +4364,7 @@ function ResultCards({
             <dt className="font-medium text-foreground">계산 시각</dt>
             <dd>{formatComputedAt(result.computedAt)}</dd>
           </div>
+          {dataNotice ? <div className="sm:col-span-2">{dataNotice}</div> : null}
         </CardContent>
       </Card>
 

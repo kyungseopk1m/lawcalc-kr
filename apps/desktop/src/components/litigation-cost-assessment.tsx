@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Notice } from "./ui/notice";
 import { Select } from "./ui/select";
+import { HelpText } from "./form/HelpText";
 
 /**
  * 소송비용확정 패널 (민사소송법 제110조~제112조, 「변호사보수의 소송비용 산입에 관한 규칙」 연혁 7개 판).
@@ -312,12 +313,12 @@ export function CostAssessmentPanel() {
         <CardTitle className="text-sm">소송비용확정 (민사소송법 제110조~제112조)</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 p-4 pt-0">
-        <p className="text-xs text-muted-foreground">
+        <HelpText>
           심급마다 접수일(1심 소 제기일, 상소심 상소 제기일)로 「변호사보수의 소송비용 산입에 관한
           규칙」 판을 고릅니다. 경과규정이 없는 2003·2020판도 같은 기준이며 판은 직접 바꿀 수
           있습니다. 최저액을 먼저 적용한 뒤 1/2로 나누는 순서는 규칙 문언에 따른 것이고 판례로
           확인하지 않았습니다. 이 패널의 입력은 .lcalc 파일에 저장되지 않습니다.
-        </p>
+        </HelpText>
 
         {instances.map((d, i) => {
           const n = `${i + 1}번째 심급`;
@@ -557,7 +558,7 @@ function CostAssessmentResultView({
           ))}
         </tbody>
       </table>
-      <details className="rounded-md border border-border bg-muted/40 p-3 text-xs">
+      <details className="border-t border-border pt-3 text-xs">
         <summary className="cursor-pointer text-sm font-medium">산식과 근거</summary>
         <div className="grid gap-2 pt-2">
           {result.instances.map((r, i) => (

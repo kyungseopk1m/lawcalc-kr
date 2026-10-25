@@ -494,7 +494,7 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
     });
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -672,6 +672,73 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
       </div>
 
       <div className="result-column grid gap-4">
+        <Card className="print:hidden">
+          <CardContent className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CardTitle className="text-sm">내보내기</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  requiresResult={true}
+                  resultReady={resultReady}
+                  onClick={handleCopy}
+                />
+                <ActionButton
+                  action="pdf"
+                  icon={FileDown}
+                  label="PDF"
+                  loadingAction={loadingAction}
+                  requiresResult={true}
+                  resultReady={resultReady}
+                  onClick={handleExportPdf}
+                />
+                <ActionButton
+                  action="hwpx"
+                  icon={FileDown}
+                  label="HWPX 저장"
+                  loadingAction={loadingAction}
+                  requiresResult={true}
+                  resultReady={resultReady}
+                  onClick={handleExportHwpx}
+                />
+                <ActionButton
+                  action="csv"
+                  icon={FileSpreadsheet}
+                  label="CSV"
+                  loadingAction={loadingAction}
+                  requiresResult={true}
+                  resultReady={resultReady}
+                  onClick={handleExportCsv}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  requiresResult={true}
+                  resultReady={resultReady}
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  requiresResult={false}
+                  resultReady={resultReady}
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
         {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
@@ -796,72 +863,6 @@ export function InheritanceCalculator({ active = true }: { active?: boolean }) {
             </Notice>
           </>
         ) : null}
-
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">내보내기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult={true}
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
-              <ActionButton
-                action="pdf"
-                icon={FileDown}
-                label="PDF"
-                loadingAction={loadingAction}
-                requiresResult={true}
-                resultReady={resultReady}
-                onClick={handleExportPdf}
-              />
-              <ActionButton
-                action="hwpx"
-                icon={FileDown}
-                label="HWPX 저장"
-                loadingAction={loadingAction}
-                requiresResult={true}
-                resultReady={resultReady}
-                onClick={handleExportHwpx}
-              />
-              <ActionButton
-                action="csv"
-                icon={FileSpreadsheet}
-                label="CSV"
-                loadingAction={loadingAction}
-                requiresResult={true}
-                resultReady={resultReady}
-                onClick={handleExportCsv}
-              />
-              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-              <ActionButton
-                action="save"
-                icon={FileJson}
-                label=".lcalc 저장"
-                loadingAction={loadingAction}
-                requiresResult={true}
-                resultReady={resultReady}
-                onClick={handleSaveLcalc}
-              />
-              <ActionButton
-                action="load"
-                icon={FileJson}
-                label=".lcalc 열기"
-                loadingAction={loadingAction}
-                requiresResult={false}
-                resultReady={resultReady}
-                onClick={handleLoadLcalc}
-              />
-            </div>
-            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-          </CardContent>
-        </Card>
 
         {!result && !error ? (
           <Card>

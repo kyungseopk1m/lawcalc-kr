@@ -2,6 +2,7 @@ import type { CalcOptions } from "@lawcalc-kr/core-engine";
 
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
+import { HelpText } from "./HelpText";
 
 /** 법원 이자계산 매뉴얼 방식: 기간식, 윤년 366 분모, 초일 산입, 끝수 절사. */
 export const COURT_STYLE_OPTIONS: CalcOptions = {
@@ -46,7 +47,7 @@ function RadioOption({
 
 export function OptionsPanel({ value, onChange }: OptionsPanelProps) {
   return (
-    <div className="grid gap-4 rounded-md border border-border bg-muted/40 p-3">
+    <div className="grid gap-4 border-t border-border pt-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
@@ -78,10 +79,10 @@ export function OptionsPanel({ value, onChange }: OptionsPanelProps) {
             onChange={() => onChange({ ...value, mode: "totalDays" })}
           />
         </div>
-        <p className="text-xs text-muted-foreground">
+        <HelpText>
           여러 해에 걸친 구간은 기간식이 정확합니다. 총일수식은 전체 일수를 한 해 기준(365/366)으로
           나누는 간이 방식이라 다년 구간에서 오차가 생길 수 있습니다.
-        </p>
+        </HelpText>
       </fieldset>
 
       <fieldset className="grid gap-2">

@@ -78,7 +78,7 @@ export function DetentionCalculator({ active = true }: { active?: boolean }) {
   useFormShortcuts({ onReset: handleReset, enabled: active });
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid content-start gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">

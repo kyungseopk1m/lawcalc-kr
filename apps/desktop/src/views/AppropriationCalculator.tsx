@@ -45,6 +45,7 @@ import {
 import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dirty-state";
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedAppropriationLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
+import { HelpText } from "../components/form/HelpText";
 
 const APP_VERSION = __APP_VERSION__;
 
@@ -687,7 +688,7 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
   });
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -895,12 +896,12 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
               <Plus className="mr-1 h-3 w-3" />
               변제·상계 추가
             </Button>
-            <span className="text-xs text-muted-foreground">
+            <HelpText cite="민법 제479조, 대법원 2022다239896">
               변제를 여러 번 넣거나 이율·상계·이자제한법을 쓰면 모든 변제에 변제일이 필요합니다.
               날짜 순서로 충당하고, 각 변제일까지 이자를 붙인 뒤 비용, 이자, 원본 순으로
               충당합니다(민법 제479조). 법정충당은 모든 채무의 비용과 이자를 먼저 충당합니다(대법원
               2022다239896).
-            </span>
+            </HelpText>
             <label className="grid gap-2 text-sm font-medium">
               비고
               <textarea
@@ -923,6 +924,73 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
       </div>
 
       <div className="result-column grid gap-4">
+        <Card className="print:hidden">
+          <CardContent className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CardTitle className="text-sm">내보내기</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleCopy}
+                />
+                <ActionButton
+                  action="pdf"
+                  icon={FileText}
+                  label="PDF"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={() => handleExport("pdf")}
+                />
+                <ActionButton
+                  action="hwpx"
+                  icon={FileText}
+                  label="HWPX 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={() => handleExport("hwpx")}
+                />
+                <ActionButton
+                  action="csv"
+                  icon={FileSpreadsheet}
+                  label="CSV"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={() => handleExport("csv")}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  requiresResult={false}
+                  resultReady={resultReady}
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
         {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
@@ -1036,72 +1104,6 @@ export function AppropriationCalculator({ active = true }: { active?: boolean })
           </>
         ) : null}
 
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">내보내기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
-              <ActionButton
-                action="pdf"
-                icon={FileText}
-                label="PDF"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={() => handleExport("pdf")}
-              />
-              <ActionButton
-                action="hwpx"
-                icon={FileText}
-                label="HWPX 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={() => handleExport("hwpx")}
-              />
-              <ActionButton
-                action="csv"
-                icon={FileSpreadsheet}
-                label="CSV"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={() => handleExport("csv")}
-              />
-              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-              <ActionButton
-                action="save"
-                icon={FileJson}
-                label=".lcalc 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleSaveLcalc}
-              />
-              <ActionButton
-                action="load"
-                icon={FileJson}
-                label=".lcalc 열기"
-                loadingAction={loadingAction}
-                requiresResult={false}
-                resultReady={resultReady}
-                onClick={handleLoadLcalc}
-              />
-            </div>
-            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-          </CardContent>
-        </Card>
-
         {!result && !error ? (
           <Card>
             <CardContent className="grid gap-2 p-6 text-sm text-muted-foreground">
@@ -1149,54 +1151,60 @@ function PaymentFields({
           onChange={(e) => update({ amountText: parseWonText(e.target.value) })}
         />
       </label>
-      <label className="grid gap-2 text-sm font-medium">
-        변제일
-        <Input
-          type="date"
-          value={value.paidAt}
-          onChange={(e) => update({ paidAt: e.target.value })}
-        />
-        <span className="text-xs font-normal text-muted-foreground">
+      <div className="grid content-start gap-2">
+        <label className="grid gap-2 text-sm font-medium">
+          변제일
+          <Input
+            type="date"
+            value={value.paidAt}
+            onChange={(e) => update({ paidAt: e.target.value })}
+          />
+        </label>
+        <HelpText cite="민법 제477조 제1호">
           법정충당의 변제기 도래 여부(제477조 제1호)를 판정하는 기준일입니다. 비워 두면 오늘 날짜로
           판정하므로, 과거 변제를 재현하거나 저장한 파일을 나중에 다시 열 때는 실제 변제일을
           입력하세요. 상계는 상계적상일(두 채무가 상계할 수 있게 된 날)을 넣습니다.
-        </span>
-      </label>
-      <label className="grid gap-2 text-sm font-medium">
-        종류
-        <Select
-          value={value.kind ?? "payment"}
-          onChange={(e) => update({ kind: e.target.value === "setoff" ? "setoff" : "payment" })}
-        >
-          <option value="payment">변제</option>
-          <option value="setoff">상계 (민법 제492조, 제493조 제2항)</option>
-        </Select>
-        <span className="text-xs font-normal text-muted-foreground">
+        </HelpText>
+      </div>
+      <div className="grid content-start gap-2">
+        <label className="grid gap-2 text-sm font-medium">
+          종류
+          <Select
+            value={value.kind ?? "payment"}
+            onChange={(e) => update({ kind: e.target.value === "setoff" ? "setoff" : "payment" })}
+          >
+            <option value="payment">변제</option>
+            <option value="setoff">상계 (민법 제492조, 제493조 제2항)</option>
+          </Select>
+        </label>
+        <HelpText cite="민법 제499조">
           상계는 상계적상일에 소급해 대등액만큼 소멸하고, 충당은 변제와 같은 규칙을 따릅니다
           (제499조). 상계 금지(제496조~제498조)는 따로 확인하세요.
-        </span>
-      </label>
-      <label className="grid gap-2 text-sm font-medium">
-        충당 방식
-        <Select
-          value={value.allocationType}
-          onChange={(e) =>
-            update({
-              allocationType: e.target.value as AppropriationAllocationType,
-              targets: e.target.value === "legal" ? [] : value.targets,
-            })
-          }
-        >
-          <option value="legal">법정충당 (제477조)</option>
-          <option value="agreement">합의 (1순위)</option>
-          <option value="debtorDesignation">채무자(변제자) 지정 (제476조 제1항)</option>
-          <option value="creditorDesignation">채권자(변제받는 자) 지정 (제476조 제2항)</option>
-        </Select>
-        <span className="text-xs font-normal text-muted-foreground">
+        </HelpText>
+      </div>
+      <div className="grid content-start gap-2">
+        <label className="grid gap-2 text-sm font-medium">
+          충당 방식
+          <Select
+            value={value.allocationType}
+            onChange={(e) =>
+              update({
+                allocationType: e.target.value as AppropriationAllocationType,
+                targets: e.target.value === "legal" ? [] : value.targets,
+              })
+            }
+          >
+            <option value="legal">법정충당 (제477조)</option>
+            <option value="agreement">합의 (1순위)</option>
+            <option value="debtorDesignation">채무자(변제자) 지정 (제476조 제1항)</option>
+            <option value="creditorDesignation">채권자(변제받는 자) 지정 (제476조 제2항)</option>
+          </Select>
+        </label>
+        <HelpText cite="민법 제477조">
           충당 방법은 합의 → 지정(채무자·채권자) → 법정 순으로 우선합니다. 충당 대상보다 변제액이
           크면 잉여는 법정충당(제477조) 순서로 잔여 채권에 충당합니다.
-        </span>
-      </label>
+        </HelpText>
+      </div>
       {value.allocationType !== "legal" ? (
         <div className="grid gap-2">
           <div className="text-xs font-medium text-muted-foreground">충당 대상</div>

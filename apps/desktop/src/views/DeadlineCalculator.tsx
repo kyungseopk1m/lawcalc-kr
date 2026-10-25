@@ -50,6 +50,7 @@ import {
   extraHolidaysSummary,
   holidayDepsWith,
 } from "./PeriodCalculator";
+import { HelpText } from "../components/form/HelpText";
 
 const APP_VERSION = __APP_VERSION__;
 
@@ -439,15 +440,16 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
   });
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">법정기한 입력</CardTitle>
             <p className="text-xs text-muted-foreground">
               법령 원문에서 기간 길이와 기산점을 모두 확인한 상소·이의신청 기간{" "}
-              {DEADLINE_ITEMS.length}건. {DEADLINE_DATASET.coverageNote}
+              {DEADLINE_ITEMS.length}건.
             </p>
+            <HelpText>{DEADLINE_DATASET.coverageNote}</HelpText>
           </CardHeader>
           <CardContent className="grid gap-3 p-4 pt-0">
             <label className="grid gap-2 text-sm font-medium">
@@ -512,10 +514,10 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                   />
                   2008-03-22 당시 법원에 계속 중인 사건
                 </label>
-                <p className="text-xs text-muted-foreground">
+                <HelpText cite="민법 부칙(법률 제8720호) 제3조 제1항">
                   민법 부칙(법률 제8720호) 제3조 제1항에 따라 이 사건에는 토요일 포함 개정 제161조를
                   적용하지 않아, 말일이 토요일이어도 연장하지 않습니다.
-                </p>
+                </HelpText>
               </>
             ) : null}
 
@@ -548,7 +550,48 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
       </div>
 
       <div className="result-column grid gap-4">
-        <DeadlineDatasetBadge />
+        <Card className="print:hidden">
+          <CardContent className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CardTitle className="text-sm">내보내기</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleCopy}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  requiresResult={false}
+                  resultReady={resultReady}
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
+        {/* 데이터 기준은 한 곳에만 둔다. 결과가 있으면 결과 카드 아래쪽으로 옮긴다. */}
+        {result ? null : <DeadlineDatasetBadge />}
 
         {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
@@ -635,9 +678,11 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                 </div>
 
                 <div className="grid gap-1 text-xs text-muted-foreground">
-                  <span>법정기한 데이터 버전: {result.dataVersion}</span>
-                  <span>공휴일 데이터 버전: {result.holidaysVersion}</span>
                   <span>계산 시각: {formatComputedAt(result.computedAt)}</span>
+                  <DeadlineDatasetBadge
+                    version={result.dataVersion}
+                    holidaysVersion={result.holidaysVersion}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -682,7 +727,7 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
 
             {result.noteKo ? (
               <div
-                className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs leading-5 text-foreground"
+                className="rounded-md bg-muted/60 px-3 py-2 text-xs leading-5 text-foreground"
                 data-testid="deadline-note"
               >
                 {result.noteKo}
@@ -694,45 +739,6 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
             </Notice>
           </>
         ) : null}
-
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">내보내기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
-              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-              <ActionButton
-                action="save"
-                icon={FileJson}
-                label=".lcalc 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleSaveLcalc}
-              />
-              <ActionButton
-                action="load"
-                icon={FileJson}
-                label=".lcalc 열기"
-                loadingAction={loadingAction}
-                requiresResult={false}
-                resultReady={resultReady}
-                onClick={handleLoadLcalc}
-              />
-            </div>
-            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-          </CardContent>
-        </Card>
 
         {!result && !error ? (
           <Card>
@@ -748,10 +754,6 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
                 {HOLIDAY_COVERAGE.to}) 밖의 만료일은 만료일 자체는 계산하되 조정 여부를 판정하지
                 않고 그 사실을 결과에 표시합니다.
               </p>
-              <p className="text-xs">
-                법정기한 데이터 버전: {DEADLINES_VERSION_TAG} · 공휴일 데이터 버전:{" "}
-                {HOLIDAYS_VERSION_TAG}
-              </p>
             </CardContent>
           </Card>
         ) : null}
@@ -764,12 +766,18 @@ export function DeadlineCalculator({ active = true }: { active?: boolean }) {
  * 법정기한·공휴일 데이터셋 기준 한 줄. 법령 개정은 공표 주기가 없어 경과로 경고하지 않는다.
  * 커버리지 밖 만료일은 결과 행이 따로 노랑으로 알린다.
  */
-function DeadlineDatasetBadge() {
+function DeadlineDatasetBadge({
+  version = DEADLINES_VERSION_TAG,
+  holidaysVersion = HOLIDAYS_VERSION_TAG,
+}: {
+  version?: string;
+  holidaysVersion?: string;
+}) {
   return (
     <Notice tone="info" testId="deadline-stale-badge">
       <span>
-        법정기한 데이터셋 {DEADLINES_VERSION_TAG} · 기준일 {DEADLINE_DATASET.updatedAt} · 공휴일
-        데이터셋 {HOLIDAYS_VERSION_TAG} · 커버리지 {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}
+        법정기한 데이터셋 {version} · 기준일 {DEADLINE_DATASET.updatedAt} · 공휴일 데이터셋{" "}
+        {holidaysVersion} · 커버리지 {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}
       </span>
     </Notice>
   );

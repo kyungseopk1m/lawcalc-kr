@@ -297,8 +297,7 @@ describe("손해배상 사건 파일: 부상·사망 두 view 를 함께 마운�
     return {
       injury: within(screen.getByTestId("compensation-injury-panel")),
       death: within(screen.getByTestId("compensation-death-panel")),
-      toMode: (name: "부상" | "사망") =>
-        fireEvent.click(screen.getByRole("button", { name: `자동차 사고 · ${name}` })),
+      toMode: (name: "부상" | "사망") => fireEvent.click(screen.getByRole("tab", { name })),
       saveCase: async () => {
         const count = savedFiles.length;
         fireEvent.click(screen.getByRole("button", { name: /사건 저장/ }));

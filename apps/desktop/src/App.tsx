@@ -56,6 +56,7 @@ import { SummaryCard } from "./components/result/SummaryCard";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Notice } from "./components/ui/notice";
+import { Tabs } from "./components/ui/tabs";
 import { UpdateDialog } from "./components/UpdateDialog";
 import { useFormShortcuts } from "./hooks/use-form-shortcuts";
 import { useResultFingerprint } from "./hooks/use-result-fingerprint";
@@ -816,28 +817,17 @@ export function App() {
       />
 
       <nav className="border-b border-border bg-background">
-        <div
-          className="mx-auto flex w-full max-w-7xl flex-wrap gap-1 px-4 py-2 sm:px-6"
-          role="tablist"
-        >
-          {TABS.map((tab) => (
-            <Button
-              key={tab.id}
-              id={`tab-${tab.id}`}
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              aria-controls={`tabpanel-${tab.id}`}
-              variant={activeTab === tab.id ? "default" : "ghost"}
-              size="sm"
-              // 색 외의 표시 — 활성 탭에 밑줄과 굵기를 준다.
-              className={activeTab === tab.id ? "font-semibold underline underline-offset-4" : ""}
-              onClick={() => setActiveTab(tab.id)}
-              type="button"
-            >
-              {tab.label}
-            </Button>
-          ))}
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 sm:px-6">
+          <Tabs
+            items={TABS}
+            value={activeTab}
+            onChange={setActiveTab}
+            variant="line"
+            idPrefix="tab"
+            panelPrefix="tabpanel"
+            label="계산 종류"
+          />
+          <div className="ml-auto flex flex-wrap items-center gap-2 py-1.5">
             <input
               aria-label="사건번호·사건명"
               className="h-8 w-44 rounded-md border border-input bg-background px-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -936,46 +926,16 @@ export function App() {
         {/* 도구 탭이 열렸을 때만 하위 tablist 를 그린다. 숨긴 tablist 가 남으면 보조기기가 tablist 를
             두 개로 읽는다. 패널은 입력 상태를 지키려고 계속 마운트해 둔다. */}
         {activeTab === "tools" ? (
-          <div
-            className="mx-auto flex w-full max-w-7xl flex-wrap gap-1 px-4 pt-3 sm:px-6"
-            role="tablist"
-            aria-label="도구"
-            // WAI-ARIA 탭 패턴: 탭 순서에는 선택된 탭 하나만 두고(roving tabindex), 좌우 화살표와
-            // Home/End 로 옮기면서 바로 선택한다.
-            onKeyDown={(e) => {
-              const i = TOOLS.findIndex((t) => t.id === activeTool);
-              const next = (
-                { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TOOLS.length - 1 } as Record<
-                  string,
-                  number
-                >
-              )[e.key];
-              if (next === undefined) return;
-              e.preventDefault();
-              const tool = TOOLS[(next + TOOLS.length) % TOOLS.length]!;
-              setActiveTool(tool.id);
-              document.getElementById(`tool-${tool.id}`)?.focus();
-            }}
-          >
-            {TOOLS.map((tool) => (
-              <Button
-                key={tool.id}
-                id={`tool-${tool.id}`}
-                role="tab"
-                aria-selected={activeTool === tool.id}
-                aria-controls={`toolpanel-${tool.id}`}
-                tabIndex={activeTool === tool.id ? 0 : -1}
-                variant={activeTool === tool.id ? "secondary" : "ghost"}
-                size="sm"
-                className={
-                  activeTool === tool.id ? "font-semibold underline underline-offset-4" : ""
-                }
-                onClick={() => setActiveTool(tool.id)}
-                type="button"
-              >
-                {tool.label}
-              </Button>
-            ))}
+          <div className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6">
+            <Tabs
+              items={TOOLS}
+              value={activeTool}
+              onChange={setActiveTool}
+              variant="segmented"
+              idPrefix="tool"
+              panelPrefix="toolpanel"
+              label="도구"
+            />
           </div>
         ) : null}
         {TOOLS.map((tool) => {
@@ -996,7 +956,7 @@ export function App() {
       {/* 이자 탭의 패널은 이 `main` 자체다. `role="tabpanel"` 을 씌우면 main 랜드마크가
           사라지므로 id 와 라벨만 연결한다 (탭의 `aria-controls` 는 그대로 가리킨다). */}
       <main
-        className={`mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)] ${
+        className={`mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)] ${
           activeTab === "interest" ? "" : "hidden"
         }`}
         id="tabpanel-interest"
@@ -1078,6 +1038,72 @@ export function App() {
           aria-labelledby="result-title"
           tabIndex={-1}
         >
+          <Card className="print:hidden">
+            <CardContent className="space-y-2 p-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <CardTitle className="text-sm">내보내기</CardTitle>
+                <div className="flex flex-wrap gap-2">
+                  <ActionButton
+                    action="copy"
+                    disabled={resultStale}
+                    icon={Clipboard}
+                    label="결과 복사"
+                    loadingAction={loadingAction}
+                    variant="outline"
+                    onClick={handleCopy}
+                  />
+                  <ActionButton
+                    action="pdf"
+                    disabled={resultStale}
+                    icon={FileDown}
+                    label="PDF"
+                    loadingAction={loadingAction}
+                    variant="secondary"
+                    onClick={handleExportPdf}
+                  />
+                  <ActionButton
+                    action="hwpx"
+                    disabled={resultStale}
+                    icon={FileDown}
+                    label="HWPX 저장"
+                    loadingAction={loadingAction}
+                    variant="secondary"
+                    onClick={handleExportHwpx}
+                  />
+                  <ActionButton
+                    action="csv"
+                    disabled={resultStale}
+                    icon={FileSpreadsheet}
+                    label="CSV"
+                    loadingAction={loadingAction}
+                    variant="secondary"
+                    onClick={handleExportCsv}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <ActionButton
+                    action="save"
+                    disabled={resultStale}
+                    icon={FileJson}
+                    label=".lcalc 저장"
+                    loadingAction={loadingAction}
+                    variant="outline"
+                    onClick={handleSaveLcalc}
+                  />
+                  <ActionButton
+                    action="load"
+                    icon={FileJson}
+                    label=".lcalc 열기"
+                    loadingAction={loadingAction}
+                    variant="outline"
+                    onClick={handleLoadLcalc}
+                  />
+                </div>
+              </div>
+              {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+            </CardContent>
+          </Card>
+
           <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
           <SummaryCard result={result} />
 
@@ -1103,7 +1129,7 @@ export function App() {
             </CardHeader>
             <CardContent className="space-y-3">
               <p
-                className="rounded-md border border-border bg-muted/40 p-3 text-sm leading-relaxed"
+                className="rounded-md bg-muted/60 p-3 text-sm leading-relaxed"
                 data-testid="claim-text"
               >
                 {claimText}
@@ -1146,74 +1172,6 @@ export function App() {
           <Notice tone="info" testId="interest-disclaimer">
             <span>{result.disclaimer || STANDARD_DISCLAIMER}</span>
           </Notice>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileJson className="h-4 w-4" aria-hidden="true" />
-                내보내기
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <ActionButton
-                  action="copy"
-                  disabled={resultStale}
-                  icon={Clipboard}
-                  label="결과 복사"
-                  loadingAction={loadingAction}
-                  variant="outline"
-                  onClick={handleCopy}
-                />
-                <ActionButton
-                  action="pdf"
-                  disabled={resultStale}
-                  icon={FileDown}
-                  label="PDF"
-                  loadingAction={loadingAction}
-                  variant="secondary"
-                  onClick={handleExportPdf}
-                />
-                <ActionButton
-                  action="hwpx"
-                  disabled={resultStale}
-                  icon={FileDown}
-                  label="HWPX 저장"
-                  loadingAction={loadingAction}
-                  variant="secondary"
-                  onClick={handleExportHwpx}
-                />
-                <ActionButton
-                  action="csv"
-                  disabled={resultStale}
-                  icon={FileSpreadsheet}
-                  label="CSV"
-                  loadingAction={loadingAction}
-                  variant="secondary"
-                  onClick={handleExportCsv}
-                />
-                <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-                <ActionButton
-                  action="save"
-                  disabled={resultStale}
-                  icon={FileJson}
-                  label=".lcalc 저장"
-                  loadingAction={loadingAction}
-                  variant="outline"
-                  onClick={handleSaveLcalc}
-                />
-                <ActionButton
-                  action="load"
-                  icon={FileJson}
-                  label=".lcalc 열기"
-                  loadingAction={loadingAction}
-                  variant="outline"
-                  onClick={handleLoadLcalc}
-                />
-              </div>
-              {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-            </CardContent>
-          </Card>
         </section>
       </main>
 

@@ -855,7 +855,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
     });
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -1325,7 +1325,7 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
       <div className="result-column grid gap-4">
         {/* 긴 폼이라 계산·초기화를 결과 열 맨 위에 둔다. 넓은 화면에서는 결과 열이 화면에 붙고,
             결과가 길어 열 안에서 스크롤해도 이 줄은 위에 남는다. */}
-        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 lg:sticky lg:top-0">
+        <div className="z-10 flex gap-2 bg-[color-mix(in_srgb,var(--color-muted)_30%,var(--color-background))] pb-1 md:sticky md:top-0">
           <Button onClick={handleCalculate} type="button">
             계산
           </Button>
@@ -1333,6 +1333,73 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
             초기화
           </Button>
         </div>
+        <Card className="print:hidden">
+          <CardContent className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CardTitle className="text-sm">내보내기</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleCopy}
+                />
+                <ActionButton
+                  action="pdf"
+                  icon={FileDown}
+                  label="PDF"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportPdf}
+                />
+                <ActionButton
+                  action="hwpx"
+                  icon={FileDown}
+                  label="HWPX 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportHwpx}
+                />
+                <ActionButton
+                  action="csv"
+                  icon={FileSpreadsheet}
+                  label="CSV"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleExportCsv}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  requiresResult={false}
+                  resultReady={resultReady}
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
         {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
         <ResultFreshnessNotice stale={resultStale} notice={resultNotice} />
@@ -1418,72 +1485,6 @@ export function LitigationCostCalculator({ active = true }: { active?: boolean }
             </Notice>
           </>
         ) : null}
-
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">내보내기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
-              <ActionButton
-                action="pdf"
-                icon={FileDown}
-                label="PDF"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportPdf}
-              />
-              <ActionButton
-                action="hwpx"
-                icon={FileDown}
-                label="HWPX 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportHwpx}
-              />
-              <ActionButton
-                action="csv"
-                icon={FileSpreadsheet}
-                label="CSV"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleExportCsv}
-              />
-              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-              <ActionButton
-                action="save"
-                icon={FileJson}
-                label=".lcalc 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleSaveLcalc}
-              />
-              <ActionButton
-                action="load"
-                icon={FileJson}
-                label=".lcalc 열기"
-                loadingAction={loadingAction}
-                requiresResult={false}
-                resultReady={resultReady}
-                onClick={handleLoadLcalc}
-              />
-            </div>
-            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-          </CardContent>
-        </Card>
       </div>
       <div className="lg:col-span-2">
         <CostAssessmentPanel />

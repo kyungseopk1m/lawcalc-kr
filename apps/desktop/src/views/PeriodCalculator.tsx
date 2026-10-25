@@ -49,6 +49,7 @@ import { createLcalcDirtySnapshot, useLcalcDirtyTracker } from "../lib/lcalc-dir
 import { CURRENT_LCALC_SCHEMA_VERSION, migrateLcalcFile } from "../lib/lcalc-migrations";
 import { parseLoadedPeriodLcalcInput, validateLcalcEnvelope } from "../lib/lcalc-validation";
 import { todayIso } from "../lib/today";
+import { HelpText } from "../components/form/HelpText";
 
 const APP_VERSION = __APP_VERSION__;
 
@@ -460,7 +461,7 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
   });
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -561,10 +562,10 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                         />
                         2008-03-22 당시 법원에 계속 중인 사건
                       </label>
-                      <p className="text-xs text-muted-foreground">
+                      <HelpText cite="민법 부칙(법률 제8720호) 제3조 제1항">
                         민법 부칙(법률 제8720호) 제3조 제1항에 따라 이 사건에는 토요일 포함 개정
                         제161조를 적용하지 않아, 말일이 토요일이어도 연장하지 않습니다.
-                      </p>
+                      </HelpText>
                     </>
                   ) : null}
                   {form.holidayExtension ? (
@@ -573,11 +574,13 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                       onChange={(extraHolidays) => update({ extraHolidays })}
                     />
                   ) : null}
-                  <p className="text-xs text-muted-foreground">
+                  <HelpText
+                    cite={`공휴일 데이터 커버리지 ${HOLIDAY_COVERAGE.from} ~ ${HOLIDAY_COVERAGE.to}`}
+                  >
                     공휴일 데이터 커버리지: {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}.
                     만료일이 이 범위 밖이면 만료일 자체는 계산하되 토요일·공휴일 연장 여부는
                     판정하지 않고 그 사실을 결과에 표시합니다.
-                  </p>
+                  </HelpText>
                 </>
               ) : null}
             </div>
@@ -604,7 +607,48 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
       </div>
 
       <div className="result-column grid gap-4">
-        <HolidayDatasetBadge />
+        <Card className="print:hidden">
+          <CardContent className="space-y-2 p-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CardTitle className="text-sm">내보내기</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="copy"
+                  icon={Clipboard}
+                  label="복사"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleCopy}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  action="save"
+                  icon={FileJson}
+                  label=".lcalc 저장"
+                  loadingAction={loadingAction}
+                  requiresResult
+                  resultReady={resultReady}
+                  onClick={handleSaveLcalc}
+                />
+                <ActionButton
+                  action="load"
+                  icon={FileJson}
+                  label=".lcalc 열기"
+                  loadingAction={loadingAction}
+                  requiresResult={false}
+                  resultReady={resultReady}
+                  onClick={handleLoadLcalc}
+                />
+              </div>
+            </div>
+            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
+          </CardContent>
+        </Card>
+
+        {/* 데이터 기준은 한 곳에만 둔다. 결과가 있으면 결과 카드 아래쪽으로 옮긴다. */}
+        {result?.mode === "expiry" ? null : <HolidayDatasetBadge />}
 
         {error && !errorStale ? <Notice tone="error">{error}</Notice> : null}
 
@@ -677,10 +721,10 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                 <div className="grid gap-1 text-xs text-muted-foreground">
                   <span>적용 조문: {result.articles.join(", ")}</span>
                   <span>{result.noteKo}</span>
-                  {result.mode === "expiry" ? (
-                    <span>공휴일 데이터 버전: {result.dataVersion}</span>
-                  ) : null}
                   <span>계산 시각: {formatComputedAt(result.computedAt)}</span>
+                  {result.mode === "expiry" ? (
+                    <HolidayDatasetBadge version={result.dataVersion} />
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
@@ -690,45 +734,6 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
             </Notice>
           </>
         ) : null}
-
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">내보내기</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="flex flex-wrap gap-2">
-              <ActionButton
-                action="copy"
-                icon={Clipboard}
-                label="복사"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleCopy}
-              />
-              <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-              <ActionButton
-                action="save"
-                icon={FileJson}
-                label=".lcalc 저장"
-                loadingAction={loadingAction}
-                requiresResult
-                resultReady={resultReady}
-                onClick={handleSaveLcalc}
-              />
-              <ActionButton
-                action="load"
-                icon={FileJson}
-                label=".lcalc 열기"
-                loadingAction={loadingAction}
-                requiresResult={false}
-                resultReady={resultReady}
-                onClick={handleLoadLcalc}
-              />
-            </div>
-            {toast ? <ToastMessage toast={toast} onDismiss={() => setToast(null)} /> : null}
-          </CardContent>
-        </Card>
 
         {!result && !error ? (
           <Card>
@@ -743,7 +748,6 @@ export function PeriodCalculator({ active = true }: { active?: boolean }) {
                 계산합니다. 소송법상 불변기간(항소·상고기간 등)의 기산 특칙과 기간 말일 특례는 다음
                 버전 범위입니다.
               </p>
-              <p className="text-xs">공휴일 데이터 버전: {HOLIDAYS_VERSION_TAG}</p>
             </CardContent>
           </Card>
         ) : null}
@@ -769,7 +773,7 @@ export function ExtraHolidaysEditor({
   const patch = (index: number, next: Partial<ExtraHolidayInput>) =>
     onChange(rows.map((row, i) => (i === index ? { ...row, ...next } : row)));
   return (
-    <div className="grid gap-2 rounded-md border border-border p-3">
+    <div className="grid gap-2 border-t border-border pt-3">
       <span className="text-sm font-medium">임시공휴일·선거일 추가</span>
       <p className="text-xs text-muted-foreground">
         공휴일 데이터({HOLIDAYS_VERSION_TAG})에 아직 없는 날을 말일 연장 판정에 더합니다. 커버리지(
@@ -823,11 +827,11 @@ export function ExtraHolidaysEditor({
  * 공휴일 데이터셋 기준 한 줄. 공휴일 표는 정기 공표판이 없어 경과로 경고하지 않는다.
  * 커버리지 밖 결과는 결과 행이 따로 노랑으로 알린다.
  */
-function HolidayDatasetBadge() {
+function HolidayDatasetBadge({ version = HOLIDAYS_VERSION_TAG }: { version?: string }) {
   return (
     <Notice tone="info" testId="period-stale-badge">
       <span>
-        공휴일 데이터셋 {HOLIDAYS_VERSION_TAG} · 기준일 {HOLIDAY_DATASET.snapshotDate} · 커버리지{" "}
+        공휴일 데이터셋 {version} · 기준일 {HOLIDAY_DATASET.snapshotDate} · 커버리지{" "}
         {HOLIDAY_COVERAGE.from} ~ {HOLIDAY_COVERAGE.to}
       </span>
     </Notice>

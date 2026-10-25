@@ -42,19 +42,19 @@ const captures = [
   },
   {
     tab: "손해배상",
-    subTab: "자동차 사고 · 부상",
+    subTab: "부상",
     file: "readme-compensation.png",
     assertDisclaimer: true,
   },
   {
     tab: "손해배상",
-    subTab: "자동차 사고 · 사망",
+    subTab: "사망",
     file: "readme-compensation-death.png",
     assertDisclaimer: true,
   },
   {
     tab: "손해배상",
-    subTab: "자동차 사고 · 부상",
+    subTab: "부상",
     accidentType: "산재",
     benefitTestId: "compensation-disability-benefit-input",
     benefitValue: "50000000",
@@ -64,7 +64,7 @@ const captures = [
   },
   {
     tab: "손해배상",
-    subTab: "자동차 사고 · 부상",
+    subTab: "부상",
     file: "readme-compensation-other-damages.png",
     assertDisclaimer: true,
     fullPage: true,
@@ -211,10 +211,19 @@ async function captureCurrentPage(page, filename, fullPage = false) {
     }
   });
   await page.waitForTimeout(2000);
+  // 결과 열은 창 높이에 맞춰 열 안에서 스크롤한다. 전체 페이지로 찍을 때는 창을 페이지 높이로
+  // 늘려야 결과 열 아래쪽이 잘리지 않는다.
+  const viewport = page.viewportSize();
+  if (fullPage && viewport) {
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.setViewportSize({ width: viewport.width, height });
+    await page.waitForTimeout(500);
+  }
   await page.screenshot({
     path: path.join(outputDir, filename),
     fullPage,
   });
+  if (fullPage && viewport) await page.setViewportSize(viewport);
 }
 
 async function main() {
@@ -250,7 +259,7 @@ async function main() {
         await page.getByRole("tab", { name: capture.toolTab, exact: true }).click();
       }
       if (capture.subTab) {
-        await page.getByRole("button", { name: capture.subTab }).click();
+        await page.getByRole("tab", { name: capture.subTab, exact: true }).click();
       }
       if (capture.accidentType) {
         await page.getByRole("button", { name: capture.accidentType, exact: true }).click();

@@ -20,6 +20,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Select } from "./ui/select";
+import { HelpText } from "./form/HelpText";
 
 /**
  * 기타손해 입력 공유 컴포넌트 (개호비 · 치료비 · 보조구).
@@ -437,12 +438,12 @@ export function OtherDamagesFormCard({ value, onChange, lifeEndDate }: OtherDama
               추가
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <HelpText>
             기왕개호비는 사고일 노임단가 × 총일수로 현가 할인 없이 계산합니다. 기간이 길어 노임
             변동을 반영하려면 그 기간을 향후개호비 구간에 사고일부터 직종으로 입력하세요. 계산
             기준일이 있으면 노임 변경일마다 나뉘어 그때 단가로 계산되며, 호프만 현가 할인과 240
             한도도 함께 적용됩니다.
-          </p>
+          </HelpText>
           {value.attendantPast.map((row) => (
             <div key={row.uid} className="grid gap-2 rounded-md border border-input p-3">
               <div className="grid gap-2 sm:grid-cols-2">

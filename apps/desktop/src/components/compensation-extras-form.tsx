@@ -49,10 +49,20 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Select } from "./ui/select";
+import { HelpText } from "./form/HelpText";
+
+/** 설명에 든 판례 번호(법원 + 사건번호). 설명을 접어도 근거가 보이게 summary 에 쓴다. */
+function caseNumbersIn(text: string): string | undefined {
+  const found = [
+    ...text.matchAll(/(대법원|헌재|\S+(?:고법|지법))\s[\d.\s]+선고\s(\d{2,4}[가-힣]{1,3}\d+)/g),
+  ].map((m) => `${m[1]} ${m[2]}`);
+  return found.length > 0 ? found.join(", ") : undefined;
+}
 
 function SectionCard({
   title,
   hint,
+  cite,
   enabled,
   toggleLabel,
   onToggle,
@@ -61,6 +71,8 @@ function SectionCard({
 }: {
   title: string;
   hint: string;
+  /** 접힌 설명 옆에 보일 근거. 비우면 설명에서 판례 번호를 찾는다. */
+  cite?: string;
   enabled: boolean;
   toggleLabel: string;
   onToggle: (enabled: boolean) => void;
@@ -71,7 +83,11 @@ function SectionCard({
     <Card data-testid={testId}>
       <CardHeader className="p-4 pb-2">
         <CardTitle className="text-sm">{title}</CardTitle>
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        {hint.length > 90 ? (
+          <HelpText cite={cite ?? caseNumbersIn(hint)}>{hint}</HelpText>
+        ) : (
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        )}
       </CardHeader>
       <CardContent className="grid gap-3 p-4 pt-0">
         <label className="flex items-center gap-2 text-sm">
@@ -222,7 +238,7 @@ export function LifeExpectancyCard({
       {preview.error ? <FieldError message={preview.error} /> : null}
       {preview.result ? (
         <div
-          className="grid grid-cols-2 gap-1 rounded-md border border-border p-3 text-xs"
+          className="grid grid-cols-2 gap-1 rounded-md bg-muted/60 p-3 text-xs"
           data-testid="compensation-life-expectancy-preview"
         >
           <PairRows rows={lifeExpectancyRows(preview.result)} />
@@ -372,7 +388,7 @@ export function LostRetirementCard({
 export function LostRetirementDetail({ result }: { result: LostRetirementResult }) {
   return (
     <div
-      className="grid grid-cols-2 gap-1 rounded-md border border-border p-3 text-xs"
+      className="grid grid-cols-2 gap-1 rounded-md bg-muted/60 p-3 text-xs"
       data-testid="compensation-lost-retirement-detail"
     >
       <PairRows rows={lostRetirementDetailRows(result)} />
@@ -431,7 +447,7 @@ export function DisabilityRateHelper({
   }
   return (
     <div
-      className="grid gap-2 rounded-md border border-border p-3"
+      className="grid gap-2 rounded-md bg-muted/60 p-3"
       data-testid="compensation-disability-helper"
     >
       <span className="text-xs text-muted-foreground">
@@ -496,20 +512,22 @@ function RoundingSelect({
   onChange: (value: ClaimantRounding) => void;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium">
-      원고별 최종액 절사
-      <Select value={value} onChange={(e) => onChange(e.target.value as ClaimantRounding)}>
-        {Object.entries(CLAIMANT_ROUNDING_LABELS).map(([key, label]) => (
-          <option key={key} value={key}>
-            {label}
-          </option>
-        ))}
-      </Select>
-      <span className="text-xs font-normal text-muted-foreground">
+    <div className="grid content-start gap-2">
+      <label className="grid gap-2 text-sm font-medium">
+        원고별 최종액 절사
+        <Select value={value} onChange={(e) => onChange(e.target.value as ClaimantRounding)}>
+          {Object.entries(CLAIMANT_ROUNDING_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </Select>
+      </label>
+      <HelpText>
         원고별 귀속을 쓰지 않으면 최종 합계에서 100원 미만을 버립니다. 원 단위를 고르면 원고마다 그
         절사를 하지 않아, 귀속을 끌 때보다 원고마다 99원까지 많을 수 있습니다.
-      </span>
-    </label>
+      </HelpText>
+    </div>
   );
 }
 
@@ -690,21 +708,23 @@ export function DeathClaimantsCard({
             </Select>
           </label>
           {industrial ? (
-            <label className="grid gap-2 text-sm font-medium">
-              산재 장의비 (원, 선택)
-              <Input
-                inputMode="numeric"
-                aria-label="산재 장의비"
-                value={formatWonInput(value.funeralBenefitText)}
-                onChange={(e) => patch({ funeralBenefitText: parseWonText(e.target.value) })}
-              />
-              <span className="text-xs font-normal text-muted-foreground">
+            <div className="grid content-start gap-2">
+              <label className="grid gap-2 text-sm font-medium">
+                산재 장의비 (원, 선택)
+                <Input
+                  inputMode="numeric"
+                  aria-label="산재 장의비"
+                  value={formatWonInput(value.funeralBenefitText)}
+                  onChange={(e) => patch({ funeralBenefitText: parseWonText(e.target.value) })}
+                />
+              </label>
+              <HelpText cite="대법원 2021다252472">
                 산재 수급자가 제3자(가해자)를 상대로 청구하는 경우를 전제로, 장례비를 지출한
                 상속인의 장례비 손해에서만 그 금액을 한도로 먼저 빼고 과실상계합니다 (대법원 2022.
                 4. 14. 선고 2021다252472, 2021다241618 전원합의체 인용). 장례비 지출 상속인을 골라야
                 합니다.
-              </span>
-            </label>
+              </HelpText>
+            </div>
           ) : null}
           <SolatiumClaimantRows
             title="상속인 아닌 유족 고유 위자료 (이름 · 위자료)"
@@ -866,6 +886,7 @@ export function DelayDamagesCard({
   return (
     <SectionCard
       title="지연손해금 (선택)"
+      cite="소송촉진 등에 관한 특례법 제3조 제2항"
       hint="계산 결과 최종액에 대한 판결 주문형 지연손해금입니다. 판결 선고일까지 민법 연 5%, 다음 날부터 소송촉진 등에 관한 특례법 이율을 적용합니다. 피고가 이행의무의 존부나 범위를 다투는 것이 타당한 범위를 선고일까지로 본 문구이므로(같은 법 제3조 제2항), 사건에서 그 범위가 다르면 기산일·선고일 칸을 그에 맞게 바꾸세요. 기산일은 위자료·장례비를 포함한 최종액 전부에 사고일을 씁니다. 불법행위로 인한 손해배상채무는 불법행위일부터 지체책임이 생긴다는 판례 입장에 따른 것이므로, 기산일이 다른 항목은 기산일 칸을 바꿔 따로 계산하세요. 손해배상액에는 들어가지 않고 파일에 저장하지 않습니다."
       enabled={value.enabled}
       toggleLabel="지연손해금 계산"
@@ -968,6 +989,7 @@ export function DocumentTextCard({
   return (
     <SectionCard
       title="조정안·판결 이유 형식 문단 (선택)"
+      cite="소송촉진 등에 관한 특례법 제3조 제2항"
       hint="계산 결과를 조정안 또는 판결 이유 형식의 문단과 별지 일실수입 계산표로 정리합니다. 조정안은 피고 책임비율을 가감 폭만큼 올리고 내린 금액과, 사고일부터 조정일까지 연 5% 이자(지연손해금과 같은 기간식)를 더한 금액을 함께 적습니다. 소장 송달일을 넣으면 그 다음 날부터 조정일까지는 소송촉진 등에 관한 특례법 이율(개정 연혁대로)을 적용합니다. 이는 피고가 이행의무의 존부나 범위를 다투는 것이 타당한 범위가 없다고 본 가정이므로(같은 법 제3조 제2항), 사건에서 그 범위가 다르면 송달일 칸을 비우거나 바꾸세요. 조정안 금액은 합의를 위한 시나리오이고 확정된 배상액이 아닙니다. 이자는 위자료·장례비를 포함한 최종액 전부에 사고일부터 붙입니다. 불법행위로 인한 손해배상채무는 불법행위일부터 지체책임이 생긴다는 판례 입장에 따른 것이므로, 기산일이 다른 항목은 지연손해금 카드의 기산일 칸을 바꿔 따로 계산하세요. 조정일은 이자 끝날로만 쓰고 일실수입 현가는 사고일 기준 그대로입니다. 복사·PDF·CSV에 함께 실리며 파일에 저장하지 않습니다."
       enabled={value.enabled}
       toggleLabel="문단 만들기"
@@ -997,18 +1019,20 @@ export function DocumentTextCard({
               onChange={(e) => patch({ mediationDate: e.target.value })}
             />
           </label>
-          <label className="grid gap-2 text-sm font-medium">
-            소장 송달일 (선택)
-            <Input
-              type="date"
-              value={value.serviceDate}
-              onChange={(e) => patch({ serviceDate: e.target.value })}
-            />
-            <span className="text-xs font-normal text-muted-foreground">
+          <div className="grid content-start gap-2">
+            <label className="grid gap-2 text-sm font-medium">
+              소장 송달일 (선택)
+              <Input
+                type="date"
+                value={value.serviceDate}
+                onChange={(e) => patch({ serviceDate: e.target.value })}
+              />
+            </label>
+            <HelpText cite="소송촉진 등에 관한 특례법 제3조 제2항">
               비우면 조정일까지 연 5%만 적용합니다. 피고가 이행의무의 존부나 범위를 다투는 것이
               타당한 범위가 있으면(같은 법 제3조 제2항) 송달일 대신 그 범위가 끝나는 날을 넣으세요.
-            </span>
-          </label>
+            </HelpText>
+          </div>
           <label className="grid gap-2 text-sm font-medium">
             책임비율 가감 폭 (%p)
             <Input

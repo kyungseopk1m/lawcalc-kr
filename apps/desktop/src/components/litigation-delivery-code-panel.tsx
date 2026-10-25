@@ -83,7 +83,7 @@ export function DeliveryCodePanel({
   }, [defendant, filingDate, plaintiff, row]);
 
   return (
-    <details className="rounded-md border border-border bg-muted/40 p-3">
+    <details className="border-t border-border pt-3">
       <summary className="cursor-pointer text-sm font-medium">
         송달료 사건부호표 (재일 87-4 별표 1)
       </summary>
@@ -146,7 +146,7 @@ export function DeliveryCodePanel({
             ) : "error" in fee ? (
               <p className="text-xs text-destructive">{fee.error}</p>
             ) : (
-              <div className="grid gap-2 rounded-md border border-border bg-background p-3">
+              <div className="grid gap-2 rounded-md bg-muted/60 p-3">
                 <p className="text-sm">
                   송달료 <strong>{formatWon(fee.amount)}</strong> ({fee.deliveryCount}회)
                 </p>

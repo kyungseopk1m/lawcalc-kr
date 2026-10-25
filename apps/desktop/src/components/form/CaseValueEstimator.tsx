@@ -75,7 +75,7 @@ export function CaseValueEstimator({ onApply }: { onApply: (caseValue: number) =
   const failed = "error" in result;
 
   return (
-    <details className="rounded-md border border-border bg-muted/40 p-3">
+    <details className="border-t border-border pt-3">
       <summary className="cursor-pointer text-sm font-medium">
         부동산 소가 계산 (인지규칙 제10조·제12조·제13조)
       </summary>
@@ -150,7 +150,7 @@ export function CaseValueEstimator({ onApply }: { onApply: (caseValue: number) =
         {failed ? (
           <p className="text-xs text-destructive">{result.error}</p>
         ) : (
-          <div className="grid gap-2 rounded-md border border-border bg-background p-3">
+          <div className="grid gap-2 rounded-md bg-muted/60 p-3">
             <p className="text-sm">
               산출 소가 <strong>{formatWon(result.caseValue)}</strong>
             </p>

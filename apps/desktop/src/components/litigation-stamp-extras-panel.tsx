@@ -47,11 +47,11 @@ export function StampExtrasPanel({ stampDuty }: { stampDuty: StampDutyInput }) {
   if (view === null) return null;
 
   return (
-    <details className="rounded-md border border-border bg-muted/40 p-3">
+    <details className="border-t border-border pt-3">
       <summary className="cursor-pointer text-sm font-medium">{view.title}</summary>
       <div className="grid gap-2 pt-3">
         <p className="text-xs text-muted-foreground">{view.note}</p>
-        <div className="grid gap-2 rounded-md border border-border bg-background p-3">
+        <div className="grid gap-2 rounded-md bg-muted/60 p-3">
           <p className="text-sm">
             {view.label} <strong>{formatWon(view.amount)}</strong>
           </p>

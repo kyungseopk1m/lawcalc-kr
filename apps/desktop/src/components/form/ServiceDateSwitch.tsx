@@ -5,6 +5,7 @@ import { serviceSwitchSegments, type RateSegment } from "@lawcalc-kr/core-engine
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { legalRateOptions, type LegalRatePresetOption } from "./LegalRatePreset";
+import { HelpText } from "./HelpText";
 
 interface ServiceDateSwitchProps {
   preset: LegalRatePresetOption;
@@ -65,7 +66,7 @@ export function ServiceDateSwitch({
   };
 
   return (
-    <div className="grid gap-2 rounded-md border border-border p-3">
+    <div className="grid gap-2 border-t border-border pt-3">
       <label className="grid gap-1 text-sm font-medium">
         소장 송달일 (송달일 전환)
         <div className="flex gap-2">
@@ -79,12 +80,12 @@ export function ServiceDateSwitch({
           </Button>
         </div>
       </label>
-      <p className="text-xs leading-5 text-muted-foreground">
+      <HelpText cite="소송촉진 등에 관한 특례법 제3조">
         송달일까지는 위 프리셋 이율, 다음 날부터는 소송촉진 등에 관한 특례법 이율로 이율 구간을
         채웁니다(같은 법 제3조 제1항). 채무자의 항쟁이 타당한 범위(제3조 제2항)가 있으면 송달일 대신
         그 범위가 끝나는 날(예: 판결 선고일)을 넣으세요. 장래의 이행을 청구하는 소(민사소송법
         제251조)는 같은 항 단서에 따라 소송촉진법 이율을 적용하지 않으니 이 기능을 쓰지 마세요.
-      </p>
+      </HelpText>
       {error ? <span className="text-xs text-red-600">{error}</span> : null}
     </div>
   );

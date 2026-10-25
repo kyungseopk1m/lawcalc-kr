@@ -2,6 +2,7 @@ import { loadLegalRates, rateHistoryFor } from "@lawcalc-kr/core-engine";
 
 import { Select } from "../ui/select";
 import { PercentInput } from "./PercentInput";
+import { HelpText } from "./HelpText";
 
 export type LegalRatePresetOption = "civil" | "commercial" | "promotion" | "custom";
 
@@ -72,18 +73,19 @@ export function LegalRatePreset({
         </Select>
       </label>
       {value === "promotion" ? (
-        <span className="text-xs font-normal text-muted-foreground">
-          소촉법 이율은 2003-06-01부터 적용됩니다. 그 이전 기간은 위헌결정(헌재 2003. 4. 24.
-          2002헌가15)에 따라 민법·상법 법정이율로 계산하고, 위헌결정 전 확정판결의 연 25%는 판결문
-          기재 이율을 직접 입력하세요.
+        <>
+          <HelpText cite="헌재 2002헌가15">
+            소촉법 이율은 2003-06-01부터 적용됩니다. 그 이전 기간은 위헌결정(헌재 2003. 4. 24.
+            2002헌가15)에 따라 민법·상법 법정이율로 계산하고, 위헌결정 전 확정판결의 연 25%는 판결문
+            기재 이율을 직접 입력하세요.
+          </HelpText>
           {straddlesPromotionRateChange(startDate, endDate) ? (
-            <>
-              {" "}
+            <span className="text-xs font-normal text-muted-foreground">
               이 계산 기간은 이율 변경일을 걸칩니다. 변경일 전에 제1심 변론이 종결된 사건은 부칙
               경과조치에 따라 종전 이율이 계속 적용될 수 있으니, 판결문의 이율 표기를 확인하세요.
-            </>
+            </span>
           ) : null}
-        </span>
+        </>
       ) : null}
       {value === "custom" ? (
         <label className="grid gap-2 text-sm font-medium">

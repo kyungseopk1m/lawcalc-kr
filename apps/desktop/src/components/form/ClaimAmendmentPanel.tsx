@@ -49,7 +49,7 @@ export function ClaimAmendmentPanel({
   const failed = "error" in result;
 
   return (
-    <details className="rounded-md border border-border bg-muted/40 p-3">
+    <details className="border-t border-border pt-3">
       <summary className="cursor-pointer text-sm font-medium">
         청구변경신청 인지액 (인지법 제5조)
       </summary>
@@ -102,7 +102,7 @@ export function ClaimAmendmentPanel({
         {failed ? (
           <p className="text-xs text-destructive">{result.error}</p>
         ) : (
-          <div className="grid gap-2 rounded-md border border-border bg-background p-3">
+          <div className="grid gap-2 rounded-md bg-muted/60 p-3">
             <p className="text-sm">
               추가 납부 인지액 <strong>{formatWon(result.amount)}</strong>
             </p>

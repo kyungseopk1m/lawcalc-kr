@@ -97,11 +97,11 @@ describe("부상 ↔ 사망 전환", () => {
     fireEvent.change(injury.getByPlaceholderText("예: 0.30"), { target: { value: "0.25" } });
     expect(screen.getByTestId("dirty").textContent).toBe("true");
 
-    fireEvent.click(screen.getByRole("button", { name: "자동차 사고 · 사망" }));
+    fireEvent.click(screen.getByRole("tab", { name: "사망" }));
     expect(screen.getByTestId("compensation-injury-panel").className).toBe("hidden");
     expect(screen.getByTestId("dirty").textContent).toBe("true");
 
-    fireEvent.click(screen.getByRole("button", { name: "자동차 사고 · 부상" }));
+    fireEvent.click(screen.getByRole("tab", { name: "부상" }));
     expect(
       within(
         screen.getByTestId("compensation-injury-panel"),
@@ -117,11 +117,11 @@ describe("부상 ↔ 사망 전환", () => {
         <DirtyProbe />
       </>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "자동차 사고 · 사망" }));
+    fireEvent.click(screen.getByRole("tab", { name: "사망" }));
     const death = within(screen.getByTestId("compensation-death-panel"));
     fireEvent.change(death.getByPlaceholderText("예: 0.30"), { target: { value: "0.2" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "자동차 사고 · 부상" }));
+    fireEvent.click(screen.getByRole("tab", { name: "부상" }));
     expect(screen.getByTestId("dirty").textContent).toBe("true");
     expect(death.getByPlaceholderText<HTMLInputElement>("예: 0.30").value).toBe("0.2");
   });
@@ -245,7 +245,7 @@ describe("R2-a 이전 버전 파일 (계산 기준일 없음 · 구 비율공제
 describe("R2-a 산재 사망 유족급여 입력 (2008다13104)", () => {
   function renderDeathIndustrial() {
     render(<CompensationCalculator />);
-    fireEvent.click(screen.getByRole("button", { name: "자동차 사고 · 사망" }));
+    fireEvent.click(screen.getByRole("tab", { name: "사망" }));
     const death = within(screen.getByTestId("compensation-death-panel"));
     fireEvent.click(death.getByRole("button", { name: "산재" }));
     return death;
@@ -401,7 +401,7 @@ describe("사건 파일 열기 (손해배상)", () => {
 
   it("적용에 성공한 뒤에만 다른 모드 입력을 비운다", () => {
     render(<CompensationCalculator />);
-    fireEvent.click(screen.getByRole("button", { name: "자동차 사고 · 사망" }));
+    fireEvent.click(screen.getByRole("tab", { name: "사망" }));
     const death = within(screen.getByTestId("compensation-death-panel"));
     fireEvent.change(death.getByPlaceholderText("예: 0.30"), { target: { value: "0.2" } });
 

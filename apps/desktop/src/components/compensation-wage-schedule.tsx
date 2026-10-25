@@ -26,6 +26,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Select } from "./ui/select";
+import { HelpText } from "./form/HelpText";
 
 export function WageScheduleCard({
   value,
@@ -78,12 +79,12 @@ export function WageScheduleCard({
     <Card data-testid="compensation-wage-schedule-card">
       <CardHeader className="p-4 pb-2">
         <CardTitle className="text-sm">호봉승급 · 일실수입 표 편집 (선택)</CardTitle>
-        <p className="text-xs text-muted-foreground">
+        <HelpText cite="대법원 88다카6761 전원합의체">
           장차 임금이 오를 것을 상당한 정도로 확실하게 예측할 수 있는 객관적 자료(보수규정·호봉표
           등)가 있으면 승급 후 소득도 일실수입에 반영합니다 (대법원 1989. 12. 26. 선고 88다카6761
           전원합의체). 승급일마다 구간을 나누고 구간 계수는 H(끝) - H(시작)입니다. 표 직접 편집은
           자동 구간 대신 입력한 행으로 계산합니다.
-        </p>
+        </HelpText>
       </CardHeader>
       <CardContent className="grid gap-3 p-4 pt-0">
         <label className="grid gap-2 text-sm font-medium">
@@ -103,11 +104,11 @@ export function WageScheduleCard({
 
         {value.mode === "steps" ? (
           <div className="grid gap-2">
-            <p className="text-xs text-muted-foreground">
+            <HelpText>
               첫 행이 사고일과 같은 달이면 직종·일당 입력 없이 계산합니다. 첫 승급 전은 직종
               단가·일당을 씁니다. 첫 승급 이후에는 노임단가 변경일을 경계로 쓰지 않으므로, 정년 뒤
               도시일용 노임으로 돌아가는 사건은 일실수입 표 직접 편집으로 입력하세요.
-            </p>
+            </HelpText>
             {value.steps.map((row, i) => (
               <div key={row.uid} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
                 <label className="grid gap-1 text-xs">

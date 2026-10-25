@@ -91,7 +91,7 @@ textarea {
   .result-column > * {
     min-width: 0;
   }
-  @media (min-width: 64rem) {
+  @media (min-width: 48rem) {
     .result-column {
       position: sticky;
       top: 1rem;

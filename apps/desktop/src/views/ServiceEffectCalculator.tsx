@@ -21,6 +21,7 @@ import { Select } from "../components/ui/select";
 import { FormulaCell } from "../components/result/FormulaCell";
 import { useFormShortcuts } from "../hooks/use-form-shortcuts";
 import { todayIso } from "../lib/today";
+import { HelpText } from "../components/form/HelpText";
 
 const HOLIDAY_DATASET = loadHolidays();
 const HOLIDAYS_VERSION_TAG = holidaysVersionTag(HOLIDAY_DATASET);
@@ -233,7 +234,7 @@ export function ServiceEffectCalculator({ active = true }: { active?: boolean })
   useFormShortcuts({ onReset: handleReset, enabled: active });
 
   return (
-    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[520px_minmax(0,1fr)]">
+    <main className="mx-auto grid w-full max-w-7xl flex-1 content-start items-start gap-4 px-4 py-4 sm:px-6 md:grid-cols-2 lg:grid-cols-[520px_minmax(0,1fr)]">
       <div className="grid content-start gap-4">
         <Card>
           <CardHeader className="p-4 pb-2">
@@ -274,12 +275,12 @@ export function ServiceEffectCalculator({ active = true }: { active?: boolean })
               />
               2008-03-22 당시 법원에 계속 중인 사건
             </label>
-            <p className="text-xs text-muted-foreground">
+            <HelpText cite="민법 부칙(법률 제8720호) 제3조 제1항">
               민법 부칙(법률 제8720호) 제3조 제1항에 따라 이 사건에는 토요일 포함 개정 제161조를
               적용하지 않아, 말일이 토요일이어도 연장하지 않습니다. 공휴일 데이터 커버리지:{" "}
               {HOLIDAY_DATASET.coverage.from} ~ {HOLIDAY_DATASET.coverage.to} (버전{" "}
               {HOLIDAYS_VERSION_TAG}).
-            </p>
+            </HelpText>
             <div className="flex gap-2">
               <Button onClick={handleReset} variant="outline" type="button">
                 초기화

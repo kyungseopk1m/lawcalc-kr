@@ -77,18 +77,31 @@ describe("상단 탭 접근성", () => {
 
     const interest = screen.getByRole("tab", { name: "이자 계산" });
     expect(interest.getAttribute("aria-selected")).toBe("true");
-    // 색 외의 표시 (밑줄) 가 활성 탭에만 붙는다.
-    expect(interest.className).toContain("underline");
+    // 색 외의 표시(밑줄 막대와 굵기)가 활성 탭에만 붙는다.
+    expect(interest.className).toContain("border-primary");
+    expect(interest.className).toContain("font-semibold");
 
     const litigation = screen.getByRole("tab", { name: "소송비용" });
     expect(litigation.getAttribute("aria-selected")).toBe("false");
-    expect(litigation.className).not.toContain("underline");
+    expect(litigation.className).not.toContain("border-primary");
+    expect(litigation.className).not.toContain("font-semibold");
 
     fireEvent.click(litigation);
     expect(litigation.getAttribute("aria-selected")).toBe("true");
     expect(screen.getByRole("tab", { name: "이자 계산" }).getAttribute("aria-selected")).toBe(
       "false",
     );
+  });
+
+  it("좌우 화살표로 옮기고, 탭 순서에는 선택된 탭 하나만 있다", () => {
+    renderApp();
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((t) => t.tabIndex)).toEqual(tabs.map((_, i) => (i === 0 ? 0 : -1)));
+    fireEvent.keyDown(tabs[0]!, { key: "ArrowRight" });
+    expect(tabs[1]!.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tabs[1]);
+    fireEvent.keyDown(tabs[1]!, { key: "ArrowLeft" });
+    expect(tabs[0]!.getAttribute("aria-selected")).toBe("true");
   });
 });
 

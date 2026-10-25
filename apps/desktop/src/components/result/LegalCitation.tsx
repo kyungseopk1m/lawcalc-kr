@@ -13,7 +13,7 @@ const citations: Record<LegalRatePresetOption, string> = {
 
 export function LegalCitation({ preset }: LegalCitationProps) {
   return (
-    <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm leading-6">
+    <div className="border-t border-border pt-3 text-sm leading-6">
       <p className="font-medium">적용 근거</p>
       <p className="text-muted-foreground">{citations[preset]}</p>
     </div>
