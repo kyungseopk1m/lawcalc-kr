@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-25
+
 > **저장해 둔 계산을 다시 열면 금액이 달라질 수 있습니다.** 손해배상의 위자료·개호비 계산, 이자 합계의 끝수 처리, 조정신청 인지액을 고쳤고, 이제 `.lcalc` 파일을 열 때 저장된 결과를 그대로 보여 주지 않고 현재 버전으로 다시 계산합니다. 저장 당시 결과와 다르면 두 금액을 함께 알려 주고, 최종액은 같은데 세부 항목만 달라진 경우에도 알려 줍니다. 사건 파일을 열면 결과가 달라진 탭 이름을 함께 표시합니다. 저장된 월 가동일수와 입력값은 그대로 엽니다. 개호가 사고 후 480개월을 넘겨 끝나는 향후개호비, 향후개호 구간을 시간 순이 아니게 입력한 파일, 생계비 공제 비율이 저장되지 않은 사망 파일도 금액이 달라질 수 있습니다(아래 Changed).
 >
 > 새로 계산하는 사건은 월 가동일수 기본값이 22일에서 20일로 바뀌고, 노임단가를 계산 기준일(기본값 오늘)까지 공표된 단가로 기간을 나눠 계산합니다. 사고에서 계산 시점까지 기간이 긴 사건은 종전보다 일실수입이 커집니다.
@@ -549,7 +551,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - 첫 공개 릴리스이므로 breaking change는 없습니다.
 - `.lcalc` `schemaVersion: "1"` 파일은 v0.1.x 안에서 하위 호환을 유지합니다.
 
-[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/kyungseopk1m/lawcalc-kr/compare/v0.11.0...v0.12.0
