@@ -60,7 +60,7 @@ const captures = [
     benefitValue: "50000000",
     file: "readme-compensation-industrial.png",
     assertDisclaimer: true,
-    assertText: "산재보험급여 공제 (장해급여)",
+    assertText: "산재보험급여 공제 (장해급여·휴업급여)",
   },
   {
     tab: "손해배상",
@@ -116,6 +116,51 @@ const captures = [
       const panel = page.locator("#tabpanel-deadline");
       await panel.getByLabel("기한 항목").selectOption("civilAppeal");
       await panel.getByLabel("기산 사건일").fill("2026-09-11");
+    },
+  },
+  // 도구 탭의 하위 탭은 입력하는 대로 결과가 바뀌어 "계산" 버튼이 없다.
+  // 법원 명칭이 화면에 나오지 않게 관할법원 찾기 화면은 찍지 않고, 우편번호는 관할법원 보기를
+  // 펼치지 않은 상태로 찍는다.
+  {
+    tab: "도구",
+    toolTab: "송달 효력·상소기간",
+    file: "readme-tools-service-effect.png",
+    noCalculate: true,
+    assertText: "2026-09-28",
+    // 불변기한 캡처와 같은 사례: 2026-09-11 송달이면 항소기간 말일이 추석에 걸려 밀린다.
+    setup: async (page) => {
+      const panel = page.locator("#tabpanel-tools");
+      await panel.getByLabel("구하는 날").selectOption("appeal14");
+      await panel.getByLabel("송달일 (공시송달은 실시일)").fill("2026-09-11");
+    },
+  },
+  {
+    tab: "도구",
+    toolTab: "민사서류 안내",
+    file: "readme-tools-civil-filings.png",
+    noCalculate: true,
+    setup: async (page) => {
+      const panel = page.locator("#tabpanel-tools");
+      await panel.getByLabel("서류 이름·조문 검색").filter({ visible: true }).fill("가압류");
+      await page
+        .getByTestId("filing-table-civil")
+        .getByRole("button")
+        .filter({ visible: true })
+        .first()
+        .click();
+      await page.getByTestId("filing-selected-name").filter({ visible: true }).waitFor();
+    },
+  },
+  {
+    tab: "도구",
+    toolTab: "우편번호",
+    file: "readme-tools-postal.png",
+    noCalculate: true,
+    setup: async (page) => {
+      const panel = page.locator("#tabpanel-tools");
+      await panel.getByLabel("지역 또는 우편번호").fill("강남구 역삼동");
+      await panel.locator("li button").filter({ visible: true }).first().click();
+      await page.getByTestId("postal-codes").filter({ visible: true }).waitFor();
     },
   },
 ];
@@ -201,6 +246,9 @@ async function main() {
       );
       // 상단 탭은 `role="tab"` 이다 (시맨틱 탭 전환 후 암묵 button role 이 덮였다).
       await page.getByRole("tab", { name: capture.tab }).click();
+      if (capture.toolTab) {
+        await page.getByRole("tab", { name: capture.toolTab, exact: true }).click();
+      }
       if (capture.subTab) {
         await page.getByRole("button", { name: capture.subTab }).click();
       }
@@ -213,7 +261,9 @@ async function main() {
       if (capture.setup) {
         await capture.setup(page);
       }
-      await clickCalculate(page, capture);
+      if (!capture.noCalculate) {
+        await clickCalculate(page, capture);
+      }
       if (capture.assertText) {
         await page
           .getByText(capture.assertText)

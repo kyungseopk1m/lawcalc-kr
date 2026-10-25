@@ -120,8 +120,9 @@ export function InfoDialog({ open, onClose, onCheckUpdate }: InfoDialogProps) {
               소개
             </h3>
             <p className="text-muted-foreground">
-              이자, 상속분, 소송비용, 변제충당, 손해배상 계산을 로컬에서 검토하는 데스크톱
-              워크벤치입니다. 입력값과 결과는 내 컴퓨터에만 저장됩니다.
+              이자, 상속분, 소송비용, 변제충당, 손해배상, 기간·불변기한 계산과 송달 효력·서류
+              인지액·관할·우편번호 같은 실무 도구를 로컬에서 쓰는 데스크톱 워크벤치입니다. 입력값과
+              결과는 내 컴퓨터에만 저장됩니다.
             </p>
           </section>
 
@@ -201,7 +202,7 @@ export function InfoDialog({ open, onClose, onCheckUpdate }: InfoDialogProps) {
             <ul className="space-y-1 text-muted-foreground">
               <li>Cmd/Ctrl+S: .lcalc 저장</li>
               <li>Cmd/Ctrl+Enter: 계산</li>
-              <li>Esc: 입력 필드 밖에서 초기화</li>
+              <li>Esc: 입력 필드 밖에서 2초 안에 두 번 누르면 초기화</li>
             </ul>
           </section>
 
