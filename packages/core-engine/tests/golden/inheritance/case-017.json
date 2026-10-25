@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "2",
+  "id": "case-017",
+  "title": "구법 1960~1978: 처 + 부 + 모 (직계존속과 공동상속)",
+  "source": "manual-derivation",
+  "notes": "1965-08-01 사망, 직계비속 없음. 처는 직계존속과 공동상속하면 남자의 상속분과 균분 = 8 (제1009조 제3항), 부 8, 동일가적 모 = 여자 1/2 = 4. 합 20 → 처 8/20=2/5, 부 2/5, 모 4/20=1/5.",
+  "input": {
+    "decedent": {
+      "deceasedAt": "1965-08-01"
+    },
+    "spouse": {
+      "name": "처",
+      "alive": true,
+      "relation": "wife"
+    },
+    "linealAscendants": [
+      {
+        "name": "부",
+        "deceasedBeforeOpening": false,
+        "sex": "male",
+        "degree": 1
+      },
+      {
+        "name": "모",
+        "deceasedBeforeOpening": false,
+        "sex": "female",
+        "sameFamilyRegister": true,
+        "degree": 1
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance-pre1991/v1.0.0",
+    "shares": [
+      {
+        "name": "처",
+        "numerator": 2,
+        "denominator": 5,
+        "rawNumerator": 8,
+        "rawDenominator": 20
+      },
+      {
+        "name": "부",
+        "numerator": 2,
+        "denominator": 5,
+        "rawNumerator": 8,
+        "rawDenominator": 20
+      },
+      {
+        "name": "모",
+        "numerator": 1,
+        "denominator": 5,
+        "rawNumerator": 4,
+        "rawDenominator": 20
+      }
+    ]
+  }
+}

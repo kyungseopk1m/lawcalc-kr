@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "2",
+  "id": "case-007-multi-payment-interest",
+  "title": "여러 번 변제: 변제 사이 이자 발생, 이자 → 원본 순",
+  "source": "민법 제479조 제1항, 제477조. 손 계산: 원본 10,000,000 × 12% × 90/365 = 295,890; 9,295,890 × 12% × 91/365 = 278,112 (p5-4a-appropriation-rules-2026-10-25.md 4절)",
+  "notes": "이자는 법원 방식(초일 산입, 원 미만 절사). 변제일 당일까지 붙이고 다음 이자는 그 다음 날부터.",
+  "input": {
+    "claims": [
+      {
+        "id": "loan",
+        "name": "대여금",
+        "principalBalance": 10000000,
+        "dueAt": "2025-12-31",
+        "interestRate": 0.12,
+        "interestFrom": "2025-01-01"
+      }
+    ],
+    "payment": {
+      "amount": 1000000,
+      "paidAt": "2025-03-31",
+      "allocation": {
+        "type": "legal"
+      }
+    },
+    "additionalPayments": [
+      {
+        "amount": 2000000,
+        "paidAt": "2025-06-30",
+        "allocation": {
+          "type": "legal"
+        }
+      }
+    ],
+    "computedAt": "2026-10-25"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 3000000,
+      "allocationType": "legal",
+      "appliedAmount": 3000000,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 0,
+      "totalInterestApplied": 574002,
+      "totalPrincipalApplied": 2425998,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 7574002,
+      "remainingGrandTotal": 7574002
+    },
+    "claims": [
+      {
+        "claimId": "loan",
+        "costApplied": 0,
+        "interestApplied": 574002,
+        "principalApplied": 2425998,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 7574002,
+        "totalApplied": 3000000,
+        "name": "대여금",
+        "statutoryRank": null
+      }
+    ],
+    "events": [
+      {
+        "paidAt": "2025-03-31",
+        "kind": "payment",
+        "amount": 1000000,
+        "allocationType": "legal",
+        "appliedAmount": 1000000,
+        "unappliedAmount": 0,
+        "claims": [
+          {
+            "claimId": "loan",
+            "interestAccrued": 295890,
+            "costApplied": 0,
+            "interestApplied": 295890,
+            "principalApplied": 704110,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 9295890,
+            "name": "대여금",
+            "accruedFrom": "2025-01-01",
+            "accruedTo": "2025-03-31",
+            "statutoryRank": {
+              "dueReached": false,
+              "debtorBenefitRank": 0,
+              "dueAt": "2025-12-31",
+              "priorityLabel": "법정충당 1순위 (변제기 미도래, 변제이익 순위 0)"
+            }
+          }
+        ]
+      },
+      {
+        "paidAt": "2025-06-30",
+        "kind": "payment",
+        "amount": 2000000,
+        "allocationType": "legal",
+        "appliedAmount": 2000000,
+        "unappliedAmount": 0,
+        "claims": [
+          {
+            "claimId": "loan",
+            "interestAccrued": 278112,
+            "costApplied": 0,
+            "interestApplied": 278112,
+            "principalApplied": 1721888,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 7574002,
+            "name": "대여금",
+            "accruedFrom": "2025-04-01",
+            "accruedTo": "2025-06-30",
+            "statutoryRank": {
+              "dueReached": false,
+              "debtorBenefitRank": 0,
+              "dueAt": "2025-12-31",
+              "priorityLabel": "법정충당 1순위 (변제기 미도래, 변제이익 순위 0)"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

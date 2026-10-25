@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "2",
+  "id": "case-014",
+  "title": "구법 1960~1978: 처 + 호주상속 아들 + 동일가적 딸 + 출가녀 (VK E-4c 1970 실측 재현)",
+  "source": "manual-derivation",
+  "notes": "1970-06-01 사망 → 제정 민법 제1009조 (1962·1964·1970 개정은 상속분 조문 불변). 호주상속 아들 8×1.5=12, 동일가적 딸 = 남자의 1/2 = 4 (제1항 단서 후단), 출가녀 = 남자의 1/4 = 2 (제2항), 처 = 직계비속과 공동이면 남자의 1/2 = 4 (제3항). 합 22 → 처 4/22=2/11, 아들 12/22=6/11, 딸 4/22=2/11, 출가녀 2/22=1/11. VK 실측 2/11·6/11·2/11·1/11 과 일치 (E-4c).",
+  "input": {
+    "decedent": {
+      "deceasedAt": "1970-06-01"
+    },
+    "spouse": {
+      "name": "을",
+      "alive": true,
+      "relation": "wife"
+    },
+    "linealDescendants": [
+      {
+        "name": "병",
+        "deceasedBeforeOpening": false,
+        "sex": "male",
+        "hojuSuccessor": true
+      },
+      {
+        "name": "정",
+        "deceasedBeforeOpening": false,
+        "sex": "female",
+        "sameFamilyRegister": true
+      },
+      {
+        "name": "무",
+        "deceasedBeforeOpening": false,
+        "sex": "female",
+        "sameFamilyRegister": false
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance-pre1991/v1.0.0",
+    "shares": [
+      {
+        "name": "을",
+        "numerator": 2,
+        "denominator": 11,
+        "rawNumerator": 4,
+        "rawDenominator": 22
+      },
+      {
+        "name": "병",
+        "numerator": 6,
+        "denominator": 11,
+        "rawNumerator": 12,
+        "rawDenominator": 22
+      },
+      {
+        "name": "정",
+        "numerator": 2,
+        "denominator": 11,
+        "rawNumerator": 4,
+        "rawDenominator": 22
+      },
+      {
+        "name": "무",
+        "numerator": 1,
+        "denominator": 11,
+        "rawNumerator": 2,
+        "rawDenominator": 22
+      }
+    ]
+  }
+}

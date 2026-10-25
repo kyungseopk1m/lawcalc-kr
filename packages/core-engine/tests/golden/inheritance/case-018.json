@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "2",
+  "id": "case-018",
+  "title": "구법 입력 + 1960-01-01 전 사망 → 거부 (관습법 시기)",
+  "source": "manual-derivation",
+  "notes": "민법 부칙(법률 제471호) 제25조 제1항: 시행일(1960-01-01) 전에 개시된 상속은 구법(관습)을 적용한다. 이 엔진은 관습법 상속을 계산하지 않는다.",
+  "input": {
+    "decedent": {
+      "deceasedAt": "1959-12-31"
+    },
+    "spouse": {
+      "alive": true,
+      "relation": "wife"
+    },
+    "linealDescendants": [
+      {
+        "name": "아들",
+        "deceasedBeforeOpening": false,
+        "sex": "male"
+      }
+    ]
+  },
+  "expected": {
+    "kind": "error",
+    "message": "1960-01-01 전 사망(입력: 1959-12-31)은 민법 시행 전 관습법이 적용되어 계산하지 않습니다"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "2",
+  "id": "case-016",
+  "title": "구법 1979~1990: 처가 피상속인, 남편 + 아들 + 출가녀",
+  "source": "manual-derivation",
+  "notes": "1980-05-01 사망, 피상속인이 처. 제1002조: 남편은 직계비속과 동순위 공동상속. 제1009조 제3항은 처만 정하므로 남편은 제1항 균분 원칙의 남자 상속분 8로 본다(해석, 계획 문서 불확실성 U3). 아들 8, 동일가적내에 없는 딸 2. 합 18 → 남편 8/18=4/9, 아들 4/9, 딸 2/18=1/9.",
+  "input": {
+    "decedent": {
+      "deceasedAt": "1980-05-01"
+    },
+    "spouse": {
+      "name": "남편",
+      "alive": true,
+      "relation": "husband"
+    },
+    "linealDescendants": [
+      {
+        "name": "아들",
+        "deceasedBeforeOpening": false,
+        "sex": "male"
+      },
+      {
+        "name": "딸",
+        "deceasedBeforeOpening": false,
+        "sex": "female",
+        "sameFamilyRegister": false
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance-pre1991/v1.0.0",
+    "shares": [
+      {
+        "name": "남편",
+        "numerator": 4,
+        "denominator": 9,
+        "rawNumerator": 8,
+        "rawDenominator": 18
+      },
+      {
+        "name": "아들",
+        "numerator": 4,
+        "denominator": 9,
+        "rawNumerator": 8,
+        "rawDenominator": 18
+      },
+      {
+        "name": "딸",
+        "numerator": 1,
+        "denominator": 9,
+        "rawNumerator": 2,
+        "rawDenominator": 18
+      }
+    ]
+  }
+}

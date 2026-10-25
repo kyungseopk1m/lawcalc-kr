@@ -52,7 +52,7 @@ export const criminalFilingsVersionTag = (ds: CriminalFilingDataset): string =>
  * 공백과 가운뎃점류를 무시한 비교용 문자열. 원문이 "가  철", "형소법361의3" 처럼 공백을 제멋대로
  * 두고, 같은 "열람·복사" 를 · (U+00B7), ․ (U+2024), ㆍ (U+318D) 로 섞어 쓴다.
  */
-const fold = (s: string): string =>
+export const fold = (s: string): string =>
   s.replace(/[\s\u00B7\u2022\u2024\u2027\u2219\u22C5\u30FB\u318D\uFF65]+/g, "").toLowerCase();
 
 /**

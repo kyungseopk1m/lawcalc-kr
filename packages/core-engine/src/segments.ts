@@ -163,3 +163,36 @@ function validateExplicitSegments(
   }
   return sorted;
 }
+
+/**
+ * 소장 송달일 다음 날부터 소송촉진법 이율로 바꾸는 이율 구간.
+ *
+ * 소송촉진 등에 관한 특례법 제3조 제1항: 금전채무 이행 판결의 지연손해금 법정이율은 소장 또는 이에
+ * 준하는 서면이 채무자에게 송달된 날의 다음 날부터 대통령령으로 정하는 이율에 따른다. 송달일까지는
+ * `basePreset`(민법·상법·약정) 이율이다. 제2항(항쟁이 타당한 범위에서 적용 배제)은 사건마다 판단할
+ * 일이라 자동 판정하지 않는다. 그 범위가 있으면 `serviceDate` 에 그 끝날(예: 판결 선고일)을 넣는다.
+ *
+ * 소촉법 구간은 데이터셋 이력대로 시행일마다 나뉜다(이자 탭의 소촉법 프리셋과 같다). 개정령 부칙의
+ * 변론종결 경과조치는 자동 판정하지 않는다.
+ */
+export function serviceSwitchSegments(
+  params: {
+    startDate: IsoDate;
+    endDate: IsoDate;
+    serviceDate: IsoDate;
+    basePreset: Exclude<LegalRatePreset, "promotion">;
+  },
+  deps?: ResolveSegmentsDeps,
+): RateSegment[] {
+  const { startDate, endDate, serviceDate, basePreset } = params;
+  const switchFrom = addDays(serviceDate, 1);
+  const options = { mode: "period", leapYear: "actual", includeFirstDay: true } as const;
+  const part = (from: IsoDate, to: IsoDate, preset: LegalRatePreset) =>
+    resolveSegments(
+      { principal: 1, startDate: from, endDate: to, legalRatePreset: preset, options },
+      deps,
+    );
+  if (switchFrom > endDate) return part(startDate, endDate, basePreset);
+  if (switchFrom <= startDate) return part(startDate, endDate, "promotion");
+  return [...part(startDate, serviceDate, basePreset), ...part(switchFrom, endDate, "promotion")];
+}

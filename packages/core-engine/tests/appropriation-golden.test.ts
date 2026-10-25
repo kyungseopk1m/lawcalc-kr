@@ -49,6 +49,10 @@ interface ExpectedShape {
     remainingGrandTotal: number;
   };
   claims: ClaimExpected[];
+  /** 여러 번 변제·이자·상계·이자제한법 픽스처만. 값 전체를 대조한다. */
+  events?: unknown;
+  interestLimits?: unknown;
+  interestLimitsDataVersion?: string;
 }
 
 interface GoldenCase {
@@ -100,6 +104,40 @@ const COVERAGE: GoldenCoverage = {
     "claims[].statutoryRank.priorityLabel",
     "claims[].statutoryRank.proportionalShare.numerator",
     "claims[].statutoryRank.proportionalShare.denominator",
+    "events[].paidAt",
+    "events[].kind",
+    "events[].amount",
+    "events[].allocationType",
+    "events[].appliedAmount",
+    "events[].unappliedAmount",
+    "events[].claims[].claimId",
+    "events[].claims[].name",
+    "events[].claims[].interestAccrued",
+    "events[].claims[].accruedFrom",
+    "events[].claims[].accruedTo",
+    "events[].claims[].costApplied",
+    "events[].claims[].interestApplied",
+    "events[].claims[].principalApplied",
+    "events[].claims[].costBalanceAfter",
+    "events[].claims[].interestBalanceAfter",
+    "events[].claims[].principalBalanceAfter",
+    "events[].claims[].statutoryRank.dueReached",
+    "events[].claims[].statutoryRank.debtorBenefitRank",
+    "events[].claims[].statutoryRank.dueAt",
+    "events[].claims[].statutoryRank.priorityLabel",
+    "interestLimits[].claimId",
+    "interestLimits[].agreedAt",
+    "interestLimits[].capRate",
+    "interestLimits[].agreedRate",
+    "interestLimits[].appliedRate",
+    "interestLimits[].capped",
+    "interestLimits[].notice",
+    "interestLimits[].prepaid.prepaidInterest",
+    "interestLimits[].prepaid.receivedAmount",
+    "interestLimits[].prepaid.allowedInterest",
+    "interestLimits[].prepaid.excessToPrincipal",
+    "interestLimits[].prepaid.principalAfter",
+    "interestLimitsDataVersion",
   ],
   unpinned: {
     computedAt: "실행 시각이라 비결정이다.",
@@ -140,6 +178,11 @@ describe("appropriation golden cases (v0.4.0-A — engine 코어)", () => {
       expect(result.disclaimer, `${c.id} disclaimer`).toBe(STANDARD_DISCLAIMER);
 
       expect(result.totals, `${c.id} totals`).toEqual(c.expected.totals);
+      expect(result.events, `${c.id} events`).toEqual(c.expected.events);
+      expect(result.interestLimits, `${c.id} interestLimits`).toEqual(c.expected.interestLimits);
+      expect(result.interestLimitsDataVersion, `${c.id} interestLimitsDataVersion`).toBe(
+        c.expected.interestLimitsDataVersion,
+      );
 
       // 충당 순위는 결과 배열의 순서로 드러나므로 claimId 로 찾지 않고 위치까지 대조한다.
       expect(

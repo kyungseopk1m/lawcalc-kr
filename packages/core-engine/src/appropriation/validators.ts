@@ -10,7 +10,24 @@ const ID_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_CLAIMS = 50;
 const MAX_NAME_LENGTH = 200;
+const MAX_PAYMENTS = 200;
 const PREFIX = "변제충당 입력 검증 실패";
+
+/**
+ * 새 키(여러 번 변제·상계·이자·이자제한법)가 하나라도 있는가. 없으면 종전 단일 변제 경로를 쓴다.
+ */
+export function isExtendedAppropriationInput(input: AppropriationInput): boolean {
+  return (
+    input.additionalPayments !== undefined ||
+    input.payment.kind !== undefined ||
+    input.claims.some(
+      (c) =>
+        c.interestRate !== undefined ||
+        c.interestFrom !== undefined ||
+        c.interestLimitAct !== undefined,
+    )
+  );
+}
 
 export function validateAppropriationInput(input: AppropriationInput): void {
   if (input === null || typeof input !== "object") {
@@ -36,6 +53,25 @@ export function validateAppropriationInput(input: AppropriationInput): void {
   }
 
   validatePayment(input.payment, claimIds);
+  if (input.additionalPayments !== undefined) {
+    if (!Array.isArray(input.additionalPayments)) {
+      throw new RangeError(`${PREFIX}: additionalPayments 는 배열이어야 합니다.`);
+    }
+    if (input.additionalPayments.length + 1 > MAX_PAYMENTS) {
+      throw new RangeError(`${PREFIX}: 변제는 ${MAX_PAYMENTS}건 이하로 입력해야 합니다.`);
+    }
+    for (const payment of input.additionalPayments) validatePayment(payment, claimIds);
+  }
+  if (isExtendedAppropriationInput(input)) {
+    // 여러 번 변제·이자는 날짜 순서로만 의미가 있다.
+    for (const payment of [input.payment, ...(input.additionalPayments ?? [])]) {
+      if (payment.paidAt === undefined) {
+        throw new RangeError(
+          `${PREFIX}: 여러 번 변제·상계·이자 계산에는 모든 변제의 변제일(상계는 상계적상일)이 필요합니다.`,
+        );
+      }
+    }
+  }
 
   if (input.computedAt !== undefined && !ISO_DATE_PATTERN.test(input.computedAt)) {
     throw new RangeError(`${PREFIX}: computedAt 은 YYYY-MM-DD 형식이어야 합니다.`);
@@ -83,6 +119,48 @@ function validateClaim(claim: AppropriationClaimInput): void {
       );
     }
   }
+  validateClaimInterest(claim);
+}
+
+function validateClaimInterest(claim: AppropriationClaimInput): void {
+  const label = `${PREFIX}: 채권 ${claim.id} 의`;
+  if (claim.interestRate !== undefined) {
+    if (
+      typeof claim.interestRate !== "number" ||
+      !Number.isFinite(claim.interestRate) ||
+      claim.interestRate <= 0 ||
+      claim.interestRate > 1
+    ) {
+      throw new RangeError(`${label} interestRate 는 0 초과 1 이하(연 100% 이하)여야 합니다.`);
+    }
+  }
+  if (claim.interestFrom !== undefined && !ISO_DATE_PATTERN.test(claim.interestFrom)) {
+    throw new RangeError(`${label} interestFrom 은 YYYY-MM-DD 형식이어야 합니다.`);
+  }
+  const limit = claim.interestLimitAct;
+  const prepaid = limit?.prepaidInterest;
+  if (
+    (claim.interestRate !== undefined || (prepaid ?? 0) > 0) &&
+    claim.interestFrom === undefined
+  ) {
+    throw new RangeError(`${label} 이자 기산일(interestFrom)이 필요합니다.`);
+  }
+  if (limit === undefined) return;
+  if (limit === null || typeof limit !== "object") {
+    throw new RangeError(`${label} interestLimitAct 는 객체여야 합니다.`);
+  }
+  if (typeof limit.agreedAt !== "string" || !ISO_DATE_PATTERN.test(limit.agreedAt)) {
+    throw new RangeError(`${label} 약정일(agreedAt)은 YYYY-MM-DD 형식이어야 합니다.`);
+  }
+  if (prepaid !== undefined) {
+    assertNonNegativeInteger(prepaid, `${label} prepaidInterest`);
+    if (prepaid >= claim.principalBalance) {
+      throw new RangeError(`${label} 선이자는 원본보다 작아야 합니다.`);
+    }
+    if (prepaid > 0 && claim.dueAt < claim.interestFrom!) {
+      throw new RangeError(`${label} 선이자 검토에는 이행기가 이자 기산일 이후여야 합니다.`);
+    }
+  }
 }
 
 function validatePayment(payment: AppropriationPaymentInput, claimIds: Set<string>): void {
@@ -99,6 +177,9 @@ function validatePayment(payment: AppropriationPaymentInput, claimIds: Set<strin
   }
   if (payment.paidAt !== undefined && !ISO_DATE_PATTERN.test(payment.paidAt)) {
     throw new RangeError(`${PREFIX}: payment.paidAt 은 YYYY-MM-DD 형식이어야 합니다.`);
+  }
+  if (payment.kind !== undefined && payment.kind !== "payment" && payment.kind !== "setoff") {
+    throw new RangeError(`${PREFIX}: payment.kind 는 "payment" 또는 "setoff" 여야 합니다.`);
   }
   validateAllocationDirective(payment.allocation, payment.amount, claimIds);
 }

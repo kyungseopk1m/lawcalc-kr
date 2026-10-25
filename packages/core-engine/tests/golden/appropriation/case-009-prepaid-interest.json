@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "2",
+  "id": "case-009-prepaid-interest",
+  "title": "선이자 사전공제: 실제 받은 금액 기준 한도 초과분 원본 충당",
+  "source": "이자제한법 제3조, 제2조 제1항, 시행령 연 20%. 손 계산: 7,000,000 × 20% × 1년 = 1,400,000; 초과 1,600,000; 8,400,000 × 20% × 90/365 = 414,246",
+  "notes": "선이자가 덮는 기간(이자 기산일~이행기) 다음 날부터 이자를 붙인다.",
+  "input": {
+    "claims": [
+      {
+        "id": "c",
+        "principalBalance": 10000000,
+        "dueAt": "2022-12-31",
+        "interestRate": 0.2,
+        "interestFrom": "2022-01-01",
+        "interestLimitAct": {
+          "agreedAt": "2022-01-01",
+          "prepaidInterest": 3000000
+        }
+      }
+    ],
+    "payment": {
+      "amount": 1000000,
+      "paidAt": "2023-03-31",
+      "allocation": {
+        "type": "legal"
+      }
+    },
+    "computedAt": "2026-10-25"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 1000000,
+      "allocationType": "legal",
+      "appliedAmount": 1000000,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 0,
+      "totalInterestApplied": 414246,
+      "totalPrincipalApplied": 585754,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 7814246,
+      "remainingGrandTotal": 7814246
+    },
+    "claims": [
+      {
+        "claimId": "c",
+        "costApplied": 0,
+        "interestApplied": 414246,
+        "principalApplied": 585754,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 7814246,
+        "totalApplied": 1000000,
+        "name": null,
+        "statutoryRank": null
+      }
+    ],
+    "events": [
+      {
+        "paidAt": "2023-03-31",
+        "kind": "payment",
+        "amount": 1000000,
+        "allocationType": "legal",
+        "appliedAmount": 1000000,
+        "unappliedAmount": 0,
+        "claims": [
+          {
+            "claimId": "c",
+            "interestAccrued": 414246,
+            "costApplied": 0,
+            "interestApplied": 414246,
+            "principalApplied": 585754,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 7814246,
+            "accruedFrom": "2023-01-01",
+            "accruedTo": "2023-03-31",
+            "statutoryRank": {
+              "dueReached": true,
+              "debtorBenefitRank": 0,
+              "dueAt": "2022-12-31",
+              "priorityLabel": "법정충당 1순위 (변제기 도래, 변제이익 순위 0)"
+            }
+          }
+        ]
+      }
+    ],
+    "interestLimits": [
+      {
+        "claimId": "c",
+        "agreedAt": "2022-01-01",
+        "capRate": 0.2,
+        "agreedRate": 0.2,
+        "appliedRate": 0.2,
+        "capped": false,
+        "notice": "약정일 최고이자율은 연 20% 입니다. 선이자 1,600,000원이 한도를 넘어 원본에 충당한 것으로 보았습니다 (이자제한법 제3조).",
+        "prepaid": {
+          "prepaidInterest": 3000000,
+          "receivedAmount": 7000000,
+          "allowedInterest": 1400000,
+          "excessToPrincipal": 1600000,
+          "principalAfter": 8400000
+        }
+      }
+    ],
+    "interestLimitsDataVersion": "interest-limits/v1.0.1"
+  }
+}

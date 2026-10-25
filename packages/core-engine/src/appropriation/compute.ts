@@ -1,4 +1,7 @@
+import { addDays } from "../days";
 import { STANDARD_DISCLAIMER } from "../disclaimers";
+import { calculateInterest } from "../interest";
+import { getCapAt, interestLimitsVersionTag, loadInterestLimits } from "../interest-limits";
 // 원 단위 잔여 배분 규칙(최대잉여법)의 단일 출처. 도메인 지식이 없는 순수 산술
 // 헬퍼라 소송비용 쪽 구현을 그대로 쓴다 — 복제하면 한쪽만 고쳐지는 결함이 생긴다.
 import { divideProportionally } from "../litigation-cost/distribute";
@@ -7,14 +10,18 @@ import type {
   AllocationTarget,
   AppropriationClaimInput,
   AppropriationClaimResult,
+  AppropriationEventClaimResult,
+  AppropriationEventResult,
   AppropriationInput,
+  AppropriationInterestLimitResult,
+  AppropriationPaymentInput,
   AppropriationResult,
   AppropriationStatutoryRank,
   AppropriationTotals,
   IsoDate,
 } from "./types";
 import { APPROPRIATION_DATA_VERSION } from "./types";
-import { validateAppropriationInput } from "./validators";
+import { isExtendedAppropriationInput, validateAppropriationInput } from "./validators";
 
 interface MutableBalance {
   cost: number;
@@ -38,6 +45,11 @@ interface ExplicitDirective {
 
 export function computeAppropriation(input: AppropriationInput): AppropriationResult {
   validateAppropriationInput(input);
+  // 새 키(여러 번 변제·이자·상계·이자제한법)가 없으면 종전 경로를 그대로 탄다. 결과가 바이트 단위로 같아야
+  // 기존 골든과 저장 파일이 흔들리지 않는다.
+  if (isExtendedAppropriationInput(input)) {
+    return computeAppropriationSchedule(input);
+  }
 
   const computedAt = input.computedAt ?? todayIso();
   // 변제기 도래 판정 기준일. 민법 제477조 제1호는 **변제 시점** 을 본다 — 계산을 언제 돌렸는지가
@@ -272,6 +284,283 @@ function buildTotals(works: ClaimWork[]): AppropriationTotals {
   totals.remainingGrandTotal =
     totals.remainingCost + totals.remainingInterest + totals.remainingPrincipal;
   return totals;
+}
+
+/**
+ * 법원 이자계산 방식 (기간식, 윤년 366, 초일 산입, 원 미만 절사). 이자 탭의 "법원 방식 적용" 과 같다.
+ * 변제일 당일까지 이자를 붙이고 다음 이자는 그 다음 날부터 붙인다.
+ */
+const ACCRUAL_OPTIONS = {
+  mode: "period",
+  leapYear: "actual",
+  includeFirstDay: true,
+  rounding: "floor",
+} as const;
+
+/** 이자제한법 제2조 제5항: 대차원금 10만원 미만은 제1항(최고이자율)을 적용하지 않는다. */
+const INTEREST_LIMIT_MIN_PRINCIPAL = 100_000;
+
+function simpleInterest(principal: number, rate: number, from: IsoDate, to: IsoDate): number {
+  if (principal <= 0 || rate <= 0 || to < from) return 0;
+  return calculateInterest({
+    principal,
+    startDate: from,
+    endDate: to,
+    legalRatePreset: { customRate: rate },
+    options: ACCRUAL_OPTIONS,
+  }).totalInterest;
+}
+
+function formatPercent(rate: number): string {
+  return `${(rate * 100).toLocaleString("ko-KR", { maximumFractionDigits: 10 })}%`;
+}
+
+interface ScheduleClaim {
+  work: ClaimWork;
+  /** 다음 이자 기산일. 이자를 붙이지 않는 채권은 null. */
+  accrualFrom: IsoDate | null;
+  rate: number;
+  costApplied: number;
+  interestApplied: number;
+  principalApplied: number;
+}
+
+/**
+ * 이자제한법 검토 (제2조·제3조). 원본 잔액 조정(선이자 초과분)과 적용 이율을 돌려준다.
+ */
+function reviewInterestLimit(
+  claim: AppropriationClaimInput,
+  dataset: ReturnType<typeof loadInterestLimits>,
+): AppropriationInterestLimitResult {
+  const limit = claim.interestLimitAct!;
+  const agreedRate = claim.interestRate;
+  const base: AppropriationInterestLimitResult = {
+    claimId: claim.id,
+    agreedAt: limit.agreedAt,
+    capRate: null,
+    ...(agreedRate === undefined ? {} : { agreedRate, appliedRate: agreedRate }),
+    capped: false,
+    notice: "",
+  };
+  const prepaid = limit.prepaidInterest ?? 0;
+  // 제3조 검토를 하지 않는 두 경우에도 선이자는 이미 받은 이자다. 원본은 그대로 두고, 선이자가
+  // 덮는 기간(이자 기산일~이행기)에는 이자를 다시 붙이지 않는다(기산일 이동은 호출부).
+  const prepaidOnlyNote =
+    prepaid > 0
+      ? ` 선이자 ${prepaid.toLocaleString("ko-KR")}원은 이자 기산일 ${claim.interestFrom}~이행기 ${claim.dueAt} 이자를 ` +
+        "미리 받은 것으로만 보아 그 기간 이자를 다시 붙이지 않았고, 원본은 조정하지 않았습니다."
+      : "";
+  // 제2조 제5항 "대차원금이 10만원 미만인 대차의 이자에 관하여는 제1항을 적용하지 아니한다."
+  // 선이자도 그 대차의 이자이고, 제3조는 "제2조제1항에서 정한 최고이자율" 을 넘는 부분만 원본에
+  // 충당하므로 최고이자율이 미치지 않는 대차에는 제3조 검토도 하지 않는다.
+  if (claim.principalBalance < INTEREST_LIMIT_MIN_PRINCIPAL) {
+    base.notice =
+      "대차원금이 10만원 미만이라 이자제한법 최고이자율을 적용하지 않았습니다 (제2조 제5항)." +
+      (prepaid > 0
+        ? " 최고이자율이 미치지 않으므로 선이자 사전공제(제3조) 검토도 하지 않았습니다."
+        : "") +
+      prepaidOnlyNote;
+    return base;
+  }
+  // 제2조 제2항: 최고이자율은 약정한 때의 이자율. 시행령 부칙도 "시행 이후 계약을 체결하거나 갱신하는 분부터".
+  const cap = getCapAt(dataset, "interestLimitAct", limit.agreedAt);
+  if (cap === undefined) {
+    base.notice =
+      `약정일 ${limit.agreedAt} 에 적용할 최고이자율 데이터가 없어 제한하지 않았습니다 ` +
+      "(데이터는 2007-06-30 이후 약정만 담고 있습니다)." +
+      // 현행 이자제한법(법률 제8322호)은 2007-06-30 시행이고, 구 이자제한법은 1998-01-13 폐지(법률 제5507호).
+      (prepaid > 0 && limit.agreedAt < "2007-06-30"
+        ? " 현행 이자제한법(법률 제8322호)은 2007-06-30 시행이라 그 전 약정에는 적용되지 않아 선이자 사전공제(제3조) 검토도 하지 않았습니다."
+        : prepaid > 0
+          ? " 선이자 사전공제(제3조) 검토도 하지 않았습니다."
+          : "") +
+      prepaidOnlyNote;
+    return base;
+  }
+  base.capRate = cap;
+  const notes: string[] = [];
+  // 제2조 제3항: 최고이자율을 초과하는 부분은 무효.
+  if (agreedRate !== undefined && agreedRate > cap) {
+    base.appliedRate = cap;
+    base.capped = true;
+    notes.push(
+      `약정이율 연 ${formatPercent(agreedRate)} 가 약정일 최고이자율 연 ${formatPercent(cap)} 를 넘어 ` +
+        `연 ${formatPercent(cap)} 로 계산했습니다 (이자제한법 제2조 제3항).`,
+    );
+  } else {
+    notes.push(`약정일 최고이자율은 연 ${formatPercent(cap)} 입니다.`);
+  }
+  if (prepaid > 0) {
+    // 제3조: 실제 받은 금액을 원본으로 최고이자율에 따라 계산한 금액을 넘는 선이자는 원본에 충당한 것으로 본다.
+    const receivedAmount = claim.principalBalance - prepaid;
+    const allowedInterest = simpleInterest(receivedAmount, cap, claim.interestFrom!, claim.dueAt);
+    const excessToPrincipal = Math.max(0, prepaid - allowedInterest);
+    base.prepaid = {
+      prepaidInterest: prepaid,
+      receivedAmount,
+      allowedInterest,
+      excessToPrincipal,
+      principalAfter: claim.principalBalance - excessToPrincipal,
+    };
+    notes.push(
+      excessToPrincipal > 0
+        ? `선이자 ${excessToPrincipal.toLocaleString("ko-KR")}원이 한도를 넘어 원본에 충당한 것으로 보았습니다 (이자제한법 제3조).`
+        : "선이자가 한도 안이라 원본을 조정하지 않았습니다 (이자제한법 제3조).",
+    );
+  }
+  base.notice = notes.join(" ");
+  return base;
+}
+
+/**
+ * 여러 번 변제·이자 발생·상계·이자제한법을 반영한 충당 (민법 제476조~제479조, 제499조 준용).
+ *
+ * 변제를 날짜 순으로 하나씩 처리한다. 각 변제 직전에 그 변제일까지의 이자를 붙이고, 그 변제는
+ * 종전 단일 변제와 같은 규칙(지정 → 잉여는 제477조 법정충당, 채권 안에서는 제479조 비용·이자·원본 순)
+ * 으로 충당한다. 이자는 원본에만 붙고 이자에 이자를 붙이지 않는다.
+ */
+function computeAppropriationSchedule(input: AppropriationInput): AppropriationResult {
+  const computedAt = input.computedAt ?? todayIso();
+  const needsLimits = input.claims.some((c) => c.interestLimitAct !== undefined);
+  const dataset = needsLimits ? loadInterestLimits() : undefined;
+  const interestLimits: AppropriationInterestLimitResult[] = [];
+
+  const states: ScheduleClaim[] = input.claims.map((claim) => {
+    let principal = claim.principalBalance;
+    let rate = claim.interestRate ?? 0;
+    let accrualFrom: IsoDate | null = claim.interestRate === undefined ? null : claim.interestFrom!;
+    if (claim.interestLimitAct && dataset) {
+      const review = reviewInterestLimit(claim, dataset);
+      interestLimits.push(review);
+      if (review.appliedRate !== undefined) rate = review.appliedRate;
+      if (review.prepaid) principal = review.prepaid.principalAfter;
+    }
+    // 선이자는 이자 기산일~변제기 이자를 미리 받은 것이므로 그 다음 날부터 이자를 붙인다.
+    // 이자제한법 제3조 검토 여부(10만원 미만, 2007-06-30 전 약정)와 상관없이 이중으로 붙이지 않는다.
+    if ((claim.interestLimitAct?.prepaidInterest ?? 0) > 0 && accrualFrom !== null) {
+      accrualFrom = addDays(claim.dueAt, 1);
+    }
+    return {
+      work: {
+        input: claim,
+        balance: {
+          cost: claim.costBalance ?? 0,
+          interest: claim.interestBalance ?? 0,
+          principal,
+          costApplied: 0,
+          interestApplied: 0,
+          principalApplied: 0,
+        },
+      },
+      accrualFrom,
+      rate,
+      costApplied: 0,
+      interestApplied: 0,
+      principalApplied: 0,
+    };
+  });
+  const works = states.map((s) => s.work);
+  const workMap = new Map<string, ClaimWork>(works.map((w) => [w.input.id, w]));
+
+  // 같은 날은 입력 순서를 지킨다 (Array.prototype.sort 는 안정 정렬).
+  const payments: AppropriationPaymentInput[] = [
+    input.payment,
+    ...(input.additionalPayments ?? []),
+  ];
+  const ordered = [...payments].sort((a, b) => a.paidAt!.localeCompare(b.paidAt!));
+
+  const events: AppropriationEventResult[] = ordered.map((payment) => {
+    const paidAt = payment.paidAt!;
+    const accrued = states.map((s) => {
+      if (s.accrualFrom === null || s.accrualFrom > paidAt) return null;
+      const from = s.accrualFrom;
+      const amount = simpleInterest(s.work.balance.principal, s.rate, from, paidAt);
+      s.work.balance.interest += amount;
+      s.accrualFrom = addDays(paidAt, 1);
+      return { from, to: paidAt, amount };
+    });
+    for (const w of works) {
+      w.balance.costApplied = 0;
+      w.balance.interestApplied = 0;
+      w.balance.principalApplied = 0;
+      delete w.statutoryRank;
+    }
+
+    const kindLabel = payment.kind === "setoff" ? "상계 " : "";
+    let remaining: number;
+    if (payment.allocation.type === "legal") {
+      remaining = applyLegalAllocation(works, payment.amount, paidAt, kindLabel);
+    } else {
+      remaining = applyExplicitDirective(payment.allocation, payment.amount, workMap);
+      if (remaining > 0) {
+        remaining = applyLegalAllocation(works, remaining, paidAt, `${kindLabel}잉여 `);
+      }
+    }
+
+    const claims = states.map((s, i): AppropriationEventClaimResult => {
+      const b = s.work.balance;
+      s.costApplied += b.costApplied;
+      s.interestApplied += b.interestApplied;
+      s.principalApplied += b.principalApplied;
+      const a = accrued[i];
+      const row: AppropriationEventClaimResult = {
+        claimId: s.work.input.id,
+        interestAccrued: a?.amount ?? 0,
+        costApplied: b.costApplied,
+        interestApplied: b.interestApplied,
+        principalApplied: b.principalApplied,
+        costBalanceAfter: b.cost,
+        interestBalanceAfter: b.interest,
+        principalBalanceAfter: b.principal,
+      };
+      if (s.work.input.name !== undefined) row.name = s.work.input.name;
+      if (a && a.amount > 0) {
+        row.accruedFrom = a.from;
+        row.accruedTo = a.to;
+      }
+      if (s.work.statutoryRank) row.statutoryRank = s.work.statutoryRank;
+      return row;
+    });
+
+    return {
+      paidAt,
+      kind: payment.kind ?? "payment",
+      amount: payment.amount,
+      allocationType: payment.allocation.type,
+      appliedAmount: payment.amount - remaining,
+      unappliedAmount: remaining,
+      claims,
+    };
+  });
+
+  for (const s of states) {
+    s.work.balance.costApplied = s.costApplied;
+    s.work.balance.interestApplied = s.interestApplied;
+    s.work.balance.principalApplied = s.principalApplied;
+    delete s.work.statutoryRank;
+  }
+
+  const amount = events.reduce((sum, e) => sum + e.amount, 0);
+  const unapplied = events.reduce((sum, e) => sum + e.unappliedAmount, 0);
+  const result: AppropriationResult = {
+    claims: works.map(toClaimResult),
+    payment: {
+      amount,
+      allocationType: input.payment.allocation.type,
+      appliedAmount: amount - unapplied,
+      unappliedAmount: unapplied,
+    },
+    totals: buildTotals(works),
+    dataVersion: APPROPRIATION_DATA_VERSION,
+    disclaimer: STANDARD_DISCLAIMER,
+    computedAt,
+    events,
+  };
+  if (dataset) {
+    result.interestLimits = interestLimits;
+    result.interestLimitsDataVersion = interestLimitsVersionTag(dataset);
+  }
+  return result;
 }
 
 function todayIso(): IsoDate {

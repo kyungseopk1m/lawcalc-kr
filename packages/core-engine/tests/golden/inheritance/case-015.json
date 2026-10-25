@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "2",
+  "id": "case-015",
+  "title": "구법 1960~1978: 아들 대습 (처 + 손자) + 처 + 아들 + 딸",
+  "source": "manual-derivation",
+  "notes": "1975-03-01 사망. 처 4, 아들 병 8, 아들 정(상속개시 전 사망) 슬롯 8, 동일가적 딸 기 4. 합 24. 정 슬롯은 제1001조 대습 + 제1003조 제2항 처(신)가 동순위 공동, 제1010조 제2항으로 슬롯 안에서 제1009조 적용: 신 = 직계비속과 공동하는 처 = 남자의 1/2 = 4, 손자 경 = 8, 슬롯 내 합 12. 신 = 8/24 × 4/12 = 32/288 = 1/9, 경 = 8/24 × 8/12 = 64/288 = 2/9. 처 4/24=1/6, 병 8/24=1/3, 기 4/24=1/6. 합 3/18+6/18+2/18+4/18+3/18 = 1.",
+  "input": {
+    "decedent": {
+      "deceasedAt": "1975-03-01"
+    },
+    "spouse": {
+      "name": "을",
+      "alive": true,
+      "relation": "wife"
+    },
+    "linealDescendants": [
+      {
+        "name": "병",
+        "deceasedBeforeOpening": false,
+        "sex": "male"
+      },
+      {
+        "name": "정",
+        "deceasedBeforeOpening": true,
+        "sex": "male",
+        "representatives": [
+          {
+            "name": "신",
+            "deceasedBeforeOpening": false,
+            "isSpouseOfRepresented": true
+          },
+          {
+            "name": "경",
+            "deceasedBeforeOpening": false,
+            "sex": "male"
+          }
+        ]
+      },
+      {
+        "name": "기",
+        "deceasedBeforeOpening": false,
+        "sex": "female",
+        "sameFamilyRegister": true
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance-pre1991/v1.0.0",
+    "shares": [
+      {
+        "name": "을",
+        "numerator": 1,
+        "denominator": 6,
+        "rawNumerator": 4,
+        "rawDenominator": 24
+      },
+      {
+        "name": "병",
+        "numerator": 1,
+        "denominator": 3,
+        "rawNumerator": 8,
+        "rawDenominator": 24
+      },
+      {
+        "name": "신",
+        "numerator": 1,
+        "denominator": 9,
+        "rawNumerator": 32,
+        "rawDenominator": 288
+      },
+      {
+        "name": "경",
+        "numerator": 2,
+        "denominator": 9,
+        "rawNumerator": 64,
+        "rawDenominator": 288
+      },
+      {
+        "name": "기",
+        "numerator": 1,
+        "denominator": 6,
+        "rawNumerator": 4,
+        "rawDenominator": 24
+      }
+    ]
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "2",
+  "id": "case-013",
+  "title": "구법 1979~1990: 처 + 호주상속 아들 + 동일가적 딸 + 출가녀 (VK E-4a 1985 실측 재현)",
+  "source": "manual-derivation",
+  "notes": "1985-06-01 사망 → 1977 개정 민법(1979 시행) 제1009조. 남자 상속분 = 8 단위. 호주상속 아들 8×1.5=12 (제1항 단서), 동일가적 딸 8 (1977 개정으로 여자 1/2 삭제), 동일가적내에 없는 딸 8×1/4=2 (제2항), 처 = 동일가적내 직계비속 상속분 8의 5할 가산 = 12 (제3항). 합 34 → 처 12/34=6/17, 아들 12/34=6/17, 딸 8/34=4/17, 출가녀 2/34=1/17. VK 실측 6/17·6/17·4/17·1/17 과 일치 (vk-run-2026-10-20 session-inherit.md E-4a).",
+  "input": {
+    "decedent": {
+      "deceasedAt": "1985-06-01"
+    },
+    "spouse": {
+      "name": "을",
+      "alive": true,
+      "relation": "wife"
+    },
+    "linealDescendants": [
+      {
+        "name": "병",
+        "deceasedBeforeOpening": false,
+        "sex": "male",
+        "hojuSuccessor": true
+      },
+      {
+        "name": "정",
+        "deceasedBeforeOpening": false,
+        "sex": "female",
+        "sameFamilyRegister": true
+      },
+      {
+        "name": "무",
+        "deceasedBeforeOpening": false,
+        "sex": "female",
+        "sameFamilyRegister": false
+      }
+    ]
+  },
+  "expected": {
+    "kind": "success",
+    "dataVersion": "inheritance-pre1991/v1.0.0",
+    "shares": [
+      {
+        "name": "을",
+        "numerator": 6,
+        "denominator": 17,
+        "rawNumerator": 12,
+        "rawDenominator": 34
+      },
+      {
+        "name": "병",
+        "numerator": 6,
+        "denominator": 17,
+        "rawNumerator": 12,
+        "rawDenominator": 34
+      },
+      {
+        "name": "정",
+        "numerator": 4,
+        "denominator": 17,
+        "rawNumerator": 8,
+        "rawDenominator": 34
+      },
+      {
+        "name": "무",
+        "numerator": 1,
+        "denominator": 17,
+        "rawNumerator": 2,
+        "rawDenominator": 34
+      }
+    ]
+  }
+}

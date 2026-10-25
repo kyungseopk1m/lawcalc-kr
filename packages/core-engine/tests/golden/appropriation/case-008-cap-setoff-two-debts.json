@@ -1,0 +1,229 @@
+{
+  "schemaVersion": "2",
+  "id": "case-008-cap-setoff-two-debts",
+  "title": "이자제한법 상한 + 상계적상일 소급 + 두 채무 법정충당",
+  "source": "이자제한법 제2조 제1항·제2항·제3항, 시행령(대통령령 제31593호) 연 20%; 민법 제477조 제1호·제3호, 제493조 제2항, 제499조. 손 계산은 p5-4a-appropriation-rules-2026-10-25.md 4절",
+  "notes": "상계(2023-01-31)를 뒤 변제(2023-03-31) 다음에 입력해도 날짜 순으로 먼저 충당한다.",
+  "input": {
+    "claims": [
+      {
+        "id": "a",
+        "principalBalance": 5000000,
+        "dueAt": "2022-06-30",
+        "interestRate": 0.3,
+        "interestFrom": "2022-01-01",
+        "interestLimitAct": {
+          "agreedAt": "2022-01-01"
+        }
+      },
+      {
+        "id": "b",
+        "principalBalance": 3000000,
+        "dueAt": "2022-12-31"
+      }
+    ],
+    "payment": {
+      "amount": 1000000,
+      "paidAt": "2022-06-30",
+      "allocation": {
+        "type": "legal"
+      }
+    },
+    "additionalPayments": [
+      {
+        "amount": 5000000,
+        "paidAt": "2023-03-31",
+        "allocation": {
+          "type": "legal"
+        }
+      },
+      {
+        "amount": 2000000,
+        "paidAt": "2023-01-31",
+        "kind": "setoff",
+        "allocation": {
+          "type": "legal"
+        }
+      }
+    ],
+    "computedAt": "2026-10-25"
+  },
+  "expected": {
+    "dataVersion": "appropriation/policy-v1",
+    "payment": {
+      "amount": 8000000,
+      "allocationType": "legal",
+      "appliedAmount": 8000000,
+      "unappliedAmount": 0
+    },
+    "totals": {
+      "totalCostApplied": 0,
+      "totalInterestApplied": 1123354,
+      "totalPrincipalApplied": 6876646,
+      "remainingCost": 0,
+      "remainingInterest": 0,
+      "remainingPrincipal": 1123354,
+      "remainingGrandTotal": 1123354
+    },
+    "claims": [
+      {
+        "claimId": "a",
+        "costApplied": 0,
+        "interestApplied": 1123354,
+        "principalApplied": 5000000,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 0,
+        "totalApplied": 6123354,
+        "name": null,
+        "statutoryRank": null
+      },
+      {
+        "claimId": "b",
+        "costApplied": 0,
+        "interestApplied": 0,
+        "principalApplied": 1876646,
+        "costBalanceAfter": 0,
+        "interestBalanceAfter": 0,
+        "principalBalanceAfter": 1123354,
+        "totalApplied": 1876646,
+        "name": null,
+        "statutoryRank": null
+      }
+    ],
+    "events": [
+      {
+        "paidAt": "2022-06-30",
+        "kind": "payment",
+        "amount": 1000000,
+        "allocationType": "legal",
+        "appliedAmount": 1000000,
+        "unappliedAmount": 0,
+        "claims": [
+          {
+            "claimId": "a",
+            "interestAccrued": 495890,
+            "costApplied": 0,
+            "interestApplied": 495890,
+            "principalApplied": 504110,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 4495890,
+            "accruedFrom": "2022-01-01",
+            "accruedTo": "2022-06-30",
+            "statutoryRank": {
+              "dueReached": true,
+              "debtorBenefitRank": 0,
+              "dueAt": "2022-06-30",
+              "priorityLabel": "법정충당 1순위 (변제기 도래, 변제이익 순위 0)"
+            }
+          },
+          {
+            "claimId": "b",
+            "interestAccrued": 0,
+            "costApplied": 0,
+            "interestApplied": 0,
+            "principalApplied": 0,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 3000000
+          }
+        ]
+      },
+      {
+        "paidAt": "2023-01-31",
+        "kind": "setoff",
+        "amount": 2000000,
+        "allocationType": "legal",
+        "appliedAmount": 2000000,
+        "unappliedAmount": 0,
+        "claims": [
+          {
+            "claimId": "a",
+            "interestAccrued": 529652,
+            "costApplied": 0,
+            "interestApplied": 529652,
+            "principalApplied": 1470348,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 3025542,
+            "accruedFrom": "2022-07-01",
+            "accruedTo": "2023-01-31",
+            "statutoryRank": {
+              "dueReached": true,
+              "debtorBenefitRank": 0,
+              "dueAt": "2022-06-30",
+              "priorityLabel": "상계 법정충당 1순위 (변제기 도래, 변제이익 순위 0)"
+            }
+          },
+          {
+            "claimId": "b",
+            "interestAccrued": 0,
+            "costApplied": 0,
+            "interestApplied": 0,
+            "principalApplied": 0,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 3000000
+          }
+        ]
+      },
+      {
+        "paidAt": "2023-03-31",
+        "kind": "payment",
+        "amount": 5000000,
+        "allocationType": "legal",
+        "appliedAmount": 5000000,
+        "unappliedAmount": 0,
+        "claims": [
+          {
+            "claimId": "a",
+            "interestAccrued": 97812,
+            "costApplied": 0,
+            "interestApplied": 97812,
+            "principalApplied": 3025542,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 0,
+            "accruedFrom": "2023-02-01",
+            "accruedTo": "2023-03-31",
+            "statutoryRank": {
+              "dueReached": true,
+              "debtorBenefitRank": 0,
+              "dueAt": "2022-06-30",
+              "priorityLabel": "법정충당 1순위 (변제기 도래, 변제이익 순위 0)"
+            }
+          },
+          {
+            "claimId": "b",
+            "interestAccrued": 0,
+            "costApplied": 0,
+            "interestApplied": 0,
+            "principalApplied": 1876646,
+            "costBalanceAfter": 0,
+            "interestBalanceAfter": 0,
+            "principalBalanceAfter": 1123354,
+            "statutoryRank": {
+              "dueReached": true,
+              "debtorBenefitRank": 0,
+              "dueAt": "2022-12-31",
+              "priorityLabel": "법정충당 2순위 (변제기 도래, 변제이익 순위 0)"
+            }
+          }
+        ]
+      }
+    ],
+    "interestLimits": [
+      {
+        "claimId": "a",
+        "agreedAt": "2022-01-01",
+        "capRate": 0.2,
+        "agreedRate": 0.3,
+        "appliedRate": 0.2,
+        "capped": true,
+        "notice": "약정이율 연 30% 가 약정일 최고이자율 연 20% 를 넘어 연 20% 로 계산했습니다 (이자제한법 제2조 제3항)."
+      }
+    ],
+    "interestLimitsDataVersion": "interest-limits/v1.0.1"
+  }
+}

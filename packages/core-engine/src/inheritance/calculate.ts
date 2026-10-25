@@ -1,6 +1,8 @@
 /**
  * 상속분 간이 계산 — 6 step 알고리즘.
  *
+ * 1991-01-01 전 사망은 구법 필드가 있을 때만 old-law.ts 로 넘긴다 (아래 단계는 현행 규칙).
+ *
  * 1. 입력 검증 (1991-01-01 cutoff, 2차 대습 거부, 직계존속·방계 대습 거부, 촌수 양의정수)
  * 2. fall-through 그룹 결정 (1·2·배우자단·3·4 순서). 2·4 순위는 최근친(최소 촌수)만 (제1000조 제2항).
  *    상속포기(`renounced`)한 자는 이 단계에서 빠진다 — 대습 사유가 아니라서 슬롯도 남기지
@@ -21,6 +23,7 @@
 
 import { STANDARD_DISCLAIMER } from "../disclaimers";
 import { type BigFraction, simplify, toNumberPair } from "./fraction";
+import { OLD_LAW_DATA_VERSION, OLD_LAW_FROM, hasOldLawFields, oldLawRawShares } from "./old-law";
 import type { HeirNode, InheritanceInput, InheritanceResult, InheritanceShare } from "./types";
 
 const INHERITANCE_DATA_VERSION = "inheritance/v1.0.0";
@@ -202,9 +205,18 @@ function validateInput(input: InheritanceInput): void {
     throw new RangeError("피상속인 사망일이 누락되었거나 형식이 올바르지 않습니다");
   }
   if (input.decedent.deceasedAt < CUTOFF_DATE) {
-    throw new RangeError(
-      `1991-01-01 이전 사망 케이스는 본 버전에서 지원하지 않습니다 (입력: ${input.decedent.deceasedAt})`,
-    );
+    // 구법 필드가 없는 입력(종전 모델·손해배상 탭)은 종전과 같은 메시지로 거부한다. 구법은 성별·
+    // 가적·호주상속이 상속분을 바꾸므로 그 정보 없이 계산하면 틀린 지분이 나온다.
+    if (!hasOldLawFields(input)) {
+      throw new RangeError(
+        `1991-01-01 이전 사망 케이스는 본 버전에서 지원하지 않습니다 (입력: ${input.decedent.deceasedAt}). 1960-01-01 ~ 1990-12-31 사망은 구법 입력(배우자 처·남편 구분, 상속인 성별·동일가적 여부)을 지정하면 구법으로 계산합니다.`,
+      );
+    }
+    if (input.decedent.deceasedAt < OLD_LAW_FROM) {
+      throw new RangeError(
+        `1960-01-01 전 사망(입력: ${input.decedent.deceasedAt})은 민법 시행 전 관습법이 적용되어 계산하지 않습니다 (민법 부칙 제25조 제1항). 전문가 확인이 필요합니다.`,
+      );
+    }
   }
   // 사망·결격과 포기는 양립할 수 없다. 상속개시 전에 사망한 사람은 포기할 수 없고, 결격자는
   // 포기할 지분 자체가 없다. 이 조합을 허용하면 포기자 제외가 먼저 걸려 대습 슬롯이 통째로
@@ -333,6 +345,23 @@ function distributeEqual(group: HeirNode[], defaultPrefix: string): RawShare[] {
 export function calculateInheritance(input: InheritanceInput): InheritanceResult {
   validateInput(input);
 
+  if (input.decedent.deceasedAt < CUTOFF_DATE) {
+    const wantOldTrace = input.estateWon !== undefined || input.includeTrace === true;
+    const oldTrace: string[] = [];
+    const warnings: string[] = [];
+    if (wantOldTrace) {
+      oldTrace.push(`피상속인 사망일 ${input.decedent.deceasedAt}: 상속개시 (구 민법 제997조)`);
+    }
+    return finishResult(
+      input,
+      oldLawRawShares(input, wantOldTrace ? oldTrace : null, warnings),
+      wantOldTrace,
+      oldTrace,
+      OLD_LAW_DATA_VERSION,
+      warnings,
+    );
+  }
+
   const spouseAlive = !!input.spouse?.alive;
   const spouseName = input.spouse?.name ?? "배우자";
 
@@ -459,6 +488,18 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
     throw new RangeError("상속인이 없습니다");
   }
 
+  return finishResult(input, rawShares, wantTrace, trace, INHERITANCE_DATA_VERSION);
+}
+
+/** 원분수 → 약분·금액·전개식 마무리. 현행·구법 경로가 같이 쓴다. */
+function finishResult(
+  input: InheritanceInput,
+  rawShares: RawShare[],
+  wantTrace: boolean,
+  trace: string[],
+  dataVersion: string,
+  warnings: string[] = [],
+): InheritanceResult {
   const shares: InheritanceShare[] = rawShares.map((rs) => {
     const simplified = simplify(rs.raw);
     const simplePair = toNumberPair(simplified);
@@ -508,7 +549,8 @@ export function calculateInheritance(input: InheritanceInput): InheritanceResult
     disclaimer: STANDARD_DISCLAIMER,
     ...estate,
     ...(wantTrace ? { trace } : {}),
-    dataVersion: INHERITANCE_DATA_VERSION,
+    ...(warnings.length > 0 ? { warnings } : {}),
+    dataVersion,
     computedAt: new Date().toISOString(),
   };
 }

@@ -22,7 +22,7 @@ export type { InterestLimitDataset, InterestLimitLaw, InterestLimitSlice } from 
 export { calculateInterest } from "./interest";
 export { buildInterestClaimText, formatCourtDate } from "./interest-claim-text";
 export { addDays, addYears, containsLeapDay, countDays, daysInYear, isLeapYear } from "./days";
-export { resolveSegments } from "./segments";
+export { resolveSegments, serviceSwitchSegments } from "./segments";
 export { datasetVersionTag, loadLegalRates, rateHistoryFor } from "./legal-rates";
 export {
   capHistoryFor,
@@ -46,7 +46,11 @@ export type {
   AppropriationAllocationType,
   AppropriationClaimInput,
   AppropriationClaimResult,
+  AppropriationEventClaimResult,
+  AppropriationEventResult,
   AppropriationInput,
+  AppropriationInterestLimitInput,
+  AppropriationInterestLimitResult,
   AppropriationPaymentInput,
   AppropriationPaymentResult,
   AppropriationProportionalShare,
@@ -57,6 +61,7 @@ export type {
 export {
   APPROPRIATION_DATA_VERSION,
   computeAppropriation,
+  isExtendedAppropriationInput,
   validateAppropriationInput,
 } from "./appropriation";
 
@@ -326,3 +331,11 @@ export {
   computeCostAssessment,
   selectLawyerFeeRuleVersion,
 } from "./litigation-cost";
+export type { PostalCodeDataset, PostalRegion, PostalSearchResult } from "./postal";
+export {
+  formatPostalCodes,
+  loadPostalCodes,
+  postalCodesVersionTag,
+  postalRegionToJurisdiction,
+  searchPostalCodes,
+} from "./postal";

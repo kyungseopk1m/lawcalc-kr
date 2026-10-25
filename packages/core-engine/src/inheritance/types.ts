@@ -4,7 +4,9 @@
  * 근거: 외부 reference 매뉴얼 (private). 적용 조항을 직접 명시한다.
  * 적용 조항: 민법 제1000조, 제1001조, 제1003조, 제1009조, 제1010조.
  *
- * 적용 시점: 1991. 1. 1. 이후 피상속인 사망 케이스만 (1990 개정민법 시행).
+ * 적용 시점: 1991. 1. 1. 이후 피상속인 사망은 현행 규칙. 1960. 1. 1. ~ 1990. 12. 31. 사망은
+ * 아래 구법 필드(`sex`·`sameFamilyRegister`·`hojuSuccessor`·`spouse.relation`)를 하나라도
+ * 지정했을 때만 구법(old-law.ts)으로 계산한다. 구법 필드는 1991 이후 사망에서는 쓰이지 않는다.
  */
 
 import type { IsoDate } from "../types";
@@ -62,6 +64,21 @@ export interface HeirNode {
    * `representatives` 안에서만 의미가 있다. 미지정 시 직계비속 대습자로 보고 균분한다(하위호환).
    */
   isSpouseOfRepresented?: boolean;
+  /**
+   * 구법(1960~1990 사망) 전용. 성별. 1960~1978 사망은 여자 상속분이 남자의 2분의 1이고
+   * (구 민법 제1009조 제1항), 두 시기 모두 동일가적내에 없는 여자는 남자의 4분의 1이다(같은 조 제2항).
+   */
+  sex?: "male" | "female";
+  /**
+   * 구법 전용. 피상속인과 동일가적(같은 호적) 안에 있는지. 여자일 때 반드시 지정한다
+   * (출가 등으로 가적을 달리한 여자는 구 민법 제1009조 제2항으로 남자의 4분의 1).
+   */
+  sameFamilyRegister?: boolean;
+  /**
+   * 구법 전용. 재산상속인이 동시에 호주상속을 하는지 (구 민법 제1009조 제1항 단서, 고유 상속분의
+   * 5할 가산). 생존한 1순위 직계비속 본인에게만 지정할 수 있다.
+   */
+  hojuSuccessor?: boolean;
 }
 
 /**
@@ -75,14 +92,25 @@ export interface HeirNode {
 export interface InheritanceInput {
   decedent: {
     name?: string;
-    /** 1991-01-01 이후 강제. 그 이전이면 RangeError throw. */
+    /**
+     * 1991-01-01 이후는 현행 규칙. 그 전이면 구법 필드가 있어야 하고(없으면 RangeError),
+     * 1960-01-01 전(관습법 시기)은 RangeError.
+     */
     deceasedAt: IsoDate;
   };
   /**
    * 배우자 0~1. 매뉴얼 + UI strings 가 single object 로 hard-cap (`배우자를 한명 이상 입력할 수 없습니다`).
    * `alive: false` 또는 omit 양쪽 모두 "배우자 미존재" 동치.
    */
-  spouse?: { name?: string; alive: boolean };
+  spouse?: {
+    name?: string;
+    alive: boolean;
+    /**
+     * 구법 전용. 배우자가 피상속인의 처인지 남편인지. 구 민법은 처(제1003조, 제1009조 제3항)와
+     * 남편(제1002조: 직계비속과 동순위, 없으면 단독)을 다르게 다룬다.
+     */
+    relation?: "wife" | "husband";
+  };
   /** 1순위 직계비속. 매뉴얼 제3조 제2항 fall-through. */
   linealDescendants?: HeirNode[];
   /** 2순위 직계존속. 1순위 부재 시에만 분배 참여. 대습 X (1001조). */
@@ -137,6 +165,11 @@ export interface InheritanceResult {
   remainderWon?: number;
   /** `estateWon` 또는 `includeTrace` 지정 시: 실제 판단 경로를 한국어로 적은 전개식. */
   trace?: string[];
+  /**
+   * 구법 경로 전용. 계산은 하되 사실관계·해석에 따라 결과가 달라질 수 있는 조합의 경고 (한국어).
+   * 경고가 없으면 필드 자체를 싣지 않는다 (종전 결과 모양 그대로).
+   */
+  warnings?: string[];
   dataVersion: string;
   /** ISO 8601 datetime. */
   computedAt: string;

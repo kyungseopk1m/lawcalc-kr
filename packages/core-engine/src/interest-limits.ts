@@ -30,10 +30,8 @@ export interface InterestLimitSlice {
 
 export interface InterestLimitDataset {
   /**
-   * Semver. 현재 어느 도메인 계산에도 미연결인 예비 dataset 이라
-   * 결과 객체에 노출되지 않는다. appropriation 도메인이 cap 적용을
-   * 도입하면 `calculateAppropriation(input, { interestLimits })` 주입 후
-   * `AppropriationResult.dataVersions.interestLimits` 로 hoist 예정.
+   * Semver. 변제충당에서 채권에 `interestLimitAct` 를 넣으면
+   * `AppropriationResult.interestLimitsDataVersion` 에 기록된다.
    */
   version: string;
   /** 데이터셋 갱신일 (YYYY-MM-DD). */
@@ -132,9 +130,7 @@ export function loadInterestLimits(override?: InterestLimitDataset): InterestLim
 }
 
 /**
- * 데이터셋 식별자 (`interest-limits/vX.Y.Z`).
- * 향후 appropriation 도메인이 cap 적용을 도입하면
- * `AppropriationResult.dataVersions.interestLimits` 로 기록될 예정 (현재 미연결).
+ * 데이터셋 식별자 (`interest-limits/vX.Y.Z`). `AppropriationResult.interestLimitsDataVersion` 에 쓴다.
  */
 export function interestLimitsVersionTag(dataset: InterestLimitDataset): string {
   return `interest-limits/v${dataset.version}`;
